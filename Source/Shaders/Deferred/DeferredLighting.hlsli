@@ -195,6 +195,7 @@ void EvaluateSingleProbe(
     const uint probeType = GET_ENV_PROBE_TYPE(CURRENT_ENV_PROBE);
 
     const bool isIrradianceProbe = (probeType == EPT_AMBIENT);
+    const bool isSkyProbe = (probeType == EPT_SKY);
 
     const uint textureIndices = CURRENT_ENV_PROBE.textureIndices;
     const uint colorTextureIndex = (textureIndices & 0xFFFFu);
@@ -259,7 +260,8 @@ void EvaluateSingleProbe(
     static const float kReflectionsProbeBlendFactor = 0.2;
     const float blendFactor = lerp(kReflectionsProbeBlendFactor, kIrradianceProbeBlendFactor, irradianceOnlyWeight);
 
-    const float boundsWeight = CalculateEnvProbeWeight(positionWS, aabbMin.xyz, aabbMax.xyz, blendFactor);
+    // Sky probes are unbounded
+    const float boundsWeight = select(isSkyProbe, 1.0, CalculateEnvProbeWeight(positionWS, aabbMin.xyz, aabbMax.xyz, blendFactor));
     
     const float reflectionsWeight = saturate(hitMask * boundsWeight * visibility * (1.0 - irradianceOnlyWeight) * currentReflections.a);
     const float irradianceWeight = saturate(hitMask * boundsWeight * visibility * diffuseContributionWeight * currentIrradiance.a);

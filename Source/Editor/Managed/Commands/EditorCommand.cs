@@ -23,6 +23,14 @@ namespace Hyperion.Editor.Commands
         public void Execute(object? parameter)
         {
             string? argument = parameter as string;
+            if (string.IsNullOrEmpty(argument) && parameter is UUID uuid)
+            {
+                argument = uuid.ToString();
+            }
+            if (string.IsNullOrEmpty(argument) && parameter != null)
+            {
+                argument = parameter.ToString();
+            }
             if (string.IsNullOrEmpty(argument))
             {
                 argument = _argumentProvider?.Invoke();

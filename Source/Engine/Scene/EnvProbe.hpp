@@ -462,7 +462,7 @@ class ENGINE_API SkyProbe final : public EnvProbe
 
 public:
     SkyProbe()
-        : EnvProbe(EPT_SKY, BoundingBox(Vec3f(-100.0f), Vec3f(100.0f)), DefaultDimensions)
+        : EnvProbe(EPT_SKY, BoundingBox::Infinity(), DefaultDimensions)
     {
         CreateTexture();
     }

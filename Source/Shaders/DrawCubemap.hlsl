@@ -300,6 +300,7 @@ PSOutput PSMain(PSInput input)
         float2 texcoord = input.texcoord0 * CURRENT_MATERIAL.uv_scale;
         float4 albedo_texture = SAMPLE_MATERIAL_TEXTURE(CURRENT_MATERIAL, DiffuseMap, texcoord);
 
+        // @TODO: Conditional upon ALPHA_DISCARD (see GeometryPass.hlsl)
         clip(albedo_texture.a - 0.2);
 
         albedo *= albedo_texture;

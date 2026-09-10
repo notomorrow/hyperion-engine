@@ -1893,6 +1893,13 @@ void RenderCollector::ExecuteDrawCalls(
 
         if (mappings.Empty())
         {
+            // Still need to bind the framebuffer so its attachments are cleared, otherwise we're in garbage town
+            if (framebuffer)
+            {
+                frame->cr << SetCurrentFramebuffer(framebuffer);
+                frame->cr << SetCurrentFramebuffer(nullptr);
+            }
+
             return;
         }
 
@@ -1913,6 +1920,13 @@ void RenderCollector::ExecuteDrawCalls(
 
         if (allEmpty)
         {
+            // Ditto
+            if (framebuffer)
+            {
+                frame->cr << SetCurrentFramebuffer(framebuffer);
+                frame->cr << SetCurrentFramebuffer(nullptr);
+            }
+
             return;
         }
 

@@ -2,27 +2,29 @@
     x:Class="Hyperion.Editor.Views.Inspector.AssetObjectPropertyEditor"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Hyperion.Editor.Controls;assembly=Hyperion.Editor"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="clr-namespace:Hyperion.Editor.ViewModels;assembly=Hyperion.Editor"
     x:DataType="vm:ObjectPropertyViewModel"
     mc:Ignorable="d">
-    <Grid ColumnDefinitions="72,*" Margin="2,2,2,4">
+    <Grid ColumnDefinitions="40,*" Margin="2,2,2,4">
         <Border
-            Width="64"
-            Height="64"
+            Width="32"
+            Height="32"
             Margin="0,0,8,0"
             VerticalAlignment="Top"
             Background="{DynamicResource Brush.PanelRaised}"
             BorderBrush="{DynamicResource Brush.BorderLight}"
             BorderThickness="1"
             CornerRadius="{DynamicResource Radius.Medium}">
-            <TextBlock
+            <controls:Codicon
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                FontSize="16"
-                Opacity="0.3"
-                Text="" /> <!-- TODO preview or icon fallback. -->
+                Foreground="{DynamicResource Brush.AccentHover}"
+                Kind="{Binding IconKind}"
+                Opacity="0.85"
+                Size="14" />
         </Border>
 
         <StackPanel Grid.Column="1" Spacing="4">
@@ -66,26 +68,58 @@
                 </Grid>
             </Border>
 
-            <StackPanel Orientation="Horizontal" Spacing="4">
-                <Button
-                    Padding="8,2"
-                    FontSize="11"
-                    Command="{Binding SelectCommand}"
-                    Content="Swap"
-                    IsEnabled="{Binding CanSelectFromContentBrowser}"
-                    ToolTip.Tip="Assign to the currently selected asset in the Assets drawer" />
-                <Button
-                    Padding="8,2"
-                    FontSize="11"
-                    Command="{Binding ClearCommand}"
-                    Content="Clear" />
-                <Button
-                    x:Name="PART_EditButton"
-                    Padding="8,2"
-                    FontSize="11"
-                    Content="Edit"
-                    IsEnabled="{Binding HasSubObject}" />
-            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2">
+                    <Button
+                        Classes="gizmo"
+                        Command="{Binding SelectCommand}"
+                        IsEnabled="{Binding CanSelectFromContentBrowser}"
+                        ToolTip.Tip="Swap with selected">
+                        <controls:Codicon Kind="Swap" Size="14" />
+                    </Button>
+                    <Button
+                        Classes="gizmo"
+                        Command="{Binding ClearCommand}"
+                        ToolTip.Tip="Clear">
+                        <controls:Codicon Kind="Close" Size="14" />
+                    </Button>
+                    <Button
+                        Classes="gizmo"
+                        Command="{Binding NewCommand}"
+                        IsEnabled="{Binding CanCreateNew}"
+                        ToolTip.Tip="Create new">
+                        <controls:Codicon Kind="Add" Size="14" />
+                    </Button>
+                    <ToggleButton
+                        Classes="gizmo"
+                        IsChecked="{Binding IsEditorExpanded, Mode=TwoWay}"
+                        IsEnabled="{Binding HasSubObject}"
+                        ToolTip.Tip="Edit this object">
+                        <controls:Codicon Kind="Edit" Size="14" />
+                    </ToggleButton>
+                </StackPanel>
+
+                <Border
+                    Grid.Column="1"
+                    Width="1"
+                    Margin="6,5"
+                    Background="{DynamicResource Brush.Border}" />
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2">
+                    <Button
+                        x:Name="PART_CopyButton"
+                        Classes="gizmo"
+                        ToolTip.Tip="Copy asset path to clipboard">
+                        <controls:Codicon Kind="Copy" Size="14" />
+                    </Button>
+                    <Button
+                        x:Name="PART_PasteButton"
+                        Classes="gizmo"
+                        ToolTip.Tip="Paste asset path from clipboard">
+                        <controls:Codicon Kind="Clippy" Size="14" />
+                    </Button>
+                </StackPanel>
+            </Grid>
         </StackPanel>
     </Grid>
 </UserControl>

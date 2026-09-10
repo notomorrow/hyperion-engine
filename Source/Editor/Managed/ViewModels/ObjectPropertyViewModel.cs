@@ -22,9 +22,6 @@ namespace Hyperion.Editor.ViewModels
 
         private const long NoSubObjectKey = 0;
 
-        // Identifies the object the current SubObject was built for, so it is only rebuilt when the
-        // property actually points at something else. Rebuilding on every refresh would tear down
-        // any pop-out edit panel and collapse nested editors mid-edit.
         private long _subObjectKey = NoSubObjectKey;
 
         private static long MakeObjectKey(ObjIdBase id) => ((long)id.TypeId.Value << 32) | id.Value;
@@ -45,6 +42,27 @@ namespace Hyperion.Editor.ViewModels
                 if (SetProperty(ref _hasSubObject, value))
                     OnPropertyChanged(nameof(ShowSubclassPicker));
             }
+        }
+
+        private string _iconKind = "File";
+        public string IconKind
+        {
+            get => _iconKind;
+            private set => SetProperty(ref _iconKind, value);
+        }
+
+        private bool _canCreateNew;
+        public bool CanCreateNew
+        {
+            get => _canCreateNew;
+            private set => SetProperty(ref _canCreateNew, value);
+        }
+
+        private bool _isEditorExpanded;
+        public bool IsEditorExpanded
+        {
+            get => _isEditorExpanded;
+            set => SetProperty(ref _isEditorExpanded, value);
         }
 
         public bool IsAssetObject => _isAssetObjectType;
@@ -78,6 +96,7 @@ namespace Hyperion.Editor.ViewModels
 
         public ICommand SelectCommand { get; }
         public ICommand ClearCommand { get; }
+        public ICommand NewCommand { get; }
 
 
         public ObservableCollection<string> AvailableSubclasses { get; } = new();
@@ -127,9 +146,11 @@ namespace Hyperion.Editor.ViewModels
 
             SelectCommand = new RelayCommand(OnSelect);
             ClearCommand = new RelayCommand(OnClear);
+            NewCommand = new RelayCommand(OnNew);
 
             HookContentBrowser();
             PopulateSubclasses();
+            UpdateCanCreateNew();
         }
 
         public ObjectPropertyViewModel(IntPtr classAddress, Func<IntPtr> targetAddressResolver, Property property, bool isReadOnly, int depth = 0)
@@ -142,9 +163,11 @@ namespace Hyperion.Editor.ViewModels
 
             SelectCommand = new RelayCommand(OnSelect);
             ClearCommand = new RelayCommand(OnClear);
+            NewCommand = new RelayCommand(OnNew);
 
             HookContentBrowser();
             PopulateSubclasses();
+            UpdateCanCreateNew();
         }
 
         public ObjectPropertyViewModel(string label, TypeInfo typeInfo, Func<BoxedValue> getter, Action<BoxedValue> setter, bool isReadOnly, int depth = 0)
@@ -157,12 +180,45 @@ namespace Hyperion.Editor.ViewModels
 
             SelectCommand = new RelayCommand(OnSelect);
             ClearCommand = new RelayCommand(OnClear);
+            NewCommand = new RelayCommand(OnNew);
 
             HookContentBrowser();
             PopulateSubclasses();
+            UpdateCanCreateNew();
         }
 
         public override bool ShowInlineLabel => false;
+
+        private void UpdateCanCreateNew()
+        {
+            IconKind = AssetIconHelper.FromTypeName(_propertyTypeClass?.Name.ToString());
+
+            if (!_isAssetObjectType || _isReadOnly || _propertyTypeClass == null)
+            {
+                CanCreateNew = false;
+                return;
+            }
+
+            Class expected = _propertyTypeClass.Value;
+
+            if (expected.IsAbstract)
+            {
+                CanCreateNew = false;
+                return;
+            }
+
+            // Scripts are created through the New Script panel (language + file), not as blank registry entries.
+            Class? scriptAssetClass = Class.TryGetClass<ScriptAsset>();
+
+            if (scriptAssetClass.HasValue
+                && (expected == scriptAssetClass.Value || expected.IsSubclassOf(scriptAssetClass.Value)))
+            {
+                CanCreateNew = false;
+                return;
+            }
+
+            CanCreateNew = true;
+        }
 
         private static bool DetectIsAssetObjectType(TypeInfo typeInfo)
         {
@@ -399,6 +455,191 @@ namespace Hyperion.Editor.ViewModels
             });
         }
 
+        private void OnNew()
+        {
+            if (!CanCreateNew || _isReadOnly || _propertyTypeClass == null)
+            {
+                return;
+            }
+
+            string className = _propertyTypeClass.Value.Name.ToString();
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                try
+                {
+                    BoxedValueInternal result;
+
+                    unsafe
+                    {
+                        if (!Hyp_CreateInstanceOfClass(className, &result))
+                        {
+                            Logger.Log(LogLevel.Warning, $"Failed to create instance of class '{className}'");
+                            return;
+                        }
+                    }
+
+                    using BoxedValue boxed = BoxedValue.FromBuffer(result);
+
+                    if (boxed.GetValue() is AssetObject assetObj && assetObj.IsValid)
+                    {
+                        try
+                        {
+                            AssetManager.Instance.AssetRegistry.PutAssetUnique(assetObj);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log(LogLevel.Warning, $"Failed to register new asset '{className}': {ex.Message}");
+                            return;
+                        }
+                    }
+
+                    CommitPropertyChange($"Create {Label}", boxed);
+                    Dispatcher.UIThread.Post(() => IsEditorExpanded = true);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"Failed to create new asset for property '{Label}': {ex.Message}");
+
+                    Dispatcher.UIThread.Post(RefreshValue);
+                }
+            });
+        }
+
+        public string? GetCopyText()
+        {
+            if (!_isAssetObjectType || !HasSubObject)
+            {
+                return null;
+            }
+
+            return AssetPathDisplay == "(None)" || AssetPathDisplay == "(Unregistered)"
+                ? null
+                : AssetPathDisplay;
+        }
+
+        public void PasteFromText(string? text)
+        {
+            if (_isReadOnly || string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+
+            string cleaned = text.Trim().Trim('"', '\'');
+            int schemeIndex = cleaned.IndexOf("://", StringComparison.Ordinal);
+
+            if (schemeIndex >= 0)
+            {
+                cleaned = cleaned.Substring(schemeIndex + 3);
+            }
+
+            string? bucketName = null;
+            string assetName;
+
+            int slashIndex = cleaned.LastIndexOf('/');
+
+            if (slashIndex >= 0)
+            {
+                bucketName = cleaned.Substring(0, slashIndex);
+                assetName = cleaned.Substring(slashIndex + 1);
+            }
+            else
+            {
+                assetName = cleaned;
+            }
+
+            if (string.IsNullOrEmpty(assetName))
+            {
+                return;
+            }
+
+            Class? expectedClass = _propertyTypeClass;
+
+            if (expectedClass == null)
+            {
+                return;
+            }
+
+            Class capturedExpected = expectedClass.Value;
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                try
+                {
+                    AssetRegistry registry = AssetManager.Instance.AssetRegistry;
+                    AssetObject? obj = null;
+
+                    if (!string.IsNullOrEmpty(bucketName))
+                    {
+                        foreach (AssetBucket bucket in AssetBucket.AllBuckets)
+                        {
+                            if (!string.Equals(bucket.Name, bucketName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
+
+                            obj = registry.GetAsset(bucket.Value, new Name(assetName));
+                            break;
+                        }
+
+                        // Tolerate paths that include extra segments - fall back to a bare-name search.
+                        obj ??= FindAssetByName(registry, capturedExpected, assetName);
+                    }
+                    else
+                    {
+                        obj = FindAssetByName(registry, capturedExpected, assetName);
+                    }
+
+                    if (obj == null || !obj.IsValid)
+                    {
+                        Logger.Log(LogLevel.Warning, $"Paste: asset '{text}' could not be resolved.");
+                        return;
+                    }
+
+                    Class objClass = obj.Class;
+
+                    if (objClass != capturedExpected && !objClass.IsSubclassOf(capturedExpected))
+                    {
+                        Logger.Log(LogLevel.Warning, $"Paste: asset '{text}' is not compatible with property '{Label}'.");
+                        return;
+                    }
+
+                    using BoxedValue boxed = new BoxedValue(obj);
+                    CommitPropertyChange($"Set {Label}", boxed);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"Failed to paste asset property '{Label}': {ex.Message}");
+
+                    Dispatcher.UIThread.Post(RefreshValue);
+                }
+            });
+        }
+
+        private static AssetObject? FindAssetByName(AssetRegistry registry, Class expectedClass, string assetName)
+        {
+            var name = new Name(assetName);
+
+            foreach (AssetBucket bucket in AssetBucket.AllBuckets)
+            {
+                AssetObject? obj = registry.GetAsset(bucket.Value, name);
+
+                if (obj == null || !obj.IsValid)
+                {
+                    continue;
+                }
+
+                Class objClass = obj.Class;
+
+                if (objClass == expectedClass || objClass.IsSubclassOf(expectedClass))
+                {
+                    return obj;
+                }
+            }
+
+            return null;
+        }
+
         public async Task<IEnumerable<object>> QueryMatchingAssetsAsync(string? search, int maxResults)
         {
             if (!_isAssetObjectType || _propertyTypeClass == null)
@@ -526,12 +767,15 @@ namespace Hyperion.Editor.ViewModels
                 return;
             }
 
+            string? expectedTypeName = _propertyTypeClass?.Name.ToString();
+
             _ = EngineManager.PostToSimThread(() =>
             {
                 long resolvedKey = NoSubObjectKey;
                 string assetPathDisplay = "(None)";
                 string displayName = "(None)";
                 string pickerName = string.Empty;
+                string iconKind = AssetIconHelper.FromTypeName(expectedTypeName);
                 ComponentSubObjectViewModel? newSubObject = null;
 
                 try
@@ -543,6 +787,7 @@ namespace Hyperion.Editor.ViewModels
                     {
                         resolvedKey = MakeObjectKey(obj.Id);
                         displayName = obj.Class.Name.ToString();
+                        iconKind = AssetIconHelper.FromTypeName(displayName);
 
                         if (obj is AssetObject assetObj)
                         {
@@ -585,6 +830,7 @@ namespace Hyperion.Editor.ViewModels
                 string capturedDisplayName = displayName;
                 string capturedAssetPath = assetPathDisplay;
                 string capturedPickerName = pickerName;
+                string capturedIconKind = iconKind;
                 long capturedResolvedKey = resolvedKey;
                 ComponentSubObjectViewModel? capturedSubObject = newSubObject;
 
@@ -594,15 +840,11 @@ namespace Hyperion.Editor.ViewModels
                     {
                         ApplyModelValue(() =>
                         {
-                            // Update the sub-object before anything else. Listeners (e.g. the
-                            // pop-out asset edit panel) treat a null SubObject as "nothing left
-                            // to edit" and close themselves in reaction to any of these property
-                            // changes, so SubObject must never be observed stale-null after the
-                            // other properties have already moved to their new values.
                             UpdateSubObject(capturedSubObject, capturedResolvedKey);
 
                             Value = capturedDisplayName;
                             AssetPathDisplay = capturedAssetPath;
+                            IconKind = capturedIconKind;
 
                             if (IsPolymorphic)
                             {
@@ -630,8 +872,6 @@ namespace Hyperion.Editor.ViewModels
             });
         }
 
-        // Only replaces the sub-object editor when the property points at a different object;
-        // otherwise the existing editors are re-read in place so open panels stay attached.
         private void UpdateSubObject(ComponentSubObjectViewModel? newSubObject, long resolvedKey)
         {
             if (resolvedKey == NoSubObjectKey)
@@ -646,7 +886,6 @@ namespace Hyperion.Editor.ViewModels
 
             if (newSubObject == null)
             {
-                // Same object as last time - re-read the existing editors in place.
                 SubObject?.RefreshProperties();
                 return;
             }

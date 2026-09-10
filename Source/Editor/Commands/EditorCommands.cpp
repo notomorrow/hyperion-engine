@@ -2452,11 +2452,19 @@ public:
 
         if (NumArguments() >= 1 && !GetArgument(0).Empty())
         {
-            Node* foundNode = subsystem->GetActiveScene()->FindNodeByName(StringHash(GetArgument(0)));
+            const UUID nodeUuid = UUID(GetArgument(0).Data());
+
+            if (nodeUuid == UUID::Invalid())
+            {
+                HYP_LOG(Editor, Warning, "EditorCommandTeleportTo: invalid UUID '{}'", GetArgument(0));
+                return;
+            }
+
+            Node* foundNode = subsystem->GetActiveScene()->FindNodeByUUID(nodeUuid);
 
             if (!foundNode)
             {
-                HYP_LOG(Editor, Warning, "EditorCommandTeleportTo: could not find node '{}'", GetArgument(0));
+                HYP_LOG(Editor, Warning, "EditorCommandTeleportTo: could not find node with UUID '{}'", GetArgument(0));
                 return;
             }
 
@@ -2495,6 +2503,79 @@ DEFINE_EDITOR_COMMAND(TeleportTo);
 
 #pragma endregion TeleportTo
 
+#pragma region MoveToCamera
+
+class EditorCommandMoveToCamera final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandMoveToCamera);
+
+public:
+    virtual ~EditorCommandMoveToCamera() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Move to Camera";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        Handle<Node> node;
+
+        if (NumArguments() >= 1 && !GetArgument(0).Empty())
+        {
+            const UUID nodeUuid = UUID(GetArgument(0).Data());
+
+            if (nodeUuid == UUID::Invalid())
+            {
+                HYP_LOG(Editor, Warning, "EditorCommandMoveToCamera: invalid UUID '{}'", GetArgument(0));
+                return;
+            }
+
+            Node* foundNode = subsystem->GetActiveScene()->FindNodeByUUID(nodeUuid);
+
+            if (!foundNode)
+            {
+                HYP_LOG(Editor, Warning, "EditorCommandMoveToCamera: could not find node with UUID '{}'", GetArgument(0));
+                return;
+            }
+
+            node = MakeStrongRef(foundNode);
+        }
+        else
+        {
+            node = subsystem->GetFocusedNode();
+        }
+
+        if (!node.IsValid())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandMoveToCamera: no node specified or focused");
+            return;
+        }
+
+        EditorViewport* activeViewport = subsystem->GetActiveViewport();
+        if (!activeViewport)
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandMoveToCamera: no active viewport");
+            return;
+        }
+
+        const Handle<Camera>& camera = activeViewport->GetCamera();
+        if (!camera.IsValid())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandMoveToCamera: no camera in active viewport");
+            return;
+        }
+
+        node->SetWorldTranslation(camera->GetWorldTranslation());
+    }
+};
+
+DEFINE_EDITOR_COMMAND(MoveToCamera);
+
+#pragma endregion MoveToCamera
+
 #pragma region Copy
 
 class EditorCommandCopy final : public EditorCommandBase
@@ -2512,7 +2593,15 @@ public:
 
         if (NumArguments() >= 1 && !GetArgument(0).Empty())
         {
-            Node* node = subsystem->GetActiveScene()->FindNodeByName(StringHash(GetArgument(0)));
+            const UUID nodeUuid = UUID(GetArgument(0).Data());
+
+            if (nodeUuid == UUID::Invalid())
+            {
+                HYP_LOG(Editor, Warning, "EditorCommandCopy: invalid UUID '{}'", GetArgument(0));
+                return;
+            }
+
+            Node* node = subsystem->GetActiveScene()->FindNodeByUUID(nodeUuid);
 
             if (node)
             {
@@ -2520,7 +2609,7 @@ public:
             }
             else
             {
-                HYP_LOG(Editor, Warning, "could not find node '{}'", GetArgument(0));
+                HYP_LOG(Editor, Warning, "EditorCommandCopy: could not find node with UUID '{}'", GetArgument(0));
                 return;
             }
         }
@@ -3077,19 +3166,12 @@ public:
             return;
         }
 
-        Handle<Node> parentNode;
-        if (Handle<Node> focusedNode = subsystem->GetFocusedNode(); focusedNode.IsValid())
-        {
-            parentNode = focusedNode;
-        }
-        else
-        {
-            parentNode = MakeStrongRef(activeScene->GetRoot());
-        }
+        Handle<Node> parentNode = activeScene->GetRoot();
+        Assert(parentNode.IsValid());
 
         if (!parentNode.IsValid())
         {
-            HYP_LOG(Editor, Error, "EditorCommandAddAsset: no parent node to attach to");
+            HYP_LOG(Editor, Error, "EditorCommandAddAsset: no root on Scene {}!", activeScene->GetName());
             return;
         }
 
@@ -4026,6 +4108,46 @@ private:
 DEFINE_EDITOR_COMMAND(ResetSwatchOverrides);
 
 #pragma endregion ResetSwatchOverrides
+
+#pragma region SyncPhysicsShapeToLocalBounds
+
+// Fired as a side effect of a LocalBounds property write, which already has its own undo entry.
+class EditorCommandSyncPhysicsShapeToLocalBounds final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSyncPhysicsShapeToLocalBounds);
+
+public:
+    virtual ~EditorCommandSyncPhysicsShapeToLocalBounds() override = default;
+
+    virtual void Execute(EditorSubsystem *subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        uint64 entityAddress = 0;
+
+        if (!StringUtil::Parse(GetArgument(0), &entityAddress) || entityAddress == 0)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandSyncPhysicsShapeToLocalBounds: invalid entity address");
+
+            return;
+        }
+
+        Handle<Entity> entity = MakeStrongRef(reinterpret_cast<Entity *>(entityAddress));
+
+        if (!entity.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandSyncPhysicsShapeToLocalBounds: invalid entity");
+
+            return;
+        }
+
+        subsystem->SyncBoxPhysicsShapeToLocalBounds(entity.Get());
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SyncPhysicsShapeToLocalBounds);
+
+#pragma endregion SyncPhysicsShapeToLocalBounds
 
 #undef DEFINE_EDITOR_COMMAND
 

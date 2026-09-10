@@ -179,10 +179,6 @@ private:
 
     SharedMutex m_mutex;
 
-    // timer for when we should prune transient packages
-    ClockTimer m_pruneTimer;
-    threading::TaskBatch* m_pruneTaskBatch;
-
     AssetBucketData* m_assetBucketData;
 
     Scheduler* m_scheduler;

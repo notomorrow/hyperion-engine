@@ -39,12 +39,15 @@ namespace Hyperion.Editor.ViewModels
 
         private DelegateHandler? _onSelectedNodeChanged;
 
+        private readonly NodeViewModelIndex _nodeViewModelIndex = new NodeViewModelIndex();
+
         public void AttachToScene(Scene? scene)
         {
             Dispatcher.UIThread.VerifyAccess();
 
             _scene = scene;
             RootNodes.Clear();
+            _nodeViewModelIndex.Clear();
 
             _suppressSelectionNotifications = true;
             try
@@ -64,7 +67,7 @@ namespace Hyperion.Editor.ViewModels
             Node? root = scene.RootNode;
             if (root != null)
             {
-                RootNodes.Add(new NodeViewModel(root, onChildrenChanged: RefreshFilter));
+                RootNodes.Add(new NodeViewModel(root, onChildrenChanged: RefreshFilter, index: _nodeViewModelIndex));
             }
 
             RefreshFilter();
@@ -76,9 +79,11 @@ namespace Hyperion.Editor.ViewModels
                 {
                     _scene = scene;
                     RootNodes.Clear();
+                    _nodeViewModelIndex.Clear();
+
                     if (newRoot != null)
                     {
-                        RootNodes.Add(new NodeViewModel(newRoot, onChildrenChanged: RefreshFilter));
+                        RootNodes.Add(new NodeViewModel(newRoot, onChildrenChanged: RefreshFilter, index: _nodeViewModelIndex));
                     }
 
                     RefreshFilter();
@@ -190,6 +195,7 @@ namespace Hyperion.Editor.ViewModels
 
             _scene = null;
             RootNodes.Clear();
+            _nodeViewModelIndex.Clear();
 
             _onSelectedNodeChanged?.Remove();
             _onSelectedNodeChanged = null;
@@ -209,7 +215,7 @@ namespace Hyperion.Editor.ViewModels
                     return;
                 }
 
-                NodeViewModel? viewModel = FindNodeViewModel(node.NativeAddress);
+                NodeViewModel? viewModel = _nodeViewModelIndex.Find(node.GetUUID());
 
                 if (viewModel != null)
                 {
@@ -237,7 +243,7 @@ namespace Hyperion.Editor.ViewModels
                     continue;
                 }
 
-                NodeViewModel? viewModel = FindNodeViewModel(node.NativeAddress);
+                NodeViewModel? viewModel = _nodeViewModelIndex.Find(node.GetUUID());
 
                 if (viewModel != null)
                 {
@@ -324,39 +330,6 @@ namespace Hyperion.Editor.ViewModels
                 current.IsExpanded = true; /// \todo Make it expand the tree node in UI!!
                 current = current.Parent;
             }
-        }
-
-        private NodeViewModel? FindNodeViewModel(IntPtr nativeAddress)
-        {
-            foreach (NodeViewModel root in RootNodes)
-            {
-                NodeViewModel? result = FindNodeViewModelRecursive(root, nativeAddress);
-                if (result != null)
-                {
-                    return result;
-                }
-            }
-
-            return null;
-        }
-
-        private static NodeViewModel? FindNodeViewModelRecursive(NodeViewModel nodeViewModel, IntPtr nativeAddress)
-        {
-            if (nodeViewModel.Node != null && nodeViewModel.Node.NativeAddress == nativeAddress)
-            {
-                return nodeViewModel;
-            }
-
-            foreach (NodeViewModel child in nodeViewModel.AllChildren)
-            {
-                NodeViewModel? found = FindNodeViewModelRecursive(child, nativeAddress);
-                if (found != null)
-                {
-                    return found;
-                }
-            }
-
-            return null;
         }
 
         public void RenameNode(NodeViewModel nodeViewModel, string newName)

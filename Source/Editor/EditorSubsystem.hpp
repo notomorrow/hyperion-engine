@@ -660,6 +660,8 @@ public:
     HYP_METHOD()
     void FitPhysicsShapeToMesh();
 
+    void SyncBoxPhysicsShapeToLocalBounds(Entity* entity);
+
     HYP_METHOD()
     void SetSelectedBucket(uint32 bucketIndex);
 
@@ -790,8 +792,6 @@ private:
 
     /*! \brief Roll the target mesh back to the captured baseline and drop the per-session stack. */
     void DiscardMeshEdits();
-
-    void SyncBoxPhysicsShapeToMeshBounds(const Handle<Node>& node);
 
     bool TryPickMeshEditFace(const Ray& ray, MeshEditFaceSelection& outSelection, bool ensureUniqueMesh);
     void SetSelectedMeshEditFace(Optional<MeshEditFaceSelection> selection);

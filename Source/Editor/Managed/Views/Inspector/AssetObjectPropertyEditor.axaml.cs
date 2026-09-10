@@ -1,8 +1,11 @@
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
@@ -20,7 +23,10 @@ namespace Hyperion.Editor.Views.Inspector
         {
             InitializeComponent();
 
-            PART_EditButton.Click += OnEditClicked;
+            PART_CopyButton.Click += OnCopyClicked;
+            PART_PasteButton.Click += OnPasteClicked;
+
+            DataContextChanged += OnDataContextChanged;
 
             // The AutoCompleteBox queries matching assets on demand (top N),
             // debounced + cancelled internally by Avalonia. No client-side cache.
@@ -37,6 +43,160 @@ namespace Hyperion.Editor.Views.Inspector
             PART_PickerToggle.Click += OnPickerToggleClicked;
             PART_PickerBox.LostFocus += OnPickerBoxLostFocus;
             PART_PickerBox.SelectionChanged += OnPickerSelectionChanged;
+
+            SubscribeViewModel(DataContext as ObjectPropertyViewModel);
+            UpdateCopyEnabled();
+        }
+
+        private ObjectPropertyViewModel? _subscribedVm;
+        private AssetObjectEditPanelViewModel? _editPanel;
+
+        private void OnDataContextChanged(object? sender, EventArgs e)
+        {
+            SubscribeViewModel(DataContext as ObjectPropertyViewModel);
+            CloseEditPanel();
+            UpdateCopyEnabled();
+
+            if (_subscribedVm != null)
+            {
+                SyncEditPanel(_subscribedVm);
+            }
+        }
+
+        private void SubscribeViewModel(ObjectPropertyViewModel? vm)
+        {
+            if (_subscribedVm != null)
+            {
+                _subscribedVm.PropertyChanged -= OnViewModelPropertyChanged;
+                _subscribedVm = null;
+            }
+
+            if (vm != null)
+            {
+                _subscribedVm = vm;
+                vm.PropertyChanged += OnViewModelPropertyChanged;
+            }
+        }
+
+        private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (DataContext is not ObjectPropertyViewModel vm)
+            {
+                return;
+            }
+
+            if (e.PropertyName == nameof(ObjectPropertyViewModel.AssetPathDisplay)
+                || e.PropertyName == nameof(ObjectPropertyViewModel.HasSubObject)
+                || e.PropertyName == nameof(ObjectPropertyViewModel.SubObject))
+            {
+                UpdateCopyEnabled();
+            }
+
+            if (e.PropertyName == nameof(ObjectPropertyViewModel.IsEditorExpanded)
+                || e.PropertyName == nameof(ObjectPropertyViewModel.HasSubObject)
+                || e.PropertyName == nameof(ObjectPropertyViewModel.SubObject))
+            {
+                SyncEditPanel(vm);
+            }
+        }
+
+        private void SyncEditPanel(ObjectPropertyViewModel vm)
+        {
+            if (vm.IsEditorExpanded && vm.HasSubObject && vm.SubObject != null)
+            {
+                if (vm.SubObject.Target is ScriptAsset)
+                {
+                    // Scripts have no property panel - open the file instead and untoggle.
+                    vm.IsEditorExpanded = false;
+                    OpenScriptFile(vm.SubObject.Target);
+                    return;
+                }
+
+                if (_editPanel != null)
+                {
+                    return;
+                }
+
+                var panel = new AssetObjectEditPanelViewModel(vm, onClosed: () =>
+                {
+                    _editPanel = null;
+                    vm.IsEditorExpanded = false;
+                });
+                _editPanel = panel;
+                PanelService.Instance.OpenPanel(panel);
+            }
+            else if (!vm.IsEditorExpanded)
+            {
+                CloseEditPanel();
+            }
+        }
+
+        private void CloseEditPanel()
+        {
+            if (_editPanel == null)
+            {
+                return;
+            }
+
+            AssetObjectEditPanelViewModel panel = _editPanel;
+            _editPanel = null;
+            PanelService.Instance.RemovePanel(panel);
+        }
+
+        private static void OpenScriptFile(ObjectBase target)
+        {
+            ObjectBase capturedTarget = target;
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                if (capturedTarget is not ScriptAsset scriptAsset || !scriptAsset.IsValid)
+                {
+                    return;
+                }
+
+                ScriptDesc scriptDesc = scriptAsset.ScriptDesc;
+                string scriptPath = Path.Combine(AssetManager.Instance.AssetRegistry.GetRootPath(), scriptDesc.Path);
+
+                Dispatcher.UIThread.Post(() => CodeEditorService.OpenFile(scriptPath));
+            });
+        }
+
+        private void UpdateCopyEnabled()
+        {
+            PART_CopyButton.IsEnabled = (DataContext as ObjectPropertyViewModel)?.GetCopyText() != null;
+        }
+
+        private async void OnCopyClicked(object? sender, RoutedEventArgs e)
+        {
+            if (DataContext is not ObjectPropertyViewModel vm || vm.GetCopyText() is not string text)
+            {
+                return;
+            }
+
+            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+
+            if (clipboard != null)
+            {
+                await clipboard.SetTextAsync(text);
+            }
+        }
+
+        private async void OnPasteClicked(object? sender, RoutedEventArgs e)
+        {
+            if (DataContext is not ObjectPropertyViewModel vm)
+            {
+                return;
+            }
+
+            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+
+            if (clipboard == null)
+            {
+                return;
+            }
+
+            string? text = await clipboard.TryGetTextAsync();
+            vm.PasteFromText(text);
         }
 
         private void OnPickerToggleClicked(object? sender, RoutedEventArgs e)
@@ -72,42 +232,6 @@ namespace Hyperion.Editor.Views.Inspector
             {
                 vm.CommitPickerItem(item);
             }
-        }
-
-        private void OnEditClicked(object? sender, RoutedEventArgs e)
-        {
-            if (DataContext is not ObjectPropertyViewModel vm || !vm.HasSubObject || vm.SubObject == null)
-            {
-                return;
-            }
-
-            if (vm.SubObject.Target is ScriptAsset)
-            {
-                ObjectBase capturedTarget = vm.SubObject.Target;
-
-                _ = EngineManager.PostToSimThread(() =>
-                {
-                    if (capturedTarget is not ScriptAsset scriptAsset || !scriptAsset.IsValid)
-                    {
-                        return;
-                    }
-
-                    // @FIXME same as in ContentBrowserViewModel.cs
-                    string extension = "strata";
-
-                    string scriptPath = Path.Combine(
-                        AssetManager.Instance.AssetRegistry.GetRootPath(),
-                        "Scripts",
-                        scriptAsset.Name.ToString() + "." + extension);
-
-                    Dispatcher.UIThread.Post(() => CodeEditorService.OpenFile(scriptPath));
-                });
-
-                return;
-            }
-
-            var panel = new AssetObjectEditPanelViewModel(vm);
-            PanelService.Instance.OpenPanel(panel);
         }
     }
 }

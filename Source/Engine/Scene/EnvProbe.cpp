@@ -65,6 +65,7 @@ static constexpr EnvProbeDimensions DefaultDimensionsByType[EPT_MAX] = {
 };
 
 static constexpr float EnvProbeCameraNearClip = 0.025f;
+static constexpr float SkyProbeCameraFarClip = 1000.0f;
 
 namespace {
 
@@ -387,6 +388,10 @@ void EnvProbe::CreateCamera()
 
     const BoundingBox worldBounds = GetWorldBounds();
 
+    // Sky probes don't have typical world-space bounds like other probes do
+    const Vec3f cameraOrigin = IsSkyProbe() ? GetWorldTranslation() : worldBounds.GetCenter();
+    const float cameraFarClip = IsSkyProbe() ? SkyProbeCameraFarClip : worldBounds.GetRadius();
+
     // Try to find existing child of type Camera, if we are loading this EnvProbe
     auto cameraIt = GetChildren().FindIf(&ObjectBase::IsA<Camera>);
     if (cameraIt != GetChildren().End())
@@ -395,7 +400,7 @@ void EnvProbe::CreateCamera()
 
         InitObject(m_camera);
 
-        m_camera->SetToPerspectiveProjection(90.0f, EnvProbeCameraNearClip, worldBounds.GetRadius());
+        m_camera->SetToPerspectiveProjection(90.0f, EnvProbeCameraNearClip, cameraFarClip);
     }
     
     if (!m_camera)
@@ -403,7 +408,7 @@ void EnvProbe::CreateCamera()
         Handle<Camera> camera = MakeHandle<Camera>(
             90.0f,
             uint32(m_dimensions), uint32(m_dimensions),
-            EnvProbeCameraNearClip, worldBounds.GetRadius());
+            EnvProbeCameraNearClip, cameraFarClip);
 
         camera->SetName(NAME_FMT("{}_Capture", GetName()));
         AddChild(camera);
@@ -412,7 +417,7 @@ void EnvProbe::CreateCamera()
     }
 
     m_camera->SetReceivesUpdate(false); // Don't automatically update
-    m_camera->SetViewMatrix(Mat4f::LookAt(worldBounds.GetCenter(), worldBounds.GetCenter() + Vec3f::UnitZ(), Vec3f::UnitY()));
+    m_camera->SetViewMatrix(Mat4f::LookAt(cameraOrigin, cameraOrigin + Vec3f::UnitZ(), Vec3f::UnitY()));
 
     InitObject(m_camera);
 }
