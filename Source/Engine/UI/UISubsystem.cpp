@@ -61,10 +61,11 @@ ENGINE_API HYP_DECLARE_LOG_CHANNEL(UI);
 
 HYP_REGISTER_DRAW_BATCH_TYPE(UIEntityInstanceBatch);
 
-//-- Text allocator
+// Global arena allocator for character data.
+// we allocate a lot throughout the frame when changing text (e.g stats).
+// don't want to make heap allocations if we can avoid it - simple bump allocator does the trick.
 static Arena s_uiTextAllocator { 1 * 1024 * 1024 };
 Arena* g_uiTextAllocator = &s_uiTextAllocator;
-//--
 
 #if HYP_DEBUG_MODE || HYP_EDITOR
 CVar<bool> g_cvShowDebugUI("Debug.ShowDebugUI", true);

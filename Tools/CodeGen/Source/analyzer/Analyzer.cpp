@@ -425,175 +425,228 @@ static TResult<Pair<E, Array<Pair<String, ClassAttributeValue>>>> ParseHypMacro(
     outStartIndex = String::NotFound;
     outEndIndex = String::NotFound;
 
-    for (const Pair<String, E>& it : usableMacros)
+    // find the next occurrence of \p name at or after \p offset
+    auto findNextOccurrence = [&source](const String& name, size_t offset) -> size_t
     {
-        size_t macroStartIndex = source.FindFirstIndex(it.first);
-
-        if (macroStartIndex != String::NotFound)
+        if (offset >= source.Length())
         {
-            Array<Pair<String, ClassAttributeValue>> attributes;
+            return String::NotFound;
+        }
 
-            outStartIndex = macroStartIndex;
-            outEndIndex = outStartIndex + it.first.Length();
+        const size_t relativeIndex = source.Substr(offset).FindFirstIndex(name);
 
-            int parenIndex = -1;
+        return relativeIndex != String::NotFound
+            ? offset + relativeIndex
+            : String::NotFound;
+    };
 
-            // skip whitespace after macro name; newlines included so the opening
-            // parenthesis may be on a following line
-            for (size_t i = outEndIndex; i < source.Length(); i++)
+    // ensure the match is not part of a longer ident
+    auto isValidOccurrence = [&source](size_t index, size_t nameLength) -> bool
+    {
+        auto isIdentifierChar = [&source](size_t charIndex) -> bool
+        {
+            if (charIndex >= source.Length())
             {
-                const utf::Char32 ch = source.GetChar(i);
-                if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n')
-                {
-                    outEndIndex++;
-                }
-                else if (ch == '(')
-                {
-                    parenIndex = int(i - outEndIndex);
-                    break;
-                }
-                else
-                {
-                    break;
-                }
+                return false;
             }
 
-            if (parenIndex == -1)
-            {
-                if (requireParens)
-                {
-                    // Must have parenthesis to be considered an invocation
-                    break;
-                }
+            const utf::Char32 ch = source.GetChar(charIndex);
 
-                // Otherwise, empty attributes are used
+            return utf::IsAlphabetical(ch) || utf::IsDecimal(ch) || ch == '_';
+        };
+
+        return !isIdentifierChar(index - 1) && !isIdentifierChar(index + nameLength);
+    };
+
+    size_t searchOffset = 0;
+
+    while (true)
+    {
+        const Pair<String, E>* bestMatch = nullptr;
+        size_t bestIndex = String::NotFound;
+
+        for (const Pair<String, E>& it : usableMacros)
+        {
+            size_t occurrenceIndex = findNextOccurrence(it.first, searchOffset);
+
+            while (occurrenceIndex != String::NotFound && !isValidOccurrence(occurrenceIndex, it.first.Size()))
+            {
+                occurrenceIndex = findNextOccurrence(it.first, occurrenceIndex + it.first.Size());
+            }
+
+            if (occurrenceIndex != String::NotFound && (bestMatch == nullptr || occurrenceIndex < bestIndex))
+            {
+                bestMatch = &it;
+                bestIndex = occurrenceIndex;
+            }
+        }
+
+        if (bestMatch == nullptr)
+        {
+            break;
+        }
+
+        const String& macroName = bestMatch->first;
+
+        Array<Pair<String, ClassAttributeValue>> attributes;
+
+        outStartIndex = bestIndex;
+        outEndIndex = bestIndex + macroName.Size();
+
+        int parenIndex = -1;
+
+        for (size_t i = outEndIndex; i < source.Length(); i++)
+        {
+            const utf::Char32 ch = source.GetChar(i);
+            if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n')
+            {
+                outEndIndex++;
+            }
+            else if (ch == '(')
+            {
+                parenIndex = int(i - outEndIndex);
+                break;
             }
             else
             {
-                outEndIndex = outEndIndex + parenIndex + 1;
+                break;
+            }
+        }
 
-                int parenDepth = 1;
-                String attributesString;
+        if (parenIndex == -1)
+        {
+            if (requireParens)
+            {
+                searchOffset = bestIndex + macroName.Size();
 
-                bool isClosed = false;
-                bool isInString = false;
-                bool isEscaped = false;
-
-                for (; outEndIndex < source.Length(); outEndIndex++)
-                {
-                    const utf::Char32 ch = source.GetChar(outEndIndex);
-
-                    if (isInString)
-                    {
-                        attributesString.Append(ch);
-
-                        if (isEscaped)
-                        {
-                            isEscaped = false;
-                        }
-                        else if (ch == '\\')
-                        {
-                            isEscaped = true;
-                        }
-                        else if (ch == '"')
-                        {
-                            isInString = false;
-                        }
-
-                        continue;
-                    }
-
-                    if (ch == '"')
-                    {
-                        isInString = true;
-                        attributesString.Append(ch);
-
-                        continue;
-                    }
-
-                    if (ch == '/' && outEndIndex + 1 < source.Length() && source.GetChar(outEndIndex + 1) == '/')
-                    {
-                        // line comment; skip to end of line
-                        while (outEndIndex < source.Length() && source.GetChar(outEndIndex) != '\n')
-                        {
-                            outEndIndex++;
-                        }
-
-                        attributesString.Append(' ');
-
-                        continue;
-                    }
-
-                    if (ch == '/' && outEndIndex + 1 < source.Length() && source.GetChar(outEndIndex + 1) == '*')
-                    {
-                        // block comment; skip to closing */
-                        outEndIndex += 2;
-
-                        while (outEndIndex + 1 < source.Length()
-                            && !(source.GetChar(outEndIndex) == '*' && source.GetChar(outEndIndex + 1) == '/'))
-                        {
-                            outEndIndex++;
-                        }
-
-                        if (outEndIndex < source.Length())
-                        {
-                            outEndIndex++;
-                        }
-
-                        attributesString.Append(' ');
-
-                        continue;
-                    }
-
-                    if (ch == '\r')
-                    {
-                        continue;
-                    }
-
-                    if (ch == '\n')
-                    {
-                        // collapse newlines to spaces so attribute lists may span multiple lines
-                        attributesString.Append(' ');
-
-                        continue;
-                    }
-
-                    if (ch == '(')
-                    {
-                        parenDepth++;
-                    }
-                    else if (ch == ')')
-                    {
-                        parenDepth--;
-
-                        if (parenDepth <= 0)
-                        {
-                            outEndIndex++; // Include the closing parenthesis
-                            isClosed = true;
-                            break;
-                        }
-                    }
-
-                    attributesString.Append(ch);
-                }
-
-                if (!isClosed)
-                {
-                    return HYP_MAKE_ERROR(Error, "Unclosed parenthesis in {}() macro invocation", it.first);
-                }
-
-                auto buildAttributesResult = BuildClassAttributes(attributesString);
-
-                if (buildAttributesResult.HasError())
-                {
-                    return buildAttributesResult.GetError();
-                }
-
-                attributes = buildAttributesResult.GetValue();
+                continue;
             }
 
-            return Pair<E, Array<Pair<String, ClassAttributeValue>>> { it.second, attributes };
+            return Pair<E, Array<Pair<String, ClassAttributeValue>>> { bestMatch->second, {} };
         }
+
+        outEndIndex = outEndIndex + parenIndex + 1;
+
+        int parenDepth = 1;
+        String attributesString;
+
+        bool isClosed = false;
+        bool isInString = false;
+        bool isEscaped = false;
+
+        for (; outEndIndex < source.Length(); outEndIndex++)
+        {
+            const utf::Char32 ch = source.GetChar(outEndIndex);
+
+            if (isInString)
+            {
+                attributesString.Append(ch);
+
+                if (isEscaped)
+                {
+                    isEscaped = false;
+                }
+                else if (ch == '\\')
+                {
+                    isEscaped = true;
+                }
+                else if (ch == '"')
+                {
+                    isInString = false;
+                }
+
+                continue;
+            }
+
+            if (ch == '"')
+            {
+                isInString = true;
+                attributesString.Append(ch);
+
+                continue;
+            }
+
+            if (ch == '/' && outEndIndex + 1 < source.Length() && source.GetChar(outEndIndex + 1) == '/')
+            {
+                // line comment; skip to end of line
+                while (outEndIndex < source.Length() && source.GetChar(outEndIndex) != '\n')
+                {
+                    outEndIndex++;
+                }
+
+                attributesString.Append(' ');
+
+                continue;
+            }
+
+            if (ch == '/' && outEndIndex + 1 < source.Length() && source.GetChar(outEndIndex + 1) == '*')
+            {
+                // block comment; skip to closing */
+                outEndIndex += 2;
+
+                while (outEndIndex + 1 < source.Length()
+                    && !(source.GetChar(outEndIndex) == '*' && source.GetChar(outEndIndex + 1) == '/'))
+                {
+                    outEndIndex++;
+                }
+
+                if (outEndIndex < source.Length())
+                {
+                    outEndIndex++;
+                }
+
+                attributesString.Append(' ');
+
+                continue;
+            }
+
+            if (ch == '\r')
+            {
+                continue;
+            }
+
+            if (ch == '\n')
+            {
+                // collapse newlines to spaces so attribute lists may span multiple lines
+                attributesString.Append(' ');
+
+                continue;
+            }
+
+            if (ch == '(')
+            {
+                parenDepth++;
+            }
+            else if (ch == ')')
+            {
+                parenDepth--;
+
+                if (parenDepth <= 0)
+                {
+                    outEndIndex++; // Include the closing parenthesis
+                    isClosed = true;
+                    break;
+                }
+            }
+
+            attributesString.Append(ch);
+        }
+
+        if (!isClosed)
+        {
+            return HYP_MAKE_ERROR(Error, "Unclosed parenthesis in {}() macro invocation", macroName);
+        }
+
+        auto buildAttributesResult = BuildClassAttributes(attributesString);
+
+        if (buildAttributesResult.HasError())
+        {
+            return buildAttributesResult.GetError();
+        }
+
+        attributes = buildAttributesResult.GetValue();
+
+        return Pair<E, Array<Pair<String, ClassAttributeValue>>> { bestMatch->second, attributes };
     }
 
     return Pair<E, Array<Pair<String, ClassAttributeValue>>> { E::None, {} };
