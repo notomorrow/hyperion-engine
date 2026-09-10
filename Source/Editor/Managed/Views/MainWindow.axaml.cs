@@ -369,7 +369,7 @@ namespace Hyperion.Editor
                 {
                     // Tool.Content must be a control (it is [TemplateContent]); the wrapper
                     // resolves the panel's view via the app data templates.
-                    _panelTool.Content = new ContentControl { Content = panel };
+                    _panelTool.Content = CreatePanelContent(panel);
                     _panelTool.Title = panel.Title;
                     existing.SetActive();
                     existing.Present(false);
@@ -387,7 +387,7 @@ namespace Hyperion.Editor
                 {
                     Id = "EditorPanel",
                     Title = panel.Title,
-                    Content = new ContentControl { Content = panel },
+                    Content = CreatePanelContent(panel),
                     CanFloat = true
                 };
 
@@ -617,9 +617,7 @@ namespace Hyperion.Editor
             return _sceneDropDown != null;
         }
 
-        // While a property's text box has focus its view model must not overwrite the text from an
-        // async read, or a refresh triggered by an edit elsewhere wipes out what is being typed.
-        private void OnInspectorTextBoxGotFocus(object? sender, FocusChangedEventArgs e)
+        private static void OnInspectorTextBoxGotFocus(object? sender, FocusChangedEventArgs e)
         {
             if (e.Source is TextBox { DataContext: InspectorPropertyViewModelBase vm })
             {
@@ -627,7 +625,7 @@ namespace Hyperion.Editor
             }
         }
 
-        private void OnInspectorTextBoxLostFocus(object? sender, FocusChangedEventArgs e)
+        private static void OnInspectorTextBoxLostFocus(object? sender, FocusChangedEventArgs e)
         {
             if (e.Source is TextBox { DataContext: InspectorPropertyViewModelBase vm })
             {
@@ -636,13 +634,66 @@ namespace Hyperion.Editor
             }
         }
 
-        private void OnInspectorTextBoxKeyDown(object? sender, KeyEventArgs e)
+        private static void OnInspectorTextBoxKeyDown(object? sender, KeyEventArgs e)
         {
             if (e.Key == Key.Return && e.Source is TextBox { DataContext: InspectorPropertyViewModelBase vm })
             {
                 vm.CommitValue();
                 e.Handled = true;
             }
+        }
+
+        private static void AttachInspectorFocusHandlers(TopLevel topLevel)
+        {
+            topLevel.AddHandler(InputElement.GotFocusEvent, OnInspectorTextBoxGotFocus, RoutingStrategies.Bubble);
+            topLevel.AddHandler(InputElement.LostFocusEvent, OnInspectorTextBoxLostFocus, RoutingStrategies.Bubble);
+            topLevel.AddHandler(InputElement.KeyDownEvent, OnInspectorTextBoxKeyDown, RoutingStrategies.Bubble);
+        }
+
+        private static void DetachInspectorFocusHandlers(TopLevel topLevel)
+        {
+            topLevel.RemoveHandler(InputElement.GotFocusEvent, OnInspectorTextBoxGotFocus);
+            topLevel.RemoveHandler(InputElement.LostFocusEvent, OnInspectorTextBoxLostFocus);
+            topLevel.RemoveHandler(InputElement.KeyDownEvent, OnInspectorTextBoxKeyDown);
+        }
+
+        private ContentControl CreatePanelContent(EditorPanelViewModel panel)
+        {
+            var content = new ContentControl { Content = panel };
+            TopLevel? attachedFloatingTopLevel = null;
+
+            content.AttachedToVisualTree += (_, _) =>
+            {
+                TopLevel? topLevel = TopLevel.GetTopLevel(content);
+
+                if (topLevel == null || ReferenceEquals(topLevel, attachedFloatingTopLevel))
+                {
+                    return;
+                }
+
+                if (attachedFloatingTopLevel != null)
+                {
+                    DetachInspectorFocusHandlers(attachedFloatingTopLevel);
+                    attachedFloatingTopLevel = null;
+                }
+
+                if (!ReferenceEquals(topLevel, this))
+                {
+                    AttachInspectorFocusHandlers(topLevel);
+                    attachedFloatingTopLevel = topLevel;
+                }
+            };
+
+            content.DetachedFromVisualTree += (_, _) =>
+            {
+                if (attachedFloatingTopLevel != null)
+                {
+                    DetachInspectorFocusHandlers(attachedFloatingTopLevel);
+                    attachedFloatingTopLevel = null;
+                }
+            };
+
+            return content;
         }
 
         private void OnNodeContextMenuOpened(object? sender, RoutedEventArgs e)

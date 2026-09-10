@@ -26,7 +26,6 @@
 #include <Scene/EntityManager.hpp>
 #include <Scene/Components/MeshComponent.hpp>
 #include <Scene/Components/AnimationComponent.hpp>
-#include <Scene/Components/TransformComponent.hpp>
 #include <Scene/Components/BoundingBoxComponent.hpp>
 #include <Scene/Components/VisibilityStateComponent.hpp>
 
@@ -109,7 +108,7 @@ static Pair<Array<FatVertex>, Array<uint32>> CalculateIndices(const Array<FatVer
 class FBXAllocator : public TArena<DynamicAllocator>
 {
 public:
-    static constexpr size_t BlockSize = 4 * 1024 * 1024; // 4 MB
+    static constexpr size_t BlockSize = 64 * 1024 * 1024; // 64 MiB
 
     FBXAllocator()
         : TArena(BlockSize)
@@ -383,6 +382,10 @@ struct FBXMesh
     Map<int32, Array<uint32, FBXAllocator>, FBXAllocator> controlPointToVertices;
 
     BoundingBox bounds;
+
+    // center of the original vertex bounds -- applied to the node transform
+    // so meshes pivot around their content instead of their raw origin
+    Vec3f pivotOffset;
 
     Optional<Handle<Mesh>> result;
 
@@ -1198,6 +1201,35 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
     Set<FBXObjectID, FBXAllocator> bindPoseIds;
     Array<FBXConnection, FBXAllocator> connections;
 
+    // 0 = X, 1 = Y, 2 = Z
+    int32 upAxis = 1;
+
+    if (const FBXObject& globalSettingsNode = root["GlobalSettings"])
+    {
+        for (FBXObject* settingsChild : globalSettingsNode.children)
+        {
+            if (!settingsChild->name.StartsWith("Properties"))
+            {
+                continue;
+            }
+
+            for (FBXObject* propertiesChild : settingsChild->children)
+            {
+                String propertiesChildName;
+
+                if (!propertiesChild->GetFBXPropertyValue<String>(0, propertiesChildName))
+                {
+                    continue;
+                }
+
+                if (propertiesChildName == "UpAxis")
+                {
+                    propertiesChild->GetFBXPropertyValue<int32>(4, upAxis);
+                }
+            }
+        }
+    }
+
     const auto getFbxObject = [&objectMapping](FBXObjectID id, auto*& out)
     {
         return GetFBXObjectInMapping(objectMapping, id, out);
@@ -1732,11 +1764,31 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
                     }
                 }
 
+                BoundingBox meshBounds;
+
+                for (const FatVertex& vertex : verticesUnpacked)
+                {
+                    const Vec3f position = vertex.GetPosition();
+
+                    meshBounds.SetMin(Vec3f::Min(meshBounds.GetMin(), position));
+                    meshBounds.SetMax(Vec3f::Max(meshBounds.GetMax(), position));
+                }
+
+                const Vec3f meshBoundsCenter = meshBounds.GetCenter();
+
+                // offset all vertices by the AABB's center,
+                // we will apply the transformation to the entity's transform
+                for (FatVertex& vertex : verticesUnpacked)
+                {
+                    vertex.SetPosition(vertex.GetPosition() - meshBoundsCenter);
+                }
+
                 auto newVertsAndIndices = CalculateIndices(verticesUnpacked);
 
                 FBXMesh fbxMesh;
                 fbxMesh.srcObject = childObject;
                 fbxMesh.name = getUniqueMeshName(nodeName);
+                fbxMesh.pivotOffset = meshBoundsCenter;
                 fbxMesh.vertexData = Array<float>(reinterpret_cast<const float*>(newVertsAndIndices.first.Data()), newVertsAndIndices.first.ByteSize() / sizeof(float));
 
                 for (size_t index = 0; index < triangulatedControlPoints.Size(); ++index)
@@ -2357,8 +2409,8 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
                     entity->AddComponent<AnimationComponent>(animationComponent);
                 }
 
-                //// offset node to center of bounds
-                // node->SetWorldTranslation(node->GetWorldTranslation() + fbxMesh->bounds.GetCenter());
+                const Vec3f pivotTranslation = fbxNode.localTransform.GetRotation().RotateVector(fbxNode.localTransform.GetScale() * fbxMesh->pivotOffset);
+                node->SetLocalTranslation(node->GetLocalTranslation() + pivotTranslation);
 
                 node->AddChild(entity);
             }
@@ -2729,8 +2781,12 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
         }
     }
 
-    // align it to the engine's expectations.
-    top->SetLocalRotation(Quat4f::AxisAngles(Vec3f(1.0f, 0.0f, 0.0f), MathUtil::DegToRad(90.0f)));
+    // align it to the engine's expectations (Y-up) -- only needed if the file is not already Y-up
+    if (upAxis != 1)
+    {
+        top->SetLocalRotation(Quat4f::AxisAngles(Vec3f(1.0f, 0.0f, 0.0f), MathUtil::DegToRad(90.0f)));
+    }
+
     top->Scale(0.01f);
 
     return LoadedAsset { MakeHandle<Prefab>(top->GetName(), top) };
