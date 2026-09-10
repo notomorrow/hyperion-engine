@@ -63,7 +63,7 @@ void TonemapPass::Render(Frame* frame, const RenderSetup& rs)
 
     // Filter out Debug draws! We don't want them tonemapped or with bloom applied.
     cr << SetStencilTest(true);
-    cr << SetStencilFunction(StencilFunction { SO_KEEP, SO_KEEP, SO_KEEP, SCO_EQUAL });
+    cr << SetStencilFunction(StencilFunction { StencilOp::Keep, StencilOp::Keep, StencilOp::Keep, StencilCompareOp::Equal });
     cr << SetStencilState(0, DebugStencilMask, 0x0);
 
     DeferredPassData* dpd = DynamicCast<DeferredPassData>(rs.passData);

@@ -101,9 +101,9 @@ AssetLoadResult TextureLoader::LoadAsset(LoaderState& state) const
         TextureType::Texture2D,
         data.format,
         Vec3u { uint32(data.width), uint32(data.height), 1 },
-        TFM_LINEAR_MIPMAP,
-        TFM_LINEAR,
-        TWM_REPEAT
+        TextureFilterMode::LinearMipmap,
+        TextureFilterMode::Linear,
+        TextureWrapMode::Repeat
     };
 
     AssertDebug(TextureUtils::NumComponents(data.format) == data.numComponents);

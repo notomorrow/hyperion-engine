@@ -77,7 +77,7 @@ CVar<float> cvBloomSoftKnee { "Rendering.BloomSoftKnee", 0.5f, "Rendering.Bloom.
 
 BloomPass::BloomPass(Vec2u extent, GBuffer* gbuffer)
     : FullScreenPass(TextureFormat::RGBA16F, extent, gbuffer),
-      m_samplerClampToEdge(RI.samplerCache->GetOrCreate(SamplerDesc { TFM_LINEAR, TFM_LINEAR, TWM_CLAMP_TO_EDGE }))
+      m_samplerClampToEdge(RI.samplerCache->GetOrCreate(SamplerDesc { TextureFilterMode::Linear, TextureFilterMode::Linear, TextureWrapMode::ClampToEdge }))
 {
     SetPassName(NAME("Bloom"));
 }
@@ -100,11 +100,11 @@ void BloomPass::Resize_Internal(Vec2u newSize)
         TextureType::Texture2D,
         TextureFormat::RGBA16F,
         Vec3u(extent, 1),
-        TFM_LINEAR,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Linear,
+        TextureFilterMode::Linear,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_STORAGE | IU_SAMPLED
+        ImageUsage::Storage | ImageUsage::Sampled
     });
 
     m_brightExtractTexture->SetIsTransient(true);
@@ -140,11 +140,11 @@ void BloomPass::Create()
         TextureType::Texture2D,
         TextureFormat::RGBA16F,
         Vec3u(extent, 1),
-        TFM_LINEAR,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Linear,
+        TextureFilterMode::Linear,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_STORAGE | IU_SAMPLED
+        ImageUsage::Storage | ImageUsage::Sampled
     });
 
     m_brightExtractTexture->SetIsTransient(true);
@@ -232,7 +232,7 @@ void BloomPass::ExtractBrightAreas(Frame* frame, const RenderSetup& renderSetup,
     RI.cbufferAllocator->Write(&bloomConstants);
     RI.cbufferAllocator->Commit(cbuffer, cbufferOffset, cbufferSize);
 
-    cr << InsertBarrier(m_brightExtractTexture->GetGpuImage(), RS_UNORDERED_ACCESS);
+    cr << InsertBarrier(m_brightExtractTexture->GetGpuImage(), ResourceState::UnorderedAccess);
 
     cr << SetCurrentShader(ShaderDesc(NAME("BloomExtract"), GetShaderProperties()));
 
@@ -248,7 +248,7 @@ void BloomPass::ExtractBrightAreas(Frame* frame, const RenderSetup& renderSetup,
 
     cr << DispatchCompute(Vec3u { numGroups.x, numGroups.y, 1 });
 
-    cr << InsertBarrier(m_brightExtractTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    cr << InsertBarrier(m_brightExtractTexture->GetGpuImage(), ResourceState::ShaderResource);
 }
 
 void BloomPass::Downsample(Frame* frame, const RenderSetup& renderSetup)
@@ -289,7 +289,7 @@ void BloomPass::Downsample(Frame* frame, const RenderSetup& renderSetup)
 
         pass->End(frame, renderSetup);
 
-        cr << InsertBarrier(pass->GetAttachment(0)->GetGpuImage(), RS_SHADER_RESOURCE);
+        cr << InsertBarrier(pass->GetAttachment(0)->GetGpuImage(), ResourceState::ShaderResource);
     }
 }
 
@@ -343,7 +343,7 @@ void BloomPass::Upsample(Frame* frame, const RenderSetup& renderSetup)
 
         pass->End(frame, renderSetup);
 
-        cr << InsertBarrier(pass->GetAttachment(0)->GetGpuImage(), RS_SHADER_RESOURCE);
+        cr << InsertBarrier(pass->GetAttachment(0)->GetGpuImage(), ResourceState::ShaderResource);
     }
 
     m_bloomResult = MakeStrongRef(m_upsamplePasses[NumMipLevels - 2]->GetAttachment(0));

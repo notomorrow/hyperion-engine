@@ -114,7 +114,7 @@ public:
     Mesh();
 
     Mesh(const MeshDataView& meshData, Topology topology, const VertexInputLayoutDesc& inputLayout);
-    explicit Mesh(const MeshDataView& meshData, Topology topology = TOP_TRIANGLES);
+    explicit Mesh(const MeshDataView& meshData, Topology topology = Topology::Triangles);
 
     ~Mesh() override;
 

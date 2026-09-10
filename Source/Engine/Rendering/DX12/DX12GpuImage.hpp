@@ -62,8 +62,8 @@ public:
     void ResetToAttachmentState()
     {
         const ResourceState attachmentState = m_textureDesc.IsDepthStencil()
-            ? RS_DEPTH_STENCIL
-            : RS_RENDER_TARGET;
+            ? ResourceState::DepthStencil
+            : ResourceState::RenderTarget;
         m_resourceState = attachmentState;
         m_stencilState = attachmentState;
         m_subResourceStates.Clear();

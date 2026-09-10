@@ -74,9 +74,9 @@ protected:
     {
     }
 
-    TextureFilterMode m_minFilterMode = TFM_NEAREST;
-    TextureFilterMode m_magFilterMode = TFM_NEAREST;
-    TextureWrapMode m_wrapMode = TWM_CLAMP_TO_EDGE;
+    TextureFilterMode m_minFilterMode = TextureFilterMode::Nearest;
+    TextureFilterMode m_magFilterMode = TextureFilterMode::Nearest;
+    TextureWrapMode m_wrapMode = TextureWrapMode::ClampToEdge;
     SamplerCompareOp m_compareOp = SamplerCompareOp::None;
 
 #ifdef HYP_RHI_DEBUG_NAMES

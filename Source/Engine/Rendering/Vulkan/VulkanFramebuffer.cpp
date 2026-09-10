@@ -41,10 +41,10 @@ static void TransitionFramebufferAttachments(CommandRecorder& cr, VulkanFramebuf
         switch (framebuffer->GetFramebufferDesc().renderPassMode)
         {
         case RenderPassMode::Present:
-            // cr << InsertBarrier(image, RS_PRESENT);
+            // cr << InsertBarrier(image, ResourceState::Present);
             break;
         case RenderPassMode::RenderTarget:
-            cr << InsertBarrier(image, RS_SHADER_RESOURCE);
+            cr << InsertBarrier(image, ResourceState::ShaderResource);
             break;
         default:
             HYP_NOT_IMPLEMENTED();
@@ -191,7 +191,7 @@ RendererResult VulkanFramebuffer::Create()
         VulkanAttachment* attachment = it.second;
         Assert(attachment != nullptr);
 
-        if (attachment->GetLoadOperation() == LoadOperation::LOAD)
+        if (attachment->GetLoadOperation() == LoadOperation::Load)
         {
             shouldClearFramebuffer = false;
         }

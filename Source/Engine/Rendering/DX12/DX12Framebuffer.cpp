@@ -259,7 +259,7 @@ DX12Attachment* DX12Framebuffer::AddAttachment(
     textureDesc.type = desc.imageType;
     textureDesc.format = desc.format;
     textureDesc.extent = Vec3u { m_framebufferDesc.extent.x, m_framebufferDesc.extent.y, 1 };
-    textureDesc.imageUsage = IU_SAMPLED | IU_ATTACHMENT;
+    textureDesc.imageUsage = ImageUsage::Sampled | ImageUsage::Attachment;
 
     DX12Attachment* attachment = new DX12Attachment(
         textureDesc,
@@ -304,7 +304,7 @@ void DX12Framebuffer::BeginCapture(DX12CommandBuffer* commandBuffer)
     Array<D3D12_CPU_DESCRIPTOR_HANDLE> rtvHandles;
     D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = {};
     bool hasDSV = false;
-    LoadOperation depthLoadOp = LoadOperation::UNDEFINED;
+    LoadOperation depthLoadOp = LoadOperation::Undefined;
 
     uint32 colorAttachmentIndex = 0;
     for (auto& it : m_attachmentMap)
@@ -328,7 +328,7 @@ void DX12Framebuffer::BeginCapture(DX12CommandBuffer* commandBuffer)
         }
 
         // Transition to render target state - matching VulkanRenderPass::Begin() logic.
-        // Uses RS_RENDER_TARGET for all attachments; InsertBarrier internally remaps
+        // Uses ResourceState::RenderTarget for all attachments; InsertBarrier internally remaps
         // depth attachments to DEPTH_WRITE.
         const GpuImageViewRef& imageView = attachment->GetImageView();
         const ImageSubResource& subResource = imageView->GetImageSubResource();
@@ -339,28 +339,28 @@ void DX12Framebuffer::BeginCapture(DX12CommandBuffer* commandBuffer)
 
         if (hasStencil && fullSubResource)
         {
-            const bool transitionDepth = !attachmentDesc.onlyStencil && image->GetResourceState() != RS_RENDER_TARGET;
-            const bool transitionStencil = !attachmentDesc.onlyDepth && image->GetStencilState() != RS_RENDER_TARGET;
+            const bool transitionDepth = !attachmentDesc.onlyStencil && image->GetResourceState() != ResourceState::RenderTarget;
+            const bool transitionStencil = !attachmentDesc.onlyDepth && image->GetStencilState() != ResourceState::RenderTarget;
 
             if (transitionDepth ^ transitionStencil)
             {
                 if (transitionDepth)
-                    image->InsertBarrier(commandBuffer, RS_RENDER_TARGET, ShaderModuleType::Pixel, /* onlyDepth */ true, /* onlyStencil */ false);
+                    image->InsertBarrier(commandBuffer, ResourceState::RenderTarget, ShaderModuleType::Pixel, /* onlyDepth */ true, /* onlyStencil */ false);
                 if (transitionStencil)
-                    image->InsertBarrier(commandBuffer, RS_RENDER_TARGET, ShaderModuleType::Pixel, /* onlyDepth */ false, /* onlyStencil */ true);
+                    image->InsertBarrier(commandBuffer, ResourceState::RenderTarget, ShaderModuleType::Pixel, /* onlyDepth */ false, /* onlyStencil */ true);
             }
             else if (transitionDepth && transitionStencil)
             {
-                image->InsertBarrier(commandBuffer, RS_RENDER_TARGET, ShaderModuleType::Pixel);
+                image->InsertBarrier(commandBuffer, ResourceState::RenderTarget, ShaderModuleType::Pixel);
             }
         }
         else if (fullSubResource)
         {
-            image->InsertBarrier(commandBuffer, RS_RENDER_TARGET, ShaderModuleType::Pixel);
+            image->InsertBarrier(commandBuffer, ResourceState::RenderTarget, ShaderModuleType::Pixel);
         }
-        else if (image->GetSubResourceState(subResource) != RS_RENDER_TARGET)
+        else if (image->GetSubResourceState(subResource) != ResourceState::RenderTarget)
         {
-            image->InsertBarrier(commandBuffer, subResource, RS_RENDER_TARGET, ShaderModuleType::Pixel);
+            image->InsertBarrier(commandBuffer, subResource, ResourceState::RenderTarget, ShaderModuleType::Pixel);
         }
     }
 
@@ -386,7 +386,7 @@ void DX12Framebuffer::BeginCapture(DX12CommandBuffer* commandBuffer)
             D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_rtvDescriptorHandle.cpuHandle;
             rtvHandle.ptr += colorAttachmentIndex * rtvIncrement;
 
-            if (attachment->GetLoadOperation() == LoadOperation::CLEAR)
+            if (attachment->GetLoadOperation() == LoadOperation::Clear)
             {
                 const Vec4f clearColor = attachment->GetClearColor();
                 commandList->ClearRenderTargetView(rtvHandle, clearColor.values, 0, nullptr);
@@ -395,7 +395,7 @@ void DX12Framebuffer::BeginCapture(DX12CommandBuffer* commandBuffer)
             colorAttachmentIndex++;
         }
 
-        if (hasDSV && depthLoadOp == LoadOperation::CLEAR)
+        if (hasDSV && depthLoadOp == LoadOperation::Clear)
         {
             commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
         }
@@ -405,7 +405,7 @@ void DX12Framebuffer::BeginCapture(DX12CommandBuffer* commandBuffer)
         // Depth only rendering
         commandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
 
-        if (depthLoadOp == LoadOperation::CLEAR)
+        if (depthLoadOp == LoadOperation::Clear)
         {
             commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
         }
@@ -449,7 +449,7 @@ void DX12Framebuffer::EndCapture(DX12CommandBuffer* commandBuffer)
 {
     Assert(m_isRecording);
 
-    // Attachments stay in RS_RENDER_TARGET state -- no barriers needed here.
+    // Attachments stay in ResourceState::RenderTarget state -- no barriers needed here.
     // SRV transitions are handled by DX12RenderInterface when the images
     // are bound as shader resources later in the frame.
 

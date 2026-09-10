@@ -116,8 +116,8 @@ static FramebufferDesc GetFramebufferDesc(Light* light, ShaderDesc& outShaderDes
         AttachmentDesc& depth = framebufferDesc.attachments[framebufferDesc.numAttachments++];
         depth.imageType = TextureType::Cubemap;
         depth.format = TextureFormat::D16;
-        depth.loadOp = LoadOperation::LOAD;
-        depth.storeOp = StoreOperation::STORE;
+        depth.loadOp = LoadOperation::Load;
+        depth.storeOp = StoreOperation::Store;
 
         outShaderDesc.name = NAME("DrawCubemap");
         outShaderDesc.properties = {};
@@ -132,8 +132,8 @@ static FramebufferDesc GetFramebufferDesc(Light* light, ShaderDesc& outShaderDes
         AttachmentDesc& depth = framebufferDesc.attachments[framebufferDesc.numAttachments++];
         depth.format = TextureFormat::D16;
         depth.imageType = TextureType::Texture2D;
-        depth.loadOp = LoadOperation::LOAD;
-        depth.storeOp = StoreOperation::STORE;
+        depth.loadOp = LoadOperation::Load;
+        depth.storeOp = StoreOperation::Store;
 
         break;
     }
@@ -222,7 +222,7 @@ static ViewDesc GetViewDesc(
     materialAttributes.flags = MAF_DEPTH_WRITE | MAF_DEPTH_TEST | MAF_DEPTH_BIAS | MAF_DEPTH_CLAMP;
     materialAttributes.depthBias = int32(MathUtil::Round(depthBiasScaled));
     materialAttributes.depthBiasSlope = 2.0f;
-    materialAttributes.cullFaces = FCM_BACK;
+    materialAttributes.cullFaces = FaceCullMode::Back;
 
     viewDesc.overrideAttributes = RenderableAttributeSet(MeshAttributes(), materialAttributes);
 

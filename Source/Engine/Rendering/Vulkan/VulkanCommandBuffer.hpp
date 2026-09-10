@@ -141,7 +141,7 @@ public:
         Span<VkPipelineStageFlags> waitStages = {});
 
     void BindVertexBuffer(const VulkanGpuBuffer* buffer) override;
-    void BindIndexBuffer(const VulkanGpuBuffer* buffer, GpuElemType elemType = GET_UNSIGNED_INT) override;
+    void BindIndexBuffer(const VulkanGpuBuffer* buffer, GpuElemType elemType = GpuElemType::UnsignedInt) override;
 
     void DrawIndexed(
         uint32 numIndices,

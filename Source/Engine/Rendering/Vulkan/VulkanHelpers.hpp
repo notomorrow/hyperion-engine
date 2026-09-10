@@ -24,13 +24,13 @@ enum class ShaderModuleType : uint8;
 
 constexpr ResourceState PreRenderResourceStates[2] = {
     // CLEAR=0, LOAD=1
-    RS_UNDEFINED,    // CLEAR
-    RS_RENDER_TARGET // LOAD
+    ResourceState::Undefined,    // CLEAR
+    ResourceState::RenderTarget // LOAD
 };
 
 constexpr ResourceState PostRenderResourceStates[uint8(RenderPassMode::Max)] = {
-    RS_RENDER_TARGET,   // RenderTarget
-    RS_PRESENT          // Presentation
+    ResourceState::RenderTarget,   // RenderTarget
+    ResourceState::Present          // Presentation
 };
 
 VkIndexType ToVkIndexType(GpuElemType);

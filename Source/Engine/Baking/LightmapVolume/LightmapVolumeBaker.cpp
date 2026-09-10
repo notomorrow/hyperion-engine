@@ -116,9 +116,9 @@ static void UpdateAtlasTextures(
                 TextureType::Texture2D,
                 irradiance->GetFormat(),
                 Vec3u { atlasDimensions, 1 },
-                TFM_LINEAR,
-                TFM_LINEAR,
-                TWM_CLAMP_TO_EDGE
+                TextureFilterMode::Linear,
+                TextureFilterMode::Linear,
+                TextureWrapMode::ClampToEdge
             },
             irradiance->ToByteView());
 
@@ -132,9 +132,9 @@ static void UpdateAtlasTextures(
                 TextureType::Texture2D,
                 bentNormal->GetFormat(),
                 Vec3u { atlasDimensions, 1 },
-                TFM_LINEAR,
-                TFM_LINEAR,
-                TWM_CLAMP_TO_EDGE
+                TextureFilterMode::Linear,
+                TextureFilterMode::Linear,
+                TextureWrapMode::ClampToEdge
             },
             bentNormal->ToByteView());
 

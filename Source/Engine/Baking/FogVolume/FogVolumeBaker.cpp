@@ -127,9 +127,9 @@ void Baker<FogVolume>::HandleCompletedJob_Internal(BakeJobBase* job)
         TextureType::Texture3D,
         volumeBitmap.GetFormat(),
         Vec3u { volumeBitmap.GetWidth(), volumeBitmap.GetHeight(), volumeBitmap.GetDepth() },
-        TFM_LINEAR,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE
+        TextureFilterMode::Linear,
+        TextureFilterMode::Linear,
+        TextureWrapMode::ClampToEdge
     };
 
     Handle<Texture> volumeTexture = MakeHandle<Texture>(volumeTextureDesc, volumeBitmap.ToByteView());
@@ -138,9 +138,9 @@ void Baker<FogVolume>::HandleCompletedJob_Internal(BakeJobBase* job)
         TextureType::Texture3D,
         noiseBitmap.GetFormat(),
         Vec3u { noiseBitmap.GetWidth(), noiseBitmap.GetHeight(), noiseBitmap.GetDepth() },
-        TFM_LINEAR,
-        TFM_LINEAR,
-        TWM_REPEAT
+        TextureFilterMode::Linear,
+        TextureFilterMode::Linear,
+        TextureWrapMode::Repeat
     };
 
     Handle<Texture> noiseTexture = MakeHandle<Texture>(noiseTextureDesc, noiseBitmap.ToByteView());

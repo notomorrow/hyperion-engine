@@ -47,6 +47,7 @@
 #include <Scene/Components/BoundingBoxComponent.hpp>
 #include <Scene/Components/TransformComponent.hpp>
 #include <Scene/Components/RigidBodyComponent.hpp>
+#include <Scene/Components/CharacterControllerComponent.hpp>
 
 #include <Physics/PhysicsShape.hpp>
 
@@ -3000,7 +3001,7 @@ static RenderableAttributeSet MeshEditOverlayAttributes(FillMode fillMode)
 
     MeshAttributes& meshAttributes = attributes.GetMeshAttributes();
     meshAttributes.inputLayout = StaticVertexInputLayout<VT_Simple>;
-    meshAttributes.topology = TOP_TRIANGLES;
+    meshAttributes.topology = Topology::Triangles;
 
     MaterialAttributes& materialAttributes = attributes.GetMaterialAttributes();
     materialAttributes.bucket = RenderBucket::Debug;
@@ -3041,8 +3042,8 @@ static void DrawMeshEditFace(
         return;
     }
 
-    static const RenderableAttributeSet fillAttributes = MeshEditOverlayAttributes(FM_FILL);
-    static const RenderableAttributeSet outlineAttributes = MeshEditOverlayAttributes(FM_LINE);
+    static const RenderableAttributeSet fillAttributes = MeshEditOverlayAttributes(FillMode::Fill);
+    static const RenderableAttributeSet outlineAttributes = MeshEditOverlayAttributes(FillMode::Line);
 
     debugDrawCommandList.triangle(worldPositions[0], worldPositions[1], worldPositions[2], fillColor, fillAttributes);
     debugDrawCommandList.triangle(worldPositions[0], worldPositions[1], worldPositions[2], outlineColor, outlineAttributes);
@@ -4015,11 +4016,11 @@ static RenderableAttributeSet PhysicsWireframeAttributes()
 
     MeshAttributes& meshAttributes = attributes.GetMeshAttributes();
     meshAttributes.inputLayout = StaticVertexInputLayout<VT_Simple>;
-    meshAttributes.topology = TOP_TRIANGLES;
+    meshAttributes.topology = Topology::Triangles;
 
     MaterialAttributes& materialAttributes = attributes.GetMaterialAttributes();
     materialAttributes.bucket = RenderBucket::Debug;
-    materialAttributes.fillMode = FM_LINE;
+    materialAttributes.fillMode = FillMode::Line;
     materialAttributes.blendFunction = BlendFunction::None();
     materialAttributes.flags = MAF_DEPTH_TEST;
 
@@ -5128,11 +5129,22 @@ void EditorSubsystem::NewProject()
 
     mainScene->GetRoot()->AddChild(sun);
 
-    // Add primary camera
+    // Add player entity
+    Handle<Entity> playerEntity = MakeHandle<Entity>();
+    playerEntity->SetName(NAME("Player"));
+    playerEntity->SetWorldTranslation(Vec3f(0.0f, 1.0f, -5.0f));
+    playerEntity->SetIsDynamic(true);
+    InitObject(playerEntity);
+
+    Handle<CapsulePhysicsShape> capsuleShape = MakeHandle<CapsulePhysicsShape>();
+    capsuleShape->SetName(NAME_FMT("{}CapsuleShape", playerEntity->GetName()));
+    InitObject(capsuleShape);
+    GetCurrentAssetRegistry()->PutAssetUnique(capsuleShape);
+
     Handle<Camera> camera = MakeHandle<Camera>();
     camera->SetDimensions(Vec2i(1920, 1080));
     camera->SetName(NAME("Camera"));
-    camera->SetWorldTranslation(Vec3f(0.0f, 1.0f, -5.0f));
+    camera->SetLocalTranslation(Vec3f(0.0f, 1.6f, 0.0f));
     camera->SetCameraFlags(CameraFlags::MatchWindowSize | CameraFlags::HasStreamingVolume);
     camera->AddTag<EntityTag::PrimaryCamera>();
 
@@ -5141,7 +5153,13 @@ void EditorSubsystem::NewProject()
 
     InitObject(camera);
 
-    mainScene->GetRoot()->AddChild(camera);
+    mainScene->GetRoot()->AddChild(playerEntity);
+
+    CharacterControllerComponent characterControllerComponent;
+    characterControllerComponent.shape = capsuleShape;
+    playerEntity->AddComponent<CharacterControllerComponent>(characterControllerComponent);
+
+    playerEntity->AddChild(camera);
 
     // Handle<Scene> streamedScene = MakeHandle<Scene>();
     // streamedScene->SetName(NAME("StreamedScene"));

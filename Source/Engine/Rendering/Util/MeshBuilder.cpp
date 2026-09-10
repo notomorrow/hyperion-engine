@@ -622,7 +622,7 @@ ENGINE_API Handle<Mesh> Merge(const Mesh* a, const Mesh* b, const Transform& aTr
     }
 
     MeshDesc mergedMeshDesc;
-    mergedMeshDesc.meshAttributes.indexBufferElemType = GET_UNSIGNED_INT;
+    mergedMeshDesc.meshAttributes.indexBufferElemType = GpuElemType::UnsignedInt;
     mergedMeshDesc.meshAttributes.inputLayout = { VT_Simple };
     mergedMeshDesc.lods[0].numIndices = uint32(allIndices.Size());
     mergedMeshDesc.lods[0].numVertices = uint32(allVertices.Size());
@@ -730,8 +730,8 @@ ENGINE_API Handle<Mesh> BuildVoxelMesh(const VoxelOctree& voxelOctree)
     meshDesc.meshAttributes.inputLayout = { VT_Simple };
     meshDesc.lods[0].numIndices = (uint32)indices.Size();
     meshDesc.lods[0].numVertices = (uint32)vertices.Size();
-    meshDesc.meshAttributes.indexBufferElemType = GET_UNSIGNED_INT;
-    meshDesc.meshAttributes.topology = TOP_LINES;
+    meshDesc.meshAttributes.indexBufferElemType = GpuElemType::UnsignedInt;
+    meshDesc.meshAttributes.topology = Topology::Lines;
 
     Handle<Mesh> mesh = MakeHandle<Mesh>();
 

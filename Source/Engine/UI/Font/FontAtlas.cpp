@@ -235,9 +235,9 @@ Result FontAtlas::RenderAtlasTextures(float mainAtlasScale, float maxScale, floa
             TextureType::Texture2D,
             TextureFormat::R8,
             Vec3u { atlasBitmap->GetWidth(), atlasBitmap->GetHeight(), 1 },
-            TFM_NEAREST,
-            TFM_NEAREST,
-            TWM_CLAMP_TO_EDGE
+            TextureFilterMode::Nearest,
+            TextureFilterMode::Nearest,
+            TextureWrapMode::ClampToEdge
         };
 
         ByteBuffer imageData = atlasBitmap->GetUnpackedBytes(1);

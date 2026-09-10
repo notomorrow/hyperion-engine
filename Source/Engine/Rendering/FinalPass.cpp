@@ -120,9 +120,9 @@ void FinalPass::Render(Frame* frame, const RenderSetup& rs)
     cr << SetDepthWrite(false);
     cr << SetStencilTest(false);
 
-    cr << SetFillMode(FM_FILL);
-    cr << SetTopology(TOP_TRIANGLES);
-    cr << SetFaceCullMode(FCM_NONE);
+    cr << SetFillMode(FillMode::Fill);
+    cr << SetTopology(Topology::Triangles);
+    cr << SetFaceCullMode(FaceCullMode::None);
 
     cr << SetShaderUniform(0, "SamplerLinear"_sh, RI.placeholderData->GetSamplerLinear());
     cr << SetShaderUniform(1, "WorldsBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
@@ -189,7 +189,7 @@ void FinalPass::Render(Frame* frame, const RenderSetup& rs)
     cr << SetCurrentBlendFunction(BlendFunction::None());
     cr << SetDepthTest(true);
     cr << SetDepthWrite(true);
-    cr << SetFaceCullMode(FCM_BACK);
+    cr << SetFaceCullMode(FaceCullMode::Back);
 }
 
 #pragma endregion FinalPass

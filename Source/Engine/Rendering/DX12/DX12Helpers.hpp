@@ -14,14 +14,14 @@
 
 namespace Hyperion {
 
-enum ResourceState : uint8;
-enum FaceCullMode : uint8;
-enum Topology : uint8;
+enum class ResourceState : uint8;
+enum class FaceCullMode : uint8;
+enum class Topology : uint8;
 enum class BlendModeFactor : uint8;
-enum StencilOp : uint8;
-enum StencilCompareOp : uint8;
-enum DepthCompareOp : uint8;
-enum GpuElemType : uint8;
+enum class StencilOp : uint8;
+enum class StencilCompareOp : uint8;
+enum class DepthCompareOp : uint8;
+enum class GpuElemType : uint8;
 
 enum class TextureFormat : uint8;
 enum class TextureType : uint8;

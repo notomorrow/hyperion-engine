@@ -106,13 +106,13 @@ RendererResult VulkanSampler::Create()
 
     switch (m_minFilterMode)
     {
-    case TFM_NEAREST_MIPMAP:
+    case TextureFilterMode::NearestMipmap:
         samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         break;
-    case TFM_LINEAR_MIPMAP:
+    case TextureFilterMode::LinearMipmap:
         samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         break;
-    case TFM_MINMAX_MIPMAP:
+    case TextureFilterMode::MinMaxMipmap:
         samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         break;
     default:
@@ -126,7 +126,7 @@ RendererResult VulkanSampler::Create()
 
     VkSamplerReductionModeCreateInfoEXT reductionInfo { VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT };
 
-    if (m_minFilterMode == TFM_MINMAX_MIPMAP)
+    if (m_minFilterMode == TextureFilterMode::MinMaxMipmap)
     {
         if (!RI.GetDevice()->GetFeatures().GetSamplerMinMaxProperties().filterMinmaxSingleComponentFormats)
         {

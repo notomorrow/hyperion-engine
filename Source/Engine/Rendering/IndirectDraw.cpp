@@ -69,12 +69,12 @@ static void ZeroizeBuffer(CommandRecorder& cr, GpuBuffer* dstBuffer)
     // set all to zero
     stagingBuffer->Memset(bufferSize, 0);
 
-    cr << InsertBarrier(stagingBuffer, RS_COPY_SRC);
-    cr << InsertBarrier(dstBuffer, RS_COPY_DST);
+    cr << InsertBarrier(stagingBuffer, ResourceState::CopySrc);
+    cr << InsertBarrier(dstBuffer, ResourceState::CopyDst);
 
     cr << CopyBuffer(stagingBuffer, dstBuffer, bufferSize);
 
-    cr << InsertBarrier(dstBuffer, RS_INDIRECT_ARG);
+    cr << InsertBarrier(dstBuffer, ResourceState::IndirectArg);
 }
 
 static inline bool CreateOrResizeBuffer(
@@ -326,12 +326,12 @@ void IndirectDrawState::UpdateBufferData(CommandRecorder& cr, bool* outWasResize
         stagingBuffer->Copy(drawCommandsBufferSize, m_drawCommandsBuffer.Data());
         stagingBuffer->Flush(0, drawCommandsBufferSize);
 
-        cr << InsertBarrier(stagingBuffer, RS_COPY_SRC);
-        cr << InsertBarrier(indirectBuffer, RS_COPY_DST);
+        cr << InsertBarrier(stagingBuffer, ResourceState::CopySrc);
+        cr << InsertBarrier(indirectBuffer, ResourceState::CopyDst);
 
         cr << CopyBuffer(stagingBuffer, indirectBuffer, drawCommandsBufferSize);
 
-        cr << InsertBarrier(indirectBuffer, RS_INDIRECT_ARG);
+        cr << InsertBarrier(indirectBuffer, ResourceState::IndirectArg);
     }
 
     // instance buffer
@@ -454,13 +454,13 @@ void IndirectRenderer::ExecuteCullShaderInBatches(CommandRecorder& cr, const Ren
 
     cr << SetShaderUniform(numShaderUniforms++, "ComputeVisibilityConstants"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
 
-    cr << InsertBarrier(m_indirectDrawState.GetIndirectBuffer(frameIndex), RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
-    cr << InsertBarrier(entityInstanceBatchesBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
+    cr << InsertBarrier(m_indirectDrawState.GetIndirectBuffer(frameIndex), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+    cr << InsertBarrier(entityInstanceBatchesBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
     cr << DispatchCompute(Vec3u { numBatches, 1, 1 });
 
-    cr << InsertBarrier(m_indirectDrawState.GetIndirectBuffer(frameIndex), RS_INDIRECT_ARG);
-    cr << InsertBarrier(entityInstanceBatchesBuffer, RS_SHADER_RESOURCE, ShaderModuleType::Vertex);
+    cr << InsertBarrier(m_indirectDrawState.GetIndirectBuffer(frameIndex), ResourceState::IndirectArg);
+    cr << InsertBarrier(entityInstanceBatchesBuffer, ResourceState::ShaderResource, ShaderModuleType::Vertex);
 }
 
 #pragma endregion IndirectRenderer

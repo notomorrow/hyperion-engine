@@ -65,7 +65,7 @@ VulkanGpuBuffer::VulkanGpuBuffer(VulkanGpuBuffer&& other) noexcept
     other.m_handle = VK_NULL_HANDLE;
     other.m_vmaAllocation = VK_NULL_HANDLE;
     other.m_mapping = nullptr;
-    other.m_resourceState = RS_UNDEFINED;
+    other.m_resourceState = ResourceState::Undefined;
 }
 
 VulkanGpuBuffer& VulkanGpuBuffer::operator=(VulkanGpuBuffer&& other) noexcept
@@ -100,7 +100,7 @@ VulkanGpuBuffer& VulkanGpuBuffer::operator=(VulkanGpuBuffer&& other) noexcept
     other.m_handle = VK_NULL_HANDLE;
     other.m_vmaAllocation = VK_NULL_HANDLE;
     other.m_mapping = nullptr;
-    other.m_resourceState = RS_UNDEFINED;
+    other.m_resourceState = ResourceState::Undefined;
 
     return *this;
 }
@@ -124,7 +124,7 @@ VulkanGpuBuffer::~VulkanGpuBuffer()
 
     m_handle = VK_NULL_HANDLE;
     m_vmaAllocation = VK_NULL_HANDLE;
-    m_resourceState = RS_UNDEFINED;
+    m_resourceState = ResourceState::Undefined;
 }
 
 void VulkanGpuBuffer::Memset(size_t count, ubyte value)
@@ -555,7 +555,7 @@ RendererResult VulkanGpuBuffer::EnsureCapacity(
 
         m_handle = VK_NULL_HANDLE;
         m_vmaAllocation = VK_NULL_HANDLE;
-        m_resourceState = RS_UNDEFINED;
+        m_resourceState = ResourceState::Undefined;
     }
 
     m_size = minimumSize;

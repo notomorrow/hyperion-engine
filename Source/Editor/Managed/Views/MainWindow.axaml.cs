@@ -9,7 +9,6 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Dock.Model;
 using Dock.Model.Core;
-using Dock.Model.Core.Events;
 using Dock.Model.Controls;
 using System;
 using System.Collections.Generic;
@@ -24,6 +23,7 @@ using ProportionalDockSplitter = Dock.Model.Avalonia.Controls.ProportionalDockSp
 using RootDock = Dock.Model.Avalonia.Controls.RootDock;
 using Tool = Dock.Model.Avalonia.Controls.Tool;
 using ToolDock = Dock.Model.Avalonia.Controls.ToolDock;
+using DockableClosedEventArgs = Dock.Model.Core.Events.DockableClosedEventArgs;
 
 namespace Hyperion.Editor
 {
@@ -293,6 +293,10 @@ namespace Hyperion.Editor
             {
                 factory.SetActiveDockable(activeTool);
                 factory.SetFocusedDockable(dock, activeTool);
+            }
+            else
+            {
+                dock.ActiveDockable = null;
             }
         }
 

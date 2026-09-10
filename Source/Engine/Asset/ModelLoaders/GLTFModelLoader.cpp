@@ -159,25 +159,25 @@ TextureFilterMode ResolveMinFilter(const cgltf_sampler* sampler)
 {
     if (sampler == nullptr || sampler->min_filter == 0)
     {
-        return TFM_LINEAR_MIPMAP;
+        return TextureFilterMode::LinearMipmap;
     }
 
     switch (sampler->min_filter)
     {
     case cgltf_filter_type_nearest:
-        return TFM_NEAREST;
+        return TextureFilterMode::Nearest;
     case cgltf_filter_type_linear:
-        return TFM_LINEAR;
+        return TextureFilterMode::Linear;
     case cgltf_filter_type_nearest_mipmap_nearest:
-        return TFM_NEAREST_MIPMAP;
+        return TextureFilterMode::NearestMipmap;
     case cgltf_filter_type_nearest_mipmap_linear:
-        return TFM_NEAREST_LINEAR;
+        return TextureFilterMode::NearestLinear;
     case cgltf_filter_type_linear_mipmap_nearest:
-        return TFM_LINEAR_MIPMAP;
+        return TextureFilterMode::LinearMipmap;
     case cgltf_filter_type_linear_mipmap_linear:
-        return TFM_LINEAR_MIPMAP;
+        return TextureFilterMode::LinearMipmap;
     default:
-        return TFM_LINEAR_MIPMAP;
+        return TextureFilterMode::LinearMipmap;
     }
 }
 
@@ -185,17 +185,17 @@ TextureFilterMode ResolveMagFilter(const cgltf_sampler* sampler)
 {
     if (sampler == nullptr || sampler->mag_filter == 0)
     {
-        return TFM_LINEAR;
+        return TextureFilterMode::Linear;
     }
 
     switch (sampler->mag_filter)
     {
     case cgltf_filter_type_nearest:
-        return TFM_NEAREST;
+        return TextureFilterMode::Nearest;
     case cgltf_filter_type_linear:
-        return TFM_LINEAR;
+        return TextureFilterMode::Linear;
     default:
-        return TFM_LINEAR;
+        return TextureFilterMode::Linear;
     }
 }
 
@@ -204,11 +204,11 @@ TextureWrapMode MapWrapValue(cgltf_int wrap, GltfLoadContext& ctx)
     switch (wrap)
     {
     case cgltf_wrap_mode_clamp_to_edge:
-        return TWM_CLAMP_TO_EDGE;
+        return TextureWrapMode::ClampToEdge;
     case cgltf_wrap_mode_repeat:
-        return TWM_REPEAT;
+        return TextureWrapMode::Repeat;
     default:
-        return TWM_REPEAT;
+        return TextureWrapMode::Repeat;
     }
 }
 
@@ -216,7 +216,7 @@ TextureWrapMode ResolveWrapMode(const cgltf_sampler* sampler, GltfLoadContext& c
 {
     if (sampler == nullptr)
     {
-        return TWM_REPEAT;
+        return TextureWrapMode::Repeat;
     }
 
     const TextureWrapMode wrapS = MapWrapValue(sampler->wrap_s != 0 ? sampler->wrap_s : cgltf_wrap_mode_repeat, ctx);
@@ -227,14 +227,14 @@ TextureWrapMode ResolveWrapMode(const cgltf_sampler* sampler, GltfLoadContext& c
         return wrapS;
     }
 
-    if (wrapS == TWM_CLAMP_TO_EDGE || wrapT == TWM_CLAMP_TO_EDGE)
+    if (wrapS == TextureWrapMode::ClampToEdge || wrapT == TextureWrapMode::ClampToEdge)
     {
-        return TWM_CLAMP_TO_EDGE;
+        return TextureWrapMode::ClampToEdge;
     }
 
-    if (wrapS == TWM_CLAMP_TO_BORDER || wrapT == TWM_CLAMP_TO_BORDER)
+    if (wrapS == TextureWrapMode::ClampToBorder || wrapT == TextureWrapMode::ClampToBorder)
     {
-        return TWM_CLAMP_TO_BORDER;
+        return TextureWrapMode::ClampToBorder;
     }
 
     return wrapS;
@@ -341,9 +341,9 @@ Handle<Texture> LoadTextureFromEncodedBytes(const cgltf_image& image, Span<const
         TextureType::Texture2D,
         format,
         Vec3u { uint32(width), uint32(height), 1 },
-        TFM_LINEAR_MIPMAP,
-        TFM_LINEAR,
-        TWM_REPEAT
+        TextureFilterMode::LinearMipmap,
+        TextureFilterMode::Linear,
+        TextureWrapMode::Repeat
     };
 
     const size_t imageBytesCount = size_t(width)
@@ -1213,7 +1213,7 @@ Handle<Material> AcquireMaterial(GltfLoadContext& ctx, const cgltf_material* glt
 
     if (gltfMaterial->double_sided)
     {
-        materialAttributes.cullFaces = FCM_NONE;
+        materialAttributes.cullFaces = FaceCullMode::None;
     }
 
     if (Handle<Texture> normalTexture = AcquireTexture(ctx, gltfMaterial->normal_texture, false); normalTexture.IsValid())
@@ -1285,13 +1285,13 @@ bool BuildPrimitive(GltfLoadContext& ctx,
     switch (primitive.type)
     {
     case cgltf_primitive_type_triangles:
-        topology = TOP_TRIANGLES;
+        topology = Topology::Triangles;
         break;
     case cgltf_primitive_type_triangle_strip:
-        topology = TOP_TRIANGLE_STRIP;
+        topology = Topology::TriangleStrip;
         break;
     case cgltf_primitive_type_triangle_fan:
-        topology = TOP_TRIANGLE_FAN;
+        topology = Topology::TriangleFan;
         break;
     default:
         HYP_LOG(Assets, Warning, "GLTF primitive skipped due to unsupported topology {} on mesh '{}'",
@@ -1485,7 +1485,7 @@ bool BuildPrimitive(GltfLoadContext& ctx,
     MeshDesc meshDesc;
     meshDesc.meshAttributes.inputLayout = VertexInputLayoutDesc { VT_Simple | VT_UV1 | VT_Skeletal };
     meshDesc.meshAttributes.topology = topology;
-    meshDesc.meshAttributes.indexBufferElemType = GET_UNSIGNED_INT;
+    meshDesc.meshAttributes.indexBufferElemType = GpuElemType::UnsignedInt;
     meshDesc.lods[0].numVertices = uint32(vertices.Size());
     meshDesc.lods[0].numIndices = uint32(indices.Size());
 
@@ -1505,7 +1505,7 @@ bool BuildPrimitive(GltfLoadContext& ctx,
 
     mesh->SetMeshData(meshDesc, meshData);
 
-    if (!hasNormals && meshDesc.meshAttributes.topology == TOP_TRIANGLES)
+    if (!hasNormals && meshDesc.meshAttributes.topology == Topology::Triangles)
     {
         mesh->CalculateNormals();
     }

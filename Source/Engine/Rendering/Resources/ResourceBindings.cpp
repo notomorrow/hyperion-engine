@@ -129,8 +129,8 @@ void OnBindingChanged_EnvProbe(EnvProbe* envProbe, uint32 prev, uint32 next)
             dstSubResource.baseArrayLayer = uint16(6 * next);
             dstSubResource.numLayers = 6;
 
-            cr << InsertBarrier(srcImage, RS_COPY_SRC, srcSubResource);
-            cr << InsertBarrier(dstImage, RS_COPY_DST, dstSubResource);
+            cr << InsertBarrier(srcImage, ResourceState::CopySrc, srcSubResource);
+            cr << InsertBarrier(dstImage, ResourceState::CopyDst, dstSubResource);
 
             const Vec3u srcExtent = srcImage->GetTextureDesc().extent;
             const Vec3u dstExtent = dstImage->GetTextureDesc().extent;
@@ -139,8 +139,8 @@ void OnBindingChanged_EnvProbe(EnvProbe* envProbe, uint32 prev, uint32 next)
 
             cr << CopyImage(srcImage, dstImage, srcExtent, srcSubResource, dstSubResource);
 
-            cr << InsertBarrier(srcImage, RS_SHADER_RESOURCE, srcSubResource);
-            cr << InsertBarrier(dstImage, RS_SHADER_RESOURCE, dstSubResource);
+            cr << InsertBarrier(srcImage, ResourceState::ShaderResource, srcSubResource);
+            cr << InsertBarrier(dstImage, ResourceState::ShaderResource, dstSubResource);
 
             cr.Submit();
         }
@@ -219,7 +219,7 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
 
         Assert(next * 6 < dstImage->NumArrayLayers());
 
-        cr << InsertBarrier(dstImage, RS_COPY_DST);
+        cr << InsertBarrier(dstImage, ResourceState::CopyDst);
 
         for (uint8 mipIndex = 0; mipIndex < dstImage->NumMips(); mipIndex++)
         {
@@ -243,7 +243,7 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
             const Vec3u srcMipExtent = srcImage->GetTextureDesc().GetMipExtent(mipIndex);
             const Vec3u dstMipExtent = dstImage->GetTextureDesc().GetMipExtent(mipIndex);
             
-            cr << InsertBarrier(srcImage, RS_COPY_SRC, srcSubResource);
+            cr << InsertBarrier(srcImage, ResourceState::CopySrc, srcSubResource);
 
             if (srcMipExtent == dstMipExtent && srcImage->GetTextureDesc().format == dstImage->GetTextureDesc().format)
             {
@@ -260,10 +260,10 @@ void OnBindingChanged_ReflectionProbe(EnvProbe* envProbe, uint32 prev, uint32 ne
                     dstSubResource);
             }
             
-            cr << InsertBarrier(srcImage, RS_SHADER_RESOURCE, srcSubResource);
+            cr << InsertBarrier(srcImage, ResourceState::ShaderResource, srcSubResource);
         }
 
-        cr << InsertBarrier(dstImage, RS_SHADER_RESOURCE);
+        cr << InsertBarrier(dstImage, ResourceState::ShaderResource);
 
         cr.Submit();
     }

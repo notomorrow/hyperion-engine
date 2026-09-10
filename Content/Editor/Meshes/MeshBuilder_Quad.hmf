@@ -8,8 +8,8 @@ Mesh "MeshBuilder_Quad" {
             InputLayout = {
                 Mask = 7
             }
-            Topology = TOP_TRIANGLES
-            IndexBufferElemType = GET_UNSIGNED_INT
+            Topology = Triangles
+            IndexBufferElemType = UnsignedInt
         }
         Lods = [
             MeshLodDesc {

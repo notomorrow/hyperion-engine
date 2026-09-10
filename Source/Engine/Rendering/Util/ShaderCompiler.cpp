@@ -659,7 +659,7 @@ static void MergeGlobalShaderProperties(bool isPrecompilingShaders, ShaderVarian
         // if compiling the entire bundle (like with PrecompileShaders.exe),
         // we want to add some of these properties as a permutation, rather than as a static property.
 
-        inOutPerm.Set(NAME("HYP_FEATURES_BINDLESS_TEXTURES"), true, SPF_PERMUTATION);
+        inOutPerm.Set(NAME("HYP_FEATURES_BINDLESS_TEXTURES"), true, ShaderPropertyFlags::Permutation);
 
         props.Set(s_propBindlessTextures, false);
     }
@@ -1314,7 +1314,7 @@ static void ForEachPermutation(
                 AssertDebug(!variableProperties[j].IsValueGroup());
 
                 ShaderProperty newProperty = variableProperties[j];
-                ((uint8&)newProperty.flags) &= ~SPF_PERMUTATION; // have to make sure it is not a permutable property anymore.
+                newProperty.flags = ShaderPropertyFlags(uint8(newProperty.flags) & ~uint8(ShaderPropertyFlags::Permutation)); // have to make sure it is not a permutable property anymore.
 
                 currentProperties.Add(newProperty);
             }

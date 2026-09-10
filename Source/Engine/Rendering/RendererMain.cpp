@@ -1607,13 +1607,13 @@ void RenderCollector::Commit(CommandRecorder& cr, uint8 index)
 
         cr << SetStencilState(0, 0xFF, 0x0);
         cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
-        cr << SetTopology(TOP_TRIANGLES);
-        cr << SetFillMode(FM_FILL);
-        cr << SetFaceCullMode(FCM_BACK);
+        cr << SetTopology(Topology::Triangles);
+        cr << SetFillMode(FillMode::Fill);
+        cr << SetFaceCullMode(FaceCullMode::Back);
         cr << SetCurrentBlendFunction(BlendFunction::None());
         cr << SetDepthWrite(true);
         cr << SetDepthTest(true);
-        cr << SetDepthCompareOp(DCO_LESS);
+        cr << SetDepthCompareOp(DepthCompareOp::Less);
         cr << SetDepthBias(0, 0.0f);
         cr << SetDepthClamp(false);
         cr << SetStencilTest(false);
@@ -1639,13 +1639,13 @@ void RenderCollector::Commit(CommandRecorder& cr, uint8 index)
         // end threaded commands -- reset draw states
         cr << SetStencilState(0, 0xFF, 0x0);
         cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
-        cr << SetTopology(TOP_TRIANGLES);
-        cr << SetFillMode(FM_FILL);
-        cr << SetFaceCullMode(FCM_BACK);
+        cr << SetTopology(Topology::Triangles);
+        cr << SetFillMode(FillMode::Fill);
+        cr << SetFaceCullMode(FaceCullMode::Back);
         cr << SetCurrentBlendFunction(BlendFunction::None());
         cr << SetDepthWrite(true);
         cr << SetDepthTest(true);
-        cr << SetDepthCompareOp(DCO_LESS);
+        cr << SetDepthCompareOp(DepthCompareOp::Less);
         cr << SetDepthBias(0, 0.0f);
         cr << SetDepthClamp(false);
         cr << SetStencilTest(false);

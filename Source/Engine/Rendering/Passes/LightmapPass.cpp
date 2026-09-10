@@ -129,8 +129,8 @@ void LightmapPass::RenderToFramebuffer_Internal(Frame* frame, const RenderSetup&
     cr << SetInputLayout(m_volumeMesh->GetMeshAttributes().inputLayout);
     cr << SetTopology(m_volumeMesh->GetMeshAttributes().topology);
     // Cull front faces so the volume still covers the screen when the camera is inside it.
-    //cr << SetFaceCullMode(FCM_FRONT);
-    cr << SetFillMode(FM_FILL);
+    //cr << SetFaceCullMode(FaceCullMode::Front);
+    cr << SetFillMode(FillMode::Fill);
 
     cr << SetDepthTest(false);
     cr << SetDepthWrite(false);

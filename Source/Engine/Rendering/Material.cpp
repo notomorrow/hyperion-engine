@@ -81,9 +81,9 @@ Material::Material(Name name, RenderBucket rb)
       m_attributes {
           .shaderName = s_defaultShaderName,
           .bucket = rb,
-          .fillMode = FM_FILL,
+          .fillMode = FillMode::Fill,
           .blendFunction = BlendFunction::None(),
-          .cullFaces = FCM_BACK,
+          .cullFaces = FaceCullMode::Back,
           .flags = MAF_DEPTH_WRITE | MAF_DEPTH_TEST
       },
       m_isDynamic(false),

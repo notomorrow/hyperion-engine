@@ -110,7 +110,7 @@ void DynamicSkySystem::InitializeSky()
         materialAttributes.shaderName = NAME("Skybox");
         materialAttributes.bucket = RenderBucket::Sky;
         // flip cull faces.
-        materialAttributes.cullFaces = FCM_FRONT;
+        materialAttributes.cullFaces = FaceCullMode::Front;
         materialAttributes.blendFunction = BlendFunction::None();
         // enable depth test but not write. we want skybox to be behind everything else, but rendered last to avoid overdraw.
         materialAttributes.flags = MAF_DEPTH_TEST;

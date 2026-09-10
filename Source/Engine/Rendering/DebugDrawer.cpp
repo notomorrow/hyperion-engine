@@ -67,11 +67,11 @@ static RenderableAttributeSet DefaultAttributes()
 
     MeshAttributes& meshAttributes = attributes.GetMeshAttributes();
     meshAttributes.inputLayout = StaticVertexInputLayout<VT_Simple>;
-    meshAttributes.topology = TOP_TRIANGLES;
+    meshAttributes.topology = Topology::Triangles;
 
     MaterialAttributes& materialAttributes = attributes.GetMaterialAttributes();
     materialAttributes.bucket = RenderBucket::Debug;
-    materialAttributes.fillMode = FM_FILL;
+    materialAttributes.fillMode = FillMode::Fill;
     materialAttributes.blendFunction = BlendFunction::None();
     materialAttributes.flags = MAF_DEPTH_TEST | MAF_DEPTH_WRITE;
 
@@ -351,7 +351,7 @@ Mesh* BoxDebugDrawShape::GetMesh_Internal() const
 void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, const Color& color)
 {
     RenderableAttributeSet attributes = DefaultAttributes();
-    attributes.GetMeshAttributes().topology = TOP_LINES;
+    attributes.GetMeshAttributes().topology = Topology::Lines;
 
     (*this)(position, size, color, attributes);
 }
@@ -385,7 +385,7 @@ void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, con
 void BoxDebugDrawShape::operator()(const Transform& transform, const Color& color)
 {
     RenderableAttributeSet attributes = DefaultAttributes();
-    attributes.GetMeshAttributes().topology = TOP_LINES;
+    attributes.GetMeshAttributes().topology = Topology::Lines;
 
     (*this)(transform, color, attributes);
 }
@@ -1014,13 +1014,13 @@ void DebugDrawer::Render(Frame* frame, const RenderSetup& renderSetup)
     HYP_DEFER({
         // reset states
         cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
-        cr << SetTopology(TOP_TRIANGLES);
+        cr << SetTopology(Topology::Triangles);
         cr << SetCurrentBlendFunction(BlendFunction::None());
         cr << SetDepthTest(true);
         cr << SetDepthWrite(true);
         cr << SetStencilTest(false);
-        cr << SetFillMode(FM_FILL);
-        cr << SetFaceCullMode(FCM_BACK);
+        cr << SetFillMode(FillMode::Fill);
+        cr << SetFaceCullMode(FaceCullMode::Back);
     });
 
     DeferredPassData* dpd = DynamicCast<DeferredPassData>(renderSetup.passData);

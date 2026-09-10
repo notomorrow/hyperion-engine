@@ -15,22 +15,22 @@ Material "InvSphereMaterial" {
             ]
         }
         Bucket = Opaque
-        FillMode = FM_FILL
+        FillMode = Fill
         BlendFunction = {
             SrcColor = None
             DstColor = None
             SrcAlpha = None
             DstAlpha = None
         }
-        CullFaces = FCM_BACK
+        CullFaces = Back
         Flags = MAF_DEPTH_WRITE|MAF_DEPTH_TEST
         StencilFunction = {
-            PassOp = SO_REPLACE
-            FailOp = SO_KEEP
-            DepthFailOp = SO_KEEP
-            CompareOp = SCO_ALWAYS
+            PassOp = Replace
+            FailOp = Keep
+            DepthFailOp = Keep
+            CompareOp = Always
         }
-        DepthCompareOp = DCO_LESS
+        DepthCompareOp = Less
         StencilReference = 0
         DepthBias = 0
         DepthBiasSlope = 0

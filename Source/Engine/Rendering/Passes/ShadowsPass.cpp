@@ -132,11 +132,11 @@ void ShadowsPassBase::RenderShadowMapCapture(
         rpl.BeginRead();
         HYP_DEFER({ rpl.EndRead(); });
 
-        frame->cr << InsertBarrier(resultImage, RS_RENDER_TARGET, target->GetImageView()->GetImageSubResource());
+        frame->cr << InsertBarrier(resultImage, ResourceState::RenderTarget, target->GetImageView()->GetImageSubResource());
 
         renderCollector.ExecuteDrawCalls(frame, rs, BucketMask);
 
-        frame->cr << InsertBarrier(resultImage, RS_SHADER_RESOURCE, target->GetImageView()->GetImageSubResource());
+        frame->cr << InsertBarrier(resultImage, ResourceState::ShaderResource, target->GetImageView()->GetImageSubResource());
 
         renderedFacesMask |= (1u << faceIndex);
         captureState->SetRenderedFacesMask(renderedFacesMask);
@@ -600,8 +600,8 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
                 Assert(TextureUtils::BytesPerComponent(depthTarget->GetFormat()) == TextureUtils::BytesPerComponent(bakedShadowMap->GetFormat()));
 
-                frame->cr << InsertBarrier(bakedShadowMap->GetGpuImage(), RS_COPY_SRC, srcImageSubResource);
-                frame->cr << InsertBarrier(depthTarget->GetGpuImage(), RS_COPY_DST, dstImageSubResource);
+                frame->cr << InsertBarrier(bakedShadowMap->GetGpuImage(), ResourceState::CopySrc, srcImageSubResource);
+                frame->cr << InsertBarrier(depthTarget->GetGpuImage(), ResourceState::CopyDst, dstImageSubResource);
 
                 frame->cr << CopyImage(
                     bakedShadowMap->GetGpuImage(),
@@ -618,11 +618,11 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                 if (localPasses[ShadowStage_Dynamic] != nullptr)
                 {
                     // get it ready for rendering to! (for dynamic shadows)
-                    frame->cr << InsertBarrier(depthTarget->GetGpuImage(), RS_RENDER_TARGET, dstImageSubResource);
+                    frame->cr << InsertBarrier(depthTarget->GetGpuImage(), ResourceState::RenderTarget, dstImageSubResource);
                 }
                 else
                 {
-                    frame->cr << InsertBarrier(depthTarget->GetGpuImage(), RS_SHADER_RESOURCE, dstImageSubResource);
+                    frame->cr << InsertBarrier(depthTarget->GetGpuImage(), ResourceState::ShaderResource, dstImageSubResource);
                 }
             }
             else if (cacheStaticShadowMaps || onlyStaticShadowMaps)
@@ -702,8 +702,8 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                             dstImageSubResource.baseArrayLayer = (atlasElement.layerIndex * 6) + viewIndex;
                         }
 
-                        frame->cr << InsertBarrier(cachedShadowMapTexture->GetGpuImage(), RS_COPY_SRC, srcImageSubResource);
-                        frame->cr << InsertBarrier(depthTarget->GetGpuImage(), RS_COPY_DST, dstImageSubResource);
+                        frame->cr << InsertBarrier(cachedShadowMapTexture->GetGpuImage(), ResourceState::CopySrc, srcImageSubResource);
+                        frame->cr << InsertBarrier(depthTarget->GetGpuImage(), ResourceState::CopyDst, dstImageSubResource);
 
                         frame->cr << CopyImage(
                             cachedShadowMapTexture->GetGpuImage(),
@@ -716,7 +716,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
                         if (!localPasses[ShadowStage_Dynamic])
                         {
-                            frame->cr << InsertBarrier(depthTarget->GetGpuImage(), RS_SHADER_RESOURCE, dstImageSubResource);
+                            frame->cr << InsertBarrier(depthTarget->GetGpuImage(), ResourceState::ShaderResource, dstImageSubResource);
                         }
                     }
                     
@@ -786,7 +786,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
                 renderProxyLists[numRenderProxyLists++] = &rpl;
 
-                frame->cr << InsertBarrier(resultImage, RS_RENDER_TARGET, target->GetImageView()->GetImageSubResource());
+                frame->cr << InsertBarrier(resultImage, ResourceState::RenderTarget, target->GetImageView()->GetImageSubResource());
 
                 RenderCollector& renderCollector = GetRenderCollector(shadowView);
                 renderCollector.ExecuteDrawCalls(frame, rs, BucketMask);
@@ -816,10 +816,10 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                     }
 
                     // need to transition atlas section to COPY_SRC
-                    frame->cr << InsertBarrier(resultImage, RS_COPY_SRC, srcImageSubResource);
+                    frame->cr << InsertBarrier(resultImage, ResourceState::CopySrc, srcImageSubResource);
 
                     // and our cache texture should be COPY_DST
-                    frame->cr << InsertBarrier(cachedShadowMapTexture->GetGpuImage(), RS_COPY_DST, dstImageSubResource);
+                    frame->cr << InsertBarrier(cachedShadowMapTexture->GetGpuImage(), ResourceState::CopyDst, dstImageSubResource);
 
                     frame->cr << CopyImage(
                         resultImage,
@@ -832,7 +832,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                 }
 
                 // transition atlas section back to shader read
-                frame->cr << InsertBarrier(resultImage, RS_SHADER_RESOURCE, target->GetImageView()->GetImageSubResource());
+                frame->cr << InsertBarrier(resultImage, ResourceState::ShaderResource, target->GetImageView()->GetImageSubResource());
             }
         }
     }

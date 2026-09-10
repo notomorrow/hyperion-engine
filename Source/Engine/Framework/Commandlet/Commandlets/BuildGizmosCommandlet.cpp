@@ -36,7 +36,7 @@ static Handle<Entity> CreateAxisEntity(
 {
     MaterialAttributes materialAttributes;
     materialAttributes.bucket = RenderBucket::Debug;
-    materialAttributes.cullFaces = FCM_NONE;
+    materialAttributes.cullFaces = FaceCullMode::None;
 
     MaterialParameters materialParameters;
     materialParameters.albedo = axisColor;
@@ -74,7 +74,7 @@ static Handle<Entity> CreateCentroidEntity(
 {
     MaterialAttributes materialAttributes;
     materialAttributes.bucket = RenderBucket::Debug;
-    materialAttributes.cullFaces = FCM_NONE;
+    materialAttributes.cullFaces = FaceCullMode::None;
 
     MaterialParameters materialParameters;
     materialParameters.albedo = centroidColor;
@@ -280,7 +280,7 @@ static void BuildVolumeGizmo(Handle<AssetRegistry>& assetRegistry)
     MaterialAttributes materialAttributes;
     materialAttributes.bucket = RenderBucket::Debug;
     materialAttributes.blendFunction = BlendFunction::Additive();
-    materialAttributes.cullFaces = FCM_NONE;
+    materialAttributes.cullFaces = FaceCullMode::None;
     materialAttributes.flags = MAF_DEPTH_WRITE | MAF_DEPTH_TEST;
 
     MaterialParameters materialParameters;

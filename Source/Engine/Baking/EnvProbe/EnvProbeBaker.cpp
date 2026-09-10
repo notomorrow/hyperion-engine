@@ -145,9 +145,9 @@ void Baker<EnvProbe>::OnCompleted_Internal()
         TextureType::Cubemap,
         bitmap.GetFormat(),
         Vec3u { dimensions, 1 },
-        TFM_LINEAR_MIPMAP,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE
+        TextureFilterMode::LinearMipmap,
+        TextureFilterMode::Linear,
+        TextureWrapMode::ClampToEdge
     };
 
     ByteBuffer buffer = ByteBuffer(bitmap.ToByteView());
@@ -197,11 +197,11 @@ void Baker<EnvProbe>::OnCompleted_Internal()
                 EnvProbe::VisibilityTextureDimensions,
                 EnvProbe::VisibilityTextureDimensions,
                 1 },
-            TFM_LINEAR,
-            TFM_LINEAR,
-            TWM_CLAMP_TO_EDGE,
+            TextureFilterMode::Linear,
+            TextureFilterMode::Linear,
+            TextureWrapMode::ClampToEdge,
             1,
-            IU_SAMPLED | IU_STORAGE
+            ImageUsage::Sampled | ImageUsage::Storage
         };
 
         ByteBuffer visBuffer = ByteBuffer(visBitmap.ToByteView());

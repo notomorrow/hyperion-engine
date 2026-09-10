@@ -127,7 +127,7 @@ protected:
         : m_type(type),
           m_size(size),
           m_alignment(alignment),
-          m_resourceState(RS_UNDEFINED),
+          m_resourceState(ResourceState::Undefined),
           m_cpuAccessible(false)
     {
     }

@@ -3,11 +3,11 @@ Texture "PointLightShadowMapImage" {
         Type = CubemapArray
         Format = D16
         Extent = (256, 256, 1)
-        MinFilterMode = TFM_NEAREST
-        MagFilterMode = TFM_NEAREST
-        TextureWrapMode = TWM_CLAMP_TO_EDGE
+        MinFilterMode = Nearest
+        MagFilterMode = Nearest
+        TextureWrapMode = ClampToEdge
         NumLayers = 16
-        ImageUsage = IU_SAMPLED|IU_ATTACHMENT
+        ImageUsage = Sampled|Attachment
         MipOffsets = [
             0
             0

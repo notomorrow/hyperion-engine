@@ -377,8 +377,8 @@ static FramebufferRef CreateLightingFramebuffer(GBuffer* gbuffer)
     // lighting, again later for the reflections composite pass after SSR runs - see RenderFrameForView).
     // The first bind clears explicitly via ClearFramebuffer() instead; the second bind needs to
     // accumulate onto what's already there.
-    colorAttachmentDesc.loadOp = LoadOperation::LOAD;
-    colorAttachmentDesc.storeOp = StoreOperation::STORE;
+    colorAttachmentDesc.loadOp = LoadOperation::Load;
+    colorAttachmentDesc.storeOp = StoreOperation::Store;
 
     Attachment* colorAttachment = framebuffer->AddAttachment(0, colorAttachmentDesc);
 
@@ -389,8 +389,8 @@ static FramebufferRef CreateLightingFramebuffer(GBuffer* gbuffer)
     AttachmentDesc depthAttachmentDesc {};
     depthAttachmentDesc.imageType = TextureType::Texture2D;
     depthAttachmentDesc.format = depthImageView->GetImage()->GetTextureFormat();
-    depthAttachmentDesc.loadOp = LoadOperation::LOAD;
-    depthAttachmentDesc.storeOp = StoreOperation::NONE;
+    depthAttachmentDesc.loadOp = LoadOperation::Load;
+    depthAttachmentDesc.storeOp = StoreOperation::None;
     depthAttachmentDesc.onlyStencil = true;
 
     Attachment* depthAttachment = framebuffer->AddAttachment(
@@ -423,8 +423,8 @@ static FramebufferRef CreateDepthPrepassFramebuffer(GBuffer* gbuffer)
     AttachmentDesc depthAttachmentDesc {};
     depthAttachmentDesc.imageType = TextureType::Texture2D;
     depthAttachmentDesc.format = depthImageView->GetImage()->GetTextureFormat();
-    depthAttachmentDesc.loadOp = LoadOperation::CLEAR;
-    depthAttachmentDesc.storeOp = StoreOperation::STORE;
+    depthAttachmentDesc.loadOp = LoadOperation::Clear;
+    depthAttachmentDesc.storeOp = StoreOperation::Store;
 
     Attachment* depthAttachment = framebuffer->AddAttachment(
         0,
@@ -1006,11 +1006,11 @@ PassData* DeferredPass::CreateViewPassData(View* view, PassDataExt&)
             TextureType::Texture2D,
             opaquePassFramebuffer->GetAttachment(0)->GetFormat(),
             Vec3u(opaquePassFramebuffer->GetExtent(), 1),
-            TFM_LINEAR_MIPMAP,
-            TFM_LINEAR_MIPMAP,
-            TWM_CLAMP_TO_EDGE,
+            TextureFilterMode::LinearMipmap,
+            TextureFilterMode::LinearMipmap,
+            TextureWrapMode::ClampToEdge,
             1,
-            IU_SAMPLED | IU_ATTACHMENT });
+            ImageUsage::Sampled | ImageUsage::Attachment });
 
         passData.mipChain->SetName(NAME("DeferredPassMipChain"));
         Check(passData.mipChain->Create());
@@ -1049,8 +1049,8 @@ PassData* DeferredPass::CreateViewPassData(View* view, PassDataExt&)
                     AttachmentDesc {
                         TextureType::Texture2D,
                         passData.mipChain->GetTextureDesc().format,
-                        LoadOperation::CLEAR,
-                        StoreOperation::STORE },
+                        LoadOperation::Clear,
+                        StoreOperation::Store },
                     mipImageView);
 
                 Check(passData.mipChainFramebuffers[mipLevel]->Create());
@@ -1213,11 +1213,11 @@ void DeferredPass::ResizeView(Viewport viewport, View* view, DeferredPassData& p
         TextureType::Texture2D,
         opaquePassFramebuffer->GetAttachment(0)->GetFormat(),
         Vec3u(opaquePassFramebuffer->GetExtent(), 1),
-        TFM_LINEAR_MIPMAP,
-        TFM_LINEAR_MIPMAP,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::LinearMipmap,
+        TextureFilterMode::LinearMipmap,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_SAMPLED | IU_ATTACHMENT });
+        ImageUsage::Sampled | ImageUsage::Attachment });
     passData.mipChain->SetName(NAME("DeferredPassMipChain"));
     Check(passData.mipChain->Create());
 
@@ -1255,8 +1255,8 @@ void DeferredPass::ResizeView(Viewport viewport, View* view, DeferredPassData& p
                 AttachmentDesc {
                     TextureType::Texture2D,
                     passData.mipChain->GetTextureDesc().format,
-                    LoadOperation::CLEAR,
-                    StoreOperation::STORE },
+                    LoadOperation::Clear,
+                    StoreOperation::Store },
                 mipImageView);
 
             Check(passData.mipChainFramebuffers[mipLevel]->Create());
@@ -1654,7 +1654,7 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
     if (performDepthPrepass)
     {
-        frame->cr << SetDepthCompareOp(DCO_LESS_OR_EQUAL);
+        frame->cr << SetDepthCompareOp(DepthCompareOp::LessOrEqual);
     }
 
     frame->cr << ClearFramebuffer(opaquePassFramebuffer, 0x1);
@@ -1674,7 +1674,7 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
     if (performDepthPrepass)
     {
-        frame->cr << SetDepthCompareOp(DCO_LESS);
+        frame->cr << SetDepthCompareOp(DepthCompareOp::Less);
     }
 
     // unset opaque target
@@ -1692,14 +1692,14 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
             if (performDepthPrepass)
             {
-                frame->cr << SetDepthCompareOp(DCO_LESS_OR_EQUAL);
+                frame->cr << SetDepthCompareOp(DepthCompareOp::LessOrEqual);
             }
 
             renderCollector.ExecuteDrawCalls(frame, rs, RenderBucketMask<RenderBucket::Lightmapped>);
 
             if (performDepthPrepass)
             {
-                frame->cr << SetDepthCompareOp(DCO_LESS);
+                frame->cr << SetDepthCompareOp(DepthCompareOp::Less);
             }
 
             frame->cr << SetCurrentFramebuffer(nullptr);
@@ -1774,7 +1774,7 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
             // make sure it is in a state for reading, we don't want any transitions between lightmap -> deferred indirect pass.
             frame->cr << InsertBarrier(
                 ssgiResultTexture->GetGpuImage(),
-                RS_SHADER_RESOURCE,
+                ResourceState::ShaderResource,
                 ShaderModuleType::Pixel);
         }
     }
@@ -1796,9 +1796,9 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
         ENGINE_STAT_GPU_SCOPE(&s_statDeferredPass);
 
         // Transition shadow map atlas to shader resource before the pass
-        frame->cr << InsertBarrier(RI.shadowMapCache->GetAtlasImage(), RS_SHADER_RESOURCE, ShaderModuleType::Pixel);
+        frame->cr << InsertBarrier(RI.shadowMapCache->GetAtlasImage(), ResourceState::ShaderResource, ShaderModuleType::Pixel);
         // Transition point light shadow map atlas to shader resource before the pass
-        frame->cr << InsertBarrier(RI.shadowMapCache->GetPointLightShadowMapImage(), RS_SHADER_RESOURCE, ShaderModuleType::Pixel);
+        frame->cr << InsertBarrier(RI.shadowMapCache->GetPointLightShadowMapImage(), ResourceState::ShaderResource, ShaderModuleType::Pixel);
 
         frame->cr << SetCurrentFramebuffer(passData.lightingFramebuffer);
 
@@ -1809,7 +1809,7 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
         // We need to use NONE because we draw lightmap volumes as boxes, not quads,
         // and we need the camera to be able to see the inside of the box.
         // Changing cull mode during lightmap volume drawing will break the render pass.
-        frame->cr << SetFaceCullMode(FCM_NONE);
+        frame->cr << SetFaceCullMode(FaceCullMode::None);
         frame->cr << SetCurrentBlendFunction(BlendFunction::Additive());
 
         const bool isPathTracer = g_cvPathTracing.Get();
@@ -1835,7 +1835,7 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
             passData.clusteredShadowMapIndexBuffer = nullptr;
         }
 
-        frame->cr << SetFaceCullMode(FCM_BACK);
+        frame->cr << SetFaceCullMode(FaceCullMode::Back);
         frame->cr << SetCurrentBlendFunction(BlendFunction::None());
         frame->cr << SetCurrentFramebuffer(nullptr);
     }
@@ -1859,7 +1859,7 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
         frame->cr << InsertBarrier(
             passData.reflectionsPass->GetFramebuffer()->GetAttachment(0)->GetGpuImage(),
-            RS_SHADER_RESOURCE,
+            ResourceState::ShaderResource,
             ShaderModuleType::Pixel);
 
         frame->cr << SetCurrentFramebuffer(passData.lightingFramebuffer);
@@ -1867,16 +1867,16 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
         frame->cr << SetCurrentViewport(rs.viewport);
 
         frame->cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
-        frame->cr << SetFaceCullMode(FCM_BACK);
-        frame->cr << SetFillMode(FM_FILL);
-        frame->cr << SetTopology(TOP_TRIANGLES);
+        frame->cr << SetFaceCullMode(FaceCullMode::Back);
+        frame->cr << SetFillMode(FillMode::Fill);
+        frame->cr << SetTopology(Topology::Triangles);
         frame->cr << SetDepthTest(false);
         frame->cr << SetDepthWrite(false);
 
         static constexpr uint8 StencilFilterMask = SkyStencilMask;
 
         frame->cr << SetStencilTest(true);
-        frame->cr << SetStencilFunction(StencilFunction { SO_KEEP, SO_KEEP, SO_KEEP, SCO_EQUAL });
+        frame->cr << SetStencilFunction(StencilFunction { StencilOp::Keep, StencilOp::Keep, StencilOp::Keep, StencilCompareOp::Equal });
         frame->cr << SetStencilState(0, StencilFilterMask, 0x0);
 
         frame->cr << SetCurrentBlendFunction(BlendFunction::Additive());
@@ -1924,9 +1924,9 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
         frame->cr << SetCurrentViewport(rs.viewport);
 
         frame->cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
-        frame->cr << SetFaceCullMode(FCM_BACK);
-        frame->cr << SetFillMode(FM_FILL);
-        frame->cr << SetTopology(TOP_TRIANGLES);
+        frame->cr << SetFaceCullMode(FaceCullMode::Back);
+        frame->cr << SetFillMode(FillMode::Fill);
+        frame->cr << SetTopology(Topology::Triangles);
         frame->cr << SetDepthTest(false);
         frame->cr << SetDepthWrite(false);
 
@@ -1934,7 +1934,7 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
         // frame->cr << SetStencilTest(false);
         frame->cr << SetStencilTest(true);
-        frame->cr << SetStencilFunction(StencilFunction { SO_KEEP, SO_KEEP, SO_KEEP, SCO_EQUAL });
+        frame->cr << SetStencilFunction(StencilFunction { StencilOp::Keep, StencilOp::Keep, StencilOp::Keep, StencilCompareOp::Equal });
         frame->cr << SetStencilState(0, StencilFilterMask, 0x0);
 
         frame->cr << SetCurrentShader(ShaderDesc(NAME("BlitTexture")));
@@ -2261,8 +2261,8 @@ void DeferredPass::GenerateMipChain(Frame* frame, const RenderSetup& rs, RenderC
     CommandRecorder& cr = frame->cr;
 
     // Copy the source image to mip 0 of the mip chain
-    cr << InsertBarrier(srcImage, RS_COPY_SRC);
-    cr << InsertBarrier(mipChainTexture->GetGpuImage(), RS_COPY_DST);
+    cr << InsertBarrier(srcImage, ResourceState::CopySrc);
+    cr << InsertBarrier(mipChainTexture->GetGpuImage(), ResourceState::CopyDst);
 
     cr << CopyImage(
         srcImage,
@@ -2272,7 +2272,7 @@ void DeferredPass::GenerateMipChain(Frame* frame, const RenderSetup& rs, RenderC
         ImageSubResource { .baseMipLevel = 0, .numLevels = 1, .baseArrayLayer = 0, .numLayers = 1 });
 
     // Transition mip 0 to shader resource for reading (source for first downsample)
-    cr << InsertBarrier(mipChainTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    cr << InsertBarrier(mipChainTexture->GetGpuImage(), ResourceState::ShaderResource);
 
     for (uint8 mipLevel = 1; mipLevel < numMips; ++mipLevel)
     {
@@ -2294,7 +2294,7 @@ void DeferredPass::GenerateMipChain(Frame* frame, const RenderSetup& rs, RenderC
             1 // layer 0, 1 layer
         );
 
-        cr << InsertBarrier(mipChainTexture->GetGpuImage(), RS_RENDER_TARGET, ImageSubResource { mipLevel, 1, 0, 1 });
+        cr << InsertBarrier(mipChainTexture->GetGpuImage(), ResourceState::RenderTarget, ImageSubResource { mipLevel, 1, 0, 1 });
 
         // Set up render target (destination mip level) - use pre-created framebuffer
         Framebuffer* dstFramebuffer = pd->mipChainFramebuffers[mipLevel];
@@ -2308,11 +2308,11 @@ void DeferredPass::GenerateMipChain(Frame* frame, const RenderSetup& rs, RenderC
         cr << SetCurrentShader(ShaderDesc(NAME("BlitTexture")));
 
         cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
-        cr << SetTopology(TOP_TRIANGLES);
-        cr << SetFillMode(FM_FILL);
+        cr << SetTopology(Topology::Triangles);
+        cr << SetFillMode(FillMode::Fill);
         cr << SetDepthTest(false);
         cr << SetDepthWrite(false);
-        cr << SetFaceCullMode(FCM_NONE);
+        cr << SetFaceCullMode(FaceCullMode::None);
 
         // Set shader uniforms
         cr << SetShaderUniform(0, "SamplerLinear"_sh, RI.placeholderData->GetSamplerLinear());
@@ -2340,7 +2340,7 @@ void DeferredPass::GenerateMipChain(Frame* frame, const RenderSetup& rs, RenderC
         // End rendering to this mip
         cr << SetCurrentFramebuffer(nullptr);
 
-        cr << InsertBarrier(mipChainTexture->GetGpuImage(), RS_SHADER_RESOURCE, ImageSubResource { mipLevel, 1, 0, 1 });
+        cr << InsertBarrier(mipChainTexture->GetGpuImage(), ResourceState::ShaderResource, ImageSubResource { mipLevel, 1, 0, 1 });
     }
 
     // Reset depth state
@@ -2348,7 +2348,7 @@ void DeferredPass::GenerateMipChain(Frame* frame, const RenderSetup& rs, RenderC
     cr << SetDepthWrite(true);
 
     // Transition source image back to render target
-    cr << InsertBarrier(srcImage, RS_RENDER_TARGET);
+    cr << InsertBarrier(srcImage, ResourceState::RenderTarget);
 }
 
 #pragma endregion DeferredPass

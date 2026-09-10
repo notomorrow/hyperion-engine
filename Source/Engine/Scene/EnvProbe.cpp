@@ -279,11 +279,11 @@ void EnvProbe::InitCaptureData(EnvProbeCaptureState* captureState)
                 TextureType::Cubemap,
                 TextureFormat::RGBA16F,
                 Vec3u(Vec2u(uint32(m_dimensions)), 1),
-                TFM_LINEAR_MIPMAP,
-                TFM_LINEAR,
-                TWM_CLAMP_TO_EDGE,
+                TextureFilterMode::LinearMipmap,
+                TextureFilterMode::Linear,
+                TextureWrapMode::ClampToEdge,
                 1,
-                IU_STORAGE | IU_SAMPLED
+                ImageUsage::Storage | ImageUsage::Sampled
             });
 
             captureState->texture->SetName(BuildBakedTextureName(GetName(), captureState->swatchName));
@@ -300,11 +300,11 @@ void EnvProbe::InitCaptureData(EnvProbeCaptureState* captureState)
                     VisibilityTextureDimensions,
                     1
                 },
-                TFM_LINEAR,
-                TFM_LINEAR,
-                TWM_CLAMP_TO_EDGE,
+                TextureFilterMode::Linear,
+                TextureFilterMode::Linear,
+                TextureWrapMode::ClampToEdge,
                 1,
-                IU_SAMPLED | IU_STORAGE
+                ImageUsage::Sampled | ImageUsage::Storage
             });
 
             captureState->visibilityTexture->SetName(BuildVisibilityTextureName(GetName(), captureState->swatchName));
@@ -324,11 +324,11 @@ void EnvProbe::InitCaptureData(EnvProbeCaptureState* captureState)
                 TextureType::Cubemap,
                 TextureFormat::RGBA16F,
                 Vec3u(Vec2u(uint32(m_dimensions)), 1),
-                TFM_LINEAR_MIPMAP,
-                TFM_LINEAR,
-                TWM_CLAMP_TO_EDGE,
+                TextureFilterMode::LinearMipmap,
+                TextureFilterMode::Linear,
+                TextureWrapMode::ClampToEdge,
                 1,
-                IU_STORAGE | IU_SAMPLED
+                ImageUsage::Storage | ImageUsage::Sampled
             });
 
             m_texture->SetName(NAME_FMT("{}_ColorMap", GetName()));
@@ -458,11 +458,11 @@ void EnvProbe::CreateVisibilityTexture()
             VisibilityTextureDimensions,
             1
         },
-        TFM_LINEAR,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Linear,
+        TextureFilterMode::Linear,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_SAMPLED | IU_STORAGE
+        ImageUsage::Sampled | ImageUsage::Storage
     });
 
     m_visibilityTexture->SetName(NAME_FMT("{}_VisibilityMap", GetName()));
@@ -679,19 +679,19 @@ void EnvProbe::CreateViewData()
     AttachmentDesc& colorDesc = attachmentDescs.PushBack(AttachmentDesc {
         TextureType::Cubemap,
         TextureFormat::RGBA16F,
-        LoadOperation::CLEAR,
-        StoreOperation::STORE
+        LoadOperation::Clear,
+        StoreOperation::Store
     });
 
     attachmentImages.PushBack(RI.MakeImage(TextureDesc {
         colorDesc.imageType,
         colorDesc.format,
         Vec3u(framebufferDesc.extent, 1),
-        TFM_LINEAR,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Linear,
+        TextureFilterMode::Linear,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_SAMPLED | IU_ATTACHMENT }));
+        ImageUsage::Sampled | ImageUsage::Attachment }));
 
     // Visibility target
     // @FIXME: Needs to be created with HAS_VISIBILITY flag set for this to ever be created.
@@ -701,19 +701,19 @@ void EnvProbe::CreateViewData()
         AttachmentDesc& visibilityDesc = attachmentDescs.PushBack(AttachmentDesc {
             TextureType::Cubemap,
             TextureFormat::RG16F,
-            LoadOperation::CLEAR,
-            StoreOperation::STORE
+            LoadOperation::Clear,
+            StoreOperation::Store
         });
 
         attachmentImages.PushBack(RI.MakeImage(TextureDesc {
             visibilityDesc.imageType,
             visibilityDesc.format,
             Vec3u(framebufferDesc.extent, 1),
-            TFM_LINEAR,
-            TFM_LINEAR,
-            TWM_CLAMP_TO_EDGE,
+            TextureFilterMode::Linear,
+            TextureFilterMode::Linear,
+            TextureWrapMode::ClampToEdge,
             1,
-            IU_SAMPLED | IU_ATTACHMENT
+            ImageUsage::Sampled | ImageUsage::Attachment
         }));
     }
 
@@ -722,19 +722,19 @@ void EnvProbe::CreateViewData()
         AttachmentDesc& hitMaskDesc = attachmentDescs.PushBack(AttachmentDesc {
             TextureType::Cubemap,
             TextureFormat::R8,
-            LoadOperation::CLEAR,
-            StoreOperation::STORE
+            LoadOperation::Clear,
+            StoreOperation::Store
         });
 
         attachmentImages.PushBack(RI.MakeImage(TextureDesc {
             hitMaskDesc.imageType,
             hitMaskDesc.format,
             Vec3u(framebufferDesc.extent, 1),
-            TFM_NEAREST,
-            TFM_NEAREST,
-            TWM_CLAMP_TO_EDGE,
+            TextureFilterMode::Nearest,
+            TextureFilterMode::Nearest,
+            TextureWrapMode::ClampToEdge,
             1,
-            IU_SAMPLED | IU_ATTACHMENT
+            ImageUsage::Sampled | ImageUsage::Attachment
         }));
     }
 
@@ -742,19 +742,19 @@ void EnvProbe::CreateViewData()
     AttachmentDesc& depthDesc = attachmentDescs.PushBack(AttachmentDesc {
         TextureType::Cubemap,
         TextureFormat::D16,
-        LoadOperation::CLEAR,
-        StoreOperation::STORE
+        LoadOperation::Clear,
+        StoreOperation::Store
     });
 
     attachmentImages.PushBack(RI.MakeImage(TextureDesc {
         depthDesc.imageType,
         depthDesc.format,
         Vec3u(framebufferDesc.extent, 1),
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Nearest,
+        TextureFilterMode::Nearest,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_SAMPLED | IU_ATTACHMENT
+        ImageUsage::Sampled | ImageUsage::Attachment
     }));
 
     for (const GpuImageRef& image : attachmentImages)
@@ -1535,11 +1535,11 @@ void SkyProbe::CreateTexture()
         TextureType::Cubemap,
         TextureFormat::RGBA16F,
         Vec3u(Vec2u(uint32(m_dimensions)), 1),
-        TFM_LINEAR_MIPMAP,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::LinearMipmap,
+        TextureFilterMode::Linear,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_STORAGE | IU_SAMPLED
+        ImageUsage::Storage | ImageUsage::Sampled
     });
 
     m_texture->SetName(NAME_FMT("{}_ColorMap", GetName()));

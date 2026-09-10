@@ -363,8 +363,8 @@ void PathTracer::ReadHitsBuffer(
 
     CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder();
 
-    cr << InsertBarrier(hitsBuffer.gpuBuffer, RS_COPY_SRC);
-    cr << InsertBarrier(readbackBuffer, RS_COPY_DST);
+    cr << InsertBarrier(hitsBuffer.gpuBuffer, ResourceState::CopySrc);
+    cr << InsertBarrier(readbackBuffer, ResourceState::CopyDst);
 
     cr << CopyBuffer(hitsBuffer.gpuBuffer, readbackBuffer, uint32(count * sizeof(LightmapHit)));
 
@@ -663,7 +663,7 @@ PathTracerRenderResult PathTracer::Render(Frame* frame, const RenderSetup& rende
     Assert(jd.hitsBufferGpu.gpuBuffer->Size() >= rays.Size() * sizeof(LightmapHit));
     Assert(raysBuffer->Size() >= rays.Size() * 2 * sizeof(Vec4f));
 
-    cr << InsertBarrier(jd.hitsBufferGpu.gpuBuffer, RS_UNORDERED_ACCESS);
+    cr << InsertBarrier(jd.hitsBufferGpu.gpuBuffer, ResourceState::UnorderedAccess);
     cr << TraceRays(Vec3u { uint32(rays.Size()), 1, 1 });
 
     cr.Done();

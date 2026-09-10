@@ -116,8 +116,8 @@ void VulkanRenderPass::CreateDependencies()
 
             switch (attachmentDesc.loadOp)
             {
-            case LoadOperation::CLEAR: // fallthrough
-            case LoadOperation::LOAD:
+            case LoadOperation::Clear: // fallthrough
+            case LoadOperation::Load:
                 if (!loadDependency.HasValue())
                 {
                     loadDependency = VkSubpassDependency {
@@ -135,7 +135,7 @@ void VulkanRenderPass::CreateDependencies()
                     loadDependency->srcStageMask |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
                     loadDependency->srcAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 
-                    if (attachmentDesc.loadOp == LoadOperation::LOAD)
+                    if (attachmentDesc.loadOp == LoadOperation::Load)
                     {
                         loadDependency->dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
                     }
@@ -148,7 +148,7 @@ void VulkanRenderPass::CreateDependencies()
                     loadDependency->srcStageMask |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                     loadDependency->srcAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
 
-                    if (attachmentDesc.loadOp == LoadOperation::LOAD)
+                    if (attachmentDesc.loadOp == LoadOperation::Load)
                     {
                         loadDependency->dstAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
                     }
@@ -160,7 +160,7 @@ void VulkanRenderPass::CreateDependencies()
 
             switch (attachmentDesc.storeOp)
             {
-            case StoreOperation::STORE:
+            case StoreOperation::Store:
                 if (!storeDependency.HasValue())
                 {
                     storeDependency = VkSubpassDependency {
@@ -384,24 +384,24 @@ void VulkanRenderPass::Begin(VulkanCommandBuffer* cmd, VulkanFramebuffer* frameb
 
         if (hasStencil && fullSubResource)
         {
-            const bool transitionDepth = !attachmentDesc.onlyStencil && image->GetResourceState() != RS_RENDER_TARGET;
-            const bool transitionStencil = !attachmentDesc.onlyDepth && image->GetStencilState() != RS_RENDER_TARGET;
+            const bool transitionDepth = !attachmentDesc.onlyStencil && image->GetResourceState() != ResourceState::RenderTarget;
+            const bool transitionStencil = !attachmentDesc.onlyDepth && image->GetStencilState() != ResourceState::RenderTarget;
 
             if (transitionDepth ^ transitionStencil)
             {
                 if (transitionDepth)
                 {
-                    image->InsertBarrier(cmd, RS_RENDER_TARGET, ShaderModuleType::Pixel, /* onlyDepth */ true, /* onlyStencil */ false);
+                    image->InsertBarrier(cmd, ResourceState::RenderTarget, ShaderModuleType::Pixel, /* onlyDepth */ true, /* onlyStencil */ false);
                 }
 
                 if (transitionStencil)
                 {
-                    image->InsertBarrier(cmd, RS_RENDER_TARGET, ShaderModuleType::Pixel, /* onlyDepth */ false, /* onlyStencil */ true);
+                    image->InsertBarrier(cmd, ResourceState::RenderTarget, ShaderModuleType::Pixel, /* onlyDepth */ false, /* onlyStencil */ true);
                 }
             }
             else if (transitionDepth && transitionStencil)
             {
-                image->InsertBarrier(cmd, RS_RENDER_TARGET, ShaderModuleType::Pixel);
+                image->InsertBarrier(cmd, ResourceState::RenderTarget, ShaderModuleType::Pixel);
             }
 
             continue;
@@ -409,11 +409,11 @@ void VulkanRenderPass::Begin(VulkanCommandBuffer* cmd, VulkanFramebuffer* frameb
 
         if (fullSubResource)
         {
-            image->InsertBarrier(cmd, RS_RENDER_TARGET, ShaderModuleType::Pixel);
+            image->InsertBarrier(cmd, ResourceState::RenderTarget, ShaderModuleType::Pixel);
         }
-        else if (image->GetSubResourceState(subResource) != RS_RENDER_TARGET)
+        else if (image->GetSubResourceState(subResource) != ResourceState::RenderTarget)
         {
-            image->InsertBarrier(cmd, subResource, RS_RENDER_TARGET, ShaderModuleType::Pixel);
+            image->InsertBarrier(cmd, subResource, ResourceState::RenderTarget, ShaderModuleType::Pixel);
         }
     }
 

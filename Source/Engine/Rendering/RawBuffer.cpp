@@ -68,10 +68,10 @@ void RawBuffer::FlushInto(CommandBuffer& cmdBuffer)
 
     Memory::Copy(stagingBuffer->Map(), cpuBuffer.Data() + dirtyRangeStart, dirtyRangeEnd - dirtyRangeStart);
 
-    stagingBuffer->InsertBarrier(&cmdBuffer, RS_COPY_SRC);
-    gpuBuffer->InsertBarrier(&cmdBuffer, RS_COPY_DST);
+    stagingBuffer->InsertBarrier(&cmdBuffer, ResourceState::CopySrc);
+    gpuBuffer->InsertBarrier(&cmdBuffer, ResourceState::CopyDst);
     gpuBuffer->CopyFrom(&cmdBuffer, stagingBuffer, 0, dirtyRangeStart, dirtyRangeEnd - dirtyRangeStart);
-    gpuBuffer->InsertBarrier(&cmdBuffer, RS_SHADER_RESOURCE);
+    gpuBuffer->InsertBarrier(&cmdBuffer, ResourceState::ShaderResource);
 
     dirtyRangeStart = SIZE_MAX;
     dirtyRangeEnd = 0;

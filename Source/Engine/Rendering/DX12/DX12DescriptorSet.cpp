@@ -573,8 +573,8 @@ void DX12DescriptorSet::Update(bool force)
                     continue;
                 }
 
-                AssertDebug(imageView->GetImage()->GetTextureDesc().imageUsage & IU_SAMPLED,
-                            "Cannot create SRV descriptor for image without IU_SAMPLED flag set.");
+                AssertDebug(imageView->GetImage()->GetTextureDesc().imageUsage & ImageUsage::Sampled,
+                            "Cannot create SRV descriptor for image without ImageUsage::Sampled flag set.");
 
                 const D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = GetSRVDesc(
                     imageView->GetImage(),
@@ -652,8 +652,8 @@ void DX12DescriptorSet::Update(bool force)
                     continue;
                 }
 
-                AssertDebug(imageView->GetImage()->GetTextureDesc().imageUsage & IU_STORAGE,
-                            "Cannot create UAV descriptor for image without IU_STORAGE flag set.");
+                AssertDebug(imageView->GetImage()->GetTextureDesc().imageUsage & ImageUsage::Storage,
+                            "Cannot create UAV descriptor for image without ImageUsage::Storage flag set.");
 
                 const D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = GetUAVDesc(
                     imageView->GetImage(),

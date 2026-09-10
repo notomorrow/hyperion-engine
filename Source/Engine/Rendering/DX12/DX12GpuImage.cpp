@@ -48,8 +48,8 @@ DX12GpuImage::~DX12GpuImage()
 
         m_isHandleOwned = true;
 
-        m_resourceState = RS_UNDEFINED;
-        m_stencilState = RS_UNDEFINED;
+        m_resourceState = ResourceState::Undefined;
+        m_stencilState = ResourceState::Undefined;
         m_subResourceStates.Clear();
     }
 }
@@ -66,7 +66,7 @@ bool DX12GpuImage::IsOwned() const
 
 RendererResult DX12GpuImage::Create()
 {
-    return Create(RS_UNDEFINED);
+    return Create(ResourceState::Undefined);
 }
 
 RendererResult DX12GpuImage::Create(ResourceState initialState)
@@ -83,9 +83,9 @@ RendererResult DX12GpuImage::Create(ResourceState initialState)
     const TextureFormat format = GetTextureFormat();
     const TextureType type = GetType();
 
-    const bool isAttachmentTexture = m_textureDesc.imageUsage[IU_ATTACHMENT];
-    const bool isRWTexture = m_textureDesc.imageUsage[IU_STORAGE];
-    const bool isExternalMemory = m_textureDesc.imageUsage[IU_EXTERNAL];
+    const bool isAttachmentTexture = m_textureDesc.imageUsage[ImageUsage::Attachment];
+    const bool isRWTexture = m_textureDesc.imageUsage[ImageUsage::Storage];
+    const bool isExternalMemory = m_textureDesc.imageUsage[ImageUsage::External];
 
     const bool isDepthStencil = m_textureDesc.IsDepthStencil();
     const bool isBlended = m_textureDesc.IsBlended();
@@ -110,7 +110,7 @@ RendererResult DX12GpuImage::Create(ResourceState initialState)
     // For depth textures that will be sampled, use TYPELESS format for the resource
     // Views will use the appropriate typed format (D16_UNORM for DSV, R16_UNORM for SRV)
     DX12ViewType resourceFormatType = DX12ViewType::SRV_UAV;
-    if (isDepthStencil && (m_textureDesc.imageUsage & IU_SAMPLED))
+    if (isDepthStencil && (m_textureDesc.imageUsage & ImageUsage::Sampled))
     {
         resourceFormatType = DX12ViewType::None;  // Returns TYPELESS format
     }
@@ -216,9 +216,9 @@ RendererResult DX12GpuImage::Create(ResourceState initialState)
 
         // Promote to RENDER_TARGET initial state so the clear value triggers
         // D3D12 auto-initialization of all subresources.
-        if (initialState == RS_UNDEFINED || initialState == RS_PRE_INITIALIZED)
+        if (initialState == ResourceState::Undefined || initialState == ResourceState::PreInitialized)
         {
-            initialState = RS_RENDER_TARGET;
+            initialState = ResourceState::RenderTarget;
             resourceStates = ToDX12ResourceStates(initialState);
         }
     }
@@ -245,15 +245,15 @@ RendererResult DX12GpuImage::Create(ResourceState initialState)
         return HYP_MAKE_ERROR(RendererError, "Failed to create image resource!", hr);
 
     // Set the initial resource state to match the actual GPU state
-    // RS_UNDEFINED/RS_PRE_INITIALIZED map to D3D12_RESOURCE_STATE_COMMON
-    if (initialState != RS_UNDEFINED && initialState != RS_PRE_INITIALIZED)
+    // ResourceState::Undefined/ResourceState::PreInitialized map to D3D12_RESOURCE_STATE_COMMON
+    if (initialState != ResourceState::Undefined && initialState != ResourceState::PreInitialized)
     {
         SetResourceState(initialState);
     }
     else
     {
-        // When created with COMMON state, track it as RS_COMMON
-        SetResourceState(RS_COMMON);
+        // When created with COMMON state, track it as ResourceState::Common
+        SetResourceState(ResourceState::Common);
     }
 
     return {};
@@ -292,15 +292,15 @@ RendererResult DX12GpuImage::Resize(const Vec3u& extent)
         m_resource.Reset();
         m_allocation.Reset();
 
-        m_resourceState = RS_UNDEFINED;
-        m_stencilState = RS_UNDEFINED;
+        m_resourceState = ResourceState::Undefined;
+        m_stencilState = ResourceState::Undefined;
         m_subResourceStates.Clear();
 
         CheckResultOrReturn(Create());
 
-        if (previousResourceState != RS_UNDEFINED)
+        if (previousResourceState != ResourceState::Undefined)
         {
-            SetResourceState(RS_UNDEFINED);
+            SetResourceState(ResourceState::Undefined);
 
             DX12Frame* frame = RI.GetCurrentFrame();
             CommandRecorder& cr = frame->cr;
@@ -365,7 +365,7 @@ void DX12GpuImage::InsertBarrier(
     bool onlyDepth,
     bool onlyStencil)
 {
-    AssertDebug(newState != RS_UNDEFINED && newState != RS_PRE_INITIALIZED);
+    AssertDebug(newState != ResourceState::Undefined && newState != ResourceState::PreInitialized);
     AssertDebug(m_resource != nullptr);
 
     AssertDebug((subResource.baseArrayLayer + subResource.numLayers) <= NumArrayLayers()
@@ -377,7 +377,7 @@ void DX12GpuImage::InsertBarrier(
     const uint16 maxArrayLayers = uint16(subResource.baseArrayLayer + MathUtil::Min(subResource.numLayers, NumArrayLayers()));
     const uint8 maxMipLevels = uint8(subResource.baseMipLevel + MathUtil::Min(subResource.numLevels, NumMips()));
 
-    const bool isAttachmentTexture = m_textureDesc.imageUsage[IU_ATTACHMENT];
+    const bool isAttachmentTexture = m_textureDesc.imageUsage[ImageUsage::Attachment];
 
     const bool isDepthStencil = m_textureDesc.IsDepthStencil();
     const bool hasStencil = TextureUtils::HasStencilComponent(m_textureDesc.format);
@@ -392,7 +392,7 @@ void DX12GpuImage::InsertBarrier(
 
     if (HasSubResourceStates())
     {
-        currResourceState = RS_UNDEFINED;
+        currResourceState = ResourceState::Undefined;
 
         bool firstSubResource = true;
         bool breakLoop = false;
@@ -433,7 +433,7 @@ void DX12GpuImage::InsertBarrier(
                 }
                 else if (foundResourceState != currResourceState)
                 {
-                    currResourceState = RS_UNDEFINED;
+                    currResourceState = ResourceState::Undefined;
                     breakLoop = true;
 
                     break;
@@ -449,26 +449,26 @@ void DX12GpuImage::InsertBarrier(
         {
             Assert(onlyStencil);
 
-            if (newState == RS_SHADER_RESOURCE)
+            if (newState == ResourceState::ShaderResource)
             {
-                Assert(currStencilState == RS_RENDER_TARGET);
+                Assert(currStencilState == ResourceState::RenderTarget);
             }
-            else if (newState == RS_RENDER_TARGET)
+            else if (newState == ResourceState::RenderTarget)
             {
-                Assert(currStencilState == RS_SHADER_RESOURCE);
+                Assert(currStencilState == ResourceState::ShaderResource);
             }
         }
         else if (currStencilState == newState)
         {
             Assert(onlyDepth);
 
-            if (newState == RS_SHADER_RESOURCE)
+            if (newState == ResourceState::ShaderResource)
             {
-                Assert(currResourceState == RS_RENDER_TARGET);
+                Assert(currResourceState == ResourceState::RenderTarget);
             }
-            else if (newState == RS_RENDER_TARGET)
+            else if (newState == ResourceState::RenderTarget)
             {
-                Assert(currResourceState == RS_SHADER_RESOURCE);
+                Assert(currResourceState == ResourceState::ShaderResource);
             }
         }
     }
@@ -490,12 +490,12 @@ void DX12GpuImage::InsertBarrier(
     {
         if (adjustForDepthStencil)
         {
-            if (state == RS_RENDER_TARGET || state == RS_DEPTH_STENCIL)
+            if (state == ResourceState::RenderTarget || state == ResourceState::DepthStencil)
             {
                 return D3D12_RESOURCE_STATE_DEPTH_WRITE;
             }
 
-            if (state == RS_SHADER_RESOURCE)
+            if (state == ResourceState::ShaderResource)
             {
                 return D3D12_RESOURCE_STATE_DEPTH_READ;
             }
@@ -509,10 +509,10 @@ void DX12GpuImage::InsertBarrier(
     D3D12_RESOURCE_STATES stateAfter = GetDX12State(newState);
 
     const bool stencilDiverged = (hasStencil && !onlyDepth && !onlyStencil
-        && currResourceState != RS_UNDEFINED
+        && currResourceState != ResourceState::Undefined
         && currStencilState != currResourceState);
 
-    if (effectiveCurrState == RS_UNDEFINED || stencilDiverged)
+    if (effectiveCurrState == ResourceState::Undefined || stencilDiverged)
     {
         // Fall through to per-subresource barrier processing
     }
@@ -521,8 +521,8 @@ void DX12GpuImage::InsertBarrier(
         && !onlyDepth && !onlyStencil)
     {
         // Only issue the barrier if the DX12 state actually changes.
-        // Some distinct RS_ states map to the same D3D12 state (e.g. RS_RENDER_TARGET and
-        // RS_DEPTH_STENCIL both map to DEPTH_WRITE for depth-stencil attachment images).
+        // Some distinct RS_ states map to the same D3D12 state (e.g. ResourceState::RenderTarget and
+        // ResourceState::DepthStencil both map to DEPTH_WRITE for depth-stencil attachment images).
         // In that case no hardware barrier is needed, but we must still update our logical
         // state tracking so callers see the correct RS_ state.
         if (stateBefore != stateAfter)
@@ -677,7 +677,7 @@ void DX12GpuImage::InsertBarrier(
         && subResource.baseArrayLayer == 0 && subResource.numLayers >= NumArrayLayers())
     {
         // Full resource was transitioned (took the per-subresource path due to diverged
-        // depth/stencil planes or RS_UNDEFINED subresource states).
+        // depth/stencil planes or ResourceState::Undefined subresource states).
         // All subresources -- including both planes -- are now in newState.
         // SetResourceState sets m_resourceState, m_stencilState, and clears the map.
         SetResourceState(newState);
@@ -790,8 +790,8 @@ void DX12GpuImage::Blit(
         const D3D12_RESOURCE_STATES srcState = srcIsDepthStencil ? D3D12_RESOURCE_STATE_DEPTH_READ : D3D12_RESOURCE_STATE_COPY_SOURCE;
         const D3D12_RESOURCE_STATES dstState = dstIsDepthStencil ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_COPY_DEST;
 
-        AssertDebug(srcImage->GetResourceState() == RS_COPY_SRC);
-        AssertDebug(GetResourceState() == RS_COPY_DST);
+        AssertDebug(srcImage->GetResourceState() == ResourceState::CopySrc);
+        AssertDebug(GetResourceState() == ResourceState::CopyDst);
 
         D3D12_TEXTURE_COPY_LOCATION srcLocation {};
         srcLocation.pResource = srcImage->GetResource();
@@ -852,8 +852,8 @@ void DX12GpuImage::Blit(
                     .numLayers = 1
                 });
 
-                AssertDebug(srcResourceState == RS_COPY_SRC);
-                AssertDebug(dstResourceState == RS_COPY_DST);
+                AssertDebug(srcResourceState == ResourceState::CopySrc);
+                AssertDebug(dstResourceState == ResourceState::CopyDst);
 
                 D3D12_TEXTURE_COPY_LOCATION srcLocation {};
                 srcLocation.pResource = srcImage->GetResource();
@@ -950,8 +950,8 @@ void DX12GpuImage::CopyFromBuffer(
         .numLayers = 1
     });
 
-    AssertDebug(subResourceState == RS_COPY_DST);
-    AssertDebug(srcBuffer->GetResourceState() == RS_COPY_SRC);
+    AssertDebug(subResourceState == ResourceState::CopyDst);
+    AssertDebug(srcBuffer->GetResourceState() == ResourceState::CopySrc);
 
     const Vec3u mipExtent = m_textureDesc.GetMipExtent(mipIdx);
     const uint32 bytesPerPixel = TextureUtils::BytesPerComponent(m_textureDesc.format) * TextureUtils::NumComponents(m_textureDesc.format);
@@ -1046,7 +1046,7 @@ void DX12GpuImage::CopyToBuffer(
         "Invalid array layer count: {} (base: {}, max: {})",
         numLayers, subResource.baseArrayLayer, NumArrayLayers());
 
-    AssertDebug(GetSubResourceState(subResource) == RS_COPY_SRC && dstBuffer->GetResourceState() == RS_COPY_DST);
+    AssertDebug(GetSubResourceState(subResource) == ResourceState::CopySrc && dstBuffer->GetResourceState() == ResourceState::CopyDst);
 
     ImageSubResource newSubResource = subResource;
     newSubResource.numLayers = numLayers;
@@ -1079,7 +1079,7 @@ void DX12GpuImage::CopyToBuffer(
                 .baseArrayLayer = layerIndex,
                 .numLayers = 1
             });
-            AssertDebug(subResourceState == RS_COPY_SRC);
+            AssertDebug(subResourceState == ResourceState::CopySrc);
 
             srcLocation.SubresourceIndex = D3D12CalcSubresource(
                 mipIndex,
@@ -1183,8 +1183,8 @@ void DX12GpuImage::CopyFrom(
     const bool srcIsDepthStencil = srcImage->GetTextureDesc().IsDepthStencil();
     const bool dstIsDepthStencil = m_textureDesc.IsDepthStencil();
 
-    const bool srcIsAttachment = srcImage->GetTextureDesc().imageUsage[IU_ATTACHMENT];
-    const bool dstIsAttachment = m_textureDesc.imageUsage[IU_ATTACHMENT];
+    const bool srcIsAttachment = srcImage->GetTextureDesc().imageUsage[ImageUsage::Attachment];
+    const bool dstIsAttachment = m_textureDesc.imageUsage[ImageUsage::Attachment];
 
     // Use resolved counts for iteration (handles UINT8_MAX/UINT16_MAX sentinel values)
     const uint8 numLevelsToCopy = MathUtil::Min(srcNumLevels, dstNumLevels);
@@ -1192,7 +1192,7 @@ void DX12GpuImage::CopyFrom(
 
     if (!HasSubResourceStates() && !srcImage->HasSubResourceStates())
     {
-        AssertDebug(GetResourceState() == RS_COPY_DST && srcImage->GetResourceState() == RS_COPY_SRC);
+        AssertDebug(GetResourceState() == ResourceState::CopyDst && srcImage->GetResourceState() == ResourceState::CopySrc);
 
         // Validate offset and extent are within bounds for the base mip level
         const Vec3u srcBaseMipExtent = srcImage->GetTextureDesc().GetMipExtent(srcSubResource.baseMipLevel);
@@ -1287,8 +1287,8 @@ void DX12GpuImage::CopyFrom(
                     .numLayers = 1
                 });
 
-                AssertDebug(srcResourceState == RS_COPY_SRC);
-                AssertDebug(dstResourceState == RS_COPY_DST);
+                AssertDebug(srcResourceState == ResourceState::CopySrc);
+                AssertDebug(dstResourceState == ResourceState::CopyDst);
 
                 D3D12_TEXTURE_COPY_LOCATION srcLocation {};
                 srcLocation.pResource = srcImage->GetResource();
@@ -1380,11 +1380,11 @@ void DX12GpuImage::Fill(
     // Transition to appropriate state for clearing
     if (isDepthStencil)
     {
-        InsertBarrier(commandBuffer, subResource, RS_DEPTH_STENCIL, ShaderModuleType::None);
+        InsertBarrier(commandBuffer, subResource, ResourceState::DepthStencil, ShaderModuleType::None);
     }
     else
     {
-        InsertBarrier(commandBuffer, subResource, RS_RENDER_TARGET, ShaderModuleType::None);
+        InsertBarrier(commandBuffer, subResource, ResourceState::RenderTarget, ShaderModuleType::None);
     }
 
     // Get the device and command list

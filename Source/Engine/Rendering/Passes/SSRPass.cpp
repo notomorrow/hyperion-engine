@@ -146,8 +146,8 @@ void SSRPass::CreatePasses()
         colorAttachmentDesc.imageType = TextureType::Texture2D;
         colorAttachmentDesc.format = m_uvsTexture->GetFormat();
         // LOAD so checkerboard tracing can discard half the pixels and keep last frame's value
-        colorAttachmentDesc.loadOp = LoadOperation::LOAD;
-        colorAttachmentDesc.storeOp = StoreOperation::STORE;
+        colorAttachmentDesc.loadOp = LoadOperation::Load;
+        colorAttachmentDesc.storeOp = StoreOperation::Store;
 
         writeUVsFramebuffer->AddAttachment(
             0,
@@ -161,8 +161,8 @@ void SSRPass::CreatePasses()
         AttachmentDesc depthAttachmentDesc {};
         depthAttachmentDesc.imageType = TextureType::Texture2D;
         depthAttachmentDesc.format = depthImageView->GetImage()->GetTextureFormat();
-        depthAttachmentDesc.loadOp = LoadOperation::LOAD;
-        depthAttachmentDesc.storeOp = StoreOperation::NONE;
+        depthAttachmentDesc.loadOp = LoadOperation::Load;
+        depthAttachmentDesc.storeOp = StoreOperation::None;
         depthAttachmentDesc.onlyStencil = true;
 
         writeUVsFramebuffer->AddAttachment(
@@ -200,8 +200,8 @@ void SSRPass::CreatePasses()
         AttachmentDesc attachmentDesc {};
         attachmentDesc.imageType = TextureType::Texture2D;
         attachmentDesc.format = m_sampledResultTexture->GetFormat();
-        attachmentDesc.loadOp = LoadOperation::CLEAR;
-        attachmentDesc.storeOp = StoreOperation::STORE;
+        attachmentDesc.loadOp = LoadOperation::Clear;
+        attachmentDesc.storeOp = StoreOperation::Store;
 
         sampleGBufferFramebuffer->AddAttachment(
             0,
@@ -215,8 +215,8 @@ void SSRPass::CreatePasses()
         AttachmentDesc depthAttachmentDesc {};
         depthAttachmentDesc.imageType = TextureType::Texture2D;
         depthAttachmentDesc.format = depthImageView->GetImage()->GetTextureFormat();
-        depthAttachmentDesc.loadOp = LoadOperation::LOAD;
-        depthAttachmentDesc.storeOp = StoreOperation::NONE;
+        depthAttachmentDesc.loadOp = LoadOperation::Load;
+        depthAttachmentDesc.storeOp = StoreOperation::None;
         depthAttachmentDesc.onlyStencil = true;
 
         sampleGBufferFramebuffer->AddAttachment(
@@ -268,11 +268,11 @@ void SSRPass::UpdatePipelineState(Frame* frame, const RenderSetup& renderSetup)
             TextureType::Texture2D,
             SSRTraceFormat,
             Vec3u(MathUtil::Max(Vec2u::One(), m_extent), 1),
-            TFM_NEAREST,
-            TFM_NEAREST,
-            TWM_CLAMP_TO_EDGE,
+            TextureFilterMode::Nearest,
+            TextureFilterMode::Nearest,
+            TextureWrapMode::ClampToEdge,
             1,
-            IU_ATTACHMENT | IU_SAMPLED
+            ImageUsage::Attachment | ImageUsage::Sampled
         });
 
         m_uvsTexture->SetName(NAME("SSRTexture_UVs"));
@@ -282,11 +282,11 @@ void SSRPass::UpdatePipelineState(Frame* frame, const RenderSetup& renderSetup)
             TextureType::Texture2D,
             SSRColorFormat,
             Vec3u(m_extent, 1),
-            TFM_NEAREST,
-            TFM_NEAREST,
-            TWM_CLAMP_TO_EDGE,
+            TextureFilterMode::Nearest,
+            TextureFilterMode::Nearest,
+            TextureWrapMode::ClampToEdge,
             1,
-            IU_ATTACHMENT | IU_SAMPLED
+            ImageUsage::Attachment | ImageUsage::Sampled
         });
 
         m_sampledResultTexture->SetName(NAME("SSRTexture_SampledResult"));
@@ -325,7 +325,7 @@ void SSRPass::Render(Frame* frame, const RenderSetup& renderSetup)
     static constexpr uint8 StencilFilterMask = SkyStencilMask;
 
     cr << SetStencilTest(true);
-    cr << SetStencilFunction(StencilFunction { SO_KEEP, SO_KEEP, SO_KEEP, SCO_EQUAL });
+    cr << SetStencilFunction(StencilFunction { StencilOp::Keep, StencilOp::Keep, StencilOp::Keep, StencilCompareOp::Equal });
     cr << SetStencilState(0, StencilFilterMask, 0x0);
 
     GpuBuffer* cbuffer = nullptr;
@@ -398,7 +398,7 @@ void SSRPass::Render(Frame* frame, const RenderSetup& renderSetup)
         m_tracePass->RenderFullScreenQuad(frame, renderSetup);
         m_tracePass->End(frame, renderSetup);
 
-        cr << InsertBarrier(m_uvsTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+        cr << InsertBarrier(m_uvsTexture->GetGpuImage(), ResourceState::ShaderResource);
     }
 
     { // PASS 2 -- fill color buffer using mip chain to sample based on roughness

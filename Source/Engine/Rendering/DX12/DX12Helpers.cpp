@@ -121,57 +121,57 @@ D3D12_RESOURCE_STATES ToDX12ResourceStates(ResourceState state)
 {
     switch (state)
     {
-    case RS_COMMON:
+    case ResourceState::Common:
         return D3D12_RESOURCE_STATE_COMMON;
 
-    case RS_VERTEX_BUFFER:
-    case RS_CONSTANT_BUFFER:
+    case ResourceState::VertexBuffer:
+    case ResourceState::ConstantBuffer:
         return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 
-    case RS_INDEX_BUFFER:
+    case ResourceState::IndexBuffer:
         return D3D12_RESOURCE_STATE_INDEX_BUFFER;
 
-    case RS_RENDER_TARGET:
+    case ResourceState::RenderTarget:
         return D3D12_RESOURCE_STATE_RENDER_TARGET;
 
-    case RS_UNORDERED_ACCESS:
+    case ResourceState::UnorderedAccess:
         return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
-    case RS_DEPTH_STENCIL:
+    case ResourceState::DepthStencil:
         return D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
-    case RS_SHADER_RESOURCE:
+    case ResourceState::ShaderResource:
         return D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
 
-    case RS_STREAM_OUT:
+    case ResourceState::StreamOut:
         return D3D12_RESOURCE_STATE_STREAM_OUT;
 
-    case RS_INDIRECT_ARG:
+    case ResourceState::IndirectArg:
         return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 
-    case RS_COPY_DST:
+    case ResourceState::CopyDst:
         return D3D12_RESOURCE_STATE_COPY_DEST;
 
-    case RS_COPY_SRC:
+    case ResourceState::CopySrc:
         return D3D12_RESOURCE_STATE_COPY_SOURCE;
 
-    case RS_RESOLVE_DST:
+    case ResourceState::ResolveDst:
         return D3D12_RESOURCE_STATE_RESOLVE_DEST;
 
-    case RS_RESOLVE_SRC:
+    case ResourceState::ResolveSrc:
         return D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
 
-    case RS_PRESENT:
+    case ResourceState::Present:
         return D3D12_RESOURCE_STATE_PRESENT;
 
-    case RS_READ_GENERIC:
+    case ResourceState::ReadGeneric:
         return D3D12_RESOURCE_STATE_GENERIC_READ;
 
-    case RS_PREDICATION:
+    case ResourceState::Predication:
         return D3D12_RESOURCE_STATE_PREDICATION;
 
-    case RS_UNDEFINED:
-    case RS_PRE_INITIALIZED:
+    case ResourceState::Undefined:
+    case ResourceState::PreInitialized:
         return D3D12_RESOURCE_STATE_COMMON;
 
     default:
@@ -237,11 +237,11 @@ D3D12_CULL_MODE ToDX12CullMode(FaceCullMode mode)
 {
     switch (mode)
     {
-    case FCM_BACK:
+    case FaceCullMode::Back:
         return D3D12_CULL_MODE_BACK;
-    case FCM_FRONT:
+    case FaceCullMode::Front:
         return D3D12_CULL_MODE_FRONT;
-    case FCM_NONE:
+    case FaceCullMode::None:
         return D3D12_CULL_MODE_NONE;
     default:
         return D3D12_CULL_MODE_BACK;
@@ -252,13 +252,13 @@ D3D12_PRIMITIVE_TOPOLOGY_TYPE ToDX12TopologyType(Topology topology)
 {
     switch (topology)
     {
-    case TOP_TRIANGLES:
-    case TOP_TRIANGLE_STRIP:
-    case TOP_TRIANGLE_FAN:
+    case Topology::Triangles:
+    case Topology::TriangleStrip:
+    case Topology::TriangleFan:
         return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    case TOP_LINES:
+    case Topology::Lines:
         return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-    case TOP_POINTS:
+    case Topology::Points:
         return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
     default:
         return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
@@ -269,15 +269,15 @@ D3D12_PRIMITIVE_TOPOLOGY ToDX12PrimitiveTopology(Topology topology)
 {
     switch (topology)
     {
-    case TOP_TRIANGLES:
+    case Topology::Triangles:
         return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-    case TOP_TRIANGLE_STRIP:
+    case Topology::TriangleStrip:
         return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-    case TOP_TRIANGLE_FAN:
+    case Topology::TriangleFan:
         return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-    case TOP_LINES:
+    case Topology::Lines:
         return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-    case TOP_POINTS:
+    case Topology::Points:
         return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
     default:
         return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -288,19 +288,19 @@ DXGI_FORMAT ToDXGIFormat(GpuElemType elemType)
 {
     switch (elemType)
     {
-    case GET_UNSIGNED_BYTE:
+    case GpuElemType::UnsignedByte:
         return DXGI_FORMAT_R8_UINT;
-    case GET_SIGNED_BYTE:
+    case GpuElemType::SignedByte:
         return DXGI_FORMAT_R8_SINT;
-    case GET_UNSIGNED_SHORT:
+    case GpuElemType::UnsignedShort:
         return DXGI_FORMAT_R16_UINT;
-    case GET_SIGNED_SHORT:
+    case GpuElemType::SignedShort:
         return DXGI_FORMAT_R16_SINT;
-    case GET_UNSIGNED_INT:
+    case GpuElemType::UnsignedInt:
         return DXGI_FORMAT_R32_UINT;
-    case GET_SIGNED_INT:
+    case GpuElemType::SignedInt:
         return DXGI_FORMAT_R32_SINT;
-    case GET_FLOAT:
+    case GpuElemType::Float:
         return DXGI_FORMAT_R32_FLOAT;
     default:
         return DXGI_FORMAT_R32_UINT;
@@ -311,15 +311,15 @@ D3D12_STENCIL_OP ToDX12StencilOp(StencilOp op)
 {
     switch (op)
     {
-    case StencilOp::SO_KEEP:
+    case StencilOp::Keep:
         return D3D12_STENCIL_OP_KEEP;
-    case StencilOp::SO_ZERO:
+    case StencilOp::Zero:
         return D3D12_STENCIL_OP_ZERO;
-    case StencilOp::SO_REPLACE:
+    case StencilOp::Replace:
         return D3D12_STENCIL_OP_REPLACE;
-    case StencilOp::SO_INCREMENT:
+    case StencilOp::Increment:
         return D3D12_STENCIL_OP_INCR;
-    case StencilOp::SO_DECREMENT:
+    case StencilOp::Decrement:
         return D3D12_STENCIL_OP_DECR;
     default:
         HYP_NOT_IMPLEMENTED();
@@ -330,13 +330,13 @@ D3D12_COMPARISON_FUNC ToDX12ComparisonFunction(StencilCompareOp compareOp)
 {
     switch (compareOp)
     {
-    case SCO_ALWAYS:
+    case StencilCompareOp::Always:
         return D3D12_COMPARISON_FUNC_ALWAYS;
-    case SCO_NEVER:
+    case StencilCompareOp::Never:
         return D3D12_COMPARISON_FUNC_NEVER;
-    case SCO_EQUAL:
+    case StencilCompareOp::Equal:
         return D3D12_COMPARISON_FUNC_EQUAL;
-    case SCO_NOT_EQUAL:
+    case StencilCompareOp::NotEqual:
         return D3D12_COMPARISON_FUNC_NOT_EQUAL;
     default:
         HYP_NOT_IMPLEMENTED();
@@ -347,21 +347,21 @@ D3D12_COMPARISON_FUNC ToDX12DepthCompareOp(DepthCompareOp compareOp)
 {
     switch (compareOp)
     {
-    case DCO_LESS:
+    case DepthCompareOp::Less:
         return D3D12_COMPARISON_FUNC_LESS;
-    case DCO_LESS_OR_EQUAL:
+    case DepthCompareOp::LessOrEqual:
         return D3D12_COMPARISON_FUNC_LESS_EQUAL;
-    case DCO_GREATER:
+    case DepthCompareOp::Greater:
         return D3D12_COMPARISON_FUNC_GREATER;
-    case DCO_GREATER_OR_EQUAL:
+    case DepthCompareOp::GreaterOrEqual:
         return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-    case DCO_EQUAL:
+    case DepthCompareOp::Equal:
         return D3D12_COMPARISON_FUNC_EQUAL;
-    case DCO_NOT_EQUAL:
+    case DepthCompareOp::NotEqual:
         return D3D12_COMPARISON_FUNC_NOT_EQUAL;
-    case DCO_ALWAYS:
+    case DepthCompareOp::Always:
         return D3D12_COMPARISON_FUNC_ALWAYS;
-    case DCO_NEVER:
+    case DepthCompareOp::Never:
         return D3D12_COMPARISON_FUNC_NEVER;
     default:
         return D3D12_COMPARISON_FUNC_LESS;
@@ -608,7 +608,7 @@ D3D12_SHADER_RESOURCE_VIEW_DESC GetSRVDesc(DX12GpuImage* image, uint32 mipIndex,
 D3D12_UNORDERED_ACCESS_VIEW_DESC GetUAVDesc(DX12GpuImage* image, uint32 mipIndex, uint32 /*numMips*/, uint32 layerIndex, uint32 numLayers, TextureType viewType)
 {
     AssertDebug(image != nullptr);
-    AssertDebug(image->GetTextureDesc().imageUsage & ImageUsage::IU_STORAGE);
+    AssertDebug(image->GetTextureDesc().imageUsage & ImageUsage::Storage);
 
     const TextureDesc& textureDesc = image->GetTextureDesc();
 
@@ -668,26 +668,26 @@ D3D12_SAMPLER_DESC GetSamplerDesc(const DX12Sampler* sampler)
 
     switch (sampler->GetMinFilterMode())
     {
-    case TFM_NEAREST:
+    case TextureFilterMode::Nearest:
         switch (sampler->GetMagFilterMode())
         {
-        case TFM_NEAREST:
+        case TextureFilterMode::Nearest:
             desc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
             break;
-        case TFM_LINEAR:
+        case TextureFilterMode::Linear:
             desc.Filter = D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR;
             break;
         default:
             desc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
         }
         break;
-    case TFM_LINEAR:
+    case TextureFilterMode::Linear:
         switch (sampler->GetMagFilterMode())
         {
-        case TFM_NEAREST:
+        case TextureFilterMode::Nearest:
             desc.Filter = D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
             break;
-        case TFM_LINEAR:
+        case TextureFilterMode::Linear:
             desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
             break;
         default:
@@ -700,17 +700,17 @@ D3D12_SAMPLER_DESC GetSamplerDesc(const DX12Sampler* sampler)
 
     switch (sampler->GetWrapMode())
     {
-    case TWM_REPEAT:
+    case TextureWrapMode::Repeat:
         desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
         desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
         desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
         break;
-    case TWM_CLAMP_TO_EDGE:
+    case TextureWrapMode::ClampToEdge:
         desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         break;
-    case TWM_CLAMP_TO_BORDER:
+    case TextureWrapMode::ClampToBorder:
         desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
         desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
         desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;

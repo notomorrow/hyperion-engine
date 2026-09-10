@@ -3,11 +3,11 @@ Texture LTC_BRDF {
         Type = Texture2D
         Format = RGBA16F
         Extent = (64, 64, 1)
-        MinFilterMode = TFM_LINEAR
-        MagFilterMode = TFM_LINEAR
-        TextureWrapMode = TWM_CLAMP_TO_EDGE
+        MinFilterMode = Linear
+        MagFilterMode = Linear
+        TextureWrapMode = ClampToEdge
         NumLayers = 1
-        ImageUsage = IU_SAMPLED
+        ImageUsage = Sampled
         MipOffsets = [
             0
             0

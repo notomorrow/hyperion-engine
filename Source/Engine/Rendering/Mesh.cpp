@@ -644,16 +644,16 @@ void Mesh::UploadGpuData()
 
     CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder();
 
-    cr << InsertBarrier(stagingBuffer, RS_COPY_SRC);
+    cr << InsertBarrier(stagingBuffer, ResourceState::CopySrc);
 
-    cr << InsertBarrier(vertexBuffer, RS_COPY_DST);
-    cr << InsertBarrier(indexBuffer, RS_COPY_DST);
+    cr << InsertBarrier(vertexBuffer, ResourceState::CopyDst);
+    cr << InsertBarrier(indexBuffer, ResourceState::CopyDst);
 
     cr << CopyBuffer(stagingBuffer, vertexBuffer, packedVerticesSize);
     cr << CopyBuffer(stagingBuffer, indexBuffer, packedVerticesSize, 0, packedIndicesSize);
 
-    cr << InsertBarrier(vertexBuffer, RS_VERTEX_BUFFER);
-    cr << InsertBarrier(indexBuffer, RS_INDEX_BUFFER);
+    cr << InsertBarrier(vertexBuffer, ResourceState::VertexBuffer);
+    cr << InsertBarrier(indexBuffer, ResourceState::IndexBuffer);
 
     if (m_vertexBuffers[lodIndex].IsValid())
     {
