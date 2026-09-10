@@ -47,3 +47,9 @@ Where _do_ we use AI? Primarily, we aim to keep the usage of AI directed towards
  - some UI stuff
  - bug fixes `hey, take a look at this callstack...`
  - code review
+
+## Credits
+- [Avalonia](https://github.com/AvaloniaUI/Avalonia)
+- [Dock.Avalonia](https://github.com/wieslawsoltes/Dock)
+- [Codicons](https://github.com/microsoft/vscode-codicons)
+- [Material Icons](https://github.com/google/material-design-icons)
