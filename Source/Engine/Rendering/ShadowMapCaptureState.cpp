@@ -269,14 +269,9 @@ void ShadowMapCaptureState::End(bool commitResult)
     {
         m_texture->SetIsTransient(false);
 
-        auto readbackCallback = [textureWeak = MakeWeakRef(m_texture)](GpuBuffer& buffer) mutable
+        auto readbackCallback = [](Texture* texture, GpuBuffer& buffer) mutable
         {
-            Handle<Texture> texture = textureWeak.Lock();
-
-            if (!texture.IsValid())
-            {
-                return;
-            }
+            Assert(texture != nullptr);
 
             auto writeScope = texture->GetWriteScope();
 
@@ -324,18 +319,25 @@ void ShadowMapCaptureState::End(bool commitResult)
 
         if (IsOnThread(g_renderThread))
         {
-            m_texture->EnqueueReadback(std::move(readbackCallback));
+            m_texture->EnqueueReadback(
+                [texture = m_texture, cb = std::move(readbackCallback)](GpuBuffer& buffer)
+                {
+                    cb(texture.Get(), buffer);
+                });
         }
         else
         {
             GetThreadById(g_renderThread)->GetScheduler().Enqueue(
                 [texture = m_texture, callback = std::move(readbackCallback)]() mutable
                 {
-                    if (texture.IsValid())
-                    {
-                        texture->EnqueueReadback(std::move(callback));
-                    }
-                });
+                    // thunk it LOUDER
+                    texture->EnqueueReadback(
+                        [texture, cb = std::move(callback)](GpuBuffer& buffer)
+                        {
+                            cb(texture.Get(), buffer);
+                        });
+                },
+                TaskEnqueueFlags::FIRE_AND_FORGET);
         }
 
         GetCurrentAssetRegistry()->PutAssetUnique(m_texture);

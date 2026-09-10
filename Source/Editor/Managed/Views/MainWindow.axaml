@@ -410,67 +410,95 @@
                         <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Classes="ribbon-label" Text="SWATCH" />
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                        <DropDownButton
-                            x:Name="SwatchDropDown"
-                            Classes="gizmo-wide"
-                            VerticalAlignment="Center"
-                            ToolTip.Tip="Active Swatch">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <controls:Codicon Kind="Paintbrush" Size="16" VerticalAlignment="Center" />
-                                <TextBlock
+                                <DropDownButton
+                                    x:Name="SwatchDropDown"
+                                    Classes="gizmo-wide"
                                     VerticalAlignment="Center"
-                                    FontSize="11"
-                                    Text="{Binding ActiveSwatchName, FallbackValue='Default'}" />
-                            </StackPanel>
-                            <DropDownButton.Flyout>
-                                <Flyout Placement="Bottom">
-                                    <StackPanel MinWidth="150">
-                                        <ItemsControl ItemsSource="{Binding Swatches}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="x:String">
-                                                    <MenuItem
-                                                        Command="{Binding SetActiveSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                        CommandParameter="{Binding}"
-                                                        Header="{Binding}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-
-                                        <Separator />
-                                        <MenuItem
-                                            Command="{Binding AddNewSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                            Header="New Swatch..." />
+                                    ToolTip.Tip="Active Swatch">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <controls:Codicon Kind="Paintbrush" Size="16" VerticalAlignment="Center" />
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            FontSize="11"
+                                            Text="{Binding ActiveSwatchName, FallbackValue='Default'}" />
                                     </StackPanel>
-                                </Flyout>
-                            </DropDownButton.Flyout>
-                        </DropDownButton>
+                                    <DropDownButton.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel MinWidth="150">
+                                                <ItemsControl ItemsSource="{Binding Swatches}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="x:String">
+                                                            <MenuItem
+                                                                Command="{Binding SetActiveSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                CommandParameter="{Binding}"
+                                                                Header="{Binding}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
 
-                        <ToggleButton
-                            x:Name="SwatchOverrideModeToggle"
-                            Height="30"
-                            Padding="8,4"
-                            Classes="panel-toggle"
-                            VerticalAlignment="Center"
-                            IsChecked="{Binding Inspector.SwatchOverrideMode, Mode=TwoWay}"
-                            IsVisible="{Binding Inspector.CanUseSwatchOverrides}"
-                            ToolTip.Tip="When this toggle button is active, edits will apply as OVERRIDES for the active swatch. Otherwise edits will apply on base + active.">
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <controls:Codicon Kind="GitBranch" Size="12" VerticalAlignment="Center" />
-                                <Panel>
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        FontSize="9"
-                                        IsVisible="{Binding Inspector.SwatchOverrideMode}"
-                                        Text="Override Edits: ON" />
-                                    <TextBlock
-                                        VerticalAlignment="Center"
-                                        FontSize="9"
-                                        IsVisible="{Binding !Inspector.SwatchOverrideMode}"
-                                        Text="Override Edits: OFF" />
-                                </Panel>
+                                                <Separator />
+                                                <MenuItem
+                                                    Command="{Binding AddNewSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                    Header="New Swatch..." />
+                                            </StackPanel>
+                                        </Flyout>
+                                    </DropDownButton.Flyout>
+                                </DropDownButton>
+
+                                <ToggleButton
+                                    x:Name="SwatchOverrideModeToggle"
+                                    Height="30"
+                                    Padding="8,4"
+                                    Classes="panel-toggle"
+                                    VerticalAlignment="Center"
+                                    IsChecked="{Binding Inspector.SwatchOverrideMode, Mode=TwoWay}"
+                                    IsVisible="{Binding Inspector.CanUseSwatchOverrides}"
+                                    ToolTip.Tip="When this toggle button is active, edits will apply as OVERRIDES for the active swatch. Otherwise edits will apply on base + active.">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <controls:Codicon Kind="GitBranch" Size="12" VerticalAlignment="Center" />
+                                        <Panel>
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="9"
+                                                IsVisible="{Binding Inspector.SwatchOverrideMode}"
+                                                Text="Override Edits: ON" />
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontSize="9"
+                                                IsVisible="{Binding !Inspector.SwatchOverrideMode}"
+                                                Text="Override Edits: OFF" />
+                                        </Panel>
+                                    </StackPanel>
+                                </ToggleButton>
                             </StackPanel>
-                        </ToggleButton>
-                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Classes="mode-separator" />
+                        
+                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Classes="ribbon-label" Text="BAKE" />
+                            <DropDownButton
+                                Classes="gizmo-wide"
+                                VerticalAlignment="Center"
+                                ToolTip.Tip="Bake"
+                                IsEnabled="{Binding !IsSimulating}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <controls:Codicon Kind="Lightbulb" Size="16" VerticalAlignment="Center" />
+                                    <controls:Codicon Kind="ChevronDown" Size="10" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <DropDownButton.Flyout>
+                                    <Flyout Placement="Bottom">
+                                        <StackPanel MinWidth="150">
+                                            <MenuItem Command="{Binding BuildReflectionProbes}" Header="Reflection Probes" />
+                                            <MenuItem Command="{Binding BuildIrradianceProbes}" Header="Irradiance Probes" />
+                                            <Separator />
+                                            <MenuItem Command="{Binding BuildLightmaps}" Header="Lightmaps" />
+                                            <Separator />
+                                            <MenuItem Command="{Binding BuildBentNormals}" Header="Bent Normals" />
+                                        </StackPanel>
+                                    </Flyout>
+                                </DropDownButton.Flyout>
+                            </DropDownButton>
                         </StackPanel>
 
                     </StackPanel>
@@ -610,34 +638,6 @@
                         Orientation="Horizontal"
                         Spacing="8"
                         VerticalAlignment="Center">
-                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Classes="ribbon-label" Text="BAKE" />
-                            <DropDownButton
-                                Classes="gizmo-wide"
-                                VerticalAlignment="Center"
-                                ToolTip.Tip="Bake"
-                                IsEnabled="{Binding !IsSimulating}">
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <controls:Codicon Kind="Lightbulb" Size="16" VerticalAlignment="Center" />
-                                    <controls:Codicon Kind="ChevronDown" Size="10" VerticalAlignment="Center" />
-                                </StackPanel>
-                                <DropDownButton.Flyout>
-                                    <Flyout Placement="Bottom">
-                                        <StackPanel MinWidth="150">
-                                            <MenuItem Command="{Binding BuildReflectionProbes}" Header="Reflection Probes" />
-                                            <MenuItem Command="{Binding BuildIrradianceProbes}" Header="Irradiance Probes" />
-                                            <Separator />
-                                            <MenuItem Command="{Binding BuildLightmaps}" Header="Lightmaps" />
-                                            <Separator />
-                                            <MenuItem Command="{Binding BuildBentNormals}" Header="Bent Normals" />
-                                        </StackPanel>
-                                    </Flyout>
-                                </DropDownButton.Flyout>
-                            </DropDownButton>
-                        </StackPanel>
-
-                        <Border Classes="mode-separator" />
-
                         <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Classes="ribbon-label" Text="PLAY" />
                             <StackPanel Orientation="Horizontal" Spacing="6">

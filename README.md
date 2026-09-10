@@ -10,7 +10,7 @@ That, and the editor shouldn't suck.
 
 ---
 
-![Hyperion Engine Screenshot - Baked lightmaps in Editor view](/Documentation/Images/LightmapBakeEditor.png)
+![Hyperion Engine Screenshot - Baked lightmaps in Editor view](/Documentation/Images/newss2.png)
 
 ## Some Features
 - Clustered deferred shading supporting a large number of dynamic lights while maintaining good frame times. Uses forward clustered shading for translucent materials.

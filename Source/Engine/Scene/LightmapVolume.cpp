@@ -65,6 +65,18 @@ Name BuildAtlasTextureName(Name volumeName, Name swatchName, uint16 atlasIndex, 
         volumeName, swatchName, atlasIndex, LightmapVolume::TextureTypeNames[type]);
 }
 
+void SyncSwatchOverrideBaseValue(LightmapVolume* volume, LightmapVolume::AtlasTextureType type, const FixedArray<Handle<Texture>, MaxAtlasesPerLightmapVolume>& textures)
+{
+    SwatchOverrideSystem* swatchOverrideSystem = GetSwatchOverrideSystem(volume);
+
+    if (!swatchOverrideSystem)
+    {
+        return;
+    }
+
+    swatchOverrideSystem->SetSwatchOverrideBaseValue(volume, LightmapVolume::GetAtlasTexturesPropertyName(type), BoxedValue(textures));
+}
+
 } // namespace
 
 LightmapVolume::LightmapVolume()
@@ -210,6 +222,7 @@ void LightmapVolume::RemoveAllElements(uint32 preserveTextureTypesMask)
         }
 
         m_irradianceAtlasTextures = {};
+        SyncSwatchOverrideBaseValue(this, IrradianceTexture, m_irradianceAtlasTextures);
     }
 
     if (!(preserveTextureTypesMask & (1u << BentNormalTexture)))
@@ -227,6 +240,7 @@ void LightmapVolume::RemoveAllElements(uint32 preserveTextureTypesMask)
         }
 
         m_bentNormalAtlasTextures = {};
+        SyncSwatchOverrideBaseValue(this, BentNormalTexture, m_bentNormalAtlasTextures);
     }
 
     m_atlases.Clear();
@@ -272,16 +286,15 @@ void LightmapVolume::SetAtlasTexture(uint16 atlasIndex, AtlasTextureType type, c
     SetNeedsRenderProxyUpdate();
 
     EnqueueDeletion(std::move(textures[atlasIndex]));
-
-    if (!texture.IsValid())
-    {
-        return;
-    }
-
     textures[atlasIndex] = texture;
 
-    texture->SetName(BuildAtlasTextureName(m_name, g_defaultSwatchName, atlasIndex, type));
-    GetCurrentAssetRegistry()->PutAssetUnique(texture);
+    if (texture.IsValid())
+    {
+        texture->SetName(BuildAtlasTextureName(m_name, g_defaultSwatchName, atlasIndex, type));
+        GetCurrentAssetRegistry()->PutAssetUnique(texture);
+    }
+
+    SyncSwatchOverrideBaseValue(this, type, textures);
 }
 
 Name LightmapVolume::GetAtlasTexturesPropertyName(AtlasTextureType type)
