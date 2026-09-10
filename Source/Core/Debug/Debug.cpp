@@ -6,6 +6,7 @@
 
 #include <Core/Debug/Debug.hpp>
 
+#include <Core/Debug/StackDump.hpp>
 #include <Core/Logging/Logger.hpp>
 #include <Core/Logging/LogChannels.hpp>
 
@@ -142,8 +143,48 @@ void LogAssert(const char* str)
 
 void TerminateProgram()
 {
+    HYP_LOG(Core, Error, "Terminating program! Stack trace:\n{}", StackDump(30, 1).ToString());
+    std::fflush(HYP_DEBUG_OUTPUT_STREAM);
+
     std::terminate();
 }
+
+#if HYP_WINDOWS
+
+static LONG WINAPI UnhandledExceptionFilter_Impl(EXCEPTION_POINTERS* exceptionPointers)
+{
+    if (::IsDebuggerPresent())
+    {
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+
+    const DWORD exceptionCode = exceptionPointers && exceptionPointers->ExceptionRecord
+        ? exceptionPointers->ExceptionRecord->ExceptionCode
+        : 0;
+
+    // intentionally not using the logging system; it may already be shut down
+    String trace = StackDump(30, 1).ToString();
+
+    std::fprintf(stdout, "\n[CRASH] Unhandled exception, code %lu! Stack trace:\n%s\n",
+        static_cast<unsigned long>(exceptionCode),
+        trace.Data());
+
+    std::fflush(HYP_DEBUG_OUTPUT_STREAM);
+
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+struct UnhandledExceptionFilterRegistrar
+{
+    UnhandledExceptionFilterRegistrar()
+    {
+        ::SetUnhandledExceptionFilter(&UnhandledExceptionFilter_Impl);
+    }
+};
+
+static UnhandledExceptionFilterRegistrar g_unhandledExceptionFilterRegistrar;
+
+#endif // HYP_WINDOWS
 
 } // namespace debug
 } // namespace Hyperion

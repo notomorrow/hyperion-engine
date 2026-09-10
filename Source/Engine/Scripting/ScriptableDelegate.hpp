@@ -15,6 +15,7 @@
 
 #include <Core/Utilities/DeferredScope.hpp>
 
+#include <Core/Containers/Array.hpp>
 #include <Core/Containers/Map.hpp>
 
 #include <Core/Threading/SharedMutex.hpp>
@@ -345,12 +346,19 @@ public:
     {
         int count = 0;
 
+        FatArray<SharedPtr<Delegate<ReturnType, Args...>>, InlineAllocator<8>> perTargetDelegates;
+
         {
             TUniqueLock guard(m_perTargetDelegatesMutex);
             for (auto& pair : m_perTargetDelegates)
             {
-                count += pair.second->RemoveAllDetached();
+                perTargetDelegates.PushBack(pair.second);
             }
+        }
+
+        for (auto& perTargetDelegate : perTargetDelegates)
+        {
+            count += perTargetDelegate->RemoveAllDetached();
         }
 
         return count;
@@ -358,16 +366,23 @@ public:
 
     virtual int RemoveAllForTarget(void* target) override
     {
-        TUniqueLock guard(m_perTargetDelegatesMutex);
+        SharedPtr<Delegate<ReturnType, Args...>> perTargetDelegate;
 
-        auto it = m_perTargetDelegates.Find(target);
-        if (it == m_perTargetDelegates.End())
         {
-            return 0;
+            TUniqueLock guard(m_perTargetDelegatesMutex);
+
+            auto it = m_perTargetDelegates.Find(target);
+            if (it == m_perTargetDelegates.End())
+            {
+                return 0;
+            }
+
+            perTargetDelegate = it->second;
+            m_perTargetDelegates.Erase(it);
         }
 
-        const int count = it->second->RemoveAllDetached();
-        m_perTargetDelegates.Erase(it);
+        // destroy outside the lock: handler destructors may re-enter this delegate
+        const int count = perTargetDelegate->RemoveAllDetached();
 
         return count;
     }

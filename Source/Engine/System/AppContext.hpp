@@ -269,6 +269,12 @@ public:
     HYP_METHOD()
     void RemoveWindow(ApplicationWindow* window);
 
+    /*! \brief Destroys windows that were closed on a previous tick. Called before events are
+     *  polled so that events referencing a closed window are guaranteed to be processed
+     *  while the window is still alive. */
+    HYP_METHOD()
+    void PurgeClosedWindows();
+
     HYP_METHOD()
     Result RunCommandlet(ANSIStringView commandletName, const CommandLineArguments& args);
 
@@ -282,6 +288,7 @@ public:
 protected:
     ApplicationWindow* m_mainWindow;
     Array<Handle<ApplicationWindow>> m_windows;
+    Array<Handle<ApplicationWindow>> m_windowsPendingDestruction;
     ANSIString m_name;
     Handle<Game> m_game;
 };

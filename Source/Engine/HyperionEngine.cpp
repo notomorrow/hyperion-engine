@@ -703,10 +703,11 @@ extern "C"
 
         s_hypIsInitialized = false;
 
-        // Stop the sim thread first to ensure it is no longer calling Simulate()
-        // before we destroy worlds in EngineDriver::Shutdown().
-        // On dedicated server (headless), SimThread::Stop()/Join() are no-ops
-        // because the sim runs on the main thread with no separate std::thread.
+        if (g_appContext.IsValid())
+        {
+            g_appContext->PurgeClosedWindows();
+        }
+
         if (g_simThreadInstance != nullptr && g_simThreadInstance->IsRunning())
         {
             g_simThreadInstance->Stop();
@@ -762,7 +763,7 @@ extern "C"
         
         g_renderThreadInstance->Join();
         g_renderThread = g_mainThread;
-        
+
         if (g_renderWorkerThreadPool != nullptr && g_renderWorkerThreadPool->IsRunning())
         {
             g_renderWorkerThreadPool->Stop();

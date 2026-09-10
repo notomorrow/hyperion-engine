@@ -13,6 +13,7 @@
 #include <Rendering/Vulkan/VulkanDevice.hpp>
 #include <Rendering/Vulkan/VulkanFeatures.hpp>
 #include <Rendering/Vulkan/VulkanSemaphore.hpp>
+#include <Rendering/Vulkan/VulkanInstance.hpp>
 #include <Rendering/Vulkan/VulkanRenderInterface.hpp>
 
 #include <Rendering/Util/DeletionQueue.hpp>
@@ -102,10 +103,19 @@ VulkanSwapchain::~VulkanSwapchain()
     if (m_handle != VK_NULL_HANDLE)
     {
         EnqueueDeletion(FunctionWrapper<Proc<void()>>(
-            [handle = m_handle]()
+            [handle = m_handle, surface = m_surface, ownsSurface = m_ownsSurface]()
             {
                 vkDestroySwapchainKHR(RI.GetDevice()->GetDevice(), handle, nullptr);
+
+                if (ownsSurface && surface != VK_NULL_HANDLE)
+                {
+                    vkDestroySurfaceKHR(RI.GetInstance()->GetInstance(), surface, nullptr);
+                }
             }));
+    }
+    else if (m_ownsSurface && m_surface != VK_NULL_HANDLE)
+    {
+        vkDestroySurfaceKHR(RI.GetInstance()->GetInstance(), m_surface, nullptr);
     }
 
     m_handle = VK_NULL_HANDLE;

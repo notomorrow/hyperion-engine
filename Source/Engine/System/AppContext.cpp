@@ -346,6 +346,9 @@ void AppContextBase::RemoveWindow(ApplicationWindow* window)
 
     if (it != m_windows.End())
     {
+        // Keep the window alive until PurgeClosedWindows() is called; events referencing
+        // this window may still be in flight and would otherwise be dangling pointers.
+        m_windowsPendingDestruction.PushBack(std::move(*it));
         m_windows.Erase(it);
 
         if (m_mainWindow == window)
@@ -355,6 +358,23 @@ void AppContextBase::RemoveWindow(ApplicationWindow* window)
             OnCurrentWindowChanged.Fire(this, nullptr);
         }
     }
+}
+
+void AppContextBase::PurgeClosedWindows()
+{
+    AssertOnThread(g_mainThread);
+
+    if (m_windowsPendingDestruction.Empty())
+    {
+        return;
+    }
+
+    for (Handle<ApplicationWindow>& window : m_windowsPendingDestruction)
+    {
+        window.Reset();
+    }
+
+    m_windowsPendingDestruction.Clear();
 }
 
 Result AppContextBase::RunCommandlet(ANSIStringView commandletName, const CommandLineArguments& args)

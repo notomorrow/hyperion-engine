@@ -574,7 +574,41 @@ TResult<CommandLineArguments> CommandLineParser::Parse(ANSIStringView command, c
         }
         else
         {
-            //return HYP_MAKE_ERROR(Error, "Invalid argument: {}", arg);
+            // positional argument: assign to the first argument definition that has not been set yet
+            const CommandLineArgumentDefinition* positionalDefinition = nullptr;
+
+            for (const CommandLineArgumentDefinition& definition : *m_definitions)
+            {
+                if (usedArguments.Contains(definition.name))
+                {
+                    continue;
+                }
+
+                positionalDefinition = &definition;
+
+                break;
+            }
+
+            if (positionalDefinition == nullptr)
+            {
+                continue;
+            }
+
+            usedArguments.Insert(positionalDefinition->name);
+
+            TResult<CommandLineArgumentValue> parsedValue = CommandLineArguments::ParseArgumentValue(*positionalDefinition, args[i]);
+
+            if (parsedValue.HasError())
+            {
+                return parsedValue.GetError();
+            }
+
+            AppendCommandLineArgumentValue(
+                result.m_values,
+                positionalDefinition->name,
+                std::move(parsedValue.GetValue()),
+                positionalDefinition->flags[CommandLineArgumentFlags::ALLOW_MULTIPLE]);
+
             continue;
         }
 

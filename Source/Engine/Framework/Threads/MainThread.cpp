@@ -114,6 +114,8 @@ void MainThread::Update()
 
     if (g_appContext.IsValid())
     {
+        g_appContext->PurgeClosedWindows();
+
         Event event;
         while (g_appContext->PollEvents(event))
         {

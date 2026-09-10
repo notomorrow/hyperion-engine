@@ -53,6 +53,8 @@ int Win32AppContext::PollEvents(Event& event)
 {
     AssertOnThread(g_mainThread);
 
+    PurgeClosedWindows();
+
     event = Event();
 
     MSG msg {};

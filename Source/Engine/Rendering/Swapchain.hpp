@@ -74,6 +74,10 @@ public:
     virtual void SetExtent(Vec2u newExtent) = 0;
     virtual void Recreate() = 0;
 
+    virtual void TakeOwnershipOfSurface()
+    {
+    }
+
 protected:
     explicit SwapchainBase(const Vec2u& extent = Vec2u::Zero())
         : m_extent(extent),

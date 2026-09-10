@@ -150,8 +150,6 @@ namespace Hyperion.Editor
             }
         }
 
-        //-- P/Invoke: BoxedValue-carrying operations --
-
         [DllImport("hyperion", EntryPoint = "EntitySwatchOverrides_SetValue")]
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool EntitySwatchOverrides_SetValue(IntPtr pEntity, ulong swatchHash, ulong propertyHash, [In] ref BoxedValueInternal pValue);

@@ -374,7 +374,7 @@ void TranslateEditorGizmo::OnDragStart(const Handle<Camera>& camera, const Mouse
     }
 }
 
-//-- Swatch override transform edits (gizmos) --
+#pragma region Swatch Overrides
 
 static SwatchOverrideSystem* GetSwatchOverrideSystemFor(const Entity* entity)
 {
@@ -538,6 +538,8 @@ static void RevertSwatchOverrideTransformEdits(const Array<SwatchOverrideTransfo
         }
     }
 }
+
+#pragma endregion Swatch Overrides
 
 void TranslateEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEvent& mouseEvent)
 {
@@ -2129,7 +2131,7 @@ void EditorSubsystem::SetSnapToGridEnabled(bool snapToGrid)
     m_snapToGridEnabled = snapToGrid;
 }
 
-//-- Entity swatch overrides
+#pragma region Entity Swatch Overrides
 
 Array<Name> EditorSubsystem::GetEntitySwatchOverrideSets(Entity* entity) const
 {
@@ -2209,6 +2211,8 @@ void EditorSubsystem::EntityRevertSwatchOverrides(Entity* entity) const
         overrideSystem->RevertOverrides(entity);
     }
 }
+
+#pragma endregion Entity Swatch Overrides
 
 #pragma region MeshEditMode
 

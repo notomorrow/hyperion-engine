@@ -793,10 +793,14 @@ void Win32ApplicationWindow::Close()
 
     m_isOpen = false;
 
-    EnqueueDeletion(std::move(m_swapchain));
-
 #if HYP_VULKAN
-    if (m_vkSurface)
+    if (m_swapchain.IsValid())
+    {
+        m_swapchain->TakeOwnershipOfSurface();
+        m_vkSurface = VK_NULL_HANDLE;
+    }
+
+    if (m_vkSurface != VK_NULL_HANDLE)
     {
         vkDestroySurfaceKHR(
             RI.GetInstance()->GetInstance(),
@@ -805,6 +809,8 @@ void Win32ApplicationWindow::Close()
         m_vkSurface = VK_NULL_HANDLE;
     }
 #endif
+
+    EnqueueDeletion(std::move(m_swapchain));
 
     if (m_hwnd != nullptr)
     {

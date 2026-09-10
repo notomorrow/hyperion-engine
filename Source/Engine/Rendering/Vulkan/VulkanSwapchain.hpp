@@ -77,6 +77,11 @@ public:
     void SetExtent(Vec2u newExtent) override;
     void Recreate() override;
 
+    void TakeOwnershipOfSurface() override
+    {
+        m_ownsSurface = true;
+    }
+
 private:
     RendererResult ChooseSurfaceFormat();
     RendererResult RetrieveImageHandles();
@@ -88,6 +93,7 @@ private:
     VkPresentModeKHR m_presentMode;
     VulkanSwapchainSupportDetails m_supportDetails;
     Array<VulkanSemaphoreRef, VulkanAllocator> m_presentSemaphores;
+    bool m_ownsSurface = false;
 };
 
 } // namespace Hyperion
