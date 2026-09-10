@@ -745,6 +745,11 @@ public:
         m_compileParams = params;
     }
 
+    HYP_FORCE_INLINE Mutex& GetCompiledShadersMutex()
+    {
+        return m_compiledShadersMutex;
+    }
+
 private:
     static void ParseShaderBundleDecl(
         const ShaderDefinition& definition,
@@ -780,6 +785,7 @@ private:
     ShaderCompileParams m_compileParams;
 
     Mutex m_initMutex;
+    Mutex m_compiledShadersMutex;
 };
 
 } // namespace Hyperion

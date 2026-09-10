@@ -1748,9 +1748,18 @@ HashCode ShaderBundle::GetHashCode() const
 {
     HashCode hc;
 
-    for (const Handle<Shader>& shader : compiledShaders)
     {
-        hc.Add(shader->GetHashCode());
+        Mutex::Guard guard;
+
+        if (g_shaderCompiler)
+        {
+            guard.Reset(g_shaderCompiler->GetCompiledShadersMutex());
+        }
+
+        for (const Handle<Shader>& shader : compiledShaders)
+        {
+            hc.Add(shader->GetHashCode());
+        }
     }
 
     hc.Add(staticProperties.GetHashCode());
@@ -1852,23 +1861,27 @@ bool ShaderCompiler::HandleBundle(
 
     if (shaderRequest.HasValue())
     {
-        auto requestedIt = inOutBundle->compiledShaders.FindIf(
-            [&](const Handle<Shader>& shader)
-            {
-                if (!shader.IsValid())
+        {
+            Mutex::Guard guard(m_compiledShadersMutex);
+
+            auto requestedIt = inOutBundle->compiledShaders.FindIf(
+                [&](const Handle<Shader>& shader)
                 {
-                    return false;
-                }
+                    if (!shader.IsValid())
+                    {
+                        return false;
+                    }
 
-                return SatisfiesRequested(
-                    shaderRequest->properties,
-                    shaderRequest->inputLayout,
-                    *shader,
-                    true);
-                // /* matchAllProperties */ CanCompileShaders());
-            });
+                    return SatisfiesRequested(
+                        shaderRequest->properties,
+                        shaderRequest->inputLayout,
+                        *shader,
+                        true);
+                    // /* matchAllProperties */ CanCompileShaders());
+                });
 
-        requestedFound = requestedIt != inOutBundle->compiledShaders.End();
+            requestedFound = requestedIt != inOutBundle->compiledShaders.End();
+        }
 
         if (!requestedFound)
         {
@@ -1880,19 +1893,23 @@ bool ShaderCompiler::HandleBundle(
 
             HYP_LOG(ShaderCompiler, Warning, "Other shaders in the bundle:\n===============================");
 
-            for (const Handle<Shader>& shader : inOutBundle->compiledShaders)
             {
-                if (!shader.IsValid())
+                Mutex::Guard guard(m_compiledShadersMutex);
+
+                for (const Handle<Shader>& shader : inOutBundle->compiledShaders)
                 {
-                    HYP_LOG(ShaderCompiler, Warning, "Null shader found!");
+                    if (!shader.IsValid())
+                    {
+                        HYP_LOG(ShaderCompiler, Warning, "Null shader found!");
 
-                    continue;
+                        continue;
+                    }
+
+                    String shaderString = "\tProperties: " + shader->properties.GetDebugString();
+                    shaderString += "\n\tVertex attributes: " + (shader->inputLayout.mask ? InputLayoutToString(shader->inputLayout) : "<none>");
+
+                    HYP_LOG(ShaderCompiler, Warning, "{}", shaderString);
                 }
-
-                String shaderString = "\tProperties: " + shader->properties.GetDebugString();
-                shaderString += "\n\tVertex attributes: " + (shader->inputLayout.mask ? InputLayoutToString(shader->inputLayout) : "<none>");
-
-                HYP_LOG(ShaderCompiler, Warning, "{}", shaderString);
             }
 
             HYP_LOG(ShaderCompiler, Warning, "===============================");
@@ -3219,7 +3236,6 @@ bool ShaderCompiler::CompileBundle(
         }
     }
 
-    Mutex compiledShadersMutex;
     Mutex errorMessagesMutex;
 
     uint32 numCompiledPermutations = 0;
@@ -3560,7 +3576,7 @@ bool ShaderCompiler::CompileBundle(
             shader->inputGroup = ShaderInputGroup();
             descriptorUsageSetsMerged.BuildDescriptorTableDeclaration(shader->inputGroup);
 
-            Mutex::Guard guard(compiledShadersMutex);
+            Mutex::Guard guard(m_compiledShadersMutex);
 
             AssertDebug(!usedNames.Contains(shader->GetName()));
             usedNames.Add(shader->GetName());
@@ -3612,16 +3628,20 @@ bool ShaderCompiler::CompileBundle(
     }
 
     // Remove all null entries
-    for (auto it = outBundle->compiledShaders.Begin(); it != outBundle->compiledShaders.End();)
     {
-        if (!it->IsValid())
+        Mutex::Guard guard(m_compiledShadersMutex);
+
+        for (auto it = outBundle->compiledShaders.Begin(); it != outBundle->compiledShaders.End();)
         {
-            it = outBundle->compiledShaders.Erase(it);
+            if (!it->IsValid())
+            {
+                it = outBundle->compiledShaders.Erase(it);
 
-            continue;
+                continue;
+            }
+
+            ++it;
         }
-
-        ++it;
     }
 
     outBundle->MarkDirty();
@@ -3691,46 +3711,50 @@ bool ShaderCompiler::CompileBundle(
         return false;
     }
 
-    if (outBundle->compiledShaders.Empty())
     {
-        HYP_LOG(ShaderCompiler, Error,
-                "No compiled shaders were produced for shader {}",
-                decl.name);
+        Mutex::Guard guard(m_compiledShadersMutex);
 
-        return false;
-    }
-
-    // keep compiled shaders sorted.
-    // partially this is to minimize changes causing excessive diffing in source control,
-    // but also sorting by the amount of bits in the flag mask lets us find more "specific" variants earlier on
-    // when selecting which variant to use.
-    std::sort(
-        outBundle->compiledShaders.Begin(),
-        outBundle->compiledShaders.End(),
-        [](const Handle<Shader>& a, const Handle<Shader>& b) -> bool
+        if (outBundle->compiledShaders.Empty())
         {
-            if (!a.IsValid())
-            {
-                return false;
-            }
+            HYP_LOG(ShaderCompiler, Error,
+                    "No compiled shaders were produced for shader {}",
+                    decl.name);
 
-            if (!b.IsValid())
+            return false;
+        }
+
+        // keep compiled shaders sorted.
+        // partially this is to minimize changes causing excessive diffing in source control,
+        // but also sorting by the amount of bits in the flag mask lets us find more "specific" variants earlier on
+        // when selecting which variant to use.
+        std::sort(
+            outBundle->compiledShaders.Begin(),
+            outBundle->compiledShaders.End(),
+            [](const Handle<Shader>& a, const Handle<Shader>& b) -> bool
             {
+                if (!a.IsValid())
+                {
+                    return false;
+                }
+
+                if (!b.IsValid())
+                {
+                    return true;
+                }
+
+                if (ByteUtil::BitCount(a->inputLayout.mask) < ByteUtil::BitCount(b->inputLayout.mask))
+                {
+                    return false;
+                }
+
+                if (std::strcmp(a->GetName().LookupString(), b->GetName().LookupString()) < 0)
+                {
+                    return false;
+                }
+
                 return true;
-            }
-
-            if (ByteUtil::BitCount(a->inputLayout.mask) < ByteUtil::BitCount(b->inputLayout.mask))
-            {
-                return false;
-            }
-
-            if (std::strcmp(a->GetName().LookupString(), b->GetName().LookupString()) < 0)
-            {
-                return false;
-            }
-
-            return true;
-        });
+            });
+    }
 
     GetEngineAssetRegistry()->PutAssetsDeep(MakeStrongRef(outBundle));
     GetEngineAssetRegistry()->SaveDirtyAssets();
@@ -3765,52 +3789,56 @@ bool ShaderCompiler::RequestShader(
         return false;
     }
 
-    if (bundle->compiledShaders.Empty())
     {
-        AssertDebug(false, "Loaded shader bundle has no compiled shaders! Corrupted file?");
-        return false;
-    }
+        Mutex::Guard guard(m_compiledShadersMutex);
 
-    // prevent derefing a bad Shader
-    bundle->compiledShaders = Filter(bundle->compiledShaders, &Handle<Shader>::IsValid);
-
-    auto it = bundle->compiledShaders.FindIf(
-        [&properties, &inputLayout](const Handle<Shader>& shader) -> bool
+        if (bundle->compiledShaders.Empty())
         {
-            return SatisfiesRequested(properties, inputLayout, *shader, /* matchAllProperties */ true);
-        });
+            AssertDebug(false, "Loaded shader bundle has no compiled shaders! Corrupted file?");
+            return false;
+        }
 
-    if (it == bundle->compiledShaders.End()
-        && (!CanCompileShaders() && !m_isPrecompilingShaders))
-    {
-        // try again but this time only match the required properties, not all properties
-        it = bundle->compiledShaders.FindIf(
+        // prevent derefing a bad Shader
+        bundle->compiledShaders = Filter(bundle->compiledShaders, &Handle<Shader>::IsValid);
+
+        auto it = bundle->compiledShaders.FindIf(
             [&properties, &inputLayout](const Handle<Shader>& shader) -> bool
             {
-                return SatisfiesRequested(properties, inputLayout, *shader, /* matchAllProperties */ false);
+                return SatisfiesRequested(properties, inputLayout, *shader, /* matchAllProperties */ true);
             });
+
+        if (it == bundle->compiledShaders.End()
+            && (!CanCompileShaders() && !m_isPrecompilingShaders))
+        {
+            // try again but this time only match the required properties, not all properties
+            it = bundle->compiledShaders.FindIf(
+                [&properties, &inputLayout](const Handle<Shader>& shader) -> bool
+                {
+                    return SatisfiesRequested(properties, inputLayout, *shader, /* matchAllProperties */ false);
+                });
+        }
+
+        if (it == bundle->compiledShaders.End())
+        {
+            HYP_LOG(ShaderCompiler, Error,
+                    "No match found for requested shader!\n"
+                    "Name: {}\n"
+                    "\tRequested properties: {}\n\tVertex Attributes: {}\n\n"
+                    "Found: {}",
+                    name, properties.GetDebugString(), InputLayoutToString(inputLayout),
+                    String::Join(bundle->compiledShaders, "\n", [](const Handle<Shader>& shader)
+                                 {
+                                     return HYP_FORMAT("-----\n\tProperties: {}\n\tVertex Attributes: {}\n-----",
+                                                       shader->properties.GetDebugString(), InputLayoutToString(shader->inputLayout));
+                                 }));
+
+            return false;
+        }
+
+        Assert((*it)->IsValid());
+
+        outShader = it->Get();
     }
-
-    if (it == bundle->compiledShaders.End())
-    {
-        HYP_LOG(ShaderCompiler, Error,
-                "No match found for requested shader!\n"
-                "Name: {}\n"
-                "\tRequested properties: {}\n\tVertex Attributes: {}\n\n"
-                "Found: {}",
-                name, properties.GetDebugString(), InputLayoutToString(inputLayout),
-                String::Join(bundle->compiledShaders, "\n", [](const Handle<Shader>& shader)
-                             {
-                                 return HYP_FORMAT("-----\n\tProperties: {}\n\tVertex Attributes: {}\n-----",
-                                                   shader->properties.GetDebugString(), InputLayoutToString(shader->inputLayout));
-                             }));
-
-        return false;
-    }
-
-    Assert((*it)->IsValid());
-
-    outShader = it->Get();
 
 #ifdef HYP_SHADER_COMPILER_LOGGING
     HYP_LOG(ShaderCompiler, Verbose,

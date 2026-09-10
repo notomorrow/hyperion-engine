@@ -442,30 +442,43 @@ static inline Char32 Char8to32(const Char8* str, size_t max, size_t& outCodepoin
     return ret;
 }
 
-/*! \brief Convert a single UTF-32 char to UTF-8 array of code points.
- *  The array at \p dst MUST have a sizeof Char32 (4 bytes)
+/*! \brief Convert a single UTF-32 codepoint into its UTF-8 encoded byte sequence.
+ *  The array at \p dst MUST have a sizeof Char32 (4 bytes), which is enough to hold
+ *  the longest possible UTF-8 encoding of any valid Unicode codepoint.
  */
 static inline void Char32to8(Char32 src, Char8* dst, size_t& outCodepoints)
 {
     // set all dst bytes to 0
-    std::memset(dst, 0, sizeof(Char32));
+    *reinterpret_cast<Char32*>(dst) = 0;
 
-    outCodepoints = 0;
+    const uint32 codepoint = uint32(src);
 
-    const ubyte* srcBytes = reinterpret_cast<ubyte*>(&src);
-
-    if (HYP_UNLIKELY(!*srcBytes))
-        return;
-    dst[outCodepoints++] = *(srcBytes++);
-    if (!*srcBytes)
-        return;
-    dst[outCodepoints++] = *(srcBytes++);
-    if (!*srcBytes)
-        return;
-    dst[outCodepoints++] = *(srcBytes++);
-    if (!*srcBytes)
-        return;
-    dst[outCodepoints++] = *(srcBytes++);
+    if (codepoint < 0x80)
+    {
+        dst[0] = Char8(codepoint);
+        outCodepoints = 1;
+    }
+    else if (codepoint < 0x800)
+    {
+        dst[0] = Char8(0xC0 | (codepoint >> 6));
+        dst[1] = Char8(0x80 | (codepoint & 0x3F));
+        outCodepoints = 2;
+    }
+    else if (codepoint < 0x10000)
+    {
+        dst[0] = Char8(0xE0 | (codepoint >> 12));
+        dst[1] = Char8(0x80 | ((codepoint >> 6) & 0x3F));
+        dst[2] = Char8(0x80 | (codepoint & 0x3F));
+        outCodepoints = 3;
+    }
+    else
+    {
+        dst[0] = Char8(0xF0 | (codepoint >> 18));
+        dst[1] = Char8(0x80 | ((codepoint >> 12) & 0x3F));
+        dst[2] = Char8(0x80 | ((codepoint >> 6) & 0x3F));
+        dst[3] = Char8(0x80 | (codepoint & 0x3F));
+        outCodepoints = 4;
+    }
 }
 
 static inline void Char32to8(Char32 src, Char8* dst)
@@ -562,14 +575,14 @@ static inline void Char32to16(Char32 src, Char16* dst, size_t& outCodeUnits)
     if (src <= 0xFFFF)
     {
         // BMP character, single UTF-16 code unit
-        dst[outCodeUnits++] = static_cast<Char16>(src);
+        dst[outCodeUnits++] = Char16(src);
     }
     else if (src <= 0x10FFFF)
     {
         // Supplementary character, needs surrogate pair
         const Char32 adjusted = src - 0x10000;
-        dst[outCodeUnits++] = static_cast<Char16>((adjusted >> 10) + 0xD800);   // High surrogate
-        dst[outCodeUnits++] = static_cast<Char16>((adjusted & 0x3FF) + 0xDC00); // Low surrogate
+        dst[outCodeUnits++] = Char16((adjusted >> 10) + 0xD800);   // High surrogate
+        dst[outCodeUnits++] = Char16((adjusted & 0x3FF) + 0xDC00); // Low surrogate
     }
     // else: invalid codepoint, outCodeUnits remains 0
 }
@@ -588,7 +601,7 @@ static inline Char32 WideTo32(const wchar_t* str)
     if constexpr (sizeof(wchar_t) == 4)
     {
         // direct conversion
-        return static_cast<Char32>(*str);
+        return Char32(*str);
     }
     else
     {
@@ -632,7 +645,7 @@ static inline Char32 WideTo32(const wchar_t* str, size_t max, size_t& outCodeUni
     if constexpr (sizeof(wchar_t) == 4)
     {
         outCodeUnits = 1;
-        return static_cast<Char32>(*str);
+        return Char32(*str);
     }
     else
     {
@@ -717,7 +730,7 @@ inline size_t ToUtf16(const Char32* start, const Char32* end, Char16* result)
             // BMP character
             if (result)
             {
-                result[len] = static_cast<Char16>(cp);
+                result[len] = Char16(cp);
             }
             len++;
         }
@@ -727,8 +740,8 @@ inline size_t ToUtf16(const Char32* start, const Char32* end, Char16* result)
             if (result)
             {
                 const Char32 adjusted = cp - 0x10000;
-                result[len] = static_cast<Char16>((adjusted >> 10) + 0xD800);       // High surrogate
-                result[len + 1] = static_cast<Char16>((adjusted & 0x3FF) + 0xDC00); // Low surrogate
+                result[len] = Char16((adjusted >> 10) + 0xD800);       // High surrogate
+                result[len + 1] = Char16((adjusted & 0x3FF) + 0xDC00); // Low surrogate
             }
             len += 2;
         }
@@ -761,7 +774,7 @@ inline size_t ToUtf16(const Char8* start, const Char8* end, Char16* result)
             // BMP character
             if (result)
             {
-                result[len] = static_cast<Char16>(cp);
+                result[len] = Char16(cp);
             }
             len++;
         }
@@ -771,8 +784,8 @@ inline size_t ToUtf16(const Char8* start, const Char8* end, Char16* result)
             if (result)
             {
                 const Char32 adjusted = cp - 0x10000;
-                result[len] = static_cast<Char16>((adjusted >> 10) + 0xD800);       // High surrogate
-                result[len + 1] = static_cast<Char16>((adjusted & 0x3FF) + 0xDC00); // Low surrogate
+                result[len] = Char16((adjusted >> 10) + 0xD800);       // High surrogate
+                result[len + 1] = Char16((adjusted & 0x3FF) + 0xDC00); // Low surrogate
             }
             len += 2;
         }
@@ -796,20 +809,20 @@ inline size_t ToUtf16(const wchar_t* start, const wchar_t* end, Char16* result)
             // wchar_t is already UTF-16 (Windows)
             if (result)
             {
-                result[len] = static_cast<Char16>(ch);
+                result[len] = Char16(ch);
             }
             len++;
         }
         else
         {
             // wchar_t is UTF-32 (Unix/macOS)
-            const Char32 cp = static_cast<Char32>(ch);
+            const Char32 cp = Char32(ch);
 
             if (cp <= 0xFFFF)
             {
                 if (result)
                 {
-                    result[len] = static_cast<Char16>(cp);
+                    result[len] = Char16(cp);
                 }
                 len++;
             }
@@ -818,8 +831,8 @@ inline size_t ToUtf16(const wchar_t* start, const wchar_t* end, Char16* result)
                 if (result)
                 {
                     const Char32 adjusted = cp - 0x10000;
-                    result[len] = static_cast<Char16>((adjusted >> 10) + 0xD800);
-                    result[len + 1] = static_cast<Char16>((adjusted & 0x3FF) + 0xDC00);
+                    result[len] = Char16((adjusted >> 10) + 0xD800);
+                    result[len + 1] = Char16((adjusted & 0x3FF) + 0xDC00);
                 }
                 len += 2;
             }
@@ -1035,25 +1048,25 @@ inline size_t ToUtf8(const wchar_t* start, const wchar_t* end, Char8* result)
 
             if (ch <= 0x7F)
             {
-                result[len++] = static_cast<Char8>(ch);
+                result[len++] = Char8(ch);
             }
             else if (ch <= 0x7FF)
             {
-                result[len++] = static_cast<Char8>(0xC0 | ((ch >> 6) & 0x1F));
-                result[len++] = static_cast<Char8>(0x80 | (ch & 0x3F));
+                result[len++] = Char8(0xC0 | ((ch >> 6) & 0x1F));
+                result[len++] = Char8(0x80 | (ch & 0x3F));
             }
             else if (ch <= 0xFFFF)
             {
-                result[len++] = static_cast<Char8>(0xE0 | ((ch >> 12) & 0x0F));
-                result[len++] = static_cast<Char8>(0x80 | ((ch >> 6) & 0x3F));
-                result[len++] = static_cast<Char8>(0x80 | (ch & 0x3F));
+                result[len++] = Char8(0xE0 | ((ch >> 12) & 0x0F));
+                result[len++] = Char8(0x80 | ((ch >> 6) & 0x3F));
+                result[len++] = Char8(0x80 | (ch & 0x3F));
             }
             else if (ch <= 0x10FFFF)
             {
-                result[len++] = static_cast<Char8>(0xF0 | ((ch >> 18) & 0x07));
-                result[len++] = static_cast<Char8>(0x80 | ((ch >> 12) & 0x3F));
-                result[len++] = static_cast<Char8>(0x80 | ((ch >> 6) & 0x3F));
-                result[len++] = static_cast<Char8>(0x80 | (ch & 0x3F));
+                result[len++] = Char8(0xF0 | ((ch >> 18) & 0x07));
+                result[len++] = Char8(0x80 | ((ch >> 12) & 0x3F));
+                result[len++] = Char8(0x80 | ((ch >> 6) & 0x3F));
+                result[len++] = Char8(0x80 | (ch & 0x3F));
             }
         }
     }
@@ -1300,7 +1313,7 @@ inline size_t ToUtf32(const wchar_t* start, const wchar_t* end, Char32* result)
         {
             for (size_t i = 0; i < len; i++)
             {
-                result[i] = static_cast<Char32>(start[i]);
+                result[i] = Char32(start[i]);
             }
         }
     }
@@ -1343,7 +1356,7 @@ inline size_t ToUtf32(const wchar_t* start, const wchar_t* end, Char32* result)
             {
                 if (result)
                 {
-                    result[len] = static_cast<Char32>(cp);
+                    result[len] = Char32(cp);
                 }
                 len++;
                 start++;
@@ -1434,13 +1447,17 @@ inline void ToString(T value, size_t& bufferLength, CharType* result)
     result[bufferIndex] = 0;
 }
 
+/*! \brief Encode a single UTF-32 codepoint as UTF-8, in place, into \p ch's own storage
+ *  (which is large enough to hold the longest possible encoding) and NUL-terminate it.
+ *  The returned pointer aliases \p ch, and is only valid as long as \p ch is alive. */
 inline char* ToUtf8Chars(Char32& ch)
 {
-#if defined(__cplusplus) && __cplusplus < 202002L
-    return reinterpret_cast<char*>(&ch);
-#else
-    return std::bit_cast<char*>(&ch);
-#endif
+    Char8* dst = reinterpret_cast<Char8*>(&ch);
+
+    size_t outCodepoints = 0;
+    Char32to8(ch, dst, outCodepoints);
+
+    return reinterpret_cast<char*>(dst);
 }
 
 } // namespace utf
