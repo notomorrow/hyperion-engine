@@ -47,6 +47,8 @@
             <Color x:Key="Color.AccentMuted">#FF49837E</Color>
             <Color x:Key="Color.AccentSubtle">#1481BBB6</Color>
             <Color x:Key="Color.AccentSelection">#3D81BBB6</Color>
+            <Color x:Key="Color.Evergreen">#FF1E2A24</Color>
+            <Color x:Key="Color.EvergreenBorder">#FF2F4438</Color>
             <Color x:Key="Color.Text">#FFD0D3D9</Color>
             <Color x:Key="Color.TextMuted">#FF72777E</Color>
             <Color x:Key="Color.TextFaint">#FF4A4E54</Color>
@@ -69,6 +71,8 @@
             <SolidColorBrush x:Key="Brush.AccentMuted" Color="{StaticResource Color.AccentMuted}" />
             <SolidColorBrush x:Key="Brush.AccentSubtle" Color="{StaticResource Color.AccentSubtle}" />
             <SolidColorBrush x:Key="Brush.AccentSelection" Color="{StaticResource Color.AccentSelection}" />
+            <SolidColorBrush x:Key="Brush.Evergreen" Color="{StaticResource Color.Evergreen}" />
+            <SolidColorBrush x:Key="Brush.EvergreenBorder" Color="{StaticResource Color.EvergreenBorder}" />
             <SolidColorBrush x:Key="Brush.Text" Color="{StaticResource Color.Text}" />
             <SolidColorBrush x:Key="Brush.TextMuted" Color="{StaticResource Color.TextMuted}" />
             <SolidColorBrush x:Key="Brush.TextFaint" Color="{StaticResource Color.TextFaint}" />
@@ -487,11 +491,16 @@
         </Style>
         
         <Style Selector="Button.Play">
-           <!-- start simulation button. green -->
+           <!-- start simulation button. evergreen to match the ribbon headings -->
 
-            <Setter Property="Background" Value="#FF1E7A3C" />
-            <Setter Property="BorderBrush" Value="#FF1E7A3C" />
+            <Setter Property="Background" Value="{DynamicResource Brush.Evergreen}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.EvergreenBorder}" />
             <Setter Property="Foreground" Value="White" />
+        </Style>
+
+        <Style Selector="Button.Play:pressed">
+            <Setter Property="Background" Value="{DynamicResource Brush.EvergreenBorder}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.EvergreenBorder}" />
         </Style>
 
         <Style Selector="Button.reset-icon">

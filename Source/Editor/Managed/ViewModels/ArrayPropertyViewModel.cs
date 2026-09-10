@@ -159,7 +159,14 @@ namespace Hyperion.Editor.ViewModels
             if (current == null)
                 return;
 
-            SetPropertyValue(current);
+            if (TryWriteContainerValueToSwatchOverride(current))
+            {
+                PostWriteCallback?.Invoke();
+            }
+            else
+            {
+                SetPropertyValue(current);
+            }
         }
 
 

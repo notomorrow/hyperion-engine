@@ -154,7 +154,8 @@
         </Style>
 
         <Style Selector="Button.gizmo:pressed">
-            <Setter Property="Background" Value="{DynamicResource Brush.AccentMuted}" />
+            <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.AccentHover}" />
         </Style>
 
         <Style Selector="DropDownButton.gizmo">
@@ -184,7 +185,40 @@
         </Style>
 
         <Style Selector="DropDownButton.gizmo:pressed">
-            <Setter Property="Background" Value="{DynamicResource Brush.AccentMuted}" />
+            <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.AccentHover}" />
+        </Style>
+
+        <Style Selector="DropDownButton.gizmo-wide">
+            <Setter Property="Height" Value="30" />
+            <Setter Property="MinWidth" Value="30" />
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions />
+            </Setter>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="{DynamicResource Radius.Small}">
+                        <ContentPresenter
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <Style Selector="DropDownButton.gizmo-wide:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Brush.MenuHover}" />
+        </Style>
+
+        <Style Selector="DropDownButton.gizmo-wide:pressed">
+            <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.AccentHover}" />
         </Style>
 
         <Style Selector="Border.mode-strip">
@@ -218,6 +252,15 @@
             <Setter Property="Background" Value="{DynamicResource Brush.Border}" />
         </Style>
 
+        <Style Selector="TextBlock.ribbon-label">
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="LetterSpacing" Value="0.5" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,0,2" />
+        </Style>
+
         <Style Selector="TextBlock.status-hint">
             <Setter Property="FontSize" Value="11.5" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}" />
@@ -226,8 +269,8 @@
 
     <Grid>
         <DockPanel Background="{DynamicResource Brush.Background}">
-            <!--  Fallback in-window menu for non-macOS platforms  -->
-            <Menu DockPanel.Dock="Top">
+            <!--  Fallback in-window menu for non-macOS platforms (hidden: actions live in the toolbar)  -->
+            <Menu DockPanel.Dock="Top" IsVisible="False">
                 <MenuItem Header="_File">
                     <MenuItem Command="{Binding NewProject}" Header="_New Project..." IsEnabled="{Binding !IsSimulating}" />
                     <MenuItem Command="{Binding OpenProject}" Header="_Open Project..." IsEnabled="{Binding !IsSimulating}" />
@@ -268,35 +311,73 @@
                 </MenuItem>
             </Menu>
 
-            <Border Classes="panel-header toolbar" DockPanel.Dock="Top" Padding="8,6">
+            <Border Classes="panel-header toolbar" DockPanel.Dock="Top" Padding="8,4">
                 <Grid VerticalAlignment="Center" ColumnDefinitions="Auto,*,Auto">
                     <StackPanel
                         Grid.Column="0"
                         Orientation="Horizontal"
-                        Spacing="6">
+                        Spacing="8"
+                        VerticalAlignment="Center">
+                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Classes="ribbon-label" Text="PROJECT" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Classes="gizmo" Command="{Binding NewProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="New Project">
+                            <controls:Codicon Kind="File" Size="16" />
+                        </Button>
                         <Button Classes="gizmo" Command="{Binding OpenProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Open">
                             <controls:Codicon Kind="FolderOpened" Size="16" />
                         </Button>
                         <Button Classes="gizmo" Command="{Binding SaveProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Save">
                             <controls:Codicon Kind="Save" Size="16" />
                         </Button>
-                        <Button Classes="gizmo" Command="{Binding Undo}" ToolTip.Tip="{Binding UndoHeader}" Margin="12,0,0,0" IsEnabled="{Binding CanUndo}">
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Classes="mode-separator" />
+
+                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Classes="ribbon-label" Text="EDIT" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Classes="gizmo" Command="{Binding Undo}" ToolTip.Tip="{Binding UndoHeader}" IsEnabled="{Binding CanUndo}">
                             <controls:Codicon Kind="Discard" Size="16" />
                         </Button>
                         <Button Classes="gizmo" Command="{Binding Redo}" ToolTip.Tip="{Binding RedoHeader}" IsEnabled="{Binding CanRedo}">
                             <controls:Codicon Kind="Redo" Size="16" />
                         </Button>
-                        <Button Classes="gizmo" Command="{Binding Copy}" ToolTip.Tip="{Binding CopyHeader}" Margin="12,0,0,0" IsEnabled="{Binding CanCopy}">
+                        <Button Classes="gizmo" Command="{Binding Copy}" ToolTip.Tip="{Binding CopyHeader}" IsEnabled="{Binding CanCopy}">
                             <controls:Codicon Kind="Copy" Size="16" />
                         </Button>
                         <Button Classes="gizmo" Command="{Binding Paste}" ToolTip.Tip="{Binding PasteHeader}" IsEnabled="{Binding CanPaste}">
                             <controls:Codicon Kind="Clippy" Size="16" />
                         </Button>
+                        <DropDownButton
+                            Classes="gizmo-wide"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Select">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <controls:Codicon Kind="Select" Size="16" VerticalAlignment="Center" />
+                                <controls:Codicon Kind="ChevronDown" Size="10" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <DropDownButton.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel MinWidth="150">
+                                        <MenuItem Command="{Binding SelectAll}" Header="Select All" />
+                                        <MenuItem Header="Select All in Viewport" />
+                                        <MenuItem Header="Select None" />
+                                    </StackPanel>
+                                </Flyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
+                            </StackPanel>
+                        </StackPanel>
 
+                        <Border Classes="mode-separator" />
+
+                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Classes="ribbon-label" Text="LAYERS" />
                         <DropDownButton
                             x:Name="ActiveLayersDropDown"
                             Classes="gizmo"
-                            Margin="12,0,0,0"
                             ToolTip.Tip="Active Layers (Visibility)">
                             <controls:Codicon Kind="Layers" Size="16" />
                             <DropDownButton.Flyout>
@@ -322,6 +403,75 @@
                                 </Flyout>
                             </DropDownButton.Flyout>
                         </DropDownButton>
+                        </StackPanel>
+
+                        <Border Classes="mode-separator" />
+
+                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Classes="ribbon-label" Text="SWATCH" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                        <DropDownButton
+                            x:Name="SwatchDropDown"
+                            Classes="gizmo-wide"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="Active Swatch">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <controls:Codicon Kind="Paintbrush" Size="16" VerticalAlignment="Center" />
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontSize="11"
+                                    Text="{Binding ActiveSwatchName, FallbackValue='Default'}" />
+                            </StackPanel>
+                            <DropDownButton.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel MinWidth="150">
+                                        <ItemsControl ItemsSource="{Binding Swatches}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="x:String">
+                                                    <MenuItem
+                                                        Command="{Binding SetActiveSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                        CommandParameter="{Binding}"
+                                                        Header="{Binding}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <Separator />
+                                        <MenuItem
+                                            Command="{Binding AddNewSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                            Header="New Swatch..." />
+                                    </StackPanel>
+                                </Flyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
+
+                        <ToggleButton
+                            x:Name="SwatchOverrideModeToggle"
+                            Height="30"
+                            Padding="8,4"
+                            Classes="panel-toggle"
+                            VerticalAlignment="Center"
+                            IsChecked="{Binding Inspector.SwatchOverrideMode, Mode=TwoWay}"
+                            IsVisible="{Binding Inspector.CanUseSwatchOverrides}"
+                            ToolTip.Tip="When this toggle button is active, edits will apply as OVERRIDES for the active swatch. Otherwise edits will apply on base + active.">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <controls:Codicon Kind="GitBranch" Size="12" VerticalAlignment="Center" />
+                                <Panel>
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="9"
+                                        IsVisible="{Binding Inspector.SwatchOverrideMode}"
+                                        Text="Override Edits: ON" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="9"
+                                        IsVisible="{Binding !Inspector.SwatchOverrideMode}"
+                                        Text="Override Edits: OFF" />
+                                </Panel>
+                            </StackPanel>
+                        </ToggleButton>
+                            </StackPanel>
+                        </StackPanel>
 
                     </StackPanel>
 
@@ -330,7 +480,10 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
-                        Spacing="6">
+                        Spacing="8">
+                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Classes="ribbon-label" Text="TRANSFORM" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
                         <ToggleButton
                             x:Name="TransformModeTranslate"
                             Classes="gizmo"
@@ -358,19 +511,28 @@
                             ToolTip.Tip="Scale">
                             <controls:Codicon Kind="ScreenFull" Size="16" />
                         </ToggleButton>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Classes="mode-separator" />
+
+                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Classes="ribbon-label" Text="EDIT" />
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                         <ToggleButton
                             x:Name="SnapToGridToggle"
                             Classes="gizmo"
-                            Margin="12,0,0,0"
                             Command="{Binding ToggleSnapToGrid}"
                             IsChecked="{Binding IsSnapToGridEnabled, Mode=OneWay}"
                             ToolTip.Tip="Snap Movement To Grid (1 Unit)">
                             <controls:Codicon Kind="Magnet" Size="16" />
                         </ToggleButton>
+
+                        <Border Classes="mode-separator" />
+
                         <ToggleButton
                             x:Name="MeshEditModeToggle"
                             Classes="gizmo"
-                            Margin="12,0,0,0"
                             Command="{Binding ToggleMeshEditMode}"
                             IsChecked="{Binding IsMeshEditModeEnabled, Mode=OneWay}"
                             IsEnabled="{Binding CanEnableMeshEditMode}"
@@ -380,7 +542,6 @@
 
                         <Border
                             Classes="mode-strip"
-                            Margin="8,0,0,0"
                             IsVisible="{Binding IsMeshEditModeEnabled}">
                             <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                 <TextBlock
@@ -440,18 +601,52 @@
                                 </Button>
                             </StackPanel>
                         </Border>
+                            </StackPanel>
+                        </StackPanel>
                     </StackPanel>
 
                     <StackPanel
                         Grid.Column="2"
                         Orientation="Horizontal"
-                        Spacing="6">
+                        Spacing="8"
+                        VerticalAlignment="Center">
+                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Classes="ribbon-label" Text="BAKE" />
+                            <DropDownButton
+                                Classes="gizmo-wide"
+                                VerticalAlignment="Center"
+                                ToolTip.Tip="Bake"
+                                IsEnabled="{Binding !IsSimulating}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <controls:Codicon Kind="Lightbulb" Size="16" VerticalAlignment="Center" />
+                                    <controls:Codicon Kind="ChevronDown" Size="10" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <DropDownButton.Flyout>
+                                    <Flyout Placement="Bottom">
+                                        <StackPanel MinWidth="150">
+                                            <MenuItem Command="{Binding BuildReflectionProbes}" Header="Reflection Probes" />
+                                            <MenuItem Command="{Binding BuildIrradianceProbes}" Header="Irradiance Probes" />
+                                            <Separator />
+                                            <MenuItem Command="{Binding BuildLightmaps}" Header="Lightmaps" />
+                                            <Separator />
+                                            <MenuItem Command="{Binding BuildBentNormals}" Header="Bent Normals" />
+                                        </StackPanel>
+                                    </Flyout>
+                                </DropDownButton.Flyout>
+                            </DropDownButton>
+                        </StackPanel>
+
+                        <Border Classes="mode-separator" />
+
+                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Classes="ribbon-label" Text="PLAY" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
                         <Button
                             Command="{Binding SetGameModePlaying}"
                             IsVisible="{Binding CanSetGameModePlaying}"
                             ToolTip.Tip="Play"
                             Classes="Play">
-                            <controls:Codicon Kind="Play" Size="16" />
+                            <controls:Codicon Kind="Play" Size="16" Foreground="White" />
                         </Button>
                         <Button
                             Command="{Binding SetGameModePaused}"
@@ -465,6 +660,8 @@
                             ToolTip.Tip="Stop">
                             <controls:Codicon Kind="DebugStop" Size="16" />
                         </Button>
+                            </StackPanel>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -490,7 +687,7 @@
                                 <ToolDock x:Name="HierarchyPane" Id="HierarchyPane" Alignment="Left" ActiveDockable="SceneHierarchyTool">
                                     <Tool x:Name="SceneHierarchyTool" Id="SceneHierarchy" Title="Scene">
                                         <ContentControl DataContext="{Binding Source={x:Static vm:MainWindowViewModel.Instance}}">
-                                            <Grid RowDefinitions="Auto, Auto, *">
+                                            <Grid RowDefinitions="Auto, *">
                                                 <Border Grid.Row="0" Classes="panel-header">
                                                     <Grid VerticalAlignment="Center" ColumnDefinitions="*,Auto">
                                                         <DropDownButton
@@ -628,74 +825,9 @@
                                                     </Grid>
                                                 </Border>
 
-                                                <!--  Swatches  -->
-                                                <Border Grid.Row="1" Classes="panel-header-small">
-                                                    <Grid VerticalAlignment="Center" ColumnDefinitions="Auto,*,Auto,Auto">
-                                                        <DropDownButton
-                                                            x:Name="SwatchDropDown"
-                                                            Grid.Column="0"
-                                                            Background="Transparent"
-                                                            BorderThickness="0"
-                                                            ToolTip.Tip="Active Swatch">
-                                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                <controls:Codicon Kind="Layers" Size="12"  Foreground="{StaticResource Brush.TextMuted}" />
-                                                                <TextBlock
-                                                                    VerticalAlignment="Center"
-                                                                    FontSize="11"
-                                                                    Text="{Binding ActiveSwatchName, FallbackValue='Default'}" />
-                                                            </StackPanel>
-                                                            <DropDownButton.Flyout>
-                                                                <Flyout Placement="Bottom">
-                                                                    <StackPanel MinWidth="150">
-                                                                        <ItemsControl ItemsSource="{Binding Swatches}">
-                                                                            <ItemsControl.ItemTemplate>
-                                                                                <DataTemplate x:DataType="x:String">
-                                                                                    <MenuItem
-                                                                                        Command="{Binding SetActiveSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                        CommandParameter="{Binding}"
-                                                                                        Header="{Binding}" />
-                                                                                </DataTemplate>
-                                                                            </ItemsControl.ItemTemplate>
-                                                                        </ItemsControl>
-
-                                                                        <Separator />
-                                                                        <MenuItem
-                                                                            Command="{Binding AddNewSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                            Header="New Swatch..." />
-                                                                    </StackPanel>
-                                                                </Flyout>
-                                                            </DropDownButton.Flyout>
-                                                        </DropDownButton>
-
-                                                        <ToggleButton
-                                                            x:Name="SwatchOverrideModeToggle"
-                                                            Grid.Column="2"
-                                                            Padding="8,4"
-                                                            Classes="panel-toggle"
-                                                            HorizontalAlignment="Right"
-                                                            VerticalAlignment="Center"
-                                                            IsChecked="{Binding Inspector.SwatchOverrideMode, Mode=TwoWay}"
-                                                            IsVisible="{Binding Inspector.CanUseSwatchOverrides}"
-                                                            ToolTip.Tip="When this toggle button is active, edits will apply as OVERRIDES for the active swatch. Otherwise edits will apply on base + active.">
-                                                            <Panel>
-                                                                <TextBlock
-                                                                    VerticalAlignment="Center"
-                                                                    FontSize="9"
-                                                                    IsVisible="{Binding Inspector.SwatchOverrideMode}"
-                                                                    Text="Override Edits: ON" />
-                                                                <TextBlock
-                                                                    VerticalAlignment="Center"
-                                                                    FontSize="9"
-                                                                    IsVisible="{Binding !Inspector.SwatchOverrideMode}"
-                                                                    Text="Override Edits: OFF" />
-                                                            </Panel>
-                                                        </ToggleButton>
-                                                    </Grid>
-                                                </Border>
-
                                                 <TreeView
                                                     x:Name="SceneHierarchyTreeView"
-                                                    Grid.Row="2"
+                                                    Grid.Row="1"
                                                     ItemsSource="{Binding SceneHierarchy.RootNodes}"
                                                     SelectedItem="{Binding SceneHierarchy.SelectedNode}"
                                                     SelectionMode="Multiple">
@@ -1212,13 +1344,6 @@
                                                         </Border>
 
                                                         <StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="10" IsVisible="{Binding SwatchOverridesSection.IsExpanded}">
-                                                            <TextBlock
-                                                                FontSize="10"
-                                                                Foreground="{DynamicResource Brush.TextMuted}"
-                                                                IsVisible="{Binding !CanUseSwatchOverrides}"
-                                                                Text="Default is the base swatch - changes made here apply to the entity's base values."
-                                                                TextWrapping="Wrap" />
-
                                                             <StackPanel Spacing="4" IsVisible="{Binding HasOverriddenProperties}">
                                                                 <TextBlock
                                                                     Classes="section-label"
@@ -1278,7 +1403,7 @@
                                                                 TextWrapping="Wrap" />
 
                                                             <StackPanel Spacing="5">
-                                                                <TextBlock Classes="section-label" Text="COPY PROPERTIES FROM SWATCH" />
+                                                                <TextBlock Classes="section-label" Text="Copy properties from other swatch" />
                                                                 <Grid ColumnDefinitions="*,Auto">
                                                                     <ComboBox
                                                                         Grid.Column="0"

@@ -244,13 +244,13 @@ public:
     /*! \brief Get the baked shadow map for this light - only present if the light has static shadows that have been baked.
      *
      *  \return The baked shadow map, or an empty handle if there is no baked shadow map. */
-    HYP_METHOD(Property = "BakedShadowMap")
+    HYP_METHOD(Property = "BakedShadowMap", Serialize)
     HYP_FORCE_INLINE const Handle<Texture>& GetBakedShadowMap() const
     {
         return m_shadowMap;
     }
 
-    HYP_METHOD(Property = "BakedShadowMap")
+    HYP_METHOD(Property = "BakedShadowMap", Serialize)
     void SetBakedShadowMap(const Handle<Texture>& shadowMap);
 
     HYP_FORCE_INLINE ShadowMapCaptureState* GetShadowMapCaptureState() const

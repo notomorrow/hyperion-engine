@@ -190,7 +190,8 @@ static ViewDesc GetViewDesc(
     const bool isDirectional = (light->GetLightType() == LightType::Directional);
     const bool isOmni = (light->GetLightType() == LightType::Point);
 
-    const bool hasBakedStaticShadows = (light->GetLightFlags() & LightFlags::BakeStaticShadows);
+    const bool hasBakedStaticShadows = (light->GetLightFlags() & LightFlags::BakeStaticShadows)
+        && light->GetBakedShadowMap().IsValid();
     const bool cacheStaticShadowMaps = !hasBakedStaticShadows && (light->GetLightFlags() & LightFlags::CacheStaticShadowMaps);
     const bool onlyStaticShadowMaps = (light->GetLightFlags() & LightFlags::OnlyDrawStaticShadowMaps);
 

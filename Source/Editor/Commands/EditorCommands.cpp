@@ -2622,8 +2622,9 @@ public:
                 continue;
             }
 
-            ANSIString newName = clipboardNode->GetName().ToString() + "Copy";
-            newNode->SetName(Name(newName));
+            const Name newName = activeScene->GetUniqueNodeName(clipboardNode->GetName().LookupString());
+            
+            newNode->SetName(newName);
 
             // Attach to the original node's parent, falling back to the scene root
             WeakHandle<Node> parentNode = MakeWeakRef(clipboardNode->GetParent());

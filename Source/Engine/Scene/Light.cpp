@@ -400,8 +400,9 @@ void Light::SetNumShadowMapCascades(uint32 numShadowMapCascades)
 
 void Light::SetBakedShadowMap(const Handle<Texture>& shadowMap)
 {
-    if (!CanBakeStaticShadows())
+    if (m_type == LightType::Directional)
     {
+        // directional lights do not support baked shadow maps
         return;
     }
 

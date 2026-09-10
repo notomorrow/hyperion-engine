@@ -10,9 +10,12 @@
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/Texture.hpp>
+#include <Rendering/GpuBuffer.hpp>
 #include <Rendering/Framebuffer.hpp>
 #include <Rendering/Util/DeletionQueue.hpp>
 #include <Rendering/Util/ShaderPropertyDictionary.hpp>
+
+#include <Core/IO/ByteWriter.hpp>
 
 #include <Scene/Light.hpp>
 #include <Scene/Scene.hpp>
@@ -29,6 +32,7 @@
 namespace Hyperion {
 
 extern CVar<float> g_cvShadowDepthBias;
+extern CVar<float> g_cvShadowDepthBiasDirectional;
 
 static StaticShaderPropertyId s_propModeShadows { ShaderProperty(NAME("MODE_SHADOWS")) };
 
@@ -109,8 +113,12 @@ void ShadowMapCaptureState::Begin()
         materialAttributes.shaderProperties.Add(s_propModeShadows);
     }
 
+    const bool isDirectional = m_light->GetLightType() == LightType::Directional;
+    const float depthBias = isDirectional ? g_cvShadowDepthBiasDirectional.Get() : g_cvShadowDepthBias.Get();
+    const float depthRange = farClip - m_camera->GetNearClip();
+
     materialAttributes.flags = MAF_DEPTH_WRITE | MAF_DEPTH_TEST | MAF_DEPTH_BIAS | MAF_DEPTH_CLAMP;
-    materialAttributes.depthBias = int32(MathUtil::Round(g_cvShadowDepthBias.Get()));
+    materialAttributes.depthBias = int32(MathUtil::Round(depthBias * depthRange));
     materialAttributes.depthBiasSlope = 2.0f;
     materialAttributes.cullFaces = FCM_BACK;
 
@@ -260,6 +268,75 @@ void ShadowMapCaptureState::End(bool commitResult)
     if (m_texture.IsValid())
     {
         m_texture->SetIsTransient(false);
+
+        auto readbackCallback = [textureWeak = MakeWeakRef(m_texture)](GpuBuffer& buffer) mutable
+        {
+            Handle<Texture> texture = textureWeak.Lock();
+
+            if (!texture.IsValid())
+            {
+                return;
+            }
+
+            auto writeScope = texture->GetWriteScope();
+
+            TextureDesc desc = texture->GetTextureDesc();
+            AssertDebug(desc.extent.Volume() != 0);
+
+            MemoryByteWriter<DynamicAllocator> stream;
+
+            const uint8* inData = reinterpret_cast<const uint8*>(buffer.Map());
+
+            desc.mipOffsets = {};
+
+            const uint8 numMips = desc.NumMips();
+            const uint16 numLayers = desc.NumArrayLayers();
+
+            size_t mipOffset = 0;
+
+            for (uint8 mipIndex = 0; mipIndex < numMips; mipIndex++)
+            {
+                const size_t mipOffsetBefore = mipOffset;
+                const size_t mipByteSize = desc.GetMipByteSize(mipIndex, /* includeArrayLayers */ false);
+
+                for (uint16 layerIndex = 0; layerIndex < numLayers; layerIndex++)
+                {
+                    stream.Write(inData, mipByteSize);
+
+                    inData += mipByteSize;
+
+                    mipOffset += mipByteSize;
+
+                    stream.Seek(mipOffset);
+                }
+
+                if (mipIndex > 0)
+                {
+                    desc.mipOffsets[mipIndex - 1] = uint32(mipOffsetBefore);
+                }
+            }
+
+            texture->SetTextureDesc(desc);
+            texture->SetImageData(stream.GetBuffer().ToByteView());
+
+            writeScope.Reset();
+        };
+
+        if (IsOnThread(g_renderThread))
+        {
+            m_texture->EnqueueReadback(std::move(readbackCallback));
+        }
+        else
+        {
+            GetThreadById(g_renderThread)->GetScheduler().Enqueue(
+                [texture = m_texture, callback = std::move(readbackCallback)]() mutable
+                {
+                    if (texture.IsValid())
+                    {
+                        texture->EnqueueReadback(std::move(callback));
+                    }
+                });
+        }
 
         GetCurrentAssetRegistry()->PutAssetUnique(m_texture);
 

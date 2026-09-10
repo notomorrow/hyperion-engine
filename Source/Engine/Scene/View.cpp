@@ -453,7 +453,9 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
     {
         const Vec2u shadowMapDimensions = light->GetShadowMapDimensions();
 
-        const bool hasBakedStaticShadows = (light->GetLightFlags() & LightFlags::BakeStaticShadows);
+        const bool hasBakedStaticShadows = (light->GetLightFlags() & LightFlags::BakeStaticShadows)
+            && light->GetBakedShadowMap().IsValid();
+            
         const bool cacheStaticShadowMaps = !hasBakedStaticShadows && (light->GetLightFlags() & LightFlags::CacheStaticShadowMaps);
         const bool onlyStaticShadowMaps = (light->GetLightFlags() & LightFlags::OnlyDrawStaticShadowMaps);
 

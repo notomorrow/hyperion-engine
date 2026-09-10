@@ -234,9 +234,6 @@ bool GetEntityTrueBaseValue(Entity* entity, Name propertyName, BoxedValue& outVa
                 return true;
             }
         }
-
-        // Not in the snapshot: the applied set does not modify this property, so the live
-        // value is the base value
     }
 
     const IMember* member = ResolveOverridableMember(entity->InstanceClass(), propertyName);
@@ -293,7 +290,6 @@ Array<Name> SwatchOverrideSystem::GetSetSwatchNames(const Entity* entity) const
 
     for (const EntitySwatchOverrideSet& set : component->sets)
     {
-        // The Default swatch is the base values, so it never counts as an override set
         if (IsDefaultSwatch(set.swatchName))
         {
             continue;

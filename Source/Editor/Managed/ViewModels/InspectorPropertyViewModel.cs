@@ -307,6 +307,49 @@ namespace Hyperion.Editor.ViewModels
             PostWriteCallback?.Invoke();
         }
 
+        protected bool TryWriteContainerValueToSwatchOverride(BoxedValue value)
+        {
+            if (_valueSetter != null || _componentTargetResolver != null || _target == null)
+            {
+                return false;
+            }
+
+            if (_property.Name == new Name("Name", weak: true))
+            {
+                return false;
+            }
+
+            if (SwatchOverrideEditContext.CurrentEntity is not Entity overrideEntity
+                || !overrideEntity.IsValid
+                || _target.NativeAddress != overrideEntity.NativeAddress
+                || SwatchOverrideEditContext.ActiveSwatchName is not string contextSwatch)
+            {
+                return false;
+            }
+
+            Name swatch = new Name(contextSwatch);
+
+            if (!SwatchOverrideEditContext.OverrideModeActive
+                && !EntitySwatchOverrides.IsPropertyOverridden(overrideEntity, swatch, _property.Name))
+            {
+                return false;
+            }
+
+            if (!EntitySwatchOverrides.HasSet(overrideEntity, swatch))
+            {
+                EntitySwatchOverrides.AddSet(overrideEntity, swatch);
+            }
+
+            if (EntitySwatchOverrides.GetAppliedSwatch(overrideEntity).HashCode != swatch.HashCode)
+            {
+                EntitySwatchOverrides.Apply(overrideEntity, swatch);
+            }
+
+            EntitySwatchOverrides.SetValue(overrideEntity, swatch, _property.Name, value);
+
+            return true;
+        }
+
         /// <summary>
         /// Writes a new value through the project's action stack. Must be called on the sim thread.
         /// </summary>

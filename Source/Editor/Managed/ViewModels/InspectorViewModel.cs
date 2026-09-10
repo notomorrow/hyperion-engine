@@ -172,13 +172,8 @@ namespace Hyperion.Editor.ViewModels
                 || (_activeSwatchDisplay ?? string.Empty) == "Default";
         }
 
-        /// <summary>False on the Default swatch, whose values are the entity's base values - there is nothing to override into.</summary>
         public bool CanUseSwatchOverrides => !IsDefaultSwatch;
 
-        /// <summary>
-        /// Publishes the active swatch to the shared edit context. The Default swatch is the base
-        /// values, so it is published as "no swatch" and every edit routes to the base.
-        /// </summary>
         private void ApplyActiveSwatchToEditContext()
         {
             SwatchOverrideEditContext.ActiveSwatchName = IsDefaultSwatch ? null : ActiveSwatchDisplay;
@@ -878,7 +873,6 @@ namespace Hyperion.Editor.ViewModels
                 return;
             }
 
-            // The Default swatch is the base values, so copying while it is active targets base
             bool targetIsSwatch = !IsDefaultSwatch && !string.IsNullOrEmpty(ActiveSwatchDisplay);
             string targetDisplay = targetIsSwatch ? ActiveSwatchDisplay! : "Base";
 

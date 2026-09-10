@@ -103,7 +103,14 @@ namespace Hyperion.Editor.ViewModels
                 return;
             }
 
-            SetPropertyValue(current);
+            if (TryWriteContainerValueToSwatchOverride(current))
+            {
+                PostWriteCallback?.Invoke();
+            }
+            else
+            {
+                SetPropertyValue(current);
+            }
         }
 
         // Replaces the cached copy and disposes the previous one on the calling (sim) thread.
