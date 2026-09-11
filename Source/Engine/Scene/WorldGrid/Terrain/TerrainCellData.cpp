@@ -74,6 +74,18 @@ ConstByteView TerrainCellData::GetSculptDelta() const
     return ConstByteView(reinterpret_cast<const ubyte*>(m_sculptDelta.raw), m_sculptDelta.size);
 }
 
+Span<const float> TerrainCellData::GetSculptDeltaFloats() const
+{
+    ConstByteView blob = GetSculptDelta();
+
+    if (blob.Size() == 0 || blob.Size() % sizeof(float) != 0)
+    {
+        return Span<const float>();
+    }
+
+    return Span<const float>(reinterpret_cast<const float*>(blob.Data()), blob.Size() / sizeof(float));
+}
+
 Span<float> TerrainCellData::EnsureSculptDelta(uint32 numVertices)
 {
     const size_t requiredSize = size_t(numVertices) * sizeof(float);
@@ -130,7 +142,7 @@ void TerrainCellData::PageBlobData()
         const Name blobKey = m_sculptDelta.key;
         const uint64 expectedSize = m_sculptDelta.size;
 
-        FileByteReader stream { registry->GetRootPath() / AssetBuckets::Terrain.GetName() / (String(*GetName()) + ".TSD.raw.blob") };
+        FileByteReader stream { registry->GetRootPath() / AssetBuckets::Terrain.GetName() / (String(*GetName()) + ".TERA.raw.blob") };
 
         if (!stream.Eof())
         {

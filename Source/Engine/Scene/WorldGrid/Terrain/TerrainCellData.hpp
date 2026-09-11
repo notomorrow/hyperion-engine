@@ -38,7 +38,9 @@ public:
     Vec3u extent;
 
     void SetSculptDelta(ConstByteView view);
+
     ConstByteView GetSculptDelta() const;
+    Span<const float> GetSculptDeltaFloats() const;
 
     Span<float> EnsureSculptDelta(uint32 numVertices);
 
@@ -51,7 +53,7 @@ protected:
     virtual void CollectBlobDataReferences(Array<Tuple<const char*, uint16, BlobDataReference*>>& outReferences) override
     {
         // terrain sculpt deltas
-        outReferences.EmplaceBack("TSD", 1, &m_sculptDelta);
+        outReferences.EmplaceBack("TERA", 1, &m_sculptDelta);
     }
 
 private:

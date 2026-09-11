@@ -376,7 +376,7 @@ void EntityManager::Shutdown()
                 Assert(system != nullptr);
 
                 // Drain all remaining entities registered with this system in the system entity map
-                Array<Entity*> entities;
+                Set<Entity*> entities;
 
                 {
                     TUniqueLock lock(m_systemEntityMapMutex);
@@ -387,11 +387,12 @@ void EntityManager::Shutdown()
                     {
                         for (Entity* entity : systemEntityIt->second)
                         {
-                            entities.PushBack(entity);
-
-                            if (allEntities.FindAs(entity->Id()) == allEntities.End())
+                            if (entities.Insert(entity).second)
                             {
-                                allEntities.Add(MakeStrongRef(entity));
+                                if (allEntities.FindAs(entity->Id()) == allEntities.End())
+                                {
+                                    allEntities.Add(MakeStrongRef(entity));
+                                }
                             }
                         }
 

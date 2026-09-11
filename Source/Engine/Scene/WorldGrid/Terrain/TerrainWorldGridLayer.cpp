@@ -350,6 +350,8 @@ float TerrainWorldGridLayer::SampleHeightAt(const Vec2f& worldXZ) const
         return height;
     }
 
+    auto cellDataReadScope = cellData->GetReadScope();
+
     ConstByteView blob = cellData->GetSculptDelta();
 
     if (blob.Size() != size_t(cellSize) * size_t(cellSize) * sizeof(float))

@@ -906,6 +906,9 @@ private:
         Vec2f paintScreenPos;
 
         ClockTimer strokeTimer;
+
+        // for projection of the effective edit region.
+        WeakHandle<TerrainWorldGridLayer> hoveredLayer;
     } m_terrainSculptState;
 
     void UpdateTerrainSculptState();

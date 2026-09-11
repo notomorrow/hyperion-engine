@@ -2141,6 +2141,8 @@ bool EditorSubsystem::TryApplyTerrainSculptAtScreenPos(const Vec2f& relativePos,
 
     if (!TryGetTerrainSculptHit(relativePos, layer, worldPos))
     {
+        m_terrainSculptState.hoveredLayer.Reset();
+
         return false;
     }
 
@@ -2152,6 +2154,7 @@ bool EditorSubsystem::TryApplyTerrainSculptAtScreenPos(const Vec2f& relativePos,
 
     m_terrainSculptState.hasHover = true;
     m_terrainSculptState.hoverWorldPos = worldPos;
+    m_terrainSculptState.hoveredLayer = layer;
 
     return true;
 }
@@ -2243,10 +2246,61 @@ void EditorSubsystem::UpdateTerrainSculptHover(const Vec2f& relativePos)
     {
         m_terrainSculptState.hasHover = true;
         m_terrainSculptState.hoverWorldPos = worldPos;
+        m_terrainSculptState.hoveredLayer = layer;
     }
     else
     {
         m_terrainSculptState.hasHover = false;
+        m_terrainSculptState.hoveredLayer.Reset();
+    }
+}
+
+static RenderableAttributeSet TerrainCursorDrawAttributes()
+{
+    RenderableAttributeSet attributes;
+
+    MeshAttributes& meshAttributes = attributes.GetMeshAttributes();
+    meshAttributes.inputLayout = StaticVertexInputLayout<VT_Simple>;
+    meshAttributes.topology = Topology::Triangles;
+
+    MaterialAttributes& materialAttributes = attributes.GetMaterialAttributes();
+    materialAttributes.bucket = RenderBucket::Debug;
+    materialAttributes.fillMode = FillMode::Fill;
+    materialAttributes.blendFunction = BlendFunction::None();
+    materialAttributes.cullFaces = FaceCullMode::None;
+    materialAttributes.flags = MAF_DEPTH_TEST;
+
+    return attributes;
+}
+
+static Vec3f ProjectOntoTerrain(const Handle<TerrainWorldGridLayer>& layer, const Vec2f& worldXZ, float surfaceOffset)
+{
+    return Vec3f(worldXZ.x, layer->SampleHeightAt(worldXZ) + surfaceOffset, worldXZ.y);
+}
+
+static void DrawTerrainRibbon(
+    DebugDrawCommandList& debugDrawCommandList,
+    const RenderableAttributeSet& attributes,
+    Span<const Vec3f> edgeA,
+    Span<const Vec3f> edgeB,
+    bool closed,
+    const Color& color)
+{
+    const uint32 pointCount = uint32(MathUtil::Min(edgeA.Size(), edgeB.Size()));
+
+    if (pointCount < 2)
+    {
+        return;
+    }
+
+    const uint32 segmentCount = closed ? pointCount : pointCount - 1;
+
+    for (uint32 i = 0; i < segmentCount; i++)
+    {
+        const uint32 j = (i + 1) % pointCount;
+
+        debugDrawCommandList.triangle(edgeA[i], edgeB[i], edgeB[j], color, attributes);
+        debugDrawCommandList.triangle(edgeA[i], edgeB[j], edgeA[j], color, attributes);
     }
 }
 
@@ -2257,15 +2311,108 @@ void EditorSubsystem::DebugDrawTerrainSculptCursor(DebugDrawCommandList& debugDr
         return;
     }
 
-    static constexpr float CursorHeight = 0.1f;
-
-    const Vec3f position = m_terrainSculptState.hoverWorldPos + Vec3f(0.0f, CursorHeight * 0.5f, 0.0f);
+    static constexpr float SurfaceOffset = 0.1f;
+    static constexpr uint32 RingSegments = 64;
+    static constexpr uint32 FalloffRingSegments = 40;
+    static constexpr uint32 SpokeCount = 8;
+    static constexpr uint32 SpokeSegments = 6;
 
     const Color color = m_terrainSculptState.isPainting
-        ? Color(1.0f, 0.55f, 0.1f, 0.5f)
-        : Color(1.0f, 0.9f, 0.2f, 0.35f);
+        ? Color(1.0f, 0.55f, 0.1f, 1.0f)
+        : Color(1.0f, 0.9f, 0.2f, 1.0f);
 
-    debugDrawCommandList.cylinder(position, m_terrainSculptState.radius, CursorHeight, color);
+    const Handle<TerrainWorldGridLayer> layer = m_terrainSculptState.hoveredLayer.Lock();
+
+    if (!layer.IsValid())
+    {
+        // Height field unavailable - fall back to a simple volume marker.
+        static constexpr float CursorHeight = 0.1f;
+
+        const Vec3f position = m_terrainSculptState.hoverWorldPos + Vec3f(0.0f, CursorHeight * 0.5f, 0.0f);
+
+        debugDrawCommandList.cylinder(position, m_terrainSculptState.radius, CursorHeight, Color(1.0f, 0.9f, 0.2f, 0.35f));
+
+        return;
+    }
+
+    const RenderableAttributeSet attributes = TerrainCursorDrawAttributes();
+
+    const Vec2f centerXZ(m_terrainSculptState.hoverWorldPos.x, m_terrainSculptState.hoverWorldPos.z);
+    const float radius = m_terrainSculptState.radius;
+
+    const float ribbonWidth = MathUtil::Clamp(radius * 0.04f, 0.08f, 0.4f);
+    const float spokeWidth = ribbonWidth * 0.6f;
+
+    Vec3f ringEdges[2][RingSegments];
+
+    for (uint32 i = 0; i < RingSegments; i++)
+    {
+        const float angle = 2.0f * MathUtil::pi<float> * (float(i) / float(RingSegments));
+        const Vec2f dir(MathUtil::Cos(angle), MathUtil::Sin(angle));
+
+        ringEdges[0][i] = ProjectOntoTerrain(layer, centerXZ + dir * (radius - ribbonWidth * 0.5f), SurfaceOffset);
+        ringEdges[1][i] = ProjectOntoTerrain(layer, centerXZ + dir * (radius + ribbonWidth * 0.5f), SurfaceOffset);
+    }
+
+    DrawTerrainRibbon(
+        debugDrawCommandList,
+        attributes,
+        Span<const Vec3f>(ringEdges[0], RingSegments),
+        Span<const Vec3f>(ringEdges[1], RingSegments),
+        /* closed */ true,
+        color);
+
+    const float falloffRadius = radius * 0.5f;
+    const float falloffRibbonWidth = ribbonWidth * 0.8f;
+
+    Vec3f falloffEdges[2][FalloffRingSegments];
+
+    for (uint32 i = 0; i < FalloffRingSegments; i++)
+    {
+        const float angle = 2.0f * MathUtil::pi<float> * (float(i) / float(FalloffRingSegments));
+        const Vec2f dir(MathUtil::Cos(angle), MathUtil::Sin(angle));
+
+        falloffEdges[0][i] = ProjectOntoTerrain(layer, centerXZ + dir * (falloffRadius - falloffRibbonWidth * 0.5f), SurfaceOffset);
+        falloffEdges[1][i] = ProjectOntoTerrain(layer, centerXZ + dir * (falloffRadius + falloffRibbonWidth * 0.5f), SurfaceOffset);
+    }
+
+    DrawTerrainRibbon(
+        debugDrawCommandList,
+        attributes,
+        Span<const Vec3f>(falloffEdges[0], FalloffRingSegments),
+        Span<const Vec3f>(falloffEdges[1], FalloffRingSegments),
+        /* closed */ true,
+        color);
+
+    Vec3f spokeEdges[2][SpokeSegments + 1];
+
+    for (uint32 spokeIndex = 0; spokeIndex < SpokeCount; spokeIndex++)
+    {
+        const float angle = 2.0f * MathUtil::pi<float> * (float(spokeIndex + 1) / float(SpokeCount) + 0.5f / float(SpokeCount));
+        const Vec2f dir(MathUtil::Cos(angle), MathUtil::Sin(angle));
+        const Vec2f perp(-dir.y, dir.x);
+
+        const float spokeLength = radius - ribbonWidth;
+
+        for (uint32 i = 0; i <= SpokeSegments; i++)
+        {
+            const float t = float(i) / float(SpokeSegments);
+            const Vec2f spokePoint = centerXZ + dir * (spokeLength * t);
+
+            const float halfWidth = spokeWidth * 0.5f * MathUtil::Clamp(t, 0.3f, 1.0f);
+
+            spokeEdges[0][i] = ProjectOntoTerrain(layer, spokePoint - perp * halfWidth, SurfaceOffset);
+            spokeEdges[1][i] = ProjectOntoTerrain(layer, spokePoint + perp * halfWidth, SurfaceOffset);
+        }
+
+        DrawTerrainRibbon(
+            debugDrawCommandList,
+            attributes,
+            Span<const Vec3f>(spokeEdges[0], SpokeSegments + 1),
+            Span<const Vec3f>(spokeEdges[1], SpokeSegments + 1),
+            /* closed */ false,
+            color);
+    }
 }
 
 #pragma endregion Terrain
@@ -5425,7 +5572,7 @@ void EditorSubsystem::NewProject()
     sun->SetName(NAME("SunLight"));
     sun->SetDirection(Vec3f(-0.2f, 0.8f, 0.2f).Normalize());
     sun->SetColor(Color(Vec4f(1.0f, 0.9f, 0.8f, 1.0f)));
-    sun->SetIntensity(50.0f);
+    sun->SetIntensity(18.0f);
     InitObject(sun);
 
     mainScene->GetRoot()->AddChild(sun);

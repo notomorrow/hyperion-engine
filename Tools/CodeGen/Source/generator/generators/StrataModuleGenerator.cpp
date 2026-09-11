@@ -659,7 +659,7 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
         const String elementCxxType = unwrappedParamType->templateArguments[0]->type->Format();
         const String arrayCxxTypeName = unwrappedParamType->typeName->ToString(/* includeNamespace */ false);
 
-        sigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::ArrayView<{}>* {}", elementCxxType, paramName));
+        sigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::SArray<{}>* {}", elementCxxType, paramName));
         callArgs.PushBack(HYP_FORMAT("{}<{}>({}->data, size_t({}->length))", arrayCxxTypeName, elementCxxType, paramName, paramName));
     }
     else if (paramTypeMapping.isVector)
@@ -1492,12 +1492,12 @@ Result StrataModuleGenerator::EmitThunks(const Analyzer& analyzer, const Module&
 
                 const String returnElementCxxType = unwrappedReturnType->templateArguments[0]->type->Format();
 
-                allSigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::ArrayView<{}>* outReturn", returnElementCxxType));
+                allSigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::SArray<{}>* outReturn", returnElementCxxType));
             }
             else if (returnTypeMapping.isString)
             {
                 // `string` is a {ptr, len} fat; the host writes it via SetReturnString.
-                allSigParams.PushBack("::Hyperion::Strata::ArrayView<char>* outReturn");
+                allSigParams.PushBack("::Hyperion::Strata::SString* outReturn");
             }
             else if (returnsViaOutParam)
             {
@@ -1557,12 +1557,15 @@ Result StrataModuleGenerator::EmitThunks(const Analyzer& analyzer, const Module&
                         : HYP_FORMAT("self->{}", prop.getter->name);
 
                     // String getters write the {ptr, len} fat through an out-param.
+                    // -- Why? They don't have to, anymore --
+                    // They don't have to per se; but because strata extern char* returns do NOT hand off ownership,
+                    // we do it this way so ownership is created on the C++ side and strata takes it over.
                     Array<String> getterSigParams;
                     getterSigParams.PushBack(selfParam);
 
                     if (prop.mapping.isString)
                     {
-                        getterSigParams.PushBack("::Hyperion::Strata::ArrayView<char>* outReturn");
+                        getterSigParams.PushBack("::Hyperion::Strata::SString* outReturn");
                     }
 
                     String getterThunk = FormatThunkDefinition(prop.getterSymbol, prop.mapping, prop.getterValueType,

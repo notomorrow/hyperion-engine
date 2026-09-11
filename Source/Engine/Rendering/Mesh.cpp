@@ -779,7 +779,7 @@ void Mesh::UpdateDynamicVertexData(uint8 lodIndex, uint32 firstVertex, const Ver
     cr << InsertBarrier(vertexBuffer, ResourceState::VertexBuffer);
 
     // Gets submitted along with the frame - not transient cmd buffer
-    // This could be changed in the future, but right now we're getting some validation errors with it - needs an eye on it
+    // @FIXME: This could be changed in the future, but right now we're getting some validation errors with it - needs an eye on it
     cr.Done();
 }
 

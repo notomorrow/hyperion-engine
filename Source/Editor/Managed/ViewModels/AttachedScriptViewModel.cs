@@ -1,11 +1,17 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input.Platform;
 using Avalonia.Threading;
 using Hyperion;
 using Hyperion.Editor.Commands;
+using Hyperion.Editor.Services;
 
 namespace Hyperion.Editor.ViewModels
 {
@@ -31,8 +37,16 @@ namespace Hyperion.Editor.ViewModels
         public bool HasScript
         {
             get => _hasScript;
-            private set => SetProperty(ref _hasScript, value);
+            private set
+            {
+                if (SetProperty(ref _hasScript, value))
+                {
+                    OnPropertyChanged(nameof(CanCopy));
+                }
+            }
         }
+
+        public bool CanCopy => GetCopyText() != null;
 
         private bool _canSelectFromContentBrowser;
         public bool CanSelectFromContentBrowser
@@ -43,6 +57,10 @@ namespace Hyperion.Editor.ViewModels
 
         public ICommand SelectCommand { get; }
         public ICommand ClearCommand { get; }
+        public ICommand NewCommand { get; }
+        public ICommand EditCommand { get; }
+        public ICommand CopyCommand { get; }
+        public ICommand PasteCommand { get; }
 
         private static readonly Class? s_scriptComponentClass = Class.TryGetClass("ScriptComponent");
         private static readonly Class? s_scriptAssetClass = Class.TryGetClass<ScriptAsset>();
@@ -56,6 +74,10 @@ namespace Hyperion.Editor.ViewModels
             _entity = entity;
             SelectCommand = new RelayCommand(OnSelect);
             ClearCommand = new RelayCommand(OnClear);
+            NewCommand = new RelayCommand(OnNew);
+            EditCommand = new RelayCommand(OnEdit);
+            CopyCommand = new AsyncRelayCommand(OnCopyAsync);
+            PasteCommand = new AsyncRelayCommand(OnPasteAsync);
 
             Debug.Assert(s_scriptComponentClass.HasValue);
 
@@ -247,6 +269,56 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
+                    AssignScriptAssetOnSimThread(scriptAsset);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"AttachedScript: Failed to set script: {ex.Message}");
+                }
+            });
+        }
+
+        private void OnNew()
+        {
+            var panel = new NewScriptPanelViewModel((name, languageArg) =>
+            {
+                if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(languageArg))
+                {
+                    Logger.Log(LogLevel.Warning, "New script creation cancelled.");
+                    return;
+                }
+
+                _ = EngineManager.PostToSimThread(() =>
+                {
+                    try
+                    {
+                        EngineManager.EditorGame?.EditorSubsystem?.ExecuteCommandByName(
+                            new Name("EditorCommandNewScript"), $"{languageArg} {name}");
+
+                        ScriptAsset? scriptAsset = AssetManager.Instance.AssetRegistry.GetAsset(
+                            AssetBucket.Scripts.Value, new Name(name)) as ScriptAsset;
+
+                        if (scriptAsset != null && scriptAsset.IsValid)
+                        {
+                            AssignScriptAssetOnSimThread(scriptAsset);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Warning, $"AttachedScript: Failed to create script: {ex.Message}");
+                    }
+                });
+            });
+
+            PanelService.Instance.OpenPanel(panel);
+        }
+
+        private void OnEdit()
+        {
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                try
+                {
                     EntityManager? mgr = _entity.EntityManager;
 
                     if (mgr == null)
@@ -254,16 +326,61 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    // Capture old value for undo
-                    ScriptAsset? oldValue = null;
                     IntPtr componentPtr = mgr.GetComponentPtr(_entity, _scriptComponentTypeId);
 
-                    if (componentPtr != IntPtr.Zero)
+                    if (componentPtr == IntPtr.Zero)
                     {
-                        using BoxedValue oldBoxed = _assetRefProperty.Get(s_scriptComponentClass!.Value.Address, componentPtr);
-                        oldValue = oldBoxed.GetValue() as ScriptAsset;
+                        return;
                     }
 
+                    using BoxedValue boxed = _assetRefProperty.Get(s_scriptComponentClass!.Value.Address, componentPtr);
+
+                    if (boxed.GetValue() is not ScriptAsset scriptAsset || !scriptAsset.IsValid)
+                    {
+                        return;
+                    }
+
+                    ScriptDesc scriptDesc = scriptAsset.ScriptDesc;
+                    string scriptPath = Path.Combine(AssetManager.Instance.AssetRegistry.GetRootPath(), scriptDesc.Path);
+
+                    Dispatcher.UIThread.Post(() => CodeEditorService.OpenFile(scriptPath));
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"AttachedScript: Failed to open script: {ex.Message}");
+                }
+            });
+        }
+
+        private void AssignScriptAsset(ScriptAsset? scriptAsset)
+        {
+            _ = EngineManager.PostToSimThread(() => AssignScriptAssetOnSimThread(scriptAsset));
+        }
+
+        private void AssignScriptAssetOnSimThread(ScriptAsset? scriptAsset)
+        {
+            try
+            {
+                EntityManager? mgr = _entity.EntityManager;
+
+                if (mgr == null)
+                {
+                    return;
+                }
+
+                IntPtr componentPtr = mgr.GetComponentPtr(_entity, _scriptComponentTypeId);
+
+                // Capture old value for undo
+                ScriptAsset? oldValue = null;
+
+                if (componentPtr != IntPtr.Zero)
+                {
+                    using BoxedValue oldBoxed = _assetRefProperty.Get(s_scriptComponentClass!.Value.Address, componentPtr);
+                    oldValue = oldBoxed.GetValue() as ScriptAsset;
+                }
+
+                if (scriptAsset != null)
+                {
                     // Add component if it doesn't exist
                     if (componentPtr == IntPtr.Zero)
                     {
@@ -280,97 +397,9 @@ namespace Hyperion.Editor.ViewModels
                     // Set the script asset
                     using BoxedValue newBoxed = new BoxedValue(scriptAsset);
                     _assetRefProperty.Set(s_scriptComponentClass!.Value.Address, componentPtr, newBoxed);
-
-                    // Push undo action
-                    ScriptAsset? capturedOldValue = oldValue;
-                    ScriptAsset newValue = scriptAsset;
-
-                    Entity capturedEntity = _entity;
-                    Property capturedProperty = _assetRefProperty;
-                    Class capturedClass = s_scriptComponentClass.Value;
-                    TypeId capturedTypeId = _scriptComponentTypeId;
-                    AttachedScriptViewModel capturedSelf = this;
-
-                    void ApplyValue(ScriptAsset? valueObj)
-                    {
-                        EntityManager? m = capturedEntity.EntityManager;
-
-                        if (m == null)
-                        {
-                            return;
-                        }
-
-                        IntPtr ptr = m.GetComponentPtr(capturedEntity, capturedTypeId);
-
-                        if (ptr == IntPtr.Zero)
-                        {
-                            if (valueObj == null)
-                            {
-                                return; // already cleared, nothing to do
-                            }
-
-                            m.AddDefaultComponent(capturedEntity, capturedClass);
-                            ptr = m.GetComponentPtr(capturedEntity, capturedTypeId);
-                        }
-
-                        if (ptr == IntPtr.Zero)
-                        {
-                            return;
-                        }
-
-                        using BoxedValue bv = new BoxedValue(valueObj);
-                        capturedProperty.Set(capturedClass.Address, ptr, bv);
-                    }
-
-                    EditorProject? project = EngineManager.CurrentProject;
-                    Debug.Assert(project != null, "No active project found when setting script");
-
-                    project.ActionStack.PushAction(new EditorAction(
-                        "Set Script",
-                        execute: (_, _) => ApplyValue(newValue),
-                        revert: (_, _) => ApplyValue(capturedOldValue)));
-
-                    string displayName = scriptAsset.Name.ToString();
-                    string pathDisplay = scriptAsset.IsRegistered() ? scriptAsset.Path.ToString() : "(Unregistered)";
-
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        capturedSelf.ScriptDisplay = displayName;
-                        capturedSelf.AssetPathDisplay = pathDisplay;
-                        capturedSelf.HasScript = true;
-                    });
                 }
-                catch (Exception ex)
+                else
                 {
-                    Logger.Log(LogLevel.Warning, $"AttachedScript: Failed to set script: {ex.Message}");
-                }
-            });
-        }
-
-        private void OnClear()
-        {
-            _ = EngineManager.PostToSimThread(() =>
-            {
-                try
-                {
-                    EntityManager? mgr = _entity.EntityManager;
-
-                    if (mgr == null)
-                    {
-                        return;
-                    }
-
-                    IntPtr componentPtr = mgr.GetComponentPtr(_entity, _scriptComponentTypeId);
-
-                    // Capture old value for undo
-                    object? oldValue = null;
-
-                    if (componentPtr != IntPtr.Zero)
-                    {
-                        using BoxedValue oldBoxed = _assetRefProperty.Get(s_scriptComponentClass!.Value.Address, componentPtr);
-                        oldValue = oldBoxed.GetValue();
-                    }
-
                     if (componentPtr == IntPtr.Zero)
                     {
                         return; // Already clear
@@ -379,56 +408,222 @@ namespace Hyperion.Editor.ViewModels
                     // Set to null
                     using BoxedValue nullBoxed = new BoxedValue(null);
                     _assetRefProperty.Set(s_scriptComponentClass!.Value.Address, componentPtr, nullBoxed);
+                }
 
-                    // Push undo action
-                    object? capturedOldValue = oldValue;
+                // Push undo action
+                ScriptAsset? capturedOldValue = oldValue;
+                ScriptAsset? capturedNewValue = scriptAsset;
 
-                    Entity capturedEntity = _entity;
-                    Property capturedProperty = _assetRefProperty;
-                    Class capturedClass = s_scriptComponentClass.Value;
-                    TypeId capturedTypeId = _scriptComponentTypeId;
-                    AttachedScriptViewModel capturedSelf = this;
+                Entity capturedEntity = _entity;
+                Property capturedProperty = _assetRefProperty;
+                Class capturedClass = s_scriptComponentClass!.Value;
+                TypeId capturedTypeId = _scriptComponentTypeId;
+                AttachedScriptViewModel capturedSelf = this;
 
-                    void ApplyClear(object? valueObj)
+                void ApplyValue(ScriptAsset? valueObj)
+                {
+                    EntityManager? m = capturedEntity.EntityManager;
+
+                    if (m == null)
                     {
-                        EntityManager? m = capturedEntity.EntityManager;
-
-                        if (m == null)
-                        {
-                            return;
-                        }
-
-                        IntPtr ptr = m.GetComponentPtr(capturedEntity, capturedTypeId);
-
-                        if (ptr == IntPtr.Zero)
-                        {
-                            return;
-                        }
-
-                        using BoxedValue bv = new BoxedValue(valueObj);
-                        capturedProperty.Set(capturedClass.Address, ptr, bv);
+                        return;
                     }
 
-                    EditorProject? project = EngineManager.CurrentProject;
-                    Debug.Assert(project != null, "No active project found when clearing script");
+                    IntPtr ptr = m.GetComponentPtr(capturedEntity, capturedTypeId);
 
-                    project.ActionStack.PushAction(new EditorAction(
-                        "Clear Script",
-                        execute: (_, _) => ApplyClear(null),
-                        revert: (_, _) => ApplyClear(capturedOldValue)));
-
-                    Dispatcher.UIThread.Post(() =>
+                    if (ptr == IntPtr.Zero)
                     {
-                        capturedSelf.ScriptDisplay = "(None)";
-                        capturedSelf.AssetPathDisplay = "(None)";
-                        capturedSelf.HasScript = false;
-                    });
+                        if (valueObj == null)
+                        {
+                            return; // already cleared, nothing to do
+                        }
+
+                        m.AddDefaultComponent(capturedEntity, capturedClass);
+                        ptr = m.GetComponentPtr(capturedEntity, capturedTypeId);
+                    }
+
+                    if (ptr == IntPtr.Zero)
+                    {
+                        return;
+                    }
+
+                    using BoxedValue bv = new BoxedValue(valueObj);
+                    capturedProperty.Set(capturedClass.Address, ptr, bv);
+                }
+
+                EditorProject? project = EngineManager.CurrentProject;
+                Debug.Assert(project != null, "No active project found when setting script");
+
+                project.ActionStack.PushAction(new EditorAction(
+                    scriptAsset != null ? "Set Script" : "Clear Script",
+                    execute: (_, _) => ApplyValue(capturedNewValue),
+                    revert: (_, _) => ApplyValue(capturedOldValue)));
+
+                string displayName = scriptAsset != null ? scriptAsset.Name.ToString() : "(None)";
+                string pathDisplay = scriptAsset == null
+                    ? "(None)"
+                    : scriptAsset.IsRegistered() ? scriptAsset.Path.ToString() : "(Unregistered)";
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    capturedSelf.ScriptDisplay = displayName;
+                    capturedSelf.AssetPathDisplay = pathDisplay;
+                    capturedSelf.HasScript = scriptAsset != null;
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, $"AttachedScript: Failed to set script: {ex.Message}");
+            }
+        }
+
+        private void OnClear()
+        {
+            AssignScriptAsset(null);
+        }
+
+        public string? GetCopyText()
+        {
+            if (!HasScript)
+            {
+                return null;
+            }
+
+            return AssetPathDisplay == "(None)" || AssetPathDisplay == "(Unregistered)"
+                ? null
+                : AssetPathDisplay;
+        }
+
+        private static IClipboard? GetClipboard()
+            => (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow?.Clipboard;
+
+        private async Task OnCopyAsync(object? dontCare = null)
+        {
+            if (GetCopyText() is not string text)
+            {
+                return;
+            }
+
+            IClipboard? clipboard = GetClipboard();
+
+            if (clipboard != null)
+            {
+                await clipboard.SetTextAsync(text);
+            }
+        }
+
+        private async Task OnPasteAsync(object? dontCare = null)
+        {
+            IClipboard? clipboard = GetClipboard();
+
+            if (clipboard == null)
+            {
+                return;
+            }
+
+            string? text = await clipboard.TryGetTextAsync();
+            PasteFromText(text);
+        }
+
+        public void PasteFromText(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+
+            string cleaned = text.Trim().Trim('"', '\'');
+            int schemeIndex = cleaned.IndexOf("://", StringComparison.Ordinal);
+
+            if (schemeIndex >= 0)
+            {
+                cleaned = cleaned.Substring(schemeIndex + 3);
+            }
+
+            string? bucketName = null;
+            string assetName;
+
+            int slashIndex = cleaned.LastIndexOf('/');
+
+            if (slashIndex >= 0)
+            {
+                bucketName = cleaned.Substring(0, slashIndex);
+                assetName = cleaned.Substring(slashIndex + 1);
+            }
+            else
+            {
+                assetName = cleaned;
+            }
+
+            if (string.IsNullOrEmpty(assetName))
+            {
+                return;
+            }
+
+            string? capturedBucketName = bucketName;
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                try
+                {
+                    AssetRegistry registry = AssetManager.Instance.AssetRegistry;
+                    ScriptAsset? scriptAsset = null;
+
+                    if (!string.IsNullOrEmpty(capturedBucketName))
+                    {
+                        foreach (AssetBucket bucket in AssetBucket.AllBuckets)
+                        {
+                            if (!string.Equals(bucket.Name, capturedBucketName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
+
+                            scriptAsset = registry.GetAsset(bucket.Value, new Name(assetName)) as ScriptAsset;
+
+                            if (scriptAsset != null && !scriptAsset.IsValid)
+                            {
+                                scriptAsset = null;
+                            }
+
+                            break;
+                        }
+
+                        // Tolerate paths that include extra segments - fall back to a bare-name search.
+                        scriptAsset ??= FindScriptAssetByName(registry, assetName);
+                    }
+                    else
+                    {
+                        scriptAsset = FindScriptAssetByName(registry, assetName);
+                    }
+
+                    if (scriptAsset == null || !scriptAsset.IsValid)
+                    {
+                        Logger.Log(LogLevel.Warning, $"Paste: script asset '{text}' could not be resolved.");
+                        return;
+                    }
+
+                    AssignScriptAssetOnSimThread(scriptAsset);
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogLevel.Warning, $"AttachedScript: Failed to clear script: {ex.Message}");
+                    Logger.Log(LogLevel.Warning, $"AttachedScript: Failed to paste script: {ex.Message}");
                 }
             });
+        }
+
+        private static ScriptAsset? FindScriptAssetByName(AssetRegistry registry, string assetName)
+        {
+            var name = new Name(assetName);
+
+            foreach (AssetBucket bucket in AssetBucket.AllBuckets)
+            {
+                if (registry.GetAsset(bucket.Value, name) is ScriptAsset found && found.IsValid)
+                {
+                    return found;
+                }
+            }
+
+            return null;
         }
     }
 }

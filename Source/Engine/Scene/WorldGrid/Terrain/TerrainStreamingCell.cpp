@@ -73,20 +73,19 @@ void TerrainStreamingCell::OnStreamStart()
 
     Assert(m_layer.IsValid(), "Invalid terrain layer!");
 
-    Span<const float> sculptDelta;
+    const uint32 cellSize = m_layer->GetLayerInfo().cellSize;
+    TerrainMeshBuilder meshBuilder(cellSize);
 
-    if (m_cellData.IsValid())
+    if (!m_cellData.IsValid())
     {
-        ConstByteView blob = m_cellData->GetSculptDelta();
+        m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), Span<const float>());
 
-        if (blob.Size() != 0)
-        {
-            sculptDelta = Span<const float>(reinterpret_cast<const float*>(blob.Data()), blob.Size() / sizeof(float));
-        }
+        return;
     }
 
-    TerrainMeshBuilder meshBuilder(m_layer->GetLayerInfo().cellSize);
-    m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), sculptDelta);
+    auto cellDataReadScope = m_cellData->GetReadScope();
+
+    m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), m_cellData->GetSculptDeltaFloats());
 }
 
 static void BuildMeshDescAndDataView(const TerrainMeshBuilder::CellMeshData& cellMeshData, MeshDesc& outMeshDesc, MeshDataView& outMeshData)
@@ -226,20 +225,18 @@ void TerrainStreamingCell::RebuildMeshFull(const Handle<TerrainCellData>& cellDa
 
     m_cellData = cellData;
 
-    Span<const float> sculptDelta;
-
-    if (m_cellData.IsValid())
-    {
-        ConstByteView blob = m_cellData->GetSculptDelta();
-
-        if (blob.Size() != 0)
-        {
-            sculptDelta = Span<const float>(reinterpret_cast<const float*>(blob.Data()), blob.Size() / sizeof(float));
-        }
-    }
-
     TerrainMeshBuilder meshBuilder(m_layer->GetLayerInfo().cellSize);
-    m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), sculptDelta);
+
+    if (!m_cellData.IsValid())
+    {
+        m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), Span<const float>());
+    }
+    else
+    {
+        auto cellDataReadScope = m_cellData->GetReadScope();
+
+        m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), m_cellData->GetSculptDeltaFloats());
+    }
 
     MeshDesc meshDesc;
     MeshDataView meshData {};
