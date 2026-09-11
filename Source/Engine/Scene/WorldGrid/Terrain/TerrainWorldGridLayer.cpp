@@ -21,6 +21,7 @@
 #include <Asset/AssetReference.hpp>
 
 #include <Rendering/Material.hpp>
+#include <Rendering/Texture.hpp>
 
 #include <Util/NoiseFactory.hpp>
 
@@ -57,6 +58,72 @@ static UniquePtr<NoiseCombinator> MakeTerrainNoiseCombinator(uint32 seed)
         .Use<SimplexNoiseGenerator>(6, NoiseCombinator::Mode::ADDITIVE, BaseHeight * 0.0625f, 0.0f, Vec3f(BaseFrequency * 16.0f, BaseFrequency * 16.0f, 0.0f));
 
     return noiseCombinator;
+}
+
+static Handle<Texture> LoadTerrainTexture(const char* name)
+{
+    auto tryLoadFromRegistry = [name](AssetRegistry& registry) -> Handle<Texture>
+    {
+        return DynamicCast<Texture>(registry.GetAsset(AssetBuckets::Textures, StringHash(name)));
+    };
+
+    Handle<Texture> texture;
+
+    if (Handle<AssetRegistry> registry = GetCurrentAssetRegistry(); registry.IsValid())
+    {
+        texture = tryLoadFromRegistry(*registry);
+    }
+
+    if (!texture.IsValid())
+    {
+        if (Handle<AssetRegistry> registry = GetEngineAssetRegistry(); registry.IsValid())
+        {
+            texture = tryLoadFromRegistry(*registry);
+        }
+    }
+
+#ifdef HYP_EDITOR
+    if (!texture.IsValid())
+    {
+        if (Handle<AssetRegistry> registry = GetEditorAssetRegistry(); registry.IsValid())
+        {
+            texture = tryLoadFromRegistry(*registry);
+        }
+    }
+#endif
+
+    if (!texture.IsValid())
+    {
+        HYP_LOG(WorldGrid, Warning, "Cooked terrain texture '{}' not found in any asset registry", name);
+    }
+
+    return texture;
+}
+
+static void LoadTerrainMaterialTextures(MaterialTextures& textures)
+{
+    struct PerLayerTextures
+    {
+        MaterialTextureKey albedoKey;
+        MaterialTextureKey normalKey;
+        const char* albedoName;
+        const char* normalName;
+    };
+
+    static constexpr PerLayerTextures Layers[] = {
+        { MaterialTextureKey::TerrainLayer0, MaterialTextureKey::TerrainNormal0, "Terrain_Layer0_Albedo", "Terrain_Layer0_Normal" },
+        { MaterialTextureKey::TerrainLayer1, MaterialTextureKey::TerrainNormal1, "Terrain_Layer1_Albedo", "Terrain_Layer1_Normal" },
+        { MaterialTextureKey::TerrainLayer2, MaterialTextureKey::TerrainNormal2, "Terrain_Layer2_Albedo", "Terrain_Layer2_Normal" },
+        { MaterialTextureKey::TerrainLayer3, MaterialTextureKey::TerrainNormal3, "Terrain_Layer3_Albedo", "Terrain_Layer3_Normal" }
+    };
+
+    for (const PerLayerTextures& layer : Layers)
+    {
+        textures[layer.albedoKey] = LoadTerrainTexture(layer.albedoName);
+        textures[layer.normalKey] = LoadTerrainTexture(layer.normalName);
+    }
+
+    textures[MaterialTextureKey::TerrainSplatMap] = LoadTerrainTexture("Terrain_SplatMap");
 }
 
 static const Name s_terrainSceneName = NAME("TerrainScene");
@@ -114,6 +181,7 @@ void TerrainWorldGridLayer::OnAdded(WorldGrid* worldGrid)
     m_scene->Initialize();
 
     MaterialAttributes attributes;
+    attributes.shaderName = NAME("Terrain");
     attributes.bucket = RenderBucket::Opaque;
     attributes.flags |= MAF_DEPTH_TEST | MAF_DEPTH_WRITE;
 
@@ -122,7 +190,10 @@ void TerrainWorldGridLayer::OnAdded(WorldGrid* worldGrid)
     parameters.roughness = 0.95f;
     parameters.metalness = 0.0f;
 
-    m_material = MakeHandle<Material>(NAME("TerrainMaterial"), attributes, parameters, MaterialTextures {});
+    MaterialTextures textures;
+    LoadTerrainMaterialTextures(textures);
+
+    m_material = MakeHandle<Material>(NAME("TerrainMaterial"), attributes, parameters, textures);
     GetCurrentAssetRegistry()->PutAsset(m_material);
 
     InitObject(m_material);

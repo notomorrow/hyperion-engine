@@ -67,7 +67,16 @@ const StringHash Material::s_textureNames[] = {
     "ParallaxMap"_sh,
     "MetalnessMap"_sh,
     "RoughnessMap"_sh,
-    "AoMap"_sh
+    "AoMap"_sh,
+    "TerrainSplatMap"_sh,
+    "TerrainLayer0"_sh,
+    "TerrainLayer1"_sh,
+    "TerrainLayer2"_sh,
+    "TerrainLayer3"_sh,
+    "TerrainNormal0"_sh,
+    "TerrainNormal1"_sh,
+    "TerrainNormal2"_sh,
+    "TerrainNormal3"_sh
 };
 
 Material::Material()

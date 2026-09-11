@@ -36,7 +36,17 @@ enum class MaterialTextureKey : uint64
     Parallax = 0x4,
     Metalness = 0x8,
     Roughness = 0x10,
-    AmbientOcclusion = 0x20
+    AmbientOcclusion = 0x20,
+
+    TerrainSplatMap = 0x40,
+    TerrainLayer0 = 0x80,
+    TerrainLayer1 = 0x100,
+    TerrainLayer2 = 0x200,
+    TerrainLayer3 = 0x400,
+    TerrainNormal0 = 0x800,
+    TerrainNormal1 = 0x1000,
+    TerrainNormal2 = 0x2000,
+    TerrainNormal3 = 0x4000
 };
 
 HYP_ENUM()
@@ -221,7 +231,7 @@ class MaterialTextures
 public:
     HYP_STRUCT_BODY(MaterialTextures);
 
-    static constexpr uint32 MaxTextures = 8;
+    static constexpr uint32 MaxTextures = 16;
 
     using Iterator = FixedArray<Handle<Texture>, MaxTextures>::Iterator;
     using ConstIterator = FixedArray<Handle<Texture>, MaxTextures>::ConstIterator;

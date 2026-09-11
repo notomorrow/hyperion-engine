@@ -29,6 +29,6 @@ Texture SolidWhite {
     }
     ImageData = {
         Key = "Engine://Textures/SolidWhite.TEX"
-        Size = 256
+        Size = 4
     }
 }

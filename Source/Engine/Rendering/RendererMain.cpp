@@ -102,9 +102,22 @@ static HYP_FORCE_INLINE bool IsCubemapShader(StringHash shaderNameHash)
         || shaderNameHash == CubemapShaderNames[1];
 }
 
-static HYP_FORCE_INLINE bool IsGeometryPassShader(StringHash shaderNameHash)
+static HYP_FORCE_INLINE bool IsGeometryPassFamily(StringHash shaderNameHash)
 {
-    return shaderNameHash == "GeometryPass"_sh;
+    static constexpr StringHash GeometryPassShaderNames[] = {
+        "GeometryPass"_sh,
+        "Terrain"_sh
+    };
+
+    for (StringHash name : GeometryPassShaderNames)
+    {
+        if (shaderNameHash == name)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 #pragma region ParallelRenderingState
@@ -273,7 +286,7 @@ static void BuildAttributes(const RenderProxyMesh& proxy, RenderableAttributeSet
     // @TODO DRY this up
     // Shouldn't depend on the names of shaders to conditionally handle stuff!
     const bool isCubemap = IsCubemapShader(shaderNameHash);
-    const bool isGeometryPass = IsGeometryPassShader(shaderNameHash);
+    const bool isGeometryPassOrSimilar = IsGeometryPassFamily(shaderNameHash);
 
     uint8 stencilReferenceValue = 0;
 
@@ -304,7 +317,7 @@ static void BuildAttributes(const RenderProxyMesh& proxy, RenderableAttributeSet
     shaderProperties.Set(Props::s_propAlphaDiscard, hasAlphaDiscard);
     shaderProperties.Set(Props::s_propSkinning, hasSkinning);
 
-    if (isGeometryPass)
+    if (isGeometryPassOrSimilar)
     {
         shaderProperties.Set(Props::s_propShadingTypeDeferred, hasDeferredLighting);
         shaderProperties.Set(Props::s_propShadingTypeForward, hasForwardLighting);
