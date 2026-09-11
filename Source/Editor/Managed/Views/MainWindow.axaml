@@ -1075,6 +1075,21 @@
                                                                             Header="{Binding MoveToGrandparentHeader}"
                                                                             IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                             IsVisible="{Binding CanMoveToGrandparent}" />
+                                                                        <MenuItem
+                                                                            Header="Move To Scene"
+                                                                            IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            IsVisible="{Binding HasMoveToSceneTargets}"
+                                                                            ItemsSource="{Binding MoveToSceneTargets}">
+                                                                            <MenuItem.ItemContainerTheme>
+                                                                                <ControlTheme
+                                                                                    x:DataType="vm:MoveToSceneItemViewModel"
+                                                                                    BasedOn="{StaticResource {x:Type MenuItem}}"
+                                                                                    TargetType="MenuItem">
+                                                                                    <Setter Property="Header" Value="{Binding SceneName}" />
+                                                                                    <Setter Property="Command" Value="{Binding MoveToSceneCommand}" />
+                                                                                </ControlTheme>
+                                                                            </MenuItem.ItemContainerTheme>
+                                                                        </MenuItem>
                                                                         <Separator IsVisible="{Binding HasActions}" />
                                                                         <MenuItem
                                                                             Header="Actions"

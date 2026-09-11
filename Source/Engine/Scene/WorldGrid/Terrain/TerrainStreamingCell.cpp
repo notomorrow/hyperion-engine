@@ -190,6 +190,12 @@ void TerrainStreamingCell::OnLoaded()
     m_node->SetLocalTransform(transform);
     m_node->SetIsStatic(true);
 
+    // Painted cells load with their splat map bound.
+    if (m_cellData.IsValid() && m_cellData->HasSplatMap())
+    {
+        UpdateSplatMaterial(m_cellData);
+    }
+
     m_layer->RegisterLoadedCell(m_cellInfo.coord, WeakHandleFromThis());
 }
 
@@ -212,6 +218,99 @@ void TerrainStreamingCell::OnRemoved()
 
         m_entity.Reset();
     }
+
+    m_splatTexture.Reset();
+    m_cellMaterial.Reset();
+}
+
+void TerrainStreamingCell::UpdateSplatMaterial(const Handle<TerrainCellData>& cellData)
+{
+    HYP_SCOPE;
+    AssertOnThread(g_simThread);
+
+    Assert(m_layer.IsValid(), "Invalid terrain layer!");
+    Assert(m_entity.IsValid(), "Cell has not finished loading yet");
+    Assert(m_mesh.IsValid(), "Cell has not finished loading yet");
+
+    m_cellData = cellData;
+
+    const uint32 cellSize = m_layer->GetLayerInfo().cellSize;
+    const size_t requiredSize = size_t(cellSize) * size_t(cellSize) * 4;
+
+    if (!cellData.IsValid() || !cellData->HasSplatMap() || !m_material.IsValid())
+    {
+        return;
+    }
+
+    // Copy the splat data out while the blob data is paged in.
+    Array<ubyte> splatBytes;
+
+    {
+        auto readScope = cellData->GetReadScope();
+
+        ConstByteView splatData = cellData->GetSplatMap();
+
+        if (splatData.Size() < requiredSize)
+        {
+            return;
+        }
+
+        splatBytes.Resize(requiredSize);
+        Memory::Copy(splatBytes.Data(), splatData.Data(), requiredSize);
+    }
+
+    Array<ubyte> uploadBytes;
+    uploadBytes.Resize(requiredSize);
+
+    const size_t rowSize = size_t(cellSize) * 4;
+
+    for (uint32 z = 0; z < cellSize; z++)
+    {
+        const size_t srcRow = size_t(cellSize - 1 - z) * rowSize;
+        const size_t dstRow = size_t(z) * rowSize;
+
+        Memory::Copy(uploadBytes.Data() + dstRow, splatBytes.Data() + srcRow, rowSize);
+    }
+
+    // Create splat map texture
+    m_splatTexture = MakeHandle<Texture>();
+    m_splatTexture->SetName(NAME_FMT("TerrainCellSplatMap_{}", m_cellInfo.coord));
+
+    TextureDesc textureDesc;
+    textureDesc.type = TextureType::Texture2D;
+    textureDesc.format = TextureFormat::RGBA8;
+    textureDesc.extent = Vec3u(cellSize, cellSize, 1);
+    textureDesc.filterModeMin = TextureFilterMode::Linear;
+    textureDesc.filterModeMag = TextureFilterMode::Linear;
+
+    m_splatTexture->SetTextureDesc(textureDesc);
+    m_splatTexture->SetImageData(ConstByteView(uploadBytes.Data(), uploadBytes.Size()));
+    m_splatTexture->SetIsTransient(true);
+
+    InitObject(m_splatTexture);
+
+    if (!m_cellMaterial.IsValid())
+    {
+        m_cellMaterial = m_material->Clone();
+        m_cellMaterial->SetName(NAME_FMT("TerrainCellMaterial_{}", m_cellInfo.coord));
+        InitObject(m_cellMaterial);
+    }
+
+    m_cellMaterial->SetTexture(MaterialTextureKey::TerrainSplatMap, m_splatTexture);
+
+    const Handle<EntityManager>& entityManager = m_scene->GetEntityManager();
+
+    if (!entityManager.IsValid())
+    {
+        return;
+    }
+
+    if (MeshComponent* meshComponent = entityManager->TryGetComponent<MeshComponent>(m_entity))
+    {
+        meshComponent->material = m_cellMaterial;
+    }
+
+    entityManager->AddTag<EntityTag::UpdateRenderProxy>(m_entity);
 }
 
 void TerrainStreamingCell::RebuildMeshFull(const Handle<TerrainCellData>& cellData)

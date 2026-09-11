@@ -189,8 +189,6 @@ void EntityManager::NotifySystemOfAllEntitiesRemoved(SystemBase* system)
     Assert(m_world != nullptr, "EntityManager must be associated with a World before shutting down systems.");
 
     Assert(system != nullptr);
-    
-    FatArray<TypeId, InlineAllocator<16>> keys;
 
     for (auto& subtypeData : m_entities.GetSubtypeData())
     {
@@ -201,24 +199,13 @@ void EntityManager::NotifySystemOfAllEntitiesRemoved(SystemBase* system)
             Entity* entity = entityData.entityWeak.GetUnsafe();
             Assert(entity != nullptr);
 
-            const ComponentMap& componentIds = entityData.components;
-
-            keys.Resize(0);
-            keys.Reserve(componentIds.Size());
-
-            for (const auto& it : componentIds)
-            {
-                keys.PushBack(it.first);
-            }
-
-            if (system->ActsOnComponents(keys, true) && IsEntityInitializedForSystem(system, entity))
+            if (IsEntityInitializedForSystem(system, entity))
             {
                 { // critical section
                     TUniqueLock lock(m_systemEntityMapMutex);
 
                     auto systemEntityIt = m_systemEntityMap.Find(system);
 
-                    // Check if the system already has this entity initialized
                     if (systemEntityIt == m_systemEntityMap.End())
                     {
                         continue;
@@ -823,21 +810,18 @@ bool EntityManager::RemoveEntity(Entity* entity, bool calledFromEntityDestructor
     {
         NotifySystemsOfEntityRemoved(entity, entityData->components);
     }
-    else
+    else if (m_scene != nullptr && (m_scene->GetSceneFlags() & SceneFlags::HAS_OCTREE))
     {
-        if (m_world != nullptr)
-        {
-            TUniqueLock lock(m_systemEntityMapMutex);
+        m_scene->GetOctree().Remove(entity);
+    }
 
-            for (auto& systemEntityPair : m_systemEntityMap)
-            {
-                systemEntityPair.second.Erase(entity);
-            }
-        }
+    if (m_world != nullptr)
+    {
+        TUniqueLock lock(m_systemEntityMapMutex);
 
-        if (m_scene != nullptr && (m_scene->GetSceneFlags() & SceneFlags::HAS_OCTREE))
+        for (auto& systemEntityPair : m_systemEntityMap)
         {
-            m_scene->GetOctree().Remove(entity);
+            systemEntityPair.second.Erase(entity);
         }
     }
 
@@ -1586,7 +1570,19 @@ void EntityManager::NotifySystemsOfEntityRemoved(Entity* entity, const Component
                 keys.PushBack(it.first);
             }
 
-            if (systemIt.second->ActsOnComponents(keys.ToSpan(), true))
+            bool systemAffected = false;
+
+            for (const TypeId key : keys)
+            {
+                if (systemIt.second->HasComponentTypeId(key, /* includeReadOnly */ false))
+                {
+                    systemAffected = true;
+
+                    break;
+                }
+            }
+
+            if (systemAffected)
             {
                 {
                     TUniqueLock lock(m_systemEntityMapMutex);

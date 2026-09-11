@@ -584,6 +584,7 @@ namespace Hyperion.Editor
             if ((sender as ContextMenu)?.DataContext is NodeViewModel nodeViewModel)
             {
                 nodeViewModel.RefreshActions();
+                nodeViewModel.RefreshMoveToSceneTargets();
             }
         }
 

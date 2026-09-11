@@ -27,6 +27,8 @@ namespace Hyperion
             set => this.SetActiveScene(value);
         }
 
+        public TerrainSculpting? TerrainSculpting => InvokeNativeMethod<TerrainSculpting>(new Name("GetTerrainSculpting"));
+
         public void ExecuteCommandByName(Name commandName, params string[] arguments)
         {
             this.InvokeNativeMethod(new Name("ExecuteCommandByName"), new object[] { commandName, string.Join(" ", arguments) });

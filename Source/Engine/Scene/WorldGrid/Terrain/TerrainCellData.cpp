@@ -40,6 +40,7 @@ TerrainCellData::TerrainCellData(Name name, const Vec2i& coord, const Vec3u& ext
 TerrainCellData::~TerrainCellData()
 {
     FreeBlobData(m_sculptDelta);
+    FreeBlobData(m_splatMap);
 }
 
 void TerrainCellData::Init()
@@ -71,7 +72,7 @@ ConstByteView TerrainCellData::GetSculptDelta() const
         return ConstByteView();
     }
 
-    return ConstByteView(reinterpret_cast<const ubyte*>(m_sculptDelta.raw), m_sculptDelta.size);
+    return ConstByteView((const ubyte*)m_sculptDelta.raw, m_sculptDelta.size);
 }
 
 Span<const float> TerrainCellData::GetSculptDeltaFloats() const
@@ -83,23 +84,23 @@ Span<const float> TerrainCellData::GetSculptDeltaFloats() const
         return Span<const float>();
     }
 
-    return Span<const float>(reinterpret_cast<const float*>(blob.Data()), blob.Size() / sizeof(float));
+    return Span<const float>((const float*)blob.Data(), blob.Size() / sizeof(float));
 }
 
 bool TerrainCellData::EnsureWritableSculptDelta(uint32 numVertices)
 {
     const size_t requiredSize = size_t(numVertices) * sizeof(float);
 
-    const auto IsResident = [this, requiredSize]()
+    const auto checkIsResident = [this, requiredSize]()
     {
         return m_sculptDelta.raw != nullptr && m_sculptDelta.size >= requiredSize;
     };
 
-    if (IsResident())
+    if (checkIsResident())
     {
         if (m_sculptDelta.readOnly)
         {
-            // Storage-mapped memory is read-only - make a private writable copy.
+            // make prviate
             SetBlobDataResident(true);
         }
 
@@ -107,31 +108,26 @@ bool TerrainCellData::EnsureWritableSculptDelta(uint32 numVertices)
     }
 
     {
-        // Page persisted data in from disk first, so we never allocate over a delta that only
-        // exists on disk.
         auto readScope = GetReadScope();
 
-        if (IsResident())
+        if (checkIsResident())
         {
             if (m_sculptDelta.readOnly)
             {
                 SetBlobDataResident(true);
             }
 
-            // Dirty blob data is kept resident when read scopes release, so the write scope
-            // below (which cannot nest inside this read scope) still sees it.
             MarkDirty();
 
             return true;
         }
     }
 
-    // No usable delta in memory - allocate one. Mutating the asset, so writers scope.
     auto writeScope = GetWriteScope();
 
-    if (IsResident())
+    if (checkIsResident())
     {
-        // Paged in by another thread in the meantime.
+        // loaded by another thread
         MarkDirty();
 
         return true;
@@ -147,7 +143,6 @@ bool TerrainCellData::EnsureWritableSculptDelta(uint32 numVertices)
 
     Memory::Zero(m_sculptDelta.raw, requiredSize);
 
-    // Fresh buffer counts as a change; also keeps it resident after scopes release.
     MarkDirty();
 
     return true;
@@ -160,7 +155,102 @@ Span<float> TerrainCellData::GetSculptDeltaMutable()
         return Span<float>();
     }
 
-    return Span<float>(reinterpret_cast<float*>(m_sculptDelta.raw), m_sculptDelta.size / sizeof(float));
+    return Span<float>((float*)m_sculptDelta.raw, m_sculptDelta.size / sizeof(float));
+}
+
+bool TerrainCellData::HasSplatMap() const
+{
+    return m_splatMap.size != 0;
+}
+
+ConstByteView TerrainCellData::GetSplatMap() const
+{
+    if (m_splatMap.raw == nullptr || m_splatMap.size == 0)
+    {
+        return ConstByteView();
+    }
+
+    return ConstByteView((const ubyte*)m_splatMap.raw, m_splatMap.size);
+}
+
+bool TerrainCellData::EnsureSplatMapAllocated(uint32 numVertices)
+{
+    const size_t requiredSize = size_t(numVertices) * NumSplatLayers;
+
+    const auto IsResident = [this, requiredSize]()
+    {
+        return m_splatMap.raw != nullptr && m_splatMap.size >= requiredSize;
+    };
+
+    if (IsResident())
+    {
+        if (m_splatMap.readOnly)
+        {
+            SetBlobDataResident(true);
+        }
+
+        return true;
+    }
+
+    {
+        // Page persisted data in from disk first, so we never allocate over a splat map that
+        // only exists on disk.
+        auto readScope = GetReadScope();
+
+        if (IsResident())
+        {
+            if (m_splatMap.readOnly)
+            {
+                SetBlobDataResident(true);
+            }
+
+            MarkDirty();
+
+            return true;
+        }
+    }
+
+    // No usable splat map in memory - allocate one. Mutating the asset, so writers scope.
+    auto writeScope = GetWriteScope();
+
+    if (IsResident())
+    {
+        MarkDirty();
+
+        return true;
+    }
+
+    FreeBlobData(m_splatMap);
+    AllocateBlobData(m_splatMap, nullptr, requiredSize, 1);
+
+    if (m_splatMap.raw == nullptr || m_splatMap.size < requiredSize)
+    {
+        return false;
+    }
+
+    // Default to layer 0 fully painted.
+    Memory::Zero(m_splatMap.raw, requiredSize);
+
+    ubyte* splatData = (ubyte*)m_splatMap.raw;
+
+    for (size_t i = 0; i < size_t(numVertices); i++)
+    {
+        splatData[i * NumSplatLayers] = 255;
+    }
+
+    MarkDirty();
+
+    return true;
+}
+
+Span<ubyte> TerrainCellData::GetSplatMapMutable()
+{
+    if (m_splatMap.raw == nullptr || m_splatMap.readOnly || m_splatMap.size == 0)
+    {
+        return Span<ubyte>();
+    }
+
+    return Span<ubyte>((ubyte*)m_splatMap.raw, m_splatMap.size);
 }
 
 void TerrainCellData::PageBlobData()

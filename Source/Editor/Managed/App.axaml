@@ -32,6 +32,9 @@
         <DataTemplate DataType="vm:AssetObjectEditPanelViewModel">
             <panels:AssetObjectEditPanelView />
         </DataTemplate>
+        <DataTemplate DataType="vm:TerrainSculptPanelViewModel">
+            <panels:TerrainSculptPanelView />
+        </DataTemplate>
     </Application.DataTemplates>
 
     <Application.Resources>

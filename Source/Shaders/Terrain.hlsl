@@ -164,7 +164,8 @@ PSOutput PSMain(PSInput input)
 
     if (HAS_TEXTURE(material, TerrainSplatMap))
     {
-        weights = SAMPLE_TEXTURE_2D(texture_sampler, GET_TEXTURE(material, TerrainSplatMap), P.xz * TERRAIN_SPLAT_SCALE);
+        // Per-cell splat maps: one RGBA8 texel per terrain vertex, sampled with the cell's UVs.
+        weights = SAMPLE_TEXTURE_2D(texture_sampler, GET_TEXTURE(material, TerrainSplatMap), input.texcoord0);
     }
     else
     {

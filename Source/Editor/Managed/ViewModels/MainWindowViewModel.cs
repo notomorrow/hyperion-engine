@@ -172,7 +172,7 @@ namespace Hyperion.Editor.ViewModels
 
         // Terrain
         public EditorCommand AddTerrainLayer => new EditorCommand("AddTerrainLayer");
-        public EditorCommand ToggleTerrainSculptMode => new EditorCommand("ToggleTerrainSculptMode");
+        public ICommand ToggleTerrainSculptMode { get; private set; }
 
         private bool _canToggleTerrainSculptMode = false;
         public bool CanToggleTerrainSculptMode
@@ -185,6 +185,70 @@ namespace Hyperion.Editor.ViewModels
         public bool IsInTerrainSculptMode
         {
             get => _isInTerrainSculptMode;
+        }
+
+        private TerrainSculptPanelViewModel? _terrainSculptPanel;
+
+        /*! Opens the terrain sculpt tool panel when sculpt mode is enabled and closes it when
+         *  disabled. Must run on the UI thread. */
+        private void UpdateTerrainSculptPanel()
+        {
+            if (_isInTerrainSculptMode)
+            {
+                if (_terrainSculptPanel != null)
+                {
+                    return;
+                }
+
+                TerrainSculpting? terrainSculpting = _editorSubsystem.TerrainSculpting;
+
+                if (terrainSculpting == null)
+                {
+                    return;
+                }
+
+                TerrainSculptPanelViewModel? panel = null;
+
+                panel = new TerrainSculptPanelViewModel(
+                    terrainSculpting,
+                    onClosed: () =>
+                    {
+                        // The user closed the panel directly - exit the tool with it.
+                        if (_terrainSculptPanel == panel)
+                        {
+                            _terrainSculptPanel = null;
+                        }
+
+                        _ = EngineManager.PostToSimThread(() =>
+                        {
+                            TerrainSculpting? terrainSculpting = _editorSubsystem.TerrainSculpting;
+
+                            if (terrainSculpting != null)
+                            {
+                                terrainSculpting.SetEnabled(false);
+                            }
+
+                            bool isInSculptMode = terrainSculpting?.IsEnabled ?? false;
+
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                _isInTerrainSculptMode = isInSculptMode;
+                                OnPropertyChanged(nameof(IsInTerrainSculptMode));
+                            });
+                        });
+                    });
+
+                _terrainSculptPanel = panel;
+
+                PanelService.Instance.OpenPanel(panel);
+            }
+            else if (_terrainSculptPanel != null)
+            {
+                TerrainSculptPanelViewModel panel = _terrainSculptPanel;
+                _terrainSculptPanel = null;
+
+                PanelService.Instance.RemovePanel(panel);
+            }
         }
 
         // Templates
@@ -437,6 +501,32 @@ namespace Hyperion.Editor.ViewModels
                     Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(IsPhysicsDebugDrawEnabled)));
                 });
             });
+
+            ToggleTerrainSculptMode = new RelayCommand(
+                () =>
+                {
+                    _ = EngineManager.PostToSimThread(() =>
+                    {
+                        TerrainSculpting? terrainSculpting = _editorSubsystem.TerrainSculpting;
+
+                        if (terrainSculpting != null)
+                        {
+                            terrainSculpting.SetEnabled(!terrainSculpting.IsEnabled);
+                        }
+
+                        bool isInSculptMode = terrainSculpting?.IsEnabled ?? false;
+
+                        // Refresh immediately so the tool panel appears/disappears with the
+                        // toggle; the scene-changed events alone don't fire when toggling.
+                        Dispatcher.UIThread.Post(() =>
+                        {
+                            _isInTerrainSculptMode = isInSculptMode;
+
+                            OnPropertyChanged(nameof(IsInTerrainSculptMode));
+                            UpdateTerrainSculptPanel();
+                        });
+                    });
+                });
 
             FitPhysicsShapeToMesh = new RelayCommand(
                 () =>
@@ -817,8 +907,8 @@ namespace Hyperion.Editor.ViewModels
             Action checkItAndSetIt = () =>
             {
                 // check it
-                bool canSculptTerrain = scene != null && _editorSubsystem.CanSculptTerrainForScene(scene);
-                bool isInSculptMode = scene != null && _editorSubsystem.IsTerrainSculptModeEnabled();
+                bool canSculptTerrain = scene != null && (_editorSubsystem.TerrainSculpting?.CanSculptTerrainForScene(scene) ?? false);
+                bool isInSculptMode = scene != null && (_editorSubsystem.TerrainSculpting?.IsEnabled ?? false);
 
                 Logger.Log(LogLevel.Info, "Can sculpt terrain = {0}", canSculptTerrain);
 
@@ -830,6 +920,7 @@ namespace Hyperion.Editor.ViewModels
 
                     OnPropertyChanged(nameof(CanToggleTerrainSculptMode));
                     OnPropertyChanged(nameof(IsInTerrainSculptMode));
+                    UpdateTerrainSculptPanel();
                 });
             };
 
@@ -905,8 +996,8 @@ namespace Hyperion.Editor.ViewModels
 
         private void HandleActiveSceneChanged(Scene? scene)
         {
-            bool canSculptTerrain = scene != null && _editorSubsystem.CanSculptTerrainForScene(scene);
-            bool isInTerrainSculptMode = scene != null && _editorSubsystem.IsTerrainSculptModeEnabled();
+            bool canSculptTerrain = scene != null && (_editorSubsystem.TerrainSculpting?.CanSculptTerrainForScene(scene) ?? false);
+            bool isInTerrainSculptMode = scene != null && (_editorSubsystem.TerrainSculpting?.IsEnabled ?? false);
 
             Dispatcher.UIThread.Post(() =>
             {
@@ -922,10 +1013,13 @@ namespace Hyperion.Editor.ViewModels
 
                     SceneHierarchy.AttachToScene(null);
 
+                    _isInTerrainSculptMode = false;
+
                     OnPropertyChanged(nameof(ActiveScene));
                     OnPropertyChanged(nameof(CanAddToScene));
                     OnPropertyChanged(nameof(CanToggleTerrainSculptMode));
                     OnPropertyChanged(nameof(IsInTerrainSculptMode));
+                    UpdateTerrainSculptPanel();
 
                     return;
                 }
@@ -943,6 +1037,7 @@ namespace Hyperion.Editor.ViewModels
                 }
 
                 _canToggleTerrainSculptMode = canSculptTerrain;
+                _isInTerrainSculptMode = isInTerrainSculptMode;
 
                 SceneHierarchy.AttachToScene(scene);
 
@@ -950,6 +1045,7 @@ namespace Hyperion.Editor.ViewModels
                 OnPropertyChanged(nameof(CanAddToScene));
                 OnPropertyChanged(nameof(CanToggleTerrainSculptMode));
                 OnPropertyChanged(nameof(IsInTerrainSculptMode));
+                UpdateTerrainSculptPanel();
             });
         }
 

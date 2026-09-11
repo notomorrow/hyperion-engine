@@ -6,6 +6,8 @@
 
 #include <Editor/Tasks/EditorTasks.hpp>
 
+#include <Editor/Terrain/TerrainSculpting.hpp>
+
 #include <Scene/Scene.hpp>
 #include <Scene/World.hpp>
 #include <Scene/EntityManager.hpp>
@@ -2159,6 +2161,141 @@ DEFINE_EDITOR_COMMAND(ReparentNode);
 
 #pragma endregion EditorCommandReparentNode
 
+#pragma region EditorCommandMoveNodeToScene
+
+class EditorCommandMoveNodeToScene final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandMoveNodeToScene);
+
+public:
+    EditorCommandMoveNodeToScene() = default;
+
+    virtual ~EditorCommandMoveNodeToScene() override = default;
+
+    virtual String GetText() const override
+    {
+        return m_text.Length() ? m_text : EditorCommandBase::GetText();
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        uint64 nodeAddress = 0;
+        uint64 targetSceneAddress = 0;
+
+        if (!StringUtil::Parse(GetArgument(0), &nodeAddress) || !StringUtil::Parse(GetArgument(1), &targetSceneAddress)
+            || nodeAddress == NULL || targetSceneAddress == NULL)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: invalid node or scene address");
+            return;
+        }
+
+        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: no project loaded");
+            return;
+        }
+
+        World* projectWorld = currentProject->GetWorld().Get();
+        if (!projectWorld)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: project has no world");
+            return;
+        }
+
+        Handle<Node> node = MakeStrongRef(reinterpret_cast<Node*>(nodeAddress));
+        Handle<Scene> targetScene = MakeStrongRef(reinterpret_cast<Scene*>(targetSceneAddress));
+
+        if (!node.IsValid() || !targetScene.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: invalid node or scene");
+            return;
+        }
+
+        bool targetSceneInWorld = false;
+
+        for (const Handle<Scene>& scene : projectWorld->GetScenes())
+        {
+            if (scene == targetScene)
+            {
+                targetSceneInWorld = true;
+
+                break;
+            }
+        }
+
+        if (!targetSceneInWorld)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: target scene does not belong to the project's world");
+            return;
+        }
+
+        Scene* nodeScene = node->GetScene();
+
+        if (!nodeScene)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: node has no scene, cannot move");
+            return;
+        }
+
+        if (nodeScene == targetScene.Get())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandMoveNodeToScene: node is already in the target scene");
+            return;
+        }
+
+        Node* previousParent = node->GetParent();
+        if (!previousParent)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: node has no parent, cannot move scene root");
+            return;
+        }
+
+        Handle<Node> targetRoot = targetScene->GetRoot();
+        if (!targetRoot.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: target scene has no root node");
+            return;
+        }
+
+        m_text = HYP_FORMAT("Move '{}' to scene '{}'", node->GetName(), targetScene->GetName());
+
+        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+            GetText(),
+            Proc<EditorActionFunctions()>(
+                [node, targetRoot, previousParent = MakeStrongRef(previousParent)]() -> EditorActionFunctions
+                {
+                    return EditorActionFunctions {
+                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [node, targetRoot](EditorSubsystem*, EditorProject*)
+                            {
+                                node->Remove();
+                                targetRoot->AddChild(node);
+                            }),
+                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [node, previousParent](EditorSubsystem*, EditorProject*)
+                            {
+                                node->Remove();
+                                previousParent->AddChild(node);
+                            })
+                    };
+                }));
+
+        InitObject(action);
+
+        currentProject->GetActionStack()->PushAction(action);
+    }
+
+private:
+    String m_text;
+};
+
+DEFINE_EDITOR_COMMAND(MoveNodeToScene);
+
+#pragma endregion EditorCommandMoveNodeToScene
+
 #pragma region RenameNode
 
 class EditorCommandRenameNode final : public EditorCommandBase
@@ -3755,14 +3892,14 @@ public:
     {
         if (IsOnThread(g_simThread))
         {
-            subsystem->SetTerrainSculptModeEnabled(!subsystem->IsTerrainSculptModeEnabled());
+                    subsystem->GetTerrainSculpting()->SetEnabled(!subsystem->GetTerrainSculpting()->IsEnabled());
         }
         else
         {
             GetThreadById(g_simThread)->GetScheduler().Enqueue(
                 [subsystem = MakeStrongRef(subsystem)]()
                 {
-                    subsystem->SetTerrainSculptModeEnabled(!subsystem->IsTerrainSculptModeEnabled());
+            subsystem->GetTerrainSculpting()->SetEnabled(!subsystem->GetTerrainSculpting()->IsEnabled());
                 },
                 TaskEnqueueFlags::FIRE_AND_FORGET);
         }
@@ -3772,6 +3909,121 @@ public:
 DEFINE_EDITOR_COMMAND(ToggleTerrainSculptMode);
 
 #pragma endregion ToggleTerrainSculptMode
+
+#pragma region SetTerrainSculptMode
+
+class EditorCommandSetTerrainSculptMode final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSetTerrainSculptMode);
+
+public:
+    virtual ~EditorCommandSetTerrainSculptMode() override = default;
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        TerrainSculptMode mode = TerrainSculptMode::Raise;
+
+        if (GetArgument(0) == "lower")
+        {
+            mode = TerrainSculptMode::Lower;
+        }
+        else if (GetArgument(0) == "paint")
+        {
+            mode = TerrainSculptMode::PaintSplat;
+        }
+
+        subsystem->GetTerrainSculpting()->SetEnabled(true);
+        subsystem->GetTerrainSculpting()->SetMode(mode);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SetTerrainSculptMode);
+
+#pragma endregion SetTerrainSculptMode
+
+#pragma region SetTerrainSculptRadius
+
+class EditorCommandSetTerrainSculptRadius final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSetTerrainSculptRadius);
+
+public:
+    virtual ~EditorCommandSetTerrainSculptRadius() override = default;
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        float radius = 0.0f;
+
+        if (!StringUtil::Parse(GetArgument(0), &radius))
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSetTerrainSculptRadius: invalid radius '{}'", GetArgument(0));
+
+            return;
+        }
+
+        subsystem->GetTerrainSculpting()->SetRadius(radius);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SetTerrainSculptRadius);
+
+#pragma endregion SetTerrainSculptRadius
+
+#pragma region SetTerrainSculptStrength
+
+class EditorCommandSetTerrainSculptStrength final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSetTerrainSculptStrength);
+
+public:
+    virtual ~EditorCommandSetTerrainSculptStrength() override = default;
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        float strength = 0.0f;
+
+        if (!StringUtil::Parse(GetArgument(0), &strength))
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSetTerrainSculptStrength: invalid strength '{}'", GetArgument(0));
+
+            return;
+        }
+
+        subsystem->GetTerrainSculpting()->SetStrength(strength);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SetTerrainSculptStrength);
+
+#pragma endregion SetTerrainSculptStrength
+
+#pragma region SetTerrainSculptPaintLayer
+
+class EditorCommandSetTerrainSculptPaintLayer final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSetTerrainSculptPaintLayer);
+
+public:
+    virtual ~EditorCommandSetTerrainSculptPaintLayer() override = default;
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        int paintLayer = 0;
+
+        if (!StringUtil::Parse(GetArgument(0), &paintLayer))
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSetTerrainSculptPaintLayer: invalid layer '{}'", GetArgument(0));
+
+            return;
+        }
+
+        subsystem->GetTerrainSculpting()->SetPaintLayer(paintLayer);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SetTerrainSculptPaintLayer);
+
+#pragma endregion SetTerrainSculptPaintLayer
 
 #pragma region AddNormalizedCubeSphere
 

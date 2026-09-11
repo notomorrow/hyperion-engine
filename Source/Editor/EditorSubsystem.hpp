@@ -52,6 +52,7 @@ class EditorViewport;
 class LightmapVolume;
 class VolumeBase;
 class TerrainWorldGridLayer;
+class TerrainSculpting;
 class AppContextBase;
 struct Ray;
 
@@ -555,25 +556,7 @@ public:
     //-- Terrain
 
     HYP_METHOD()
-    bool IsTerrainSculptModeEnabled() const;
-
-    HYP_METHOD()
-    void SetTerrainSculptModeEnabled(bool enabled);
-
-    HYP_METHOD()
-    float GetTerrainSculptRadius() const;
-
-    HYP_METHOD()
-    void SetTerrainSculptRadius(float radius);
-
-    HYP_METHOD()
-    float GetTerrainSculptStrength() const;
-
-    HYP_METHOD()
-    void SetTerrainSculptStrength(float strength);
-
-    HYP_METHOD()
-    bool CanSculptTerrainForScene(const Handle<Scene>& scene) const;
+    Handle<TerrainSculpting> GetTerrainSculpting();
 
     //-- Mesh edits
 
@@ -841,20 +824,9 @@ private:
 
     bool BackOutOfMeshEditState();
 
-    //-- Terrain
-    
-    bool TryGetTerrainSculptHit(const Vec2f& relativePos, Handle<TerrainWorldGridLayer>& outLayer, Vec3f& outWorldPos) const;
-
-    bool TryApplyTerrainSculptAtScreenPos(const Vec2f& relativePos, bool lower, float dt);
-
-    void UpdateTerrainSculptHover(const Vec2f& relativePos);
-
-    void DebugDrawTerrainSculptCursor(class DebugDrawCommandList& debugDrawCommandList);
-
     //--
 
     void DebugDrawPhysicsShapes(class DebugDrawCommandList& debugDrawCommandList);
-
     /*! \brief If the focused entity's physics shape is referenced by any other entity, clone it and
      *  assign the clone to this entity, so the shape can be mutated */
     Handle<PhysicsShape> EnsureUniquePhysicsShape(Entity* entity);
@@ -892,29 +864,7 @@ private:
 
     //--
 
-    struct TerrainSculptState
-    {
-        bool enabled = false;
-        float radius = 5.0f;
-        float strength = 2.0f;
-
-        bool hasHover = false;
-        Vec3f hoverWorldPos;
-
-        bool isPainting = false;
-        bool paintLower = false;
-        Vec2f paintScreenPos;
-
-        ClockTimer strokeTimer;
-
-        // for projection of the effective edit region.
-        WeakHandle<TerrainWorldGridLayer> hoveredLayer;
-    } m_terrainSculptState;
-
-    void UpdateTerrainSculptState();
-    void BeginTerrainSculptStroke(const Vec2f& relativePos, bool lower);
-    void UpdateTerrainSculptStroke(const Vec2f& relativePos, bool lower);
-    void EndTerrainSculptStroke();
+    Handle<TerrainSculpting> m_terrainSculpting;
 
     //--
 

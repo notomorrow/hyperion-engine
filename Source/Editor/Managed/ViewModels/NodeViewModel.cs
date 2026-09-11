@@ -108,6 +108,15 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _hasActions, value);
         }
 
+        public ObservableCollection<MoveToSceneItemViewModel> MoveToSceneTargets { get; } = new ObservableCollection<MoveToSceneItemViewModel>();
+
+        private bool _hasMoveToSceneTargets;
+        public bool HasMoveToSceneTargets
+        {
+            get => _hasMoveToSceneTargets;
+            private set => SetProperty(ref _hasMoveToSceneTargets, value);
+        }
+
         public void RefreshActions()
         {
             Dispatcher.UIThread.VerifyAccess();
@@ -120,6 +129,34 @@ namespace Hyperion.Editor.ViewModels
             }
 
             HasActions = Actions.Count > 0;
+        }
+
+        public void RefreshMoveToSceneTargets()
+        {
+            Dispatcher.UIThread.VerifyAccess();
+
+            MoveToSceneTargets.Clear();
+
+            MainWindowViewModel? mainWindowViewModel = MainWindowViewModel.Instance;
+
+            if (mainWindowViewModel != null && !IsRootNode)
+            {
+                Scene? currentScene = _node.IsValid ? _node.Scene : null;
+
+                foreach (SceneViewModel sceneViewModel in mainWindowViewModel.Scenes)
+                {
+                    Scene? scene = sceneViewModel.Scene;
+
+                    if (scene == null || !scene.IsValid || scene == currentScene)
+                    {
+                        continue;
+                    }
+
+                    MoveToSceneTargets.Add(new MoveToSceneItemViewModel(scene, _node));
+                }
+            }
+
+            HasMoveToSceneTargets = MoveToSceneTargets.Count > 0;
         }
 
         private bool _isExpanded;

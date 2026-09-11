@@ -123,7 +123,8 @@ static void LoadTerrainMaterialTextures(MaterialTextures& textures)
         textures[layer.normalKey] = LoadTerrainTexture(layer.normalName);
     }
 
-    textures[MaterialTextureKey::TerrainSplatMap] = LoadTerrainTexture("Terrain_SplatMap");
+    // NOTE: the splat map is not bound here - each painted cell gets its own splat texture on a
+    // per-cell material (TerrainStreamingCell::UpdateSplatMaterial), sampled with per-cell UVs.
 }
 
 static const Name s_terrainSceneName = NAME("TerrainScene");
@@ -408,6 +409,167 @@ void TerrainWorldGridLayer::ApplyBrush(const Vec3f& worldPos, float radius, floa
                         cellData,
                         Vec2i(minVertexX, minVertexZ),
                         Vec2i(maxVertexX, maxVertexZ));
+                }
+            }
+        }
+    }
+}
+
+void TerrainWorldGridLayer::PaintSplat(const Vec3f& worldPos, float radius, float strength, uint32 layerIndex, bool erase)
+{
+    HYP_SCOPE;
+    AssertOnThread(g_simThread);
+
+    if (radius <= 0.0f || strength == 0.0f)
+    {
+        return;
+    }
+
+    layerIndex = MathUtil::Min(layerIndex, TerrainCellData::NumSplatLayers - 1);
+
+    const WorldGridLayerInfo& layerInfo = m_layerInfo;
+    const uint32 cellSize = layerInfo.cellSize;
+    const float cellWorldSizeX = (float(cellSize) - 1.0f) * layerInfo.scale.x;
+    const float cellWorldSizeZ = (float(cellSize) - 1.0f) * layerInfo.scale.z;
+
+    if (cellWorldSizeX <= 0.0f || cellWorldSizeZ <= 0.0f)
+    {
+        return;
+    }
+
+    auto coordAt = [&](const Vec2f& worldXZ) -> Vec2f
+    {
+        return Vec2f(
+            (worldXZ.x - layerInfo.offset.x) / cellWorldSizeX + 0.5f,
+            (worldXZ.y - layerInfo.offset.z) / cellWorldSizeZ + 0.5f);
+    };
+
+    const Vec2f worldPosXZ(worldPos.x, worldPos.z);
+    const Vec2f minCoordF = coordAt(worldPosXZ - Vec2f(radius, radius));
+    const Vec2f maxCoordF = coordAt(worldPosXZ + Vec2f(radius, radius));
+
+    const int32 minCoordX = int32(MathUtil::Floor(minCoordF.x)) - 1;
+    const int32 minCoordZ = int32(MathUtil::Floor(minCoordF.y)) - 1;
+    const int32 maxCoordX = int32(MathUtil::Ceil(maxCoordF.x)) + 1;
+    const int32 maxCoordZ = int32(MathUtil::Ceil(maxCoordF.y)) + 1;
+
+    for (int32 cz = minCoordZ; cz <= maxCoordZ; cz++)
+    {
+        for (int32 cx = minCoordX; cx <= maxCoordX; cx++)
+        {
+            const Vec2i coord(cx, cz);
+
+            const Vec3f cellBoundsMin = ComputeCellBoundsMin(layerInfo, coord);
+            const Vec2f cellWorldMinXZ(cellBoundsMin.x, cellBoundsMin.z);
+            const Vec2f cellWorldMaxXZ = cellWorldMinXZ + Vec2f(cellWorldSizeX, cellWorldSizeZ);
+
+            const Vec2f closestPoint(
+                MathUtil::Clamp(worldPosXZ.x, cellWorldMinXZ.x, cellWorldMaxXZ.x),
+                MathUtil::Clamp(worldPosXZ.y, cellWorldMinXZ.y, cellWorldMaxXZ.y));
+
+            if ((closestPoint - worldPosXZ).Length() > radius)
+            {
+                continue;
+            }
+
+            Handle<TerrainCellData> cellData;
+
+            auto objectsByCoordIt = m_objectsByCoord.Find(coord);
+
+            if (objectsByCoordIt != m_objectsByCoord.End() && objectsByCoordIt->second.Any())
+            {
+                cellData = DynamicCast<TerrainCellData>(objectsByCoordIt->second[0].Resolve());
+            }
+
+            const bool isNewCellData = !cellData.IsValid();
+
+            if (isNewCellData)
+            {
+                cellData = MakeHandle<TerrainCellData>(NAME_FMT("TerrainCellData_{}_{}", coord.x, coord.y), coord, Vec3u(cellSize));
+                InitObject(cellData);
+            }
+
+            // Same scope protocol as the sculpt brush - invalidate the sample cache so no read
+            // scope of ours is held, then page in / allocate the splat map.
+            m_deltaSampleCache.Invalidate();
+
+            if (!cellData->EnsureSplatMapAllocated(cellSize * cellSize))
+            {
+                continue;
+            }
+
+            bool anyModified = false;
+
+            {
+                auto cellDataWriteScope = cellData->GetWriteScope();
+
+                Span<ubyte> splatMap = cellData->GetSplatMapMutable();
+
+                if (splatMap.Size() != 0)
+                {
+                    for (uint32 z = 0; z < cellSize; z++)
+                    {
+                        for (uint32 x = 0; x < cellSize; x++)
+                        {
+                            const Vec2f vertexWorldXZ = cellWorldMinXZ + Vec2f(float(x), float(z)) * Vec2f(layerInfo.scale.x, layerInfo.scale.z);
+
+                            const float dist = (vertexWorldXZ - worldPosXZ).Length();
+
+                            if (dist > radius)
+                            {
+                                continue;
+                            }
+
+                            const float falloff = 1.0f - (dist / radius);
+                            const float weight = falloff * falloff * (3.0f - 2.0f * falloff); // smoothstep
+
+                            const int32 paintDelta = int32(MathUtil::Clamp(strength * weight, 0.0f, 1.0f) * 255.0f);
+
+                            if (paintDelta == 0)
+                            {
+                                continue;
+                            }
+
+                            ubyte& channel = splatMap[(size_t(z) * cellSize + x) * TerrainCellData::NumSplatLayers + layerIndex];
+
+                            const int32 oldValue = int32(channel);
+
+                            channel = erase
+                                ? ubyte(MathUtil::Max(oldValue - paintDelta, 0))
+                                : ubyte(MathUtil::Min(oldValue + paintDelta, 255));
+
+                            anyModified |= channel != oldValue;
+                        }
+                    }
+
+                    if (anyModified)
+                    {
+                        cellData->MarkDirty();
+                    }
+                }
+            }
+
+            if (!anyModified)
+            {
+                // Nothing painted - the freshly created cell data simply dies without being
+                // registered.
+                continue;
+            }
+
+            if (isNewCellData)
+            {
+                AddStreamingObject(cellData.Get(), coord);
+            }
+
+            m_cellsModifiedSinceStrokeEnd[coord] = true;
+
+            auto loadedCellIt = m_loadedCells.Find(coord);
+
+            if (loadedCellIt != m_loadedCells.End())
+            {
+                if (Handle<TerrainStreamingCell> loadedCell = loadedCellIt->second.Lock(); loadedCell)
+                {
+                    loadedCell->UpdateSplatMaterial(cellData);
                 }
             }
         }

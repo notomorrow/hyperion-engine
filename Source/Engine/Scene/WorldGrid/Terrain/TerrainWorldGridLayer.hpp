@@ -63,6 +63,11 @@ public:
     HYP_METHOD()
     void ApplyBrush(const Vec3f& worldPos, float radius, float strength, bool raise);
 
+    /*! Paints the splat map layer \p layerIndex (0-3) inside the brush. With \p erase the layer
+     *  weight is reduced instead. \p strength is the flow amount per second (already dt scaled). */
+    HYP_METHOD()
+    void PaintSplat(const Vec3f& worldPos, float radius, float strength, uint32 layerIndex, bool erase);
+
     /*! Samples the full terrain height (base noise + sculpt delta) at the given world XZ position. */
     float SampleHeightAt(const Vec2f& worldXZ) const;
 
