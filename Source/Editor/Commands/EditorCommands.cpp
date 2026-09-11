@@ -21,6 +21,9 @@
 #include <Scene/Node.hpp>
 #include <Scene/Prefab.hpp>
 
+#include <Scene/WorldGrid/WorldGrid.hpp>
+#include <Scene/WorldGrid/Terrain/TerrainWorldGridLayer.hpp>
+
 #include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Scene/Camera/Camera.hpp>
@@ -49,6 +52,8 @@
 #include <Core/Logging/Logger.hpp>
 
 #include <Core/CLI/CommandLine.hpp>
+
+#include <random>
 
 #include <Asset/Assets.hpp>
 #include <Asset/AssetBatch.hpp>
@@ -3653,6 +3658,120 @@ public:
 DEFINE_EDITOR_COMMAND(AddCube);
 
 #pragma endregion AddCube
+
+#pragma region AddTerrainLayer
+
+class EditorCommandAddTerrainLayer final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandAddTerrainLayer);
+
+public:
+    virtual ~EditorCommandAddTerrainLayer() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Add Terrain";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        Handle<EditorProject> currentProject = subsystem->GetCurrentProject();
+
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Error, "No project loaded; cannot add terrain!");
+
+            return;
+        }
+
+        Handle<Scene> activeScene = subsystem->GetActiveScene();
+
+        if (!activeScene.IsValid() || !activeScene->GetWorld())
+        {
+            HYP_LOG(Editor, Error, "No active scene/world; cannot add terrain!");
+
+            return;
+        }
+
+        World* world = activeScene->GetWorld();
+
+        if (!world->GetWorldGrid().IsValid())
+        {
+            HYP_LOG(Editor, Error, "Active world has no WorldGrid (streaming disabled); cannot add terrain!");
+
+            return;
+        }
+
+        std::random_device randomDevice;
+
+        WorldGridLayerInfo layerInfo;
+        layerInfo.cellSize = 64;
+        layerInfo.maxDistance = 3.0f;
+        layerInfo.seed = randomDevice();
+
+        Handle<TerrainWorldGridLayer> layer = MakeHandle<TerrainWorldGridLayer>(NAME("Terrain"), layerInfo);
+
+        Handle<WorldGrid> worldGrid = world->GetWorldGrid();
+
+        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+            GetText(),
+            Proc<EditorActionFunctions()>(
+                [layer, worldGrid]() -> EditorActionFunctions
+                {
+                    return EditorActionFunctions {
+                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [layer, worldGrid](EditorSubsystem*, EditorProject*)
+                            {
+                                worldGrid->AddLayer(layer);
+                            }),
+                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [layer, worldGrid](EditorSubsystem*, EditorProject*)
+                            {
+                                worldGrid->RemoveLayer(layer.Get());
+                            })
+                    };
+                }));
+
+        InitObject(action);
+
+        currentProject->GetActionStack()->PushAction(action);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(AddTerrainLayer);
+
+#pragma endregion AddTerrainLayer
+
+#pragma region ToggleTerrainSculptMode
+
+class EditorCommandToggleTerrainSculptMode final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandToggleTerrainSculptMode);
+
+public:
+    virtual ~EditorCommandToggleTerrainSculptMode() override = default;
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        if (IsOnThread(g_simThread))
+        {
+            subsystem->SetTerrainSculptModeEnabled(!subsystem->IsTerrainSculptModeEnabled());
+        }
+        else
+        {
+            GetThreadById(g_simThread)->GetScheduler().Enqueue(
+                [subsystem = MakeStrongRef(subsystem)]()
+                {
+                    subsystem->SetTerrainSculptModeEnabled(!subsystem->IsTerrainSculptModeEnabled());
+                },
+                TaskEnqueueFlags::FIRE_AND_FORGET);
+        }
+    }
+};
+
+DEFINE_EDITOR_COMMAND(ToggleTerrainSculptMode);
+
+#pragma endregion ToggleTerrainSculptMode
 
 #pragma region AddNormalizedCubeSphere
 

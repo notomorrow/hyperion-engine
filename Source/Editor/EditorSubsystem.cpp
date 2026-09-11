@@ -36,6 +36,9 @@
 #include <Scene/Systems/MeshSystem.hpp>
 #include <Scene/Systems/SwatchOverrideSystem.hpp>
 
+#include <Scene/WorldGrid/WorldGrid.hpp>
+#include <Scene/WorldGrid/Terrain/TerrainWorldGridLayer.hpp>
+
 #include <Scene/Sky/DynamicSkySystem.hpp>
 
 #include <Scene/Camera/Camera.hpp>
@@ -48,6 +51,7 @@
 #include <Scene/Components/TransformComponent.hpp>
 #include <Scene/Components/RigidBodyComponent.hpp>
 #include <Scene/Components/CharacterControllerComponent.hpp>
+#include <Scene/Components/TerrainCellComponent.hpp>
 
 #include <Physics/PhysicsShape.hpp>
 
@@ -2013,6 +2017,259 @@ bool VolumeEditorGizmo::OnKeyPress(const Handle<Camera>& camera, const KeyboardE
 
 #pragma endregion VolumeEditorGizmo
 
+#pragma region Terrain
+
+bool EditorSubsystem::IsTerrainSculptModeEnabled() const
+{
+    AssertOnThread(g_simThread);
+
+    return m_terrainSculptState.enabled;
+}
+
+void EditorSubsystem::SetTerrainSculptModeEnabled(bool enabled)
+{
+    AssertOnThread(g_simThread);
+
+    if (!enabled && m_terrainSculptState.isPainting)
+    {
+        EndTerrainSculptStroke();
+    }
+
+    m_terrainSculptState.enabled = enabled;
+}
+
+float EditorSubsystem::GetTerrainSculptRadius() const
+{
+    AssertOnThread(g_simThread);
+
+    return m_terrainSculptState.radius;
+}
+
+void EditorSubsystem::SetTerrainSculptRadius(float radius)
+{
+    AssertOnThread(g_simThread);
+
+    m_terrainSculptState.radius = MathUtil::Max(radius, 0.1f);
+}
+
+float EditorSubsystem::GetTerrainSculptStrength() const
+{
+    AssertOnThread(g_simThread);
+
+    return m_terrainSculptState.strength;
+}
+
+void EditorSubsystem::SetTerrainSculptStrength(float strength)
+{
+    AssertOnThread(g_simThread);
+
+    m_terrainSculptState.strength = strength;
+}
+
+bool EditorSubsystem::CanSculptTerrainForScene(const Handle<Scene>& scene) const
+{
+    AssertOnThread(g_simThread);
+
+    if (!scene.IsValid())
+    {
+        return false;
+    }
+
+    // Check if we have any nodes with TerrainCellComponent
+    EntitySetView<TerrainCellComponent> setView = scene->GetEntityManager()->GetEntitySet<TerrainCellComponent>()
+        .GetScopedView(DataAccessFlags::ACCESS_READ);
+
+    return setView.Begin() != setView.End();
+}
+
+bool EditorSubsystem::TryGetTerrainSculptHit(const Vec2f& relativePos, Handle<TerrainWorldGridLayer>& outLayer, Vec3f& outWorldPos) const
+{
+    AssertOnThread(g_simThread);
+
+    EditorViewport* activeViewport = GetActiveViewport();
+
+    if (!activeViewport)
+    {
+        return false;
+    }
+
+    Handle<Scene> activeScene = GetActiveScene();
+
+    if (!activeScene.IsValid() || !activeScene->GetWorld())
+    {
+        return false;
+    }
+
+    const Handle<WorldGrid>& worldGrid = activeScene->GetWorld()->GetWorldGrid();
+
+    if (!worldGrid.IsValid())
+    {
+        return false;
+    }
+
+    const Ray ray = activeViewport->GetCamera()->GetPickRay(relativePos);
+
+    for (const Handle<WorldGridLayer>& layer : worldGrid->GetLayers())
+    {
+        const Handle<TerrainWorldGridLayer>& terrainLayer = DynamicCast<TerrainWorldGridLayer>(layer);
+
+        if (!terrainLayer.IsValid())
+        {
+            continue;
+        }
+
+        Vec3f hitPoint;
+
+        if (terrainLayer->RaycastSurface(ray, hitPoint))
+        {
+            outLayer = terrainLayer;
+            outWorldPos = hitPoint;
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool EditorSubsystem::TryApplyTerrainSculptAtScreenPos(const Vec2f& relativePos, bool lower, float dt)
+{
+    AssertOnThread(g_simThread);
+
+    Handle<TerrainWorldGridLayer> layer;
+    Vec3f worldPos;
+
+    if (!TryGetTerrainSculptHit(relativePos, layer, worldPos))
+    {
+        return false;
+    }
+
+    layer->ApplyBrush(
+        worldPos,
+        m_terrainSculptState.radius,
+        m_terrainSculptState.strength * MathUtil::Clamp(dt, 0.0f, 0.1f),
+        /* raise */ !lower);
+
+    m_terrainSculptState.hasHover = true;
+    m_terrainSculptState.hoverWorldPos = worldPos;
+
+    return true;
+}
+
+void EditorSubsystem::BeginTerrainSculptStroke(const Vec2f& relativePos, bool lower)
+{
+    AssertOnThread(g_simThread);
+
+    if (!m_terrainSculptState.enabled)
+    {
+        return;
+    }
+
+    m_terrainSculptState.isPainting = true;
+    m_terrainSculptState.paintLower = lower;
+    m_terrainSculptState.paintScreenPos = relativePos;
+    m_terrainSculptState.strokeTimer.Reset();
+    m_terrainSculptState.strokeTimer.NextTick();
+
+    if (!TryApplyTerrainSculptAtScreenPos(relativePos, lower, MathUtil::Max(m_terrainSculptState.strokeTimer.delta, 1.0f / 60.0f)))
+    {
+        m_terrainSculptState.hasHover = false;
+    }
+}
+
+void EditorSubsystem::UpdateTerrainSculptStroke(const Vec2f& relativePos, bool lower)
+{
+    AssertOnThread(g_simThread);
+
+    if (!m_terrainSculptState.isPainting)
+    {
+        return;
+    }
+
+    m_terrainSculptState.paintLower = lower;
+    m_terrainSculptState.paintScreenPos = relativePos;
+}
+
+void EditorSubsystem::EndTerrainSculptStroke()
+{
+    AssertOnThread(g_simThread);
+
+    if (!m_terrainSculptState.isPainting)
+    {
+        return;
+    }
+
+    m_terrainSculptState.isPainting = false;
+
+    // Let modified terrain layers rebuild their picking BVHs now that the stroke is done.
+    Handle<Scene> activeScene = GetActiveScene();
+
+    if (!activeScene.IsValid() || !activeScene->GetWorld())
+    {
+        return;
+    }
+
+    const Handle<WorldGrid>& worldGrid = activeScene->GetWorld()->GetWorldGrid();
+
+    if (!worldGrid.IsValid())
+    {
+        return;
+    }
+
+    for (const Handle<WorldGridLayer>& layer : worldGrid->GetLayers())
+    {
+        if (Handle<TerrainWorldGridLayer> terrainLayer = DynamicCast<TerrainWorldGridLayer>(layer); terrainLayer.IsValid())
+        {
+            terrainLayer->EndBrushStroke();
+        }
+    }
+}
+
+void EditorSubsystem::UpdateTerrainSculptHover(const Vec2f& relativePos)
+{
+    AssertOnThread(g_simThread);
+
+    if (!m_terrainSculptState.enabled)
+    {
+        m_terrainSculptState.hasHover = false;
+
+        return;
+    }
+
+    Handle<TerrainWorldGridLayer> layer;
+    Vec3f worldPos;
+
+    if (TryGetTerrainSculptHit(relativePos, layer, worldPos))
+    {
+        m_terrainSculptState.hasHover = true;
+        m_terrainSculptState.hoverWorldPos = worldPos;
+    }
+    else
+    {
+        m_terrainSculptState.hasHover = false;
+    }
+}
+
+void EditorSubsystem::DebugDrawTerrainSculptCursor(DebugDrawCommandList& debugDrawCommandList)
+{
+    if (!m_terrainSculptState.enabled || !m_terrainSculptState.hasHover)
+    {
+        return;
+    }
+
+    static constexpr float CursorHeight = 0.1f;
+
+    const Vec3f position = m_terrainSculptState.hoverWorldPos + Vec3f(0.0f, CursorHeight * 0.5f, 0.0f);
+
+    const Color color = m_terrainSculptState.isPainting
+        ? Color(1.0f, 0.55f, 0.1f, 0.5f)
+        : Color(1.0f, 0.9f, 0.2f, 0.35f);
+
+    debugDrawCommandList.cylinder(position, m_terrainSculptState.radius, CursorHeight, color);
+}
+
+#pragma endregion Terrain
+
 bool EditorSubsystem::IsMeshEditModeEnabled() const
 {
     AssertOnThread(g_simThread);
@@ -3650,9 +3907,9 @@ EditorSubsystem::EditorSubsystem()
     : m_selectedManipulationMode(EditorManipulationMode::None),
       m_snapToGridEnabled(false),
       m_swatchOverrideMode(false),
+      m_gizmosHiddenByProximity(false),
       m_editorCameraEnabled(false),
-      m_shouldCancelNextClick(false),
-      m_gizmosHiddenByProximity(false)
+      m_shouldCancelNextClick(false)
 {
     m_gizmos.Insert(MakeHandle<NullEditorGizmo>());
     m_gizmos.Insert(MakeHandle<TranslateEditorGizmo>());
@@ -4190,17 +4447,14 @@ void EditorSubsystem::Update(float delta)
 
     UpdateGizmoProximityVisibility();
 
-    if (!m_bakeStatusUpdateTimer.Waiting())
-    {
-        m_bakeStatusUpdateTimer.NextTick();
-
-        UpdateBakeStatus();
-    }
+    UpdateTerrainSculptState();
+    UpdateBakeStatus();
 
     DebugDrawCommandList& dbg = DebugDrawer::GetInstance().CreateCommandList();
 
     DebugDrawMeshEditSelection(dbg);
     DebugDrawPhysicsShapes(dbg);
+    DebugDrawTerrainSculptCursor(dbg);
 
     if (m_currentProject.IsValid())
     {
@@ -4518,6 +4772,11 @@ void EditorSubsystem::InitViewport()
             //     return UIEventHandlerResult::STOP_BUBBLING;
             // }
 
+            if (m_terrainSculptState.enabled)
+            {
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
             if (m_meshEditState.enabled)
             {
                 const Ray ray = activeViewport->GetCamera()->GetPickRay(event.relativePos);
@@ -4649,6 +4908,15 @@ void EditorSubsystem::InitViewport()
                 return UIEventHandlerResult::OK;
             }
 
+            if (m_terrainSculptState.enabled && event.mouseButtons[MouseButtonState::LEFT])
+            {
+                InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+
+                UpdateTerrainSculptStroke(event.relativePos, /* lower */ inputManager->IsShiftDown());
+
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
             if (IsMeshEditDragActive())
             {
                 UpdateMeshEditDrag(activeViewport->GetCamera(), event);
@@ -4702,6 +4970,25 @@ void EditorSubsystem::InitViewport()
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
+            }
+
+            if (m_terrainSculptState.enabled)
+            {
+                UpdateTerrainSculptHover(event.relativePos);
+
+                if (m_terrainSculptState.isPainting && event.mouseButtons[MouseButtonState::LEFT])
+                {
+                    InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+
+                    UpdateTerrainSculptStroke(event.relativePos, /* lower */ inputManager->IsShiftDown());
+
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                }
+
+                if (!event.mouseButtons[MouseButtonState::LEFT])
+                {
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                }
             }
 
             if (m_meshEditState.enabled && !event.mouseButtons[MouseButtonState::LEFT] && !IsMeshEditDragActive())
@@ -4785,6 +5072,15 @@ void EditorSubsystem::InitViewport()
                 return UIEventHandlerResult::OK;
             }
 
+            if (m_terrainSculptState.enabled)
+            {
+                InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+
+                BeginTerrainSculptStroke(event.relativePos, /* lower */ inputManager->IsShiftDown());
+
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
             if (m_meshEditState.enabled && m_meshEditState.selectedFace)
             {
                 StartMeshEditDrag(activeViewport->GetCamera(), event);
@@ -4844,6 +5140,11 @@ void EditorSubsystem::InitViewport()
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
+            }
+
+            if (m_terrainSculptState.enabled)
+            {
+                EndTerrainSculptStroke();
             }
 
             CameraController* controller = activeViewport->GetCamera()->GetCameraController();
@@ -5970,6 +6271,13 @@ void EditorSubsystem::UpdateBakeStatus()
         return;
     }
 
+    if (m_bakeStatusUpdateTimer.Waiting())
+    {
+        return;
+    }
+
+    m_bakeStatusUpdateTimer.NextTick();
+
     static const Name s_bakeStatusMessageKey = NAME("BakeStatus");
 
     if (!m_messagesOverlay.IsValid())
@@ -6168,6 +6476,40 @@ void EditorSubsystem::UpdateBakeStatus()
         text,
         Color(1.0f, 0.7f, 0.1f, 1.0f)
     });
+}
+
+void EditorSubsystem::UpdateTerrainSculptState()
+{
+    if (IsSimulating())
+    {
+        EndTerrainSculptStroke();
+
+        return;
+    }
+
+    if (!m_terrainSculptState.enabled)
+    {
+        EndTerrainSculptStroke();
+
+        m_terrainSculptState.hasHover = false;
+
+        return;
+    }
+
+    if (!m_terrainSculptState.isPainting)
+    {
+        return;
+    }
+
+    m_terrainSculptState.strokeTimer.NextTick();
+
+    if (!TryApplyTerrainSculptAtScreenPos(
+            m_terrainSculptState.paintScreenPos,
+            m_terrainSculptState.paintLower,
+            m_terrainSculptState.strokeTimer.delta))
+    {
+        m_terrainSculptState.hasHover = false;
+    }
 }
 
 void EditorSubsystem::ShutdownProjectWorld(const Handle<EditorProject>& project, bool shutdownWorld)

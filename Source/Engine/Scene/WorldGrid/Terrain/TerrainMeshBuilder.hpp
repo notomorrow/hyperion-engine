@@ -6,15 +6,25 @@
 
 #pragma once
 
-#include <Core/Reflection/Handle.hpp>
+#include <Core/Containers/Array.hpp>
+#include <Core/Utilities/Span.hpp>
+
+#include <Rendering/Vertex.hpp>
 
 namespace Hyperion {
 
-class Mesh;
+class NoiseCombinator;
+struct StreamingCellInfo;
 
 class TerrainMeshBuilder
 {
 public:
+    struct CellMeshData
+    {
+        Array<SimpleVertex> vertices;
+        Array<uint32> indices;
+    };
+
     explicit TerrainMeshBuilder(uint32 cellSize);
 
     TerrainMeshBuilder(const TerrainMeshBuilder& other) = delete;
@@ -22,11 +32,17 @@ public:
 
     ~TerrainMeshBuilder();
 
-    const Handle<Mesh>& GetMesh();
+    /*! \brief CPU-only: builds vertex/index data for one terrain cell from procedural noise plus an
+     *  optional sculpt delta. Safe to call off the sim thread -- creates no GPU/Handle<Mesh> resources.
+     *  Normals are computed in local (unscaled, per-index-step) mesh space via finite differences;
+     *  they rely on the renderer's normal matrix to transform correctly under the cell's world scale. */
+    CellMeshData BuildCellVertexData(
+        const StreamingCellInfo& cellInfo,
+        const NoiseCombinator& noise,
+        Span<const float> sculptDelta) const;
 
 private:
     uint32 m_cellSize;
-    Handle<Mesh> m_mesh;
 };
 
 } // namespace Hyperion

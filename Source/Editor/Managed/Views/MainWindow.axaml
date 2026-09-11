@@ -4,8 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="clr-namespace:Hyperion.Editor.Controls;assembly=Hyperion.Editor"
     xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
-    
-    
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:hyp="clr-namespace:Hyperion;assembly=Hyperion.Runtime"
     xmlns:inspector="clr-namespace:Hyperion.Editor.Views.Inspector;assembly=Hyperion.Editor"
@@ -17,8 +15,8 @@
     Title="Hyperion Editor"
     d:DesignHeight="720"
     d:DesignWidth="1280"
-    x:DataType="vm:MainWindowViewModel"
     x:CompileBindings="False"
+    x:DataType="vm:MainWindowViewModel"
     mc:Ignorable="d">
 
     <Window.Styles>
@@ -46,8 +44,8 @@
                             Margin="6,2"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            TextElement.Foreground="{TemplateBinding Foreground}"
-                            Content="{TemplateBinding Header}" />
+                            Content="{TemplateBinding Header}"
+                            TextElement.Foreground="{TemplateBinding Foreground}" />
                     </Border>
                 </ControlTemplate>
             </Setter>
@@ -78,9 +76,7 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{DynamicResource Radius.Small}">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Radius.Small}">
                         <ContentPresenter
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -106,9 +102,7 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{DynamicResource Radius.Small}">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Radius.Small}">
                         <ContentPresenter
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -137,9 +131,7 @@
             </Setter>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{DynamicResource Radius.Small}">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Radius.Small}">
                         <ContentPresenter
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -168,9 +160,7 @@
             </Setter>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{DynamicResource Radius.Small}">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Radius.Small}">
                         <ContentPresenter
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -200,9 +190,7 @@
             </Setter>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{DynamicResource Radius.Small}">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Radius.Small}">
                         <ContentPresenter
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -272,22 +260,49 @@
             <!--  Fallback in-window menu for non-macOS platforms (hidden: actions live in the toolbar)  -->
             <Menu DockPanel.Dock="Top" IsVisible="False">
                 <MenuItem Header="_File">
-                    <MenuItem Command="{Binding NewProject}" Header="_New Project..." IsEnabled="{Binding !IsSimulating}" />
-                    <MenuItem Command="{Binding OpenProject}" Header="_Open Project..." IsEnabled="{Binding !IsSimulating}" />
+                    <MenuItem
+                        Command="{Binding NewProject}"
+                        Header="_New Project..."
+                        IsEnabled="{Binding !IsSimulating}" />
+                    <MenuItem
+                        Command="{Binding OpenProject}"
+                        Header="_Open Project..."
+                        IsEnabled="{Binding !IsSimulating}" />
                     <Separator />
-                    <MenuItem Command="{Binding SaveProject}" Header="_Save Project" IsEnabled="{Binding !IsSimulating}" />
-                    <MenuItem Command="{Binding SaveProjectAs}" Header="Save Project _As..." IsEnabled="{Binding !IsSimulating}" />
+                    <MenuItem
+                        Command="{Binding SaveProject}"
+                        Header="_Save Project"
+                        IsEnabled="{Binding !IsSimulating}" />
+                    <MenuItem
+                        Command="{Binding SaveProjectAs}"
+                        Header="Save Project _As..."
+                        IsEnabled="{Binding !IsSimulating}" />
                     <Separator />
-                    <MenuItem Command="{Binding CloseProject}" Header="Close Project" IsEnabled="{Binding !IsSimulating}" />
+                    <MenuItem
+                        Command="{Binding CloseProject}"
+                        Header="Close Project"
+                        IsEnabled="{Binding !IsSimulating}" />
                     <Separator />
                     <MenuItem Command="{Binding Exit}" Header="_Exit" />
                 </MenuItem>
                 <MenuItem Header="_Edit" IsEnabled="{Binding !IsSimulating}">
-                    <MenuItem Command="{Binding Undo}" Header="{Binding UndoHeader}" IsEnabled="{Binding CanUndo}" />
-                    <MenuItem Command="{Binding Redo}" Header="{Binding RedoHeader}" IsEnabled="{Binding CanRedo}" />
+                    <MenuItem
+                        Command="{Binding Undo}"
+                        Header="{Binding UndoHeader}"
+                        IsEnabled="{Binding CanUndo}" />
+                    <MenuItem
+                        Command="{Binding Redo}"
+                        Header="{Binding RedoHeader}"
+                        IsEnabled="{Binding CanRedo}" />
                     <Separator />
-                    <MenuItem Command="{Binding Copy}" Header="{Binding CopyHeader}" IsEnabled="{Binding CanCopy}" />
-                    <MenuItem Command="{Binding Paste}" Header="{Binding PasteHeader}" IsEnabled="{Binding CanPaste}" />
+                    <MenuItem
+                        Command="{Binding Copy}"
+                        Header="{Binding CopyHeader}"
+                        IsEnabled="{Binding CanCopy}" />
+                    <MenuItem
+                        Command="{Binding Paste}"
+                        Header="{Binding PasteHeader}"
+                        IsEnabled="{Binding CanPaste}" />
                     <MenuItem Command="{Binding Delete}" Header="{Binding DeleteHeader}" />
                     <Separator />
                     <MenuItem Command="{Binding SelectAll}" Header="Select _All" />
@@ -295,128 +310,181 @@
                     <MenuItem Header="Select None" />
                 </MenuItem>
                 <MenuItem Header="_Layout">
-                    <MenuItem Header="_Reset Layout" Click="OnResetLayoutClick" ToolTip.Tip="Restore the default dock layout" />
+                    <MenuItem
+                        Click="OnResetLayoutClick"
+                        Header="_Reset Layout"
+                        ToolTip.Tip="Restore the default dock layout" />
                 </MenuItem>
                 <MenuItem Header="_Build" IsEnabled="{Binding !IsSimulating}">
-                  <MenuItem Command="{Binding BuildReflectionProbes}" Header="Reflection Probes" />
-                  <MenuItem Command="{Binding BuildIrradianceProbes}" Header="Irradiance Probes" />
-                  <Separator />
-                  <MenuItem Command="{Binding BuildLightmaps}" Header="Lightmaps" />
-                  <Separator />
-                  <MenuItem Command="{Binding BuildBentNormals}" Header="Bent Normals" />
-                  <Separator />
-                  <MenuItem Command="{Binding RebuildMeshBVHs}" Header="Rebuild Mesh BVHs" />
-                  <Separator />
-                  <MenuItem Command="{Binding CookGameContent}" Header="Cook Game Content" />
+                    <MenuItem Command="{Binding BuildReflectionProbes}" Header="Reflection Probes" />
+                    <MenuItem Command="{Binding BuildIrradianceProbes}" Header="Irradiance Probes" />
+                    <Separator />
+                    <MenuItem Command="{Binding BuildLightmaps}" Header="Lightmaps" />
+                    <Separator />
+                    <MenuItem Command="{Binding BuildBentNormals}" Header="Bent Normals" />
+                    <Separator />
+                    <MenuItem Command="{Binding RebuildMeshBVHs}" Header="Rebuild Mesh BVHs" />
+                    <Separator />
+                    <MenuItem Command="{Binding CookGameContent}" Header="Cook Game Content" />
                 </MenuItem>
             </Menu>
 
-            <Border Classes="panel-header toolbar" DockPanel.Dock="Top" Padding="8,4">
+            <Border
+                Padding="8,4"
+                Classes="panel-header toolbar"
+                DockPanel.Dock="Top">
                 <Grid VerticalAlignment="Center" ColumnDefinitions="Auto,*,Auto">
                     <StackPanel
                         Grid.Column="0"
+                        VerticalAlignment="Center"
                         Orientation="Horizontal"
-                        Spacing="8"
-                        VerticalAlignment="Center">
-                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Classes="ribbon-label" Text="PROJECT" />
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Button Classes="gizmo" Command="{Binding NewProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="New Project">
-                            <controls:Codicon Kind="File" Size="16" />
-                        </Button>
-                        <Button Classes="gizmo" Command="{Binding OpenProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Open">
-                            <controls:Codicon Kind="FolderOpened" Size="16" />
-                        </Button>
-                        <Button Classes="gizmo" Command="{Binding SaveProject}" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Save">
-                            <controls:Codicon Kind="Save" Size="16" />
-                        </Button>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <Border Classes="mode-separator" />
-
-                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Classes="ribbon-label" Text="EDIT" />
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Button Classes="gizmo" Command="{Binding Undo}" ToolTip.Tip="{Binding UndoHeader}" IsEnabled="{Binding CanUndo}">
-                            <controls:Codicon Kind="Discard" Size="16" />
-                        </Button>
-                        <Button Classes="gizmo" Command="{Binding Redo}" ToolTip.Tip="{Binding RedoHeader}" IsEnabled="{Binding CanRedo}">
-                            <controls:Codicon Kind="Redo" Size="16" />
-                        </Button>
-                        <Button Classes="gizmo" Command="{Binding Copy}" ToolTip.Tip="{Binding CopyHeader}" IsEnabled="{Binding CanCopy}">
-                            <controls:Codicon Kind="Copy" Size="16" />
-                        </Button>
-                        <Button Classes="gizmo" Command="{Binding Paste}" ToolTip.Tip="{Binding PasteHeader}" IsEnabled="{Binding CanPaste}">
-                            <controls:Codicon Kind="Clippy" Size="16" />
-                        </Button>
-                        <DropDownButton
-                            Classes="gizmo-wide"
+                        Spacing="8">
+                        <StackPanel
                             VerticalAlignment="Center"
-                            ToolTip.Tip="Select">
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <controls:Codicon Kind="Select" Size="16" VerticalAlignment="Center" />
-                                <controls:Codicon Kind="ChevronDown" Size="10" VerticalAlignment="Center" />
-                            </StackPanel>
-                            <DropDownButton.Flyout>
-                                <Flyout Placement="Bottom">
-                                    <StackPanel MinWidth="150">
-                                        <MenuItem Command="{Binding SelectAll}" Header="Select All" />
-                                        <MenuItem Header="Select All in Viewport" />
-                                        <MenuItem Header="Select None" />
-                                    </StackPanel>
-                                </Flyout>
-                            </DropDownButton.Flyout>
-                        </DropDownButton>
+                            Orientation="Vertical"
+                            Spacing="2">
+                            <!-- <TextBlock Classes="ribbon-label" Text="PROJECT" /> -->
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button
+                                    Classes="gizmo"
+                                    Command="{Binding NewProject}"
+                                    IsEnabled="{Binding !IsSimulating}"
+                                    ToolTip.Tip="New Project">
+                                    <controls:Codicon Kind="File" Size="16" />
+                                </Button>
+                                <Button
+                                    Classes="gizmo"
+                                    Command="{Binding OpenProject}"
+                                    IsEnabled="{Binding !IsSimulating}"
+                                    ToolTip.Tip="Open">
+                                    <controls:Codicon Kind="FolderOpened" Size="16" />
+                                </Button>
+                                <Button
+                                    Classes="gizmo"
+                                    Command="{Binding SaveProject}"
+                                    IsEnabled="{Binding !IsSimulating}"
+                                    ToolTip.Tip="Save">
+                                    <controls:Codicon Kind="Save" Size="16" />
+                                </Button>
                             </StackPanel>
                         </StackPanel>
 
                         <Border Classes="mode-separator" />
 
-                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Classes="ribbon-label" Text="LAYERS" />
-                        <DropDownButton
-                            x:Name="ActiveLayersDropDown"
-                            Classes="gizmo"
-                            ToolTip.Tip="Active Layers (Visibility)">
-                            <controls:Codicon Kind="Layers" Size="16" />
-                            <DropDownButton.Flyout>
-                                <Flyout Placement="Bottom">
-                                    <StackPanel MinWidth="150">
-                                        <ItemsControl ItemsSource="{Binding ActiveLayerToggles}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:LayerToggleViewModel">
-                                                    <CheckBox
-                                                        Classes="layers-toggle"
-                                                        Content="{Binding Name}"
-                                                        IsChecked="{Binding IsActive, Mode=TwoWay}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-
-                                        <Separator />
-
-                                        <MenuItem
-                                            Command="{Binding AddNewLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                            Header="Add New Layer..." />
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Orientation="Vertical"
+                            Spacing="2">
+                            <!-- <TextBlock Classes="ribbon-label" Text="EDIT" /> -->
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button
+                                    Classes="gizmo"
+                                    Command="{Binding Undo}"
+                                    IsEnabled="{Binding CanUndo}"
+                                    ToolTip.Tip="{Binding UndoHeader}">
+                                    <controls:Codicon Kind="Discard" Size="16" />
+                                </Button>
+                                <Button
+                                    Classes="gizmo"
+                                    Command="{Binding Redo}"
+                                    IsEnabled="{Binding CanRedo}"
+                                    ToolTip.Tip="{Binding RedoHeader}">
+                                    <controls:Codicon Kind="Redo" Size="16" />
+                                </Button>
+                                <Button
+                                    Classes="gizmo"
+                                    Command="{Binding Copy}"
+                                    IsEnabled="{Binding CanCopy}"
+                                    ToolTip.Tip="{Binding CopyHeader}">
+                                    <controls:Codicon Kind="Copy" Size="16" />
+                                </Button>
+                                <Button
+                                    Classes="gizmo"
+                                    Command="{Binding Paste}"
+                                    IsEnabled="{Binding CanPaste}"
+                                    ToolTip.Tip="{Binding PasteHeader}">
+                                    <controls:Codicon Kind="Clippy" Size="16" />
+                                </Button>
+                                <DropDownButton
+                                    VerticalAlignment="Center"
+                                    Classes="gizmo-wide"
+                                    ToolTip.Tip="Select">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <controls:Codicon
+                                            VerticalAlignment="Center"
+                                            Kind="Select"
+                                            Size="16" />
+                                        <controls:Codicon
+                                            VerticalAlignment="Center"
+                                            Kind="ChevronDown"
+                                            Size="10" />
                                     </StackPanel>
-                                </Flyout>
-                            </DropDownButton.Flyout>
-                        </DropDownButton>
+                                    <DropDownButton.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel MinWidth="150">
+                                                <MenuItem Command="{Binding SelectAll}" Header="Select All" />
+                                                <MenuItem Header="Select All in Viewport" />
+                                                <MenuItem Header="Select None" />
+                                            </StackPanel>
+                                        </Flyout>
+                                    </DropDownButton.Flyout>
+                                </DropDownButton>
+                            </StackPanel>
                         </StackPanel>
 
                         <Border Classes="mode-separator" />
 
-                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Classes="ribbon-label" Text="SWATCH" />
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Orientation="Vertical"
+                            Spacing="2">
+                            <!-- <TextBlock Classes="ribbon-label" Text="LAYERS" /> -->
+                            <DropDownButton
+                                x:Name="ActiveLayersDropDown"
+                                Classes="gizmo"
+                                ToolTip.Tip="Active Layers (Visibility)">
+                                <controls:Codicon Kind="Layers" Size="16" />
+                                <DropDownButton.Flyout>
+                                    <Flyout Placement="Bottom">
+                                        <StackPanel MinWidth="150">
+                                            <ItemsControl ItemsSource="{Binding ActiveLayerToggles}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:LayerToggleViewModel">
+                                                        <CheckBox
+                                                            Classes="layers-toggle"
+                                                            Content="{Binding Name}"
+                                                            IsChecked="{Binding IsActive, Mode=TwoWay}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+
+                                            <Separator />
+
+                                            <MenuItem Command="{Binding AddNewLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}" Header="Add New Layer..." />
+                                        </StackPanel>
+                                    </Flyout>
+                                </DropDownButton.Flyout>
+                            </DropDownButton>
+                        </StackPanel>
+
+                        <Border Classes="mode-separator" />
+
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Orientation="Vertical"
+                            Spacing="2">
+                            <!-- <TextBlock Classes="ribbon-label" Text="SWATCH" /> -->
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <DropDownButton
                                     x:Name="SwatchDropDown"
-                                    Classes="gizmo-wide"
                                     VerticalAlignment="Center"
+                                    Classes="gizmo-wide"
                                     ToolTip.Tip="Active Swatch">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <controls:Codicon Kind="Paintbrush" Size="16" VerticalAlignment="Center" />
+                                        <controls:Codicon
+                                            VerticalAlignment="Center"
+                                            Kind="Paintbrush"
+                                            Size="16" />
                                         <TextBlock
                                             VerticalAlignment="Center"
                                             FontSize="11"
@@ -437,9 +505,7 @@
                                                 </ItemsControl>
 
                                                 <Separator />
-                                                <MenuItem
-                                                    Command="{Binding AddNewSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                    Header="New Swatch..." />
+                                                <MenuItem Command="{Binding AddNewSwatchCommand, Source={x:Static vm:MainWindowViewModel.Instance}}" Header="New Swatch..." />
                                             </StackPanel>
                                         </Flyout>
                                     </DropDownButton.Flyout>
@@ -449,13 +515,16 @@
                                     x:Name="SwatchOverrideModeToggle"
                                     Height="30"
                                     Padding="8,4"
-                                    Classes="panel-toggle"
                                     VerticalAlignment="Center"
+                                    Classes="panel-toggle"
                                     IsChecked="{Binding Inspector.SwatchOverrideMode, Mode=TwoWay}"
                                     IsVisible="{Binding Inspector.CanUseSwatchOverrides}"
                                     ToolTip.Tip="When this toggle button is active, edits will apply as OVERRIDES for the active swatch. Otherwise edits will apply on base + active.">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <controls:Codicon Kind="GitBranch" Size="12" VerticalAlignment="Center" />
+                                        <controls:Codicon
+                                            VerticalAlignment="Center"
+                                            Kind="GitBranch"
+                                            Size="12" />
                                         <Panel>
                                             <TextBlock
                                                 VerticalAlignment="Center"
@@ -474,17 +543,26 @@
                         </StackPanel>
 
                         <Border Classes="mode-separator" />
-                        
-                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Classes="ribbon-label" Text="BAKE" />
+
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Orientation="Vertical"
+                            Spacing="2">
+                            <!-- <TextBlock Classes="ribbon-label" Text="BAKE" /> -->
                             <DropDownButton
-                                Classes="gizmo-wide"
                                 VerticalAlignment="Center"
-                                ToolTip.Tip="Bake"
-                                IsEnabled="{Binding !IsSimulating}">
+                                Classes="gizmo-wide"
+                                IsEnabled="{Binding !IsSimulating}"
+                                ToolTip.Tip="Bake">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <controls:Codicon Kind="Heat" Size="16" VerticalAlignment="Center" />
-                                    <controls:Codicon Kind="ChevronDown" Size="10" VerticalAlignment="Center" />
+                                    <controls:Codicon
+                                        VerticalAlignment="Center"
+                                        Kind="Heat"
+                                        Size="16" />
+                                    <controls:Codicon
+                                        VerticalAlignment="Center"
+                                        Kind="ChevronDown"
+                                        Size="10" />
                                 </StackPanel>
                                 <DropDownButton.Flyout>
                                     <Flyout Placement="Bottom">
@@ -509,157 +587,188 @@
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
                         Spacing="8">
-                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Classes="ribbon-label" Text="TRANSFORM" />
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Orientation="Vertical"
+                            Spacing="2">
+                            <!-- <TextBlock Classes="ribbon-label" Text="TRANSFORM" /> -->
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                        <ToggleButton
-                            x:Name="TransformModeTranslate"
-                            Classes="gizmo"
-                            Command="{Binding SelectTransformModeTranslate}"
-                            IsChecked="{Binding IsTransformModeTranslateActive, Mode=OneWay}"
-                            IsEnabled="{Binding CanSelectTransformModeTranslate}"
-                            ToolTip.Tip="Translate">
-                            <controls:Codicon Kind="Move" Size="16" />
-                        </ToggleButton>
-                        <ToggleButton
-                            x:Name="TransformModeRotate"
-                            Classes="gizmo"
-                            Command="{Binding SelectTransformModeRotate}"
-                            IsChecked="{Binding IsTransformModeRotateActive, Mode=OneWay}"
-                            IsEnabled="{Binding CanSelectTransformModeRotate}"
-                            ToolTip.Tip="Rotate">
-                            <controls:Codicon Kind="Refresh" Size="16" />
-                        </ToggleButton>
-                        <ToggleButton
-                            x:Name="TransformModeScale"
-                            Classes="gizmo"
-                            Command="{Binding SelectTransformModeScale}"
-                            IsChecked="{Binding IsTransformModeScaleActive, Mode=OneWay}"
-                            IsEnabled="{Binding CanSelectTransformModeScale}"
-                            ToolTip.Tip="Scale">
-                            <controls:Codicon Kind="ScreenFull" Size="16" />
-                        </ToggleButton>
+                                <ToggleButton
+                                    x:Name="TransformModeTranslate"
+                                    Classes="gizmo"
+                                    Command="{Binding SelectTransformModeTranslate}"
+                                    IsChecked="{Binding IsTransformModeTranslateActive, Mode=OneWay}"
+                                    IsEnabled="{Binding CanSelectTransformModeTranslate}"
+                                    ToolTip.Tip="Translate">
+                                    <controls:Codicon Kind="Move" Size="16" />
+                                </ToggleButton>
+                                <ToggleButton
+                                    x:Name="TransformModeRotate"
+                                    Classes="gizmo"
+                                    Command="{Binding SelectTransformModeRotate}"
+                                    IsChecked="{Binding IsTransformModeRotateActive, Mode=OneWay}"
+                                    IsEnabled="{Binding CanSelectTransformModeRotate}"
+                                    ToolTip.Tip="Rotate">
+                                    <controls:Codicon Kind="Refresh" Size="16" />
+                                </ToggleButton>
+                                <ToggleButton
+                                    x:Name="TransformModeScale"
+                                    Classes="gizmo"
+                                    Command="{Binding SelectTransformModeScale}"
+                                    IsChecked="{Binding IsTransformModeScaleActive, Mode=OneWay}"
+                                    IsEnabled="{Binding CanSelectTransformModeScale}"
+                                    ToolTip.Tip="Scale">
+                                    <controls:Codicon Kind="ScreenFull" Size="16" />
+                                </ToggleButton>
                             </StackPanel>
                         </StackPanel>
 
                         <Border Classes="mode-separator" />
 
-                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Classes="ribbon-label" Text="EDIT" />
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <ToggleButton
-                            x:Name="SnapToGridToggle"
-                            Classes="gizmo"
-                            Command="{Binding ToggleSnapToGrid}"
-                            IsChecked="{Binding IsSnapToGridEnabled, Mode=OneWay}"
-                            ToolTip.Tip="Snap Movement To Grid (1 Unit)">
-                            <controls:Codicon Kind="Magnet" Size="16" />
-                        </ToggleButton>
-
-                        <Border Classes="mode-separator" />
-
-                        <ToggleButton
-                            x:Name="MeshEditModeToggle"
-                            Classes="gizmo"
-                            Command="{Binding ToggleMeshEditMode}"
-                            IsChecked="{Binding IsMeshEditModeEnabled, Mode=OneWay}"
-                            IsEnabled="{Binding CanEnableMeshEditMode}"
-                            ToolTip.Tip="{Binding MeshEditModeTooltip}">
-                            <controls:Codicon Kind="MeshEditMode" Size="16" />
-                        </ToggleButton>
-
-                        <Border
-                            Classes="mode-strip"
-                            IsVisible="{Binding IsMeshEditModeEnabled}">
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                <TextBlock
-                                    Classes="mode-target"
-                                    VerticalAlignment="Center"
-                                    MaxWidth="160"
-                                    TextTrimming="CharacterEllipsis"
-                                    Text="{Binding MeshEditTargetName}"
-                                    ToolTip.Tip="{Binding MeshEditTargetName}" />
-
-                                <Border Classes="mode-separator" />
-
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Orientation="Vertical"
+                            Spacing="2">
+                            <!-- <TextBlock Classes="ribbon-label" Text="EDIT" /> -->
+                            <StackPanel
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal"
+                                Spacing="6">
                                 <ToggleButton
-                                    x:Name="MeshEditFaceModeTriangle"
+                                    x:Name="SnapToGridToggle"
                                     Classes="gizmo"
-                                    Command="{Binding SelectMeshEditFaceTriangle}"
-                                    IsChecked="{Binding !IsMeshEditFaceModeQuad, Mode=OneWay}"
-                                    ToolTip.Tip="Edit triangle faces">
-                                    <controls:Codicon Kind="TriangleRight" Size="16" />
-                                </ToggleButton>
-                                <ToggleButton
-                                    x:Name="MeshEditFaceModeQuad"
-                                    Classes="gizmo"
-                                    Command="{Binding SelectMeshEditFaceQuad}"
-                                    IsChecked="{Binding IsMeshEditFaceModeQuad, Mode=OneWay}"
-                                    ToolTip.Tip="Edit as quads">
-                                    <controls:Codicon Kind="PrimitiveSquare" Size="16" />
+                                    Command="{Binding ToggleSnapToGrid}"
+                                    IsChecked="{Binding IsSnapToGridEnabled, Mode=OneWay}"
+                                    ToolTip.Tip="Snap Movement To Grid (1 Unit)">
+                                    <controls:Codicon Kind="Magnet" Size="16" />
                                 </ToggleButton>
 
                                 <Border Classes="mode-separator" />
 
                                 <ToggleButton
-                                    x:Name="MeshEditAlignToNormal"
+                                    x:Name="MeshEditModeToggle"
                                     Classes="gizmo"
-                                    Command="{Binding ToggleMeshEditAlignToNormal}"
-                                    IsChecked="{Binding IsMeshEditAlignToNormal, Mode=OneWay}"
-                                    ToolTip.Tip="Align to normal">
-                                    <controls:Codicon Kind="AlignToNormal" Size="16" />
+                                    Command="{Binding ToggleMeshEditMode}"
+                                    IsChecked="{Binding IsMeshEditModeEnabled, Mode=OneWay}"
+                                    IsEnabled="{Binding CanEnableMeshEditMode}"
+                                    ToolTip.Tip="{Binding MeshEditModeTooltip}">
+                                    <controls:Codicon Kind="MeshEditMode" Size="16" />
                                 </ToggleButton>
 
-                                <Border Classes="mode-separator" />
+                                <Border Classes="mode-strip" IsVisible="{Binding IsMeshEditModeEnabled}">
+                                    <StackPanel
+                                        VerticalAlignment="Center"
+                                        Orientation="Horizontal"
+                                        Spacing="4">
+                                        <TextBlock
+                                            MaxWidth="160"
+                                            VerticalAlignment="Center"
+                                            Classes="mode-target"
+                                            Text="{Binding MeshEditTargetName}"
+                                            TextTrimming="CharacterEllipsis"
+                                            ToolTip.Tip="{Binding MeshEditTargetName}" />
 
-                                <Button
-                                    x:Name="SaveMeshEditsButton"
+                                        <Border Classes="mode-separator" />
+
+                                        <ToggleButton
+                                            x:Name="MeshEditFaceModeTriangle"
+                                            Classes="gizmo"
+                                            Command="{Binding SelectMeshEditFaceTriangle}"
+                                            IsChecked="{Binding !IsMeshEditFaceModeQuad, Mode=OneWay}"
+                                            ToolTip.Tip="Edit triangle faces">
+                                            <controls:Codicon Kind="TriangleRight" Size="16" />
+                                        </ToggleButton>
+                                        <ToggleButton
+                                            x:Name="MeshEditFaceModeQuad"
+                                            Classes="gizmo"
+                                            Command="{Binding SelectMeshEditFaceQuad}"
+                                            IsChecked="{Binding IsMeshEditFaceModeQuad, Mode=OneWay}"
+                                            ToolTip.Tip="Edit as quads">
+                                            <controls:Codicon Kind="PrimitiveSquare" Size="16" />
+                                        </ToggleButton>
+
+                                        <Border Classes="mode-separator" />
+
+                                        <ToggleButton
+                                            x:Name="MeshEditAlignToNormal"
+                                            Classes="gizmo"
+                                            Command="{Binding ToggleMeshEditAlignToNormal}"
+                                            IsChecked="{Binding IsMeshEditAlignToNormal, Mode=OneWay}"
+                                            ToolTip.Tip="Align to normal">
+                                            <controls:Codicon Kind="AlignToNormal" Size="16" />
+                                        </ToggleButton>
+
+                                        <Border Classes="mode-separator" />
+
+                                        <Button
+                                            x:Name="SaveMeshEditsButton"
+                                            Classes="gizmo"
+                                            Command="{Binding SaveMeshEdits}"
+                                            ToolTip.Tip="Save Edits">
+                                            <controls:Codicon Kind="Check" Size="16" />
+                                        </Button>
+                                        <Button
+                                            x:Name="DiscardMeshEditsButton"
+                                            Classes="gizmo"
+                                            Command="{Binding DiscardMeshEdits}"
+                                            IsEnabled="{Binding HasPendingMeshEdits}"
+                                            ToolTip.Tip="Discard Edits">
+                                            <controls:Codicon Kind="Close" Size="16" />
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Classes="mode-separator" IsVisible="{Binding CanToggleTerrainSculptMode}"/>
+
+                                <ToggleButton
+                                    x:Name="ToggleTerrainSculptModeButton"
                                     Classes="gizmo"
-                                    Command="{Binding SaveMeshEdits}"
-                                    ToolTip.Tip="Save Edits">
-                                    <controls:Codicon Kind="Check" Size="16" />
-                                </Button>
-                                <Button
-                                    x:Name="DiscardMeshEditsButton"
-                                    Classes="gizmo"
-                                    Command="{Binding DiscardMeshEdits}"
-                                    IsEnabled="{Binding HasPendingMeshEdits}"
-                                    ToolTip.Tip="Discard Edits">
-                                    <controls:Codicon Kind="Close" Size="16" />
-                                </Button>
-                            </StackPanel>
-                        </Border>
+                                    Command="{Binding ToggleTerrainSculptMode}"
+                                    IsChecked="{Binding IsInTerrainSculptMode, Mode=OneWay}"
+                                    IsVisible="{Binding CanToggleTerrainSculptMode}"
+                                    ToolTip.Tip="Toggle terrain sculpt mode">
+
+                                    <!--  Big front loader type guy  -->
+                                    <controls:Codicon Kind="FrontLoader" Size="16" />
+                                </ToggleButton>
+
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
 
                     <StackPanel
                         Grid.Column="2"
+                        VerticalAlignment="Center"
                         Orientation="Horizontal"
-                        Spacing="8"
-                        VerticalAlignment="Center">
-                        <StackPanel Orientation="Vertical" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Classes="ribbon-label" Text="{Binding GameStateText}" />
+                        Spacing="8">
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Orientation="Vertical"
+                            Spacing="2">
+                            <!-- <TextBlock Classes="ribbon-label" Text="{Binding GameStateText}" /> -->
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Button
-                            Command="{Binding SetGameModePlaying}"
-                            IsVisible="{Binding CanSetGameModePlaying}"
-                            ToolTip.Tip="Play"
-                            Classes="Play">
-                            <controls:Codicon Kind="Play" Size="16" Foreground="White" />
-                        </Button>
-                        <Button
-                            Command="{Binding SetGameModePaused}"
-                            IsVisible="{Binding CanSetGameModePaused}"
-                            ToolTip.Tip="Pause">
-                            <controls:Codicon Kind="DebugPause" Size="16" />
-                        </Button>
-                        <Button
-                            Command="{Binding SetGameModeStopped}"
-                            IsVisible="{Binding CanSetGameModeStopped}"
-                            ToolTip.Tip="Stop">
-                            <controls:Codicon Kind="DebugStop" Size="16" />
-                        </Button>
+                                <Button
+                                    Classes="Play"
+                                    Command="{Binding SetGameModePlaying}"
+                                    IsVisible="{Binding CanSetGameModePlaying}"
+                                    ToolTip.Tip="Play">
+                                    <controls:Codicon
+                                        Foreground="White"
+                                        Kind="Play"
+                                        Size="16" />
+                                </Button>
+                                <Button
+                                    Command="{Binding SetGameModePaused}"
+                                    IsVisible="{Binding CanSetGameModePaused}"
+                                    ToolTip.Tip="Pause">
+                                    <controls:Codicon Kind="DebugPause" Size="16" />
+                                </Button>
+                                <Button
+                                    Command="{Binding SetGameModeStopped}"
+                                    IsVisible="{Binding CanSetGameModeStopped}"
+                                    ToolTip.Tip="Stop">
+                                    <controls:Codicon Kind="DebugStop" Size="16" />
+                                </Button>
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
@@ -671,21 +780,39 @@
                 <DockControl
                     x:Name="DockControl"
                     Grid.Row="0"
-                    InitializeLayout="True"
-                    InitializeFactory="True">
+                    InitializeFactory="True"
+                    InitializeLayout="True">
                     <DockControl.Factory>
-                        <Factory HideToolsOnClose="True" HideDocumentsOnClose="True" />
+                        <Factory HideDocumentsOnClose="True" HideToolsOnClose="True" />
                     </DockControl.Factory>
 
-                    <RootDock x:Name="DockRoot" Id="Root" IsCollapsable="False" DefaultDockable="{Binding #MainLayout}">
+                    <RootDock
+                        x:Name="DockRoot"
+                        DefaultDockable="{Binding #MainLayout}"
+                        Id="Root"
+                        IsCollapsable="False">
 
-                        <ProportionalDock x:Name="MainLayout" Id="MainLayout" Orientation="Horizontal">
+                        <ProportionalDock
+                            x:Name="MainLayout"
+                            Id="MainLayout"
+                            Orientation="Horizontal">
 
                             <!--  Left column: Scene hierarchy + Inspector  -->
-                            <ProportionalDock x:Name="Left" Id="Left" Orientation="Vertical" Proportion="0.25">
+                            <ProportionalDock
+                                x:Name="Left"
+                                Id="Left"
+                                Orientation="Vertical"
+                                Proportion="0.25">
 
-                                <ToolDock x:Name="HierarchyPane" Id="HierarchyPane" Alignment="Left" ActiveDockable="SceneHierarchyTool">
-                                    <Tool x:Name="SceneHierarchyTool" Id="SceneHierarchy" Title="Scene">
+                                <ToolDock
+                                    x:Name="HierarchyPane"
+                                    ActiveDockable="SceneHierarchyTool"
+                                    Alignment="Left"
+                                    Id="HierarchyPane">
+                                    <Tool
+                                        x:Name="SceneHierarchyTool"
+                                        Title="Scene"
+                                        Id="SceneHierarchy">
                                         <ContentControl DataContext="{Binding Source={x:Static vm:MainWindowViewModel.Instance}}">
                                             <Grid RowDefinitions="Auto, *">
                                                 <Border Grid.Row="0" Classes="panel-header">
@@ -698,7 +825,10 @@
                                                             Background="Transparent"
                                                             BorderThickness="0">
                                                             <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                <controls:Codicon Kind="ListTree" Size="14" Foreground="{StaticResource Brush.TextMuted}" />
+                                                                <controls:Codicon
+                                                                    Foreground="{StaticResource Brush.TextMuted}"
+                                                                    Kind="ListTree"
+                                                                    Size="14" />
                                                                 <TextBlock
                                                                     VerticalAlignment="Center"
                                                                     Classes="header"
@@ -759,7 +889,10 @@
                                                                         Foreground="#808080"
                                                                         Header="Rendering"
                                                                         IsEnabled="False" />
-                                                                    <MenuItem Command="{Binding AddInstance}" Header="Instanced Mesh" IsEnabled="{Binding CanAddInstance}" />
+                                                                    <MenuItem
+                                                                        Command="{Binding AddInstance}"
+                                                                        Header="Instanced Mesh"
+                                                                        IsEnabled="{Binding CanAddInstance}" />
                                                                     <Separator />
                                                                     <MenuItem
                                                                         Margin="0,2"
@@ -815,6 +948,17 @@
                                                                     <MenuItem Command="{Binding AddNormalizedCubeSphereCommand}" Header="Normalized Cube Sphere" />
                                                                     <MenuItem Command="{Binding AddCylinder}" Header="Cylinder" />
                                                                     <Separator />
+                                                                    <MenuItem
+                                                                        Margin="0,2"
+                                                                        Padding="8,4"
+                                                                        HorizontalAlignment="Center"
+                                                                        FontSize="12"
+                                                                        Foreground="#808080"
+                                                                        Header="Terrain"
+                                                                        IsEnabled="False" />
+
+                                                                    <MenuItem Command="{Binding AddTerrainLayer}" Header="Terrain Layer" />
+                                                                    <Separator />
                                                                     <MenuItem Header="Templates">
                                                                         <MenuItem Command="{Binding AddPlayerEntity}" Header="Player Entity" />
                                                                     </MenuItem>
@@ -841,36 +985,78 @@
                                                     </TreeView.ItemContainerTheme>
                                                     <TreeView.ItemTemplate>
                                                         <TreeDataTemplate x:DataType="vm:NodeViewModel" ItemsSource="{Binding Children}">
-                                                            <Grid Background="Transparent" HorizontalAlignment="Stretch">
+                                                            <Grid HorizontalAlignment="Stretch" Background="Transparent">
                                                                 <!--  Drop-target highlight: sits behind the label, shown during drag-over  -->
                                                                 <Border
                                                                     Background="{DynamicResource Brush.Accent}"
                                                                     CornerRadius="3"
                                                                     IsVisible="{Binding IsDropTarget}"
                                                                     Opacity="0.35" />
-                                                                <StackPanel Margin="2,2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                                                    <Ellipse Width="6" Height="6" Fill="{DynamicResource Brush.Accent}" IsVisible="{Binding IsDirty}" VerticalAlignment="Center" />
-                                                                    <controls:Codicon Kind="{Binding IconKind}" Size="14" Opacity="0.7" VerticalAlignment="Center" />
-                                                                    <TextBlock FontStyle="{Binding NameFontStyle}" IsVisible="{Binding !IsEditingName}" Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                                                                <StackPanel
+                                                                    Margin="2,2"
+                                                                    VerticalAlignment="Center"
+                                                                    Orientation="Horizontal"
+                                                                    Spacing="6">
+                                                                    <Ellipse
+                                                                        Width="6"
+                                                                        Height="6"
+                                                                        VerticalAlignment="Center"
+                                                                        Fill="{DynamicResource Brush.Accent}"
+                                                                        IsVisible="{Binding IsDirty}" />
+                                                                    <controls:Codicon
+                                                                        VerticalAlignment="Center"
+                                                                        Kind="{Binding IconKind}"
+                                                                        Opacity="0.7"
+                                                                        Size="14" />
+                                                                    <TextBlock
+                                                                        VerticalAlignment="Center"
+                                                                        FontStyle="{Binding NameFontStyle}"
+                                                                        IsVisible="{Binding !IsEditingName}"
+                                                                        Text="{Binding DisplayName}" />
                                                                     <TextBox
                                                                         Name="NodeRenameTextBox"
                                                                         MinWidth="80"
                                                                         Padding="2,0"
+                                                                        VerticalAlignment="Center"
                                                                         IsVisible="{Binding IsEditingName}"
-                                                                        Text="{Binding EditingName, Mode=TwoWay}"
-                                                                        VerticalAlignment="Center" />
+                                                                        Text="{Binding EditingName, Mode=TwoWay}" />
                                                                 </StackPanel>
                                                                 <Grid.ContextMenu>
                                                                     <ContextMenu Opened="OnNodeContextMenuOpened">
-                                                                        <MenuItem Command="{Binding Copy, Source={x:Static vm:MainWindowViewModel.Instance}}" Header="{Binding CopyHeader, Source={x:Static vm:MainWindowViewModel.Instance}}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
-                                                                        <MenuItem Command="{Binding Paste, Source={x:Static vm:MainWindowViewModel.Instance}}" Header="{Binding PasteHeader, Source={x:Static vm:MainWindowViewModel.Instance}}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem
+                                                                            Command="{Binding Copy, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            Header="{Binding CopyHeader, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem
+                                                                            Command="{Binding Paste, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            Header="{Binding PasteHeader, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                         <Separator />
-                                                                        <MenuItem Click="OnRenameNodeMenuItemClick" Header="Rename" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
-                                                                        <MenuItem Command="{Binding TeleportToNode, Source={x:Static vm:MainWindowViewModel.Instance}}" CommandParameter="{Binding UUID}" Header="Teleport to" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
-                                                                        <MenuItem Command="{Binding MoveToCameraNode, Source={x:Static vm:MainWindowViewModel.Instance}}" CommandParameter="{Binding UUID}" Header="Move to camera" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
-                                                                        <MenuItem Click="OnMoveToGrandparentMenuItemClick" Header="{Binding MoveToGrandparentHeader}" IsVisible="{Binding CanMoveToGrandparent}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem
+                                                                            Click="OnRenameNodeMenuItemClick"
+                                                                            Header="Rename"
+                                                                            IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem
+                                                                            Command="{Binding TeleportToNode, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            CommandParameter="{Binding UUID}"
+                                                                            Header="Teleport to"
+                                                                            IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem
+                                                                            Command="{Binding MoveToCameraNode, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            CommandParameter="{Binding UUID}"
+                                                                            Header="Move to camera"
+                                                                            IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem
+                                                                            Click="OnMoveToGrandparentMenuItemClick"
+                                                                            Header="{Binding MoveToGrandparentHeader}"
+                                                                            IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            IsVisible="{Binding CanMoveToGrandparent}" />
                                                                         <Separator IsVisible="{Binding HasActions}" />
-                                                                        <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" ItemsSource="{Binding Actions}">
+                                                                        <MenuItem
+                                                                            Header="Actions"
+                                                                            IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            IsVisible="{Binding HasActions}"
+                                                                            ItemsSource="{Binding Actions}">
                                                                             <MenuItem.ItemContainerTheme>
                                                                                 <ControlTheme
                                                                                     x:DataType="vm:InspectorActionViewModel"
@@ -883,7 +1069,10 @@
                                                                             </MenuItem.ItemContainerTheme>
                                                                         </MenuItem>
                                                                         <Separator />
-                                                                        <MenuItem Command="{Binding DeleteNode, Source={x:Static vm:MainWindowViewModel.Instance}}" Header="{Binding DeleteHeader, Source={x:Static vm:MainWindowViewModel.Instance}}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                        <MenuItem
+                                                                            Command="{Binding DeleteNode, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            Header="{Binding DeleteHeader, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                     </ContextMenu>
                                                                 </Grid.ContextMenu>
                                                             </Grid>
@@ -897,8 +1086,15 @@
 
                                 <ProportionalDockSplitter x:Name="LeftSplitter" Id="LeftSplitter" />
 
-                                <ToolDock x:Name="InspectorPane" Id="InspectorPane" Alignment="Bottom" ActiveDockable="InspectorTool">
-                                    <Tool x:Name="InspectorTool" Id="Inspector" Title="Inspector">
+                                <ToolDock
+                                    x:Name="InspectorPane"
+                                    ActiveDockable="InspectorTool"
+                                    Alignment="Bottom"
+                                    Id="InspectorPane">
+                                    <Tool
+                                        x:Name="InspectorTool"
+                                        Title="Inspector"
+                                        Id="Inspector">
                                         <ContentControl DataContext="{Binding Source={x:Static vm:MainWindowViewModel.Instance}}">
                                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                                 <StackPanel Spacing="8">
@@ -915,8 +1111,14 @@
                                                                     Classes="section-toggle"
                                                                     IsChecked="{Binding ComponentsSection.IsExpanded, Mode=TwoWay}">
                                                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <controls:Codicon Kind="{Binding ComponentsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Components" />
+                                                                        <controls:Codicon
+                                                                            Margin="2,2,0,0"
+                                                                            Kind="{Binding ComponentsSection.ChevronKind}"
+                                                                            Size="10" />
+                                                                        <TextBlock
+                                                                            VerticalAlignment="Center"
+                                                                            Classes="header"
+                                                                            Text="Components" />
                                                                     </StackPanel>
                                                                 </ToggleButton>
 
@@ -966,33 +1168,35 @@
                                                                         CornerRadius="{DynamicResource Radius.Medium}">
                                                                         <StackPanel Spacing="6">
                                                                             <Grid ColumnDefinitions="*,Auto">
-                                                                                <TextBlock Grid.Column="0" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" Text="{Binding Label}" />
+                                                                                <TextBlock
+                                                                                    Grid.Column="0"
+                                                                                    VerticalAlignment="Center"
+                                                                                    FontSize="12"
+                                                                                    FontWeight="SemiBold"
+                                                                                    Text="{Binding Label}" />
                                                                                 <Button
                                                                                     Grid.Column="1"
                                                                                     Padding="4,2"
-                                                                                    ToolTip.Tip="Remove component"
                                                                                     Command="{Binding Inspector.RemoveComponentCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    CommandParameter="{Binding}">
+                                                                                    CommandParameter="{Binding}"
+                                                                                    ToolTip.Tip="Remove component">
                                                                                     <controls:Codicon Kind="Trash" Size="14" />
                                                                                 </Button>
                                                                             </Grid>
 
                                                                             <!--  Component-level scalar properties  -->
-                                                                            <inspector:InspectorPropertyItemsControl
-                                                                                IsVisible="{Binding HasProperties}"
-                                                                                ItemsSource="{Binding Properties}" />
+                                                                            <inspector:InspectorPropertyItemsControl IsVisible="{Binding HasProperties}" ItemsSource="{Binding Properties}" />
 
                                                                             <!--  Sub-object groups (Mesh, Material, etc.)  -->
-                                                                            <ItemsControl
-                                                                                IsVisible="{Binding HasSubObjects}"
-                                                                                ItemsSource="{Binding SubObjects}">
+                                                                            <ItemsControl IsVisible="{Binding HasSubObjects}" ItemsSource="{Binding SubObjects}">
                                                                                 <ItemsControl.ItemTemplate>
                                                                                     <DataTemplate x:DataType="vm:ComponentSubObjectViewModel">
                                                                                         <StackPanel Margin="0,4,0,0" Spacing="2">
-                                                                                            <TextBlock FontWeight="SemiBold" Margin="0,2,0,2" Text="{Binding Label}" />
-                                                                                            <inspector:InspectorPropertyItemsControl
-                                                                                                IsVisible="{Binding HasProperties}"
-                                                                                                ItemsSource="{Binding Properties}" />
+                                                                                            <TextBlock
+                                                                                                Margin="0,2,0,2"
+                                                                                                FontWeight="SemiBold"
+                                                                                                Text="{Binding Label}" />
+                                                                                            <inspector:InspectorPropertyItemsControl IsVisible="{Binding HasProperties}" ItemsSource="{Binding Properties}" />
                                                                                         </StackPanel>
                                                                                     </DataTemplate>
                                                                                 </ItemsControl.ItemTemplate>
@@ -1011,12 +1215,16 @@
                                                         RowDefinitions="Auto, Auto, Auto">
 
                                                         <Border Grid.Row="0" Classes="panel-header">
-                                                            <ToggleButton
-                                                                Classes="section-toggle"
-                                                                IsChecked="{Binding TagsSection.IsExpanded, Mode=TwoWay}">
+                                                            <ToggleButton Classes="section-toggle" IsChecked="{Binding TagsSection.IsExpanded, Mode=TwoWay}">
                                                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                    <controls:Codicon Kind="{Binding TagsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                                    <TextBlock VerticalAlignment="Center" Classes="header" Text="Tags" />
+                                                                    <controls:Codicon
+                                                                        Margin="2,2,0,0"
+                                                                        Kind="{Binding TagsSection.ChevronKind}"
+                                                                        Size="10" />
+                                                                    <TextBlock
+                                                                        VerticalAlignment="Center"
+                                                                        Classes="header"
+                                                                        Text="Tags" />
                                                                 </StackPanel>
                                                             </ToggleButton>
                                                         </Border>
@@ -1030,9 +1238,9 @@
                                                                 Grid.Column="0"
                                                                 Margin="0,0,6,0"
                                                                 HorizontalAlignment="Stretch"
-                                                                PlaceholderText="Add tag"
                                                                 IsEnabled="{Binding EntityTags.HasAvailableTags}"
                                                                 ItemsSource="{Binding EntityTags.AvailableTags}"
+                                                                PlaceholderText="Add tag"
                                                                 SelectedItem="{Binding EntityTags.SelectedAvailableTag, Mode=TwoWay}">
                                                                 <ComboBox.ItemTemplate>
                                                                     <DataTemplate x:DataType="vm:EntityTagOptionViewModel">
@@ -1043,9 +1251,9 @@
                                                             <Button
                                                                 Grid.Column="1"
                                                                 Padding="8,2"
-                                                                Content="Add"
                                                                 Command="{Binding EntityTags.AddTagCommand}"
-                                                                CommandParameter="{Binding EntityTags.SelectedAvailableTag}" />
+                                                                CommandParameter="{Binding EntityTags.SelectedAvailableTag}"
+                                                                Content="Add" />
                                                         </Grid>
 
                                                         <ItemsControl
@@ -1068,13 +1276,17 @@
                                                                         BorderThickness="1"
                                                                         CornerRadius="{DynamicResource Radius.Medium}">
                                                                         <Grid ColumnDefinitions="*,Auto">
-                                                                            <TextBlock Grid.Column="0" FontSize="12" VerticalAlignment="Center" Text="{Binding Name}" />
+                                                                            <TextBlock
+                                                                                Grid.Column="0"
+                                                                                VerticalAlignment="Center"
+                                                                                FontSize="12"
+                                                                                Text="{Binding Name}" />
                                                                             <Button
                                                                                 Grid.Column="1"
                                                                                 Padding="4,2"
-                                                                                ToolTip.Tip="Remove tag"
                                                                                 Command="{Binding Inspector.EntityTags.RemoveTagCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                CommandParameter="{Binding}">
+                                                                                CommandParameter="{Binding}"
+                                                                                ToolTip.Tip="Remove tag">
                                                                                 <controls:Codicon Kind="Trash" Size="14" />
                                                                             </Button>
                                                                         </Grid>
@@ -1097,8 +1309,14 @@
                                                                     Classes="section-toggle"
                                                                     IsChecked="{Binding LayersSection.IsExpanded, Mode=TwoWay}">
                                                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <controls:Codicon Kind="{Binding LayersSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Layers" />
+                                                                        <controls:Codicon
+                                                                            Margin="2,2,0,0"
+                                                                            Kind="{Binding LayersSection.ChevronKind}"
+                                                                            Size="10" />
+                                                                        <TextBlock
+                                                                            VerticalAlignment="Center"
+                                                                            Classes="header"
+                                                                            Text="Layers" />
                                                                     </StackPanel>
                                                                 </ToggleButton>
 
@@ -1124,9 +1342,7 @@
                                                                                 </ItemsControl>
 
                                                                                 <Separator />
-                                                                                <MenuItem
-                                                                                    Command="{Binding Inspector.EntityLayers.CreateNewLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    Header="New Layer..." />
+                                                                                <MenuItem Command="{Binding Inspector.EntityLayers.CreateNewLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}" Header="New Layer..." />
                                                                             </StackPanel>
                                                                         </Flyout>
                                                                     </Button.Flyout>
@@ -1154,13 +1370,17 @@
                                                                         BorderThickness="1"
                                                                         CornerRadius="{DynamicResource Radius.Medium}">
                                                                         <Grid ColumnDefinitions="*,Auto">
-                                                                            <TextBlock Grid.Column="0" FontSize="12" VerticalAlignment="Center" Text="{Binding Name}" />
+                                                                            <TextBlock
+                                                                                Grid.Column="0"
+                                                                                VerticalAlignment="Center"
+                                                                                FontSize="12"
+                                                                                Text="{Binding Name}" />
                                                                             <Button
                                                                                 Grid.Column="1"
                                                                                 Padding="4,2"
-                                                                                ToolTip.Tip="Remove from layer"
                                                                                 Command="{Binding Inspector.EntityLayers.RemoveLayerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                CommandParameter="{Binding}">
+                                                                                CommandParameter="{Binding}"
+                                                                                ToolTip.Tip="Remove from layer">
                                                                                 <controls:Codicon Kind="Trash" Size="14" />
                                                                             </Button>
                                                                         </Grid>
@@ -1175,74 +1395,78 @@
                                                         IsVisible="{Binding Inspector.HasAttachedScript}"
                                                         RowDefinitions="Auto, Auto">
                                                         <Border Grid.Row="0" Classes="panel-header">
-                                                            <ToggleButton
-                                                                Classes="section-toggle"
-                                                                IsChecked="{Binding Inspector.ScriptSection.IsExpanded, Mode=TwoWay}">
+                                                            <ToggleButton Classes="section-toggle" IsChecked="{Binding Inspector.ScriptSection.IsExpanded, Mode=TwoWay}">
                                                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                    <controls:Codicon Kind="{Binding Inspector.ScriptSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                                    <TextBlock VerticalAlignment="Center" Classes="header" Text="Script" />
+                                                                    <controls:Codicon
+                                                                        Margin="2,2,0,0"
+                                                                        Kind="{Binding Inspector.ScriptSection.ChevronKind}"
+                                                                        Size="10" />
+                                                                    <TextBlock
+                                                                        VerticalAlignment="Center"
+                                                                        Classes="header"
+                                                                        Text="Script" />
                                                                 </StackPanel>
                                                             </ToggleButton>
                                                         </Border>
 
                                                         <StackPanel Grid.Row="1" IsVisible="{Binding Inspector.ScriptSection.IsExpanded}">
                                                             <Grid
-                                                                DataContext="{Binding Inspector.AttachedScript}"
+                                                                Margin="12,6,12,4"
                                                                 ColumnDefinitions="72,*"
-                                                                Margin="12,6,12,4">
-                                                            <Border
-                                                                Width="64"
-                                                                Height="64"
-                                                                Margin="0,0,8,0"
-                                                                VerticalAlignment="Top"
-                                                                Background="{DynamicResource Brush.PanelRaised}"
-                                                                BorderBrush="{DynamicResource Brush.BorderLight}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="{DynamicResource Radius.Medium}">
-                                                                <controls:Codicon
-                                                                    HorizontalAlignment="Center"
-                                                                    VerticalAlignment="Center"
-                                                                    Foreground="{DynamicResource Brush.AccentHover}"
-                                                                    Kind="FileCode"
-                                                                    Opacity="0.85"
-                                                                    Size="28" />
-                                                            </Border>
-
-                                                            <StackPanel Grid.Column="1" Spacing="4">
-                                                                <TextBlock
-                                                                    FontSize="12"
-                                                                    FontWeight="SemiBold"
-                                                                    Text="{Binding ScriptDisplay}" />
-
+                                                                DataContext="{Binding Inspector.AttachedScript}">
                                                                 <Border
+                                                                    Width="64"
+                                                                    Height="64"
+                                                                    Margin="0,0,8,0"
+                                                                    VerticalAlignment="Top"
                                                                     Background="{DynamicResource Brush.PanelRaised}"
                                                                     BorderBrush="{DynamicResource Brush.BorderLight}"
                                                                     BorderThickness="1"
-                                                                    CornerRadius="{DynamicResource Radius.Small}"
-                                                                    Padding="6,5">
-                                                                    <TextBlock
-                                                                        FontSize="11"
-                                                                        Text="{Binding AssetPathDisplay}"
-                                                                        TextTrimming="CharacterEllipsis" />
+                                                                    CornerRadius="{DynamicResource Radius.Medium}">
+                                                                    <controls:Codicon
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center"
+                                                                        Foreground="{DynamicResource Brush.AccentHover}"
+                                                                        Kind="FileCode"
+                                                                        Opacity="0.85"
+                                                                        Size="28" />
                                                                 </Border>
 
-                                                                <StackPanel Orientation="Horizontal" Spacing="2">
-                                                                    <Button
-                                                                        Classes="gizmo"
-                                                                        Command="{Binding SelectCommand}"
-                                                                        IsEnabled="{Binding CanSelectFromContentBrowser}"
-                                                                        ToolTip.Tip="Swap with selected">
-                                                                        <controls:Codicon Kind="Swap" Size="14" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        Classes="gizmo"
-                                                                        Command="{Binding ClearCommand}"
-                                                                        IsEnabled="{Binding HasScript}"
-                                                                        ToolTip.Tip="Clear">
-                                                                        <controls:Codicon Kind="Close" Size="14" />
-                                                                    </Button>
+                                                                <StackPanel Grid.Column="1" Spacing="4">
+                                                                    <TextBlock
+                                                                        FontSize="12"
+                                                                        FontWeight="SemiBold"
+                                                                        Text="{Binding ScriptDisplay}" />
+
+                                                                    <Border
+                                                                        Padding="6,5"
+                                                                        Background="{DynamicResource Brush.PanelRaised}"
+                                                                        BorderBrush="{DynamicResource Brush.BorderLight}"
+                                                                        BorderThickness="1"
+                                                                        CornerRadius="{DynamicResource Radius.Small}">
+                                                                        <TextBlock
+                                                                            FontSize="11"
+                                                                            Text="{Binding AssetPathDisplay}"
+                                                                            TextTrimming="CharacterEllipsis" />
+                                                                    </Border>
+
+                                                                    <StackPanel Orientation="Horizontal" Spacing="2">
+                                                                        <Button
+                                                                            Classes="gizmo"
+                                                                            Command="{Binding SelectCommand}"
+                                                                            IsEnabled="{Binding CanSelectFromContentBrowser}"
+                                                                            ToolTip.Tip="Swap with selected">
+                                                                            <controls:Codicon Kind="Swap" Size="14" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            Classes="gizmo"
+                                                                            Command="{Binding ClearCommand}"
+                                                                            IsEnabled="{Binding HasScript}"
+                                                                            ToolTip.Tip="Clear">
+                                                                            <controls:Codicon Kind="Close" Size="14" />
+                                                                        </Button>
+                                                                    </StackPanel>
                                                                 </StackPanel>
-                                                            </StackPanel>
                                                             </Grid>
                                                         </StackPanel>
                                                     </Grid>
@@ -1252,12 +1476,16 @@
                                                         IsVisible="{Binding Inspector.HasActions}"
                                                         RowDefinitions="Auto, Auto">
                                                         <Border Grid.Row="0" Classes="panel-header">
-                                                            <ToggleButton
-                                                                Classes="section-toggle"
-                                                                IsChecked="{Binding Inspector.ActionsSection.IsExpanded, Mode=TwoWay}">
+                                                            <ToggleButton Classes="section-toggle" IsChecked="{Binding Inspector.ActionsSection.IsExpanded, Mode=TwoWay}">
                                                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                    <controls:Codicon Kind="{Binding Inspector.ActionsSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                                    <TextBlock VerticalAlignment="Center" Classes="header" Text="Actions" />
+                                                                    <controls:Codicon
+                                                                        Margin="2,2,0,0"
+                                                                        Kind="{Binding Inspector.ActionsSection.ChevronKind}"
+                                                                        Size="10" />
+                                                                    <TextBlock
+                                                                        VerticalAlignment="Center"
+                                                                        Classes="header"
+                                                                        Text="Actions" />
                                                                 </StackPanel>
                                                             </ToggleButton>
                                                         </Border>
@@ -1275,8 +1503,8 @@
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:InspectorActionViewModel">
                                                                     <Button
-                                                                        Padding="10,4"
                                                                         Margin="12,6,12,0"
+                                                                        Padding="10,4"
                                                                         HorizontalAlignment="Stretch"
                                                                         VerticalAlignment="Center"
                                                                         Command="{Binding ExecuteActionCommand}"
@@ -1293,18 +1521,20 @@
                                                         IsVisible="{Binding Inspector.HasSceneProperties}"
                                                         RowDefinitions="Auto, Auto">
                                                         <Border Grid.Row="0" Classes="panel-header">
-                                                            <ToggleButton
-                                                                Classes="section-toggle"
-                                                                IsChecked="{Binding Inspector.ScenePropertiesSection.IsExpanded, Mode=TwoWay}">
+                                                            <ToggleButton Classes="section-toggle" IsChecked="{Binding Inspector.ScenePropertiesSection.IsExpanded, Mode=TwoWay}">
                                                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                    <controls:Codicon Kind="{Binding Inspector.ScenePropertiesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                                    <TextBlock VerticalAlignment="Center" Classes="header" Text="Scene Properties" />
+                                                                    <controls:Codicon
+                                                                        Margin="2,2,0,0"
+                                                                        Kind="{Binding Inspector.ScenePropertiesSection.ChevronKind}"
+                                                                        Size="10" />
+                                                                    <TextBlock
+                                                                        VerticalAlignment="Center"
+                                                                        Classes="header"
+                                                                        Text="Scene Properties" />
                                                                 </StackPanel>
                                                             </ToggleButton>
                                                         </Border>
-                                                        <inspector:InspectorPropertyItemsControl
-                                                            Grid.Row="1"
-                                                            ItemsSource="{Binding Inspector.SceneProperties}">
+                                                        <inspector:InspectorPropertyItemsControl Grid.Row="1" ItemsSource="{Binding Inspector.SceneProperties}">
                                                             <inspector:InspectorPropertyItemsControl.IsVisible>
                                                                 <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
                                                                     <Binding Path="Inspector.HasSceneProperties" />
@@ -1327,8 +1557,14 @@
                                                                     Classes="section-toggle"
                                                                     IsChecked="{Binding SwatchOverridesSection.IsExpanded, Mode=TwoWay}">
                                                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <controls:Codicon Kind="{Binding SwatchOverridesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                                        <TextBlock VerticalAlignment="Center" Classes="header" Text="Swatch Overrides" />
+                                                                        <controls:Codicon
+                                                                            Margin="2,2,0,0"
+                                                                            Kind="{Binding SwatchOverridesSection.ChevronKind}"
+                                                                            Size="10" />
+                                                                        <TextBlock
+                                                                            VerticalAlignment="Center"
+                                                                            Classes="header"
+                                                                            Text="Swatch Overrides" />
                                                                     </StackPanel>
                                                                 </ToggleButton>
                                                                 <Border
@@ -1351,8 +1587,12 @@
                                                             </Grid>
                                                         </Border>
 
-                                                        <StackPanel Grid.Row="1" Margin="12,8,12,10" Spacing="10" IsVisible="{Binding SwatchOverridesSection.IsExpanded}">
-                                                            <StackPanel Spacing="4" IsVisible="{Binding HasOverriddenProperties}">
+                                                        <StackPanel
+                                                            Grid.Row="1"
+                                                            Margin="12,8,12,10"
+                                                            IsVisible="{Binding SwatchOverridesSection.IsExpanded}"
+                                                            Spacing="10">
+                                                            <StackPanel IsVisible="{Binding HasOverriddenProperties}" Spacing="4">
                                                                 <TextBlock
                                                                     Classes="section-label"
                                                                     Text="{Binding OverriddenPropertiesHeader}"
@@ -1370,8 +1610,8 @@
                                                                                     CornerRadius="1" />
                                                                                 <TextBlock
                                                                                     Grid.Column="1"
-                                                                                    FontSize="11"
                                                                                     VerticalAlignment="Center"
+                                                                                    FontSize="11"
                                                                                     Text="{Binding Label}"
                                                                                     TextTrimming="CharacterEllipsis"
                                                                                     ToolTip.Tip="{Binding OverrideTooltip}" />
@@ -1383,8 +1623,8 @@
                                                                                     <Path
                                                                                         Width="11"
                                                                                         Height="11"
-                                                                                        Stretch="Uniform"
-                                                                                        Data="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" />
+                                                                                        Data="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"
+                                                                                        Stretch="Uniform" />
                                                                                 </Button>
                                                                             </Grid>
                                                                         </DataTemplate>
@@ -1396,8 +1636,8 @@
                                                                         Grid.Column="0"
                                                                         Padding="8,2"
                                                                         VerticalAlignment="Center"
-                                                                        Content="Revert All"
                                                                         Command="{Binding ResetSwatchOverridesCommand}"
+                                                                        Content="Revert All"
                                                                         ToolTip.Tip="Revert swatch-specific property overrides back to base values." />
                                                                 </Grid>
 
@@ -1417,9 +1657,9 @@
                                                                         Grid.Column="0"
                                                                         Margin="0,0,6,0"
                                                                         HorizontalAlignment="Stretch"
-                                                                        PlaceholderText="Select swatch"
                                                                         IsEnabled="{Binding HasCopySwatchSources}"
                                                                         ItemsSource="{Binding CopySwatchSources}"
+                                                                        PlaceholderText="Select swatch"
                                                                         SelectedItem="{Binding SelectedCopySwatchSource, Mode=TwoWay}">
                                                                         <ComboBox.ItemTemplate>
                                                                             <DataTemplate x:DataType="vm:SwatchCopySourceOptionViewModel">
@@ -1430,8 +1670,8 @@
                                                                     <Button
                                                                         Grid.Column="1"
                                                                         Padding="8,2"
-                                                                        Content="Apply"
                                                                         Command="{Binding ApplyCopyFromSwatchCommand}"
+                                                                        Content="Apply"
                                                                         ToolTip.Tip="Copy the selected source's property values onto the current edit target" />
                                                                 </Grid>
                                                             </StackPanel>
@@ -1441,19 +1681,23 @@
                                                     <!--  Properties  -->
                                                     <Grid Margin="0" RowDefinitions="Auto, Auto, Auto">
                                                         <Border Grid.Row="0" Classes="panel-header">
-                                                            <ToggleButton
-                                                                Classes="section-toggle"
-                                                                IsChecked="{Binding Inspector.PropertiesSection.IsExpanded, Mode=TwoWay}">
+                                                            <ToggleButton Classes="section-toggle" IsChecked="{Binding Inspector.PropertiesSection.IsExpanded, Mode=TwoWay}">
                                                                 <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                    <controls:Codicon Kind="{Binding Inspector.PropertiesSection.ChevronKind}" Size="10" Margin="2,2,0,0" />
-                                                                    <TextBlock VerticalAlignment="Center" Classes="header" Text="Properties" />
+                                                                    <controls:Codicon
+                                                                        Margin="2,2,0,0"
+                                                                        Kind="{Binding Inspector.PropertiesSection.ChevronKind}"
+                                                                        Size="10" />
+                                                                    <TextBlock
+                                                                        VerticalAlignment="Center"
+                                                                        Classes="header"
+                                                                        Text="Properties" />
                                                                 </StackPanel>
                                                             </ToggleButton>
                                                         </Border>
                                                         <inspector:InspectorPropertyItemsControl
                                                             Grid.Row="1"
-                                                            ItemsSource="{Binding Inspector.Properties}"
-                                                            IsVisible="{Binding Inspector.PropertiesSection.IsExpanded}" />
+                                                            IsVisible="{Binding Inspector.PropertiesSection.IsExpanded}"
+                                                            ItemsSource="{Binding Inspector.Properties}" />
                                                     </Grid>
                                                 </StackPanel>
                                             </ScrollViewer>
@@ -1466,17 +1710,24 @@
                             <ProportionalDockSplitter x:Name="MainSplitter1" Id="MainSplitter1" />
 
                             <!--  Center column: Scene document + bottom panel (Assets/Console)  -->
-                            <ProportionalDock x:Name="Center" Id="Center" Orientation="Vertical">
+                            <ProportionalDock
+                                x:Name="Center"
+                                Id="Center"
+                                Orientation="Vertical">
 
-                                <DocumentDock x:Name="Documents" Id="Documents" CanCreateDocument="True" ActiveDockable="SceneDoc">
+                                <DocumentDock
+                                    x:Name="Documents"
+                                    ActiveDockable="SceneDoc"
+                                    CanCreateDocument="True"
+                                    Id="Documents">
                                     <Document
                                         x:Name="SceneDoc"
-                                        Id="Scene"
                                         Title="Viewport"
+                                        CanClose="False"
                                         CanDrag="False"
                                         CanFloat="False"
                                         CanPin="False"
-                                        CanClose="False">
+                                        Id="Scene">
                                         <Grid>
                                             <Border
                                                 x:Name="ViewportDropTarget"
@@ -1494,110 +1745,162 @@
 
                                 <ProportionalDockSplitter x:Name="CenterSplitter" Id="CenterSplitter" />
 
-                                <ProportionalDock x:Name="Bottom" Id="Bottom" Orientation="Horizontal" Proportion="0.3">
+                                <ProportionalDock
+                                    x:Name="Bottom"
+                                    Id="Bottom"
+                                    Orientation="Horizontal"
+                                    Proportion="0.3">
 
-                                    <ToolDock x:Name="AssetsPane" Id="AssetsPane" Alignment="Left" ActiveDockable="AssetsTool">
-                                        <Tool x:Name="AssetsTool" Id="ContentBrowser" Title="Assets">
+                                    <ToolDock
+                                        x:Name="AssetsPane"
+                                        ActiveDockable="AssetsTool"
+                                        Alignment="Left"
+                                        Id="AssetsPane">
+                                        <Tool
+                                            x:Name="AssetsTool"
+                                            Title="Assets"
+                                            Id="ContentBrowser">
                                             <ContentControl DataContext="{Binding Source={x:Static vm:MainWindowViewModel.Instance}}">
                                                 <DockPanel>
-                                                <Border Classes="panel-header" DockPanel.Dock="Top" Height="36">
-                                                    <Grid VerticalAlignment="Center" ColumnDefinitions="*, Auto, Auto, Auto">
-                                                        <TextBlock Grid.Column="0" Margin="6,0" VerticalAlignment="Center" Classes="header" FontSize="12" Text="Assets" />
-                                                        <ComboBox Grid.Column="1" Margin="0,0,4,0" Padding="6,2" FontSize="11" VerticalAlignment="Center" ToolTip.Tip="Sort order" ItemsSource="{Binding ContentBrowser.SortModeLabels}" SelectedIndex="{Binding ContentBrowser.SortModeIndex, Mode=TwoWay}" />
-                                                        <Button Grid.Column="2" Padding="8,2" VerticalAlignment="Center" Command="{Binding ContentBrowser.ImportCommand}" Content="Import" IsEnabled="{Binding !IsSimulating}" ToolTip.Tip="Import external content into the asset registry." />
-                                                        <Button Grid.Column="3" Padding="8,2" VerticalAlignment="Center" Content="New..." IsEnabled="{Binding !IsSimulating}">
-                                                            <Button.Flyout>
-                                                                <MenuFlyout>
-                                                                    <MenuItem Command="{Binding ContentBrowser.NewPhysicsShapeCommand}" Header="Physics Shape..." />
-                                                                    <MenuItem Command="{Binding ContentBrowser.NewMaterialCommand}" Header="Material" />
-                                                                    <MenuItem Command="{Binding ContentBrowser.NewScriptCommand}" Header="Script..." />
-                                                                </MenuFlyout>
-                                                            </Button.Flyout>
-                                                        </Button>
-                                                    </Grid>
-                                                </Border>
-                                                <Grid ColumnDefinitions="220, *">
-                                                    <ListBox
-                                                        Grid.Column="0"
-                                                        ItemsSource="{Binding ContentBrowser.Buckets}"
-                                                        SelectedItem="{Binding ContentBrowser.CurrentBucket, Mode=TwoWay}">
-                                                        <ListBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:AssetBucketViewModel">
-                                                                <TextBlock Text="{Binding Name}" />
-                                                            </DataTemplate>
-                                                        </ListBox.ItemTemplate>
-                                                    </ListBox>
-                                                    <ListBox
-                                                        x:Name="ContentBrowserAssetList"
-                                                        Grid.Column="1"
-                                                        ItemsSource="{Binding ContentBrowser.Assets}"
-                                                        SelectedItem="{Binding ContentBrowser.SelectedAsset, Mode=TwoWay}"
-                                                        ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                                        <ListBox.ItemsPanel>
-                                                            <ItemsPanelTemplate>
-                                                                <WrapPanel />
-                                                            </ItemsPanelTemplate>
-                                                        </ListBox.ItemsPanel>
-                                                        <ListBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:AssetObjectViewModel">
-                                                                <Border
-                                                                    Width="64"
-                                                                    Height="64"
-                                                                    Margin="3"
-                                                                    Padding="3"
-                                                                    Background="Transparent"
-                                                                    CornerRadius="{DynamicResource Radius.Small}">
-                                                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
-                                                                        <controls:Codicon Kind="{Binding IconKind}" Size="20" Opacity="0.85" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.AccentHover}" />
-                                                                        <TextBlock
-                                                                            Text="{Binding DisplayName}"
-                                                                            FontSize="10"
+                                                    <Border
+                                                        Height="36"
+                                                        Classes="panel-header"
+                                                        DockPanel.Dock="Top">
+                                                        <Grid VerticalAlignment="Center" ColumnDefinitions="*, Auto, Auto, Auto">
+                                                            <TextBlock
+                                                                Grid.Column="0"
+                                                                Margin="6,0"
+                                                                VerticalAlignment="Center"
+                                                                Classes="header"
+                                                                FontSize="12"
+                                                                Text="Assets" />
+                                                            <ComboBox
+                                                                Grid.Column="1"
+                                                                Margin="0,0,4,0"
+                                                                Padding="6,2"
+                                                                VerticalAlignment="Center"
+                                                                FontSize="11"
+                                                                ItemsSource="{Binding ContentBrowser.SortModeLabels}"
+                                                                SelectedIndex="{Binding ContentBrowser.SortModeIndex, Mode=TwoWay}"
+                                                                ToolTip.Tip="Sort order" />
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Padding="8,2"
+                                                                VerticalAlignment="Center"
+                                                                Command="{Binding ContentBrowser.ImportCommand}"
+                                                                Content="Import"
+                                                                IsEnabled="{Binding !IsSimulating}"
+                                                                ToolTip.Tip="Import external content into the asset registry." />
+                                                            <Button
+                                                                Grid.Column="3"
+                                                                Padding="8,2"
+                                                                VerticalAlignment="Center"
+                                                                Content="New..."
+                                                                IsEnabled="{Binding !IsSimulating}">
+                                                                <Button.Flyout>
+                                                                    <MenuFlyout>
+                                                                        <MenuItem Command="{Binding ContentBrowser.NewPhysicsShapeCommand}" Header="Physics Shape..." />
+                                                                        <MenuItem Command="{Binding ContentBrowser.NewMaterialCommand}" Header="Material" />
+                                                                        <MenuItem Command="{Binding ContentBrowser.NewScriptCommand}" Header="Script..." />
+                                                                    </MenuFlyout>
+                                                                </Button.Flyout>
+                                                            </Button>
+                                                        </Grid>
+                                                    </Border>
+                                                    <Grid ColumnDefinitions="220, *">
+                                                        <ListBox
+                                                            Grid.Column="0"
+                                                            ItemsSource="{Binding ContentBrowser.Buckets}"
+                                                            SelectedItem="{Binding ContentBrowser.CurrentBucket, Mode=TwoWay}">
+                                                            <ListBox.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:AssetBucketViewModel">
+                                                                    <TextBlock Text="{Binding Name}" />
+                                                                </DataTemplate>
+                                                            </ListBox.ItemTemplate>
+                                                        </ListBox>
+                                                        <ListBox
+                                                            x:Name="ContentBrowserAssetList"
+                                                            Grid.Column="1"
+                                                            ItemsSource="{Binding ContentBrowser.Assets}"
+                                                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                            SelectedItem="{Binding ContentBrowser.SelectedAsset, Mode=TwoWay}">
+                                                            <ListBox.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <WrapPanel />
+                                                                </ItemsPanelTemplate>
+                                                            </ListBox.ItemsPanel>
+                                                            <ListBox.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:AssetObjectViewModel">
+                                                                    <Border
+                                                                        Width="64"
+                                                                        Height="64"
+                                                                        Margin="3"
+                                                                        Padding="3"
+                                                                        Background="Transparent"
+                                                                        CornerRadius="{DynamicResource Radius.Small}">
+                                                                        <StackPanel
                                                                             HorizontalAlignment="Center"
-                                                                            TextAlignment="Center"
-                                                                            TextWrapping="Wrap"
-                                                                            TextTrimming="CharacterEllipsis"
-                                                                            MaxWidth="58" />
-                                                                    </StackPanel>
-                                                                    <Border.ContextMenu>
-                                                                        <ContextMenu Opened="OnAssetContextMenuOpened">
-                                                                            <MenuItem
-                                                                                Command="{Binding ContentBrowser.AddToSceneCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                CommandParameter="{Binding}"
-                                                                                Header="Add to Current Scene"
-                                                                                IsVisible="{Binding CanAddToScene, Source={x:Static vm:MainWindowViewModel.Instance}}" />
-                                                                            <Separator IsVisible="{Binding CanAddToScene, Source={x:Static vm:MainWindowViewModel.Instance}}" />
-                                                                            <MenuItem
-                                                                                Command="{Binding ContentBrowser.EditAssetCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                CommandParameter="{Binding}"
-                                                                                Header="_Edit"
-                                                                                IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
-                                                                            <Separator IsVisible="{Binding HasActions}" />
-                                                                            <MenuItem Header="Actions" IsVisible="{Binding HasActions}" IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" ItemsSource="{Binding Actions}">
-                                                                                <!--  The generated containers are the menu items themselves; a MenuItem in an ItemTemplate would be nested inside the container's header and render disabled.  -->
-                                                                                <MenuItem.ItemContainerTheme>
-                                                                                    <ControlTheme
-                                                                                        x:DataType="vm:InspectorActionViewModel"
-                                                                                        BasedOn="{StaticResource {x:Type MenuItem}}"
-                                                                                        TargetType="MenuItem">
-                                                                                        <Setter Property="Header" Value="{Binding Label}" />
-                                                                                        <Setter Property="Command" Value="{Binding ExecuteActionCommand}" />
-                                                                                        <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
-                                                                                    </ControlTheme>
-                                                                                </MenuItem.ItemContainerTheme>
-                                                                            </MenuItem>
-                                                                            <Separator />
-                                                                            <MenuItem
-                                                                                Command="{Binding ContentBrowser.DeleteAssetCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                CommandParameter="{Binding}"
-                                                                                Header="_Delete"
-                                                                                IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
-                                                                        </ContextMenu>
-                                                                    </Border.ContextMenu>
-                                                                </Border>
-                                                            </DataTemplate>
-                                                        </ListBox.ItemTemplate>
-                                                    </ListBox>
-                                                </Grid>
+                                                                            VerticalAlignment="Center"
+                                                                            Spacing="2">
+                                                                            <controls:Codicon
+                                                                                HorizontalAlignment="Center"
+                                                                                Foreground="{DynamicResource Brush.AccentHover}"
+                                                                                Kind="{Binding IconKind}"
+                                                                                Opacity="0.85"
+                                                                                Size="20" />
+                                                                            <TextBlock
+                                                                                MaxWidth="58"
+                                                                                HorizontalAlignment="Center"
+                                                                                FontSize="10"
+                                                                                Text="{Binding DisplayName}"
+                                                                                TextAlignment="Center"
+                                                                                TextTrimming="CharacterEllipsis"
+                                                                                TextWrapping="Wrap" />
+                                                                        </StackPanel>
+                                                                        <Border.ContextMenu>
+                                                                            <ContextMenu Opened="OnAssetContextMenuOpened">
+                                                                                <MenuItem
+                                                                                    Command="{Binding ContentBrowser.AddToSceneCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                    CommandParameter="{Binding}"
+                                                                                    Header="Add to Current Scene"
+                                                                                    IsVisible="{Binding CanAddToScene, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                                <Separator IsVisible="{Binding CanAddToScene, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                                <MenuItem
+                                                                                    Command="{Binding ContentBrowser.EditAssetCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                    CommandParameter="{Binding}"
+                                                                                    Header="_Edit"
+                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                                <Separator IsVisible="{Binding HasActions}" />
+                                                                                <MenuItem
+                                                                                    Header="Actions"
+                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                    IsVisible="{Binding HasActions}"
+                                                                                    ItemsSource="{Binding Actions}">
+                                                                                    <!--  The generated containers are the menu items themselves; a MenuItem in an ItemTemplate would be nested inside the container's header and render disabled.  -->
+                                                                                    <MenuItem.ItemContainerTheme>
+                                                                                        <ControlTheme
+                                                                                            x:DataType="vm:InspectorActionViewModel"
+                                                                                            BasedOn="{StaticResource {x:Type MenuItem}}"
+                                                                                            TargetType="MenuItem">
+                                                                                            <Setter Property="Header" Value="{Binding Label}" />
+                                                                                            <Setter Property="Command" Value="{Binding ExecuteActionCommand}" />
+                                                                                            <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+                                                                                        </ControlTheme>
+                                                                                    </MenuItem.ItemContainerTheme>
+                                                                                </MenuItem>
+                                                                                <Separator />
+                                                                                <MenuItem
+                                                                                    Command="{Binding ContentBrowser.DeleteAssetCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                    CommandParameter="{Binding}"
+                                                                                    Header="_Delete"
+                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                            </ContextMenu>
+                                                                        </Border.ContextMenu>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ListBox.ItemTemplate>
+                                                        </ListBox>
+                                                    </Grid>
                                                 </DockPanel>
                                             </ContentControl>
                                         </Tool>
@@ -1605,8 +1908,15 @@
 
                                     <ProportionalDockSplitter x:Name="BottomSplitter" Id="BottomSplitter" />
 
-                                    <ToolDock x:Name="ConsolePane" Id="ConsolePane" Alignment="Right" ActiveDockable="ConsoleTool">
-                                        <Tool x:Name="ConsoleTool" Id="Console" Title="Console">
+                                    <ToolDock
+                                        x:Name="ConsolePane"
+                                        ActiveDockable="ConsoleTool"
+                                        Alignment="Right"
+                                        Id="ConsolePane">
+                                        <Tool
+                                            x:Name="ConsoleTool"
+                                            Title="Console"
+                                            Id="Console">
                                             <local:ConsoleView />
                                         </Tool>
                                     </ToolDock>
@@ -1620,8 +1930,8 @@
                             <!--  Right column: dynamic panels (object editors, etc.) - docked and tabbed, empty until opened  -->
                             <ToolDock
                                 x:Name="DynamicPanelsPane"
-                                Id="DynamicPanelsPane"
                                 Alignment="Right"
+                                Id="DynamicPanelsPane"
                                 Proportion="0.22" />
 
                         </ProportionalDock>
@@ -1634,13 +1944,11 @@
                 <Border Grid.Row="1" Classes="status-bar">
                     <Grid ColumnDefinitions="*, Auto">
                         <TextBlock
-                            Classes="status-hint"
                             VerticalAlignment="Center"
-                            TextTrimming="CharacterEllipsis"
-                            Text="{Binding StatusText}" />
-                        <ItemsControl
-                            Grid.Column="1"
-                            ItemsSource="{Binding Tasks}">
+                            Classes="status-hint"
+                            Text="{Binding StatusText}"
+                            TextTrimming="CharacterEllipsis" />
+                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Tasks}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="8" />
@@ -1650,9 +1958,7 @@
                                 <DataTemplate x:DataType="vm:TaskItemViewModel">
                                     <Border Classes="task-box">
                                         <StackPanel Spacing="3">
-                                            <TextBlock
-                                                Classes="task-title"
-                                                Text="{Binding TaskName}" />
+                                            <TextBlock Classes="task-title" Text="{Binding TaskName}" />
                                             <ProgressBar
                                                 Width="80"
                                                 Height="3"

@@ -44,6 +44,9 @@ struct WorldGridLayerInfo
     HYP_FIELD()
     float maxDistance = 1.0f;
 
+    HYP_FIELD()
+    uint32 seed = 0;
+
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hc;
@@ -51,6 +54,7 @@ struct WorldGridLayerInfo
         hc.Add(scale);
         hc.Add(cellSize);
         hc.Add(maxDistance);
+        hc.Add(seed);
 
         return hc;
     }

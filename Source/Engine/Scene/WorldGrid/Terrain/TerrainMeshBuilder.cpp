@@ -7,18 +7,32 @@
 #include <ScenePch.hpp>
 
 #include <Scene/WorldGrid/Terrain/TerrainMeshBuilder.hpp>
+#include <Scene/WorldGrid/Terrain/TerrainHeightField.hpp>
 
-#include <Rendering/Mesh.hpp>
-#include <Rendering/Vertex.hpp>
+#include <Streaming/StreamingCell.hpp>
 
-#include <Asset/AssetRegistry.hpp>
+#include <Util/NoiseFactory.hpp>
 
 namespace Hyperion {
 
 #pragma region Helpers
 
-static Array<SimpleVertex> BuildVertices(uint32 cellSize, float scale)
+static Array<SimpleVertex> BuildVertices(
+    uint32 cellSize,
+    const StreamingCellInfo& cellInfo,
+    const NoiseCombinator& noise,
+    Span<const float> sculptDelta)
 {
+    TerrainHeightField heightField(noise);
+
+    const Vec2f cellWorldMinXZ(cellInfo.bounds.min.x, cellInfo.bounds.min.z);
+    const Vec2f scaleXZ(cellInfo.scale.x, cellInfo.scale.z);
+
+    Array<float> paddedHeights;
+    heightField.SampleCellHeightsPadded(cellWorldMinXZ, scaleXZ, cellSize, sculptDelta, paddedHeights);
+
+    const uint32 paddedPitch = cellSize + 2;
+
     Array<SimpleVertex> vertices;
     vertices.Resize(cellSize * cellSize);
 
@@ -28,10 +42,23 @@ static Array<SimpleVertex> BuildVertices(uint32 cellSize, float scale)
         {
             const uint32 i = z * cellSize + x;
 
-            const Vec3f position = Vec3f { float(x), 0.0f, float(z) } * scale;
+            // padded index for local (x, z) is (x + 1, z + 1)
+            const float h = paddedHeights[(z + 1) * paddedPitch + (x + 1)];
+            const float hL = paddedHeights[(z + 1) * paddedPitch + x];
+            const float hR = paddedHeights[(z + 1) * paddedPitch + (x + 2)];
+            const float hD = paddedHeights[z * paddedPitch + (x + 1)];
+            const float hU = paddedHeights[(z + 2) * paddedPitch + (x + 1)];
+
+            const Vec3f position = Vec3f { float(x), h, float(z) };
             const Vec2f texcoord(float(x) / float(cellSize), float(z) / float(cellSize));
 
-            vertices[i] = SimpleVertex { position, Vec3f::Zero(), texcoord };
+            // Local (unscaled, per-index-step) tangents -- the renderer's normal matrix accounts
+            // for the cell's actual world scale, so normals must be computed in local mesh space.
+            const Vec3f tangentX(2.0f, hR - hL, 0.0f);
+            const Vec3f tangentZ(0.0f, hU - hD, 2.0f);
+            const Vec3f normal = tangentZ.Cross(tangentX).Normalized();
+
+            vertices[i] = SimpleVertex { position, normal, texcoord };
         }
     }
 
@@ -92,40 +119,16 @@ TerrainMeshBuilder::TerrainMeshBuilder(uint32 cellSize)
 
 TerrainMeshBuilder::~TerrainMeshBuilder() = default;
 
-const Handle<Mesh>& TerrainMeshBuilder::GetMesh()
+TerrainMeshBuilder::CellMeshData TerrainMeshBuilder::BuildCellVertexData(
+    const StreamingCellInfo& cellInfo,
+    const NoiseCombinator& noise,
+    Span<const float> sculptDelta) const
 {
-    if (m_mesh.IsValid())
-    {
-        return m_mesh;
-    }
+    CellMeshData result;
+    result.vertices = BuildVertices(m_cellSize, cellInfo, noise, sculptDelta);
+    result.indices = BuildIndices(m_cellSize);
 
-    Array<SimpleVertex> vertices = BuildVertices(m_cellSize, 1.0f);
-    Array<uint32> indices = BuildIndices(m_cellSize);
-
-    MeshDesc meshDesc;
-    meshDesc.meshAttributes.inputLayout = { VT_Simple };
-    meshDesc.lods[0].numIndices = uint32(indices.Size());
-    meshDesc.lods[0].numVertices = uint32(vertices.Size());
-
-    Handle<Mesh> mesh = MakeHandle<Mesh>();
-    mesh->SetName(NAME("TerrainChunkMesh"));
-
-    VertexArrayView vertexArrayView {};
-    vertexArrayView.floatData = reinterpret_cast<const float*>(vertices.Data());
-    vertexArrayView.vertexCount = vertices.Size();
-    vertexArrayView.layoutDesc = meshDesc.meshAttributes.inputLayout;
-
-    MeshDataView meshData {};
-    meshData.vertices[0] = vertexArrayView;
-    meshData.indices[0] = indices.ToByteView();
-
-    mesh->SetMeshData(meshDesc, meshData);
-
-    GetCurrentAssetRegistry()->PutAsset(mesh);
-    
-    m_mesh = mesh;
-
-    return m_mesh;
+    return result;
 }
 
 #pragma endregion TerrainMeshBuilder

@@ -40,7 +40,8 @@ HYP_ENUM()
 enum class MeshFlags : uint32
 {
     None = 0x0,
-    ViewIndependent = 0x1 //!< keep GPU data around even if mesh is not used by any View
+    ViewIndependent = 0x1,  //!< keep GPU data around even if mesh is not used by any View
+    DynamicMesh = 0x2       //!< the mesh data will be updated dynamically, at runtime.
 };
 
 HYP_MAKE_ENUM_FLAGS(MeshFlags);
@@ -181,8 +182,29 @@ public:
         return m_bvhData;
     }
 
+    HYP_METHOD()
+    bool IsDynamicMesh() const
+    {
+        return (m_flags & MeshFlags::DynamicMesh);
+    }
+    
+    HYP_METHOD()
+    void SetIsDynamicMesh(bool isDynamic);
+
     void UploadGpuData();
     void ReleaseGpuData();
+
+    //-- Dynamic Mesh stuff
+
+    /// Dynamically set vertices for the LOD \p lodIndex starting at \p firstVertex.
+    /// Must be a Dynamic Mesh (needs DynamicMesh flag on creation)
+    void UpdateDynamicVertexData(uint8 lodIndex, uint32 firstVertex, const VertexArrayView& vertexRange);
+    
+    /// Update BVH after finished updating dynamic vertices
+    /// Must be a Dynamic Mesh (needs DynamicMesh flag on creation)
+    void UpdateDynamicBVH();
+
+    //-- \Dynamic Mesh stuff
 
     HYP_FORCE_INLINE const MeshDesc& GetMeshDesc() const
     {

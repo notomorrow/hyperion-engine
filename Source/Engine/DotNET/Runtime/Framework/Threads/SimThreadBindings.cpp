@@ -18,6 +18,11 @@ using namespace Hyperion;
 
 extern "C"
 {
+    HYP_EXPORT int32 SimThread_IsOnIt()
+    {
+        return IsOnThread(g_simThread);
+    }
+
     HYP_EXPORT void SimThread_PostTask(void (*pTaskFunc)())
     {
         Assert(pTaskFunc != nullptr);

@@ -170,6 +170,23 @@ namespace Hyperion.Editor.ViewModels
         public ICommand AddNormalizedCubeSphereCommand { get; private set; }
         public EditorCommand AddCylinder => new EditorCommand("AddCylinder");
 
+        // Terrain
+        public EditorCommand AddTerrainLayer => new EditorCommand("AddTerrainLayer");
+        public EditorCommand ToggleTerrainSculptMode => new EditorCommand("ToggleTerrainSculptMode");
+
+        private bool _canToggleTerrainSculptMode = false;
+        public bool CanToggleTerrainSculptMode
+        {
+            get => _canToggleTerrainSculptMode;
+            set => SetProperty(ref _canToggleTerrainSculptMode, value);
+        }
+
+        private bool _isInTerrainSculptMode = false;
+        public bool IsInTerrainSculptMode
+        {
+            get => _isInTerrainSculptMode;
+        }
+
         // Templates
         public EditorCommand AddPlayerEntity => new EditorCommand("AddPlayerEntity");
 
@@ -318,6 +335,7 @@ namespace Hyperion.Editor.ViewModels
             OnPropertyChanged(nameof(CanSetGameModeStopped));
             OnPropertyChanged(nameof(IsSimulating));
             OnPropertyChanged(nameof(GameStateText));
+            OnPropertyChanged(nameof(CanToggleTerrainSculptMode));
         }
 
         private DelegateHandler? _gameInstanceLaunchedHandler;
@@ -391,6 +409,8 @@ namespace Hyperion.Editor.ViewModels
             PanelService.Instance.ActivePanelChanged += OnActivePanelChanged;
 
             SceneHierarchy = new SceneHierarchyViewModel();
+            SceneHierarchy.SceneChildrenChanged += OnSceneChildrenChanged;
+
             Inspector = new InspectorViewModel();
             ForegroundTask = new ForegroundTaskViewModel();
 
@@ -783,11 +803,46 @@ namespace Hyperion.Editor.ViewModels
                 EngineManager.TaskEnded -= OnTaskEnded;
                 EngineManager.TaskProgressUpdated -= OnTaskProgressUpdated;
 
+                SceneHierarchy.SceneChildrenChanged -= OnSceneChildrenChanged;
+
                 SceneHierarchy.SelectedNodeChanged -= OnSceneHierarchyNodeSelected;
                 SceneHierarchy.SelectionChanged -= OnSceneHierarchySelectionChanged;
                 
                 ContentBrowser.Dispose();
             }
+        }
+
+        private void OnSceneChildrenChanged(Scene scene)
+        {
+            Action checkItAndSetIt = () =>
+            {
+                // check it
+                bool canSculptTerrain = scene != null && _editorSubsystem.CanSculptTerrainForScene(scene);
+                bool isInSculptMode = scene != null && _editorSubsystem.IsTerrainSculptModeEnabled();
+
+                Logger.Log(LogLevel.Info, "Can sculpt terrain = {0}", canSculptTerrain);
+
+                // set it (on the ui thread of course)
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _canToggleTerrainSculptMode = canSculptTerrain;
+                    _isInTerrainSculptMode = isInSculptMode;
+
+                    OnPropertyChanged(nameof(CanToggleTerrainSculptMode));
+                    OnPropertyChanged(nameof(IsInTerrainSculptMode));
+                });
+            };
+
+            if (EngineManager.IsOnSimThread)
+            {
+                // just do it
+                checkItAndSetIt();
+
+                return;
+            }
+
+            // make the sim thread do it for us
+            EngineManager.PostToSimThread(checkItAndSetIt);
         }
 
         private void OnTaskStarted(EditorTaskBase task, bool isForegroundTask)
@@ -850,10 +905,11 @@ namespace Hyperion.Editor.ViewModels
 
         private void HandleActiveSceneChanged(Scene? scene)
         {
+            bool canSculptTerrain = scene != null && _editorSubsystem.CanSculptTerrainForScene(scene);
+            bool isInTerrainSculptMode = scene != null && _editorSubsystem.IsTerrainSculptModeEnabled();
+
             Dispatcher.UIThread.Post(() =>
             {
-                Logger.Log(LogLevel.Info, "Changing active scene in c#");
-
                 if (!_isReady)
                 {
                     return;
@@ -868,6 +924,8 @@ namespace Hyperion.Editor.ViewModels
 
                     OnPropertyChanged(nameof(ActiveScene));
                     OnPropertyChanged(nameof(CanAddToScene));
+                    OnPropertyChanged(nameof(CanToggleTerrainSculptMode));
+                    OnPropertyChanged(nameof(IsInTerrainSculptMode));
 
                     return;
                 }
@@ -884,10 +942,14 @@ namespace Hyperion.Editor.ViewModels
                     OnPropertyChanged(nameof(Scenes));
                 }
 
+                _canToggleTerrainSculptMode = canSculptTerrain;
+
                 SceneHierarchy.AttachToScene(scene);
 
                 OnPropertyChanged(nameof(ActiveScene));
                 OnPropertyChanged(nameof(CanAddToScene));
+                OnPropertyChanged(nameof(CanToggleTerrainSculptMode));
+                OnPropertyChanged(nameof(IsInTerrainSculptMode));
             });
         }
 

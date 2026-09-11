@@ -18,9 +18,8 @@ namespace Hyperion.Editor
 
         public static EditorProject? CurrentProject { get; private set; }
 
-
         private static List<EditorViewport> _registeredViewports = new List<EditorViewport>();
-        private static Lock _lockViewports = new Lock();
+        private static Lock _lockViewports = new();
 
         private static DelegateHandler? _onCurrentProjectChanged;
 
@@ -330,6 +329,8 @@ namespace Hyperion.Editor
                 }
             }
         }
+
+        public static bool IsOnSimThread => SimThread.IsOnIt;
 
         public static async Task PostToSimThread(Action action)
         {

@@ -16,6 +16,7 @@
 
 #include <Core/Functional/Delegate.hpp>
 #include <Core/Containers/Set.hpp>
+
 #include <Core/Utilities/ClockTimer.hpp>
 
 namespace Hyperion {
@@ -50,6 +51,7 @@ class View;
 class EditorViewport;
 class LightmapVolume;
 class VolumeBase;
+class TerrainWorldGridLayer;
 class AppContextBase;
 struct Ray;
 
@@ -550,6 +552,31 @@ public:
 
     const EditorGizmoSet& GetGizmos() const;
 
+    //-- Terrain
+
+    HYP_METHOD()
+    bool IsTerrainSculptModeEnabled() const;
+
+    HYP_METHOD()
+    void SetTerrainSculptModeEnabled(bool enabled);
+
+    HYP_METHOD()
+    float GetTerrainSculptRadius() const;
+
+    HYP_METHOD()
+    void SetTerrainSculptRadius(float radius);
+
+    HYP_METHOD()
+    float GetTerrainSculptStrength() const;
+
+    HYP_METHOD()
+    void SetTerrainSculptStrength(float strength);
+
+    HYP_METHOD()
+    bool CanSculptTerrainForScene(const Handle<Scene>& scene) const;
+
+    //-- Mesh edits
+
     HYP_METHOD()
     bool IsMeshEditModeEnabled() const;
 
@@ -580,11 +607,6 @@ public:
     HYP_METHOD()
     int GetMeshEditLockedAxis() const;
 
-    EditorActionStack* GetActiveActionStack() const;
-
-    HYP_METHOD()
-    MeshEditFaceMode GetMeshEditFaceMode() const;
-
     HYP_METHOD()
     void SetMeshEditFaceMode(MeshEditFaceMode faceMode);
 
@@ -595,10 +617,22 @@ public:
     void SetMeshEditAlignToNormal(bool alignToNormal);
 
     HYP_METHOD()
+    MeshEditFaceMode GetMeshEditFaceMode() const;
+
+    //-- action stack
+
+    EditorActionStack* GetActiveActionStack() const;
+
+    //- Snappy
+
+    HYP_METHOD()
     bool IsSnapToGridEnabled() const;
 
     HYP_METHOD()
     void SetSnapToGridEnabled(bool snapToGrid);
+
+    //-- Swatch overrides
+
 
     HYP_METHOD()
     bool IsSwatchOverrideModeEnabled() const
@@ -611,8 +645,6 @@ public:
     {
         m_swatchOverrideMode = enabled;
     }
-
-    //-- Swatch overrides
 
     HYP_METHOD()
     Array<Name> GetEntitySwatchOverrideSets(Entity* entity) const;
@@ -644,6 +676,8 @@ public:
     HYP_METHOD()
     void EntityRevertSwatchOverrides(Entity* entity) const;
 
+    //-- Phys
+
     HYP_METHOD()
     bool IsPhysicsDebugDrawEnabled() const;
 
@@ -661,6 +695,8 @@ public:
     void FitPhysicsShapeToMesh();
 
     void SyncBoxPhysicsShapeToLocalBounds(Entity* entity);
+
+    //-- 
 
     HYP_METHOD()
     void SetSelectedBucket(uint32 bucketIndex);
@@ -805,7 +841,17 @@ private:
 
     bool BackOutOfMeshEditState();
 
-    //-- 
+    //-- Terrain
+    
+    bool TryGetTerrainSculptHit(const Vec2f& relativePos, Handle<TerrainWorldGridLayer>& outLayer, Vec3f& outWorldPos) const;
+
+    bool TryApplyTerrainSculptAtScreenPos(const Vec2f& relativePos, bool lower, float dt);
+
+    void UpdateTerrainSculptHover(const Vec2f& relativePos);
+
+    void DebugDrawTerrainSculptCursor(class DebugDrawCommandList& debugDrawCommandList);
+
+    //--
 
     void DebugDrawPhysicsShapes(class DebugDrawCommandList& debugDrawCommandList);
 
@@ -821,18 +867,6 @@ private:
     {
         return SubsystemUpdatePhase::AfterVis;
     }
-
-    Handle<Scene> m_editorScene;
-
-    // The project.
-    Handle<EditorProject> m_currentProject;
-    // The project, but only used when we start simulation and need to restore the pre-simulation state after we end simulation.
-    Handle<EditorProject> m_preSimulationProject;
-
-    WeakHandle<Scene> m_activeScene;
-
-    EditorManipulationMode m_selectedManipulationMode;
-    EditorGizmoSet m_gizmos;
 
     struct MeshEditState
     {
@@ -856,22 +890,51 @@ private:
         Optional<MeshEditDragData> dragData;
     } m_meshEditState;
 
-    bool m_snapToGridEnabled;
-    bool m_swatchOverrideMode;
+    //--
+
+    struct TerrainSculptState
+    {
+        bool enabled = false;
+        float radius = 5.0f;
+        float strength = 2.0f;
+
+        bool hasHover = false;
+        Vec3f hoverWorldPos;
+
+        bool isPainting = false;
+        bool paintLower = false;
+        Vec2f paintScreenPos;
+
+        ClockTimer strokeTimer;
+    } m_terrainSculptState;
+
+    void UpdateTerrainSculptState();
+    void BeginTerrainSculptStroke(const Vec2f& relativePos, bool lower);
+    void UpdateTerrainSculptStroke(const Vec2f& relativePos, bool lower);
+    void EndTerrainSculptStroke();
+
+    //--
+
+    Handle<Scene> m_editorScene;
+
+    // The project.
+    Handle<EditorProject> m_currentProject;
+    // The project, but only used when we start simulation and need to restore the pre-simulation state after we end simulation.
+    Handle<EditorProject> m_preSimulationProject;
+
+    WeakHandle<Scene> m_activeScene;
+
+    EditorManipulationMode m_selectedManipulationMode;
+    EditorGizmoSet m_gizmos;
 
     WeakHandle<EditorGizmoBase> m_hoveredGizmo;
     WeakHandle<Node> m_hoveredGizmoNode;
-
-    bool m_gizmosHiddenByProximity;
 
     WeakHandle<Node> m_focusedNode;
     // the actual node that displays the highlight for the focused item
     Handle<Node> m_highlightNode;
 
     Set<Handle<Node>, EditorAllocator> m_selectedNodes;
-
-    bool m_editorCameraEnabled;
-    bool m_shouldCancelNextClick;
 
     EditorDelegates* m_editorDelegates;
 
@@ -889,6 +952,16 @@ private:
     Handle<Material> m_meshPreviewMaterial;
 
     DelegateHandlerSet m_delegateHandlers;
+
+    //--
+
+    bool m_snapToGridEnabled;
+    bool m_swatchOverrideMode;
+
+    bool m_gizmosHiddenByProximity;
+
+    bool m_editorCameraEnabled;
+    bool m_shouldCancelNextClick;
 };
 
 } // namespace Hyperion
