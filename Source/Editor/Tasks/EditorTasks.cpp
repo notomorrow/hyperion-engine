@@ -258,7 +258,7 @@ void GenerateBentNormalsEditorTask::Start()
         lightmapperSubsystem = m_world->AddSubsystem<BakerSubsystem>();
     }
 
-    const uint32 bentNormalOnlyMask = 1u << uint32(Baking::LightmapShadingType::BENT_NORMAL);
+    const uint32 bentNormalOnlyMask = 1u << uint32(Baking::PathTraceType::BentNormals);
 
     Handle<Swatch> activeSwatch = m_world->GetActiveSwatch();
     Assert(activeSwatch.IsValid());

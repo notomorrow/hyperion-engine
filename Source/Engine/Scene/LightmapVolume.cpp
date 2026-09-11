@@ -605,7 +605,7 @@ void LightmapVolume::UpdateRenderProxy(RenderProxyLightmapVolume* proxy)
 
 #ifdef HYP_EDITOR
 
-template <Baking::LightmapShadingType ShadingType>
+template <Baking::PathTraceType ShadingType>
 static void EnqueueBake(LightmapVolume& self)
 {
     World* world = self.GetWorld();
@@ -639,12 +639,12 @@ static void EnqueueBake(LightmapVolume& self)
 
 void LightmapVolume::BakeLightmap()
 {
-    EnqueueBake<Baking::LightmapShadingType::LIGHTMAP>(*this);
+    EnqueueBake<Baking::PathTraceType::Lightmap>(*this);
 }
 
 void LightmapVolume::BakeBentNormals()
 {
-    EnqueueBake<Baking::LightmapShadingType::BENT_NORMAL>(*this);
+    EnqueueBake<Baking::PathTraceType::BentNormals>(*this);
 }
 
 #endif // HYP_EDITOR

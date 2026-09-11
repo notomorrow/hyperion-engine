@@ -11,7 +11,7 @@
 #include <Baking/BakeData.hpp>
 #include <Baking/BakerThreadPool.hpp>
 
-#include <Baking/Lightmaps/LightmapPathTraceGpu.hpp>
+#include <Baking/PathTracer/PathTracer.hpp>
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/RenderHelpers.hpp>
@@ -328,7 +328,7 @@ BakeJobParams BakerBase::CreateLightmapJobParams(size_t startIndex, size_t endIn
     return jobParams;
 }
 
-UniquePtr<PathTracer> BakerBase::CreatePathTracer(LightmapShadingType shadingType, uint32 maxTexelsPerFrame)
+UniquePtr<PathTracer> BakerBase::CreatePathTracer(PathTraceType shadingType, uint32 maxTexelsPerFrame)
 {
     if (!PerformsRayTracing())
     {

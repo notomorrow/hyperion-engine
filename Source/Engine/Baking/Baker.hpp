@@ -71,14 +71,14 @@ struct LightmapRay;
 class PathTracer;
 
 HYP_ENUM()
-enum class LightmapShadingType : uint32
+enum class PathTraceType : uint32
 {
-    LIGHTMAP = 0,   // Lightmap irradiance
-    FULL,           // Full scene bake (reflection probe)
-    IRRADIANCE,     // Irradiance probe
-    DISTANCE,       // Bake ray hit distance (for variance shadow maps / visibility)
-    BENT_NORMAL,    // Bake bent normal 
-    MAX
+    Lightmap = 0,       // Lightmap irradiance
+    Radiance,           // Full scene bake (reflection probe)
+    Irradiance,         // Irradiance probe
+    Moments,            // Bake ray hit distance (for variance shadow maps / visibility)
+    BentNormals,        // Bake bent normal 
+    Max
 };
 
 HYP_STRUCT(ConfigName = "EngineConfig", JsonPath = "Baker")
@@ -205,7 +205,7 @@ public:
     /*! \brief Get the bitmask of shading types this Lightmapper instance should bake for. */
     virtual uint32 GetShadingTypesMask() const
     {
-        return 1u << int(LightmapShadingType::FULL);
+        return 1u << int(PathTraceType::Radiance);
     }
 
     /*! \brief Restrict this bake to a specific subset of shading types instead of the baker's default mask
@@ -321,7 +321,7 @@ protected:
     }
 
     virtual UniquePtr<BakeJobBase> CreateJob(BakeJobParams&& params) = 0;
-    virtual UniquePtr<PathTracer> CreatePathTracer(LightmapShadingType shadingType, uint32 maxTexelsPerFrame);
+    virtual UniquePtr<PathTracer> CreatePathTracer(PathTraceType shadingType, uint32 maxTexelsPerFrame);
 
     virtual void CreateLightmapRenderers();
 

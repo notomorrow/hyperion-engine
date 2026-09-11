@@ -6,7 +6,7 @@
 
 #include <HyperionPch.hpp>
 
-#include <Baking/Lightmaps/LightmapPathTraceGpu.hpp>
+#include <Baking/PathTracer/PathTracer.hpp>
 
 #include <Baking/EnvProbe/EnvProbeBaker.hpp>
 #include <Baking/EnvProbe/EnvProbeBakeJob.hpp>
@@ -77,14 +77,14 @@ void Baker<EnvProbe>::CreateLightmapRenderers()
     const uint32 maxTexelsPerFrame = MaxTexelsPerFrame();
     AssertDebug(maxTexelsPerFrame > 0);
 
-    for (uint32 i = 0; i < uint32(LightmapShadingType::MAX); i++)
+    for (uint32 i = 0; i < uint32(PathTraceType::Max); i++)
     {
         if (!(shadingTypesMask & (1u << i)))
         {
             continue;
         }
 
-        const UniquePtr<PathTracer>& pathTracer = m_pathTracers.PushBack(CreatePathTracer(LightmapShadingType(i), maxTexelsPerFrame));
+        const UniquePtr<PathTracer>& pathTracer = m_pathTracers.PushBack(CreatePathTracer(PathTraceType(i), maxTexelsPerFrame));
 
         if (!pathTracer)
         {

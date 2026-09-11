@@ -1,6 +1,6 @@
 #include <HyperionPch.hpp>
 
-#include <Baking/Lightmaps/LightmapPathTraceGpu.hpp>
+#include <Baking/PathTracer/PathTracer.hpp>
 
 #include <Baking/LightmapTexel.hpp>
 
@@ -81,20 +81,20 @@ namespace Baking {
 
 #pragma region PathTracer
 
-static StaticShaderPropertyId s_lightmapModeProperties[uint32(LightmapShadingType::MAX)] = {
-    StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("LIGHTMAP")) },
-    StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("FULL")) },
+static StaticShaderPropertyId s_pathTraceTypeProps[uint32(PathTraceType::Max)] = {
+    StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("LIGHTMAP")) },      
+    StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("RADIANCE")) },
     StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("IRRADIANCE")) },
-    StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("DISTANCE")) },
-    StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("BENT_NORMAL")) }
+    StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("MOMENTS")) },
+    StaticShaderPropertyId { ShaderProperty(NAME("MODE"), NAME("BENT_NORMALS")) }
 };
 
-static ShaderDesc GetShaderDesc(LightmapShadingType shadingType)
+static ShaderDesc GetShaderDesc(PathTraceType shadingType)
 {
     ShaderPropertySet shaderProperties;
     shaderProperties.Add(s_propMaxLights);
     shaderProperties.Add(s_propMaxEnvProbes);
-    shaderProperties.Add(s_lightmapModeProperties[uint32(shadingType)]);
+    shaderProperties.Add(s_pathTraceTypeProps[uint32(shadingType)]);
 
     return ShaderDesc(NAME("LightmapPathTracer"), shaderProperties);
 }
@@ -102,7 +102,7 @@ static ShaderDesc GetShaderDesc(LightmapShadingType shadingType)
 PathTracer::PathTracer(
     BakerBase* baker,
     const Handle<Scene>& scene,
-    LightmapShadingType shadingType,
+    PathTraceType shadingType,
     uint32 maxTexelsPerFrame)
     : m_baker(baker),
       m_scene(scene),
@@ -382,21 +382,22 @@ void PathTracer::ReadHitsBuffer(
     cr.Done();
 }
 
-PathTracerRenderResult PathTracer::Render(Frame* frame, const RenderSetup& renderSetup, BakeJobBase* job, Span<const LightmapRay> rays, uint32 rayOffset)
+PathTraceResult PathTracer::Render(Frame* frame, const RenderSetup& renderSetup, BakeJobBase* job, Span<const LightmapRay> rays, uint32 rayOffset)
 {
     AssertOnThread(g_renderThread);
 
     if (rays.Size() == 0)
     {
-        return PathTracerRenderResult::Failed;
+        return PathTraceResult::Failed;
     }
 
     Assert(CanRender());
 
     AssertDebug(renderSetup.world);
 
-    RenderProxyList& rpl = *renderSetup.view->GetRenderProxyList(GetRingIndex()); // GetConsumerProxyList(renderSetup.view);
+    RenderProxyList& rpl = *renderSetup.view->GetRenderProxyList(GetRingIndex());
     rpl.BeginRead();
+
     HYP_DEFER({ rpl.EndRead(); });
 
     AssertDebug(rpl.isShared);
@@ -407,24 +408,13 @@ PathTracerRenderResult PathTracer::Render(Frame* frame, const RenderSetup& rende
     {
         // no BottomLevelAS to process if TLAS not created
         HYP_LOG(Lightmap, Error, "No top level acceleration structure created, cannot bake lightmap");
-        return PathTracerRenderResult::Failed;
+
+        return PathTraceResult::Failed;
     }
 
     if (builtAccelerationStructures)
     {
-        //--
-        // We run from inside command execution, which is past the point where the render thread
-        // updates the global descriptor sets and drains the deferred buffer flushes for this frame.
-        // Building the acceleration structures above registered new bindless vertex/index buffer
-        // descriptors and queued the TLAS mesh descriptions upload, so neither is in place yet.
-        // Tracing now would read whichever descriptors and mesh descriptions those slots held
-        // before, giving hits with zeroed vertex data - which surfaces as exactly one corrupt
-        // cubemap face (the first batch of a bake) with flat, unlit shading.
-        //
-        // Skip the dispatch. The caller re-queues this batch, and by the time it comes back around
-        // the builds, the descriptor writes and the mesh descriptions upload all precede it.
-        //--
-        return PathTracerRenderResult::Deferred;
+        return PathTraceResult::Deferred;
     }
 
     UpdatePipelineState(frame, job);
@@ -668,7 +658,7 @@ PathTracerRenderResult PathTracer::Render(Frame* frame, const RenderSetup& rende
 
     cr.Done();
 
-    return PathTracerRenderResult::Dispatched;
+    return PathTraceResult::Dispatched;
 }
 
 #pragma endregion PathTracer

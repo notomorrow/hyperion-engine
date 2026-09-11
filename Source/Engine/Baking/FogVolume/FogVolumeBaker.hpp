@@ -48,7 +48,7 @@ public:
 
     virtual uint32 GetShadingTypesMask() const override
     {
-        return 1u << int(LightmapShadingType::FULL);
+        return 1u << int(PathTraceType::Radiance);
     }
 
     virtual bool ShouldSplitIntoJobs() const override

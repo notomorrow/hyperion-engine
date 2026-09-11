@@ -23,16 +23,11 @@ struct GpuLightmapperReadyNotification;
 
 namespace Baking {
 
-enum class PathTracerRenderResult : uint8
+enum class PathTraceResult : uint8
 {
-    /*! Rays were dispatched; a readback callback is pending and will signal the job. */
-    Dispatched = 0,
-
-    /*! Nothing was dispatched, but the same batch can be traced again on a later frame. */
-    Deferred,
-
-    /*! Nothing was dispatched and retrying will not help. */
-    Failed
+    Dispatched = 0, //!< Read back pending
+    Deferred,       //!< Can be retried
+    Failed          //!< RIP
 };
 
 class PathTracer final
@@ -43,7 +38,7 @@ public:
     PathTracer(
         BakerBase* baker,
         const Handle<Scene>& scene,
-        LightmapShadingType shadingType,
+        PathTraceType shadingType,
         uint32 maxTexelsPerFrame);
     
     PathTracer(const PathTracer& other) = delete;
@@ -59,7 +54,7 @@ public:
         return UINT32_MAX;
     }
 
-    LightmapShadingType GetShadingType() const
+    PathTraceType GetShadingType() const
     {
         return m_shadingType;
     }
@@ -70,7 +65,7 @@ public:
     void CleanJobData(BakeJobBase* job);
     void ReadHitsBuffer(Frame* frame, BakeJobBase* job, size_t count, Proc<void(Span<LightmapHit> hits)>&& callback);
 
-    PathTracerRenderResult Render(Frame* frame, const RenderSetup& renderSetup, BakeJobBase* job, Span<const LightmapRay> rays, uint32 rayOffset);
+    PathTraceResult Render(Frame* frame, const RenderSetup& renderSetup, BakeJobBase* job, Span<const LightmapRay> rays, uint32 rayOffset);
 
 private:
     struct JobData
@@ -91,7 +86,7 @@ private:
     BakerBase* m_baker;
 
     Handle<Scene> m_scene;
-    LightmapShadingType m_shadingType;
+    PathTraceType m_shadingType;
     uint32 m_maxTexelsPerFrame;
 
     Map<BakeJobBase*, JobData> m_jobData;

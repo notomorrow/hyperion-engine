@@ -41,13 +41,12 @@ void VisibilityStateUpdaterSystem::OnEntityRemoved(Entity* entity)
         return;
     }
 
-    // entity->GetScene() already reports the destination scene mid-move, so gate on the EntityManager's scene instead.
     if (!ShouldProcessScene(entityManager->GetScene()))
     {
         return;
     }
 
-    VisibilityStateComponent* visibilityStateComponent = entityManage->TryGetComponent<VisibilityStateComponent>(entity);
+    VisibilityStateComponent* visibilityStateComponent = entityManager->TryGetComponent<VisibilityStateComponent>(entity);
 
     if (!visibilityStateComponent)
     {

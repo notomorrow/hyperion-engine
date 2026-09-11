@@ -50,12 +50,12 @@ public:
             return m_shadingTypesMaskOverride;
         }
 
-        return (1u << int(LightmapShadingType::LIGHTMAP));
+        return (1u << int(PathTraceType::Lightmap));
     }
 
     virtual uint32 NumTexelSamples() const override
     {
-        if (m_shadingTypesMaskOverride == (1u << int(LightmapShadingType::BENT_NORMAL)))
+        if (m_shadingTypesMaskOverride == (1u << int(PathTraceType::BentNormals)))
         {
             return m_config.bentNormalSamples;
         }
