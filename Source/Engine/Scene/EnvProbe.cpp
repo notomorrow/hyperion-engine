@@ -52,10 +52,12 @@ static StaticShaderPropertyId s_propApplyLightmaps { ShaderProperty(NAME("APPLY_
 static StaticShaderPropertyId s_propWriteMoments { ShaderProperty(NAME("WRITE_MOMENTS")) };
 static StaticShaderPropertyId s_propWriteHitMask { ShaderProperty(NAME("WRITE_HIT_MASK")) };
 
+static constexpr EnumFlags<EnvProbeFlags> SharedDefaultEnvProbeFlags = EPF_ORIGIN_FROM_CENTER | EPF_ONLY_SAME_SCENE;
+
 static constexpr EnumFlags<EnvProbeFlags> DefaultEnvProbeFlags[EPT_MAX] = {
-    EPF_ORIGIN_FROM_CENTER,                                                                                 // sky
-    EPF_ORIGIN_FROM_CENTER | EPF_BAKED | EPF_VISIBILITY | EPF_HIT_MASK | EPF_PARALLAX_CORRECTED,            // reflection
-    EPF_ORIGIN_FROM_CENTER | EPF_BAKED | EPF_VISIBILITY | EPF_HIT_MASK                                      // irradiance
+    SharedDefaultEnvProbeFlags,                                                                         // sky
+    SharedDefaultEnvProbeFlags | EPF_BAKED | EPF_VISIBILITY | EPF_HIT_MASK | EPF_PARALLAX_CORRECTED,    // reflection
+    SharedDefaultEnvProbeFlags | EPF_BAKED | EPF_VISIBILITY | EPF_HIT_MASK                              // irradiance
 };
 
 static constexpr EnvProbeDimensions DefaultDimensionsByType[EPT_MAX] = {
@@ -508,7 +510,7 @@ void EnvProbe::SetEnvProbeFlags(EnumFlags<EnvProbeFlags> envProbeFlags)
     bool dirtyViewData = false;
 
     // @TODO stupid overloads for EnumFlags... fix
-    if ((changedFlags & uint32(EPF_BAKED | EPF_VISIBILITY | EPF_HIT_MASK | EPF_PATH_TRACED)) != 0)
+    if ((changedFlags & uint32(EPF_BAKED | EPF_VISIBILITY | EPF_HIT_MASK | EPF_PATH_TRACED | EPF_ONLY_SAME_SCENE)) != 0)
     {
         dirtyViewData = true;
         shouldForceRerender = true;
@@ -839,9 +841,14 @@ void EnvProbe::CreateViewData()
         viewDesc.viewIndex = uint8(viewIndex);
         viewDesc.camera = m_camera;
 
-        if (m_scene != nullptr)
+        if ((m_envProbeFlags & EnvProbeFlags::EPF_ONLY_SAME_SCENE) && m_scene != nullptr)
         {
             viewDesc.scenes = { m_scene };
+        }
+        else
+        {
+            // capture all foreground scenes if !EPF_ONLY_SAME_SCENE OR our Scene is null
+            viewDesc.flags |= ViewFlags::ALL_FOREGROUND_SCENES;
         }
 
         Handle<View> view = MakeHandle<View>(viewDesc);

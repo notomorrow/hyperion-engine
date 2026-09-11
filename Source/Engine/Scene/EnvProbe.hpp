@@ -49,7 +49,8 @@ enum EnvProbeFlags : uint32
     EPF_ORIGIN_FROM_CENTER = 0x8, //!< @title="Origin from center"
     EPF_VISIBILITY = 0x10,        //!< @title="Prevent light leaking" @description="This EnvProbe stores distance values to a texture, used to prevent light leaks at the cost of more memory usage and rendering time."
     EPF_PATH_TRACED = 0x20,       //!< @title="Path traced" @description="Bake this probe using hardware ray tracing"
-    EPF_HIT_MASK = 0x40           //!< @editor=false
+    EPF_HIT_MASK = 0x40,          //!< @editor=false
+    EPF_ONLY_SAME_SCENE = 0x80    //!< @title="Only capture entities in same Scene" @description="When enabled, the EnvProbe will capture Entity instances that are in the current Scene as the EnvProbe. Otherwise, will capture Entity instances across Scenes."
 };
 
 // clang-format on

@@ -170,7 +170,7 @@ void World::Initialize()
 
         ViewDesc rayTracingViewDesc {};
         rayTracingViewDesc.flags = ViewFlags::RAY_TRACING | ViewFlags::NO_DRAW_CALLS
-            | ViewFlags::ALL_WORLD_SCENES | ViewFlags::COLLECT_ALL_ENTITIES
+            | ViewFlags::ALL_FOREGROUND_SCENES | ViewFlags::COLLECT_ALL_ENTITIES
             | ViewFlags::SKIP_LIGHTS
             | ViewFlags::SKIP_LIGHTMAP_VOLUMES
             | ViewFlags::SKIP_ENV_PROBES
@@ -209,7 +209,7 @@ void World::Initialize()
         {
             for (View* view : m_views)
             {
-                if (!(view->GetFlags() & ViewFlags::ALL_WORLD_SCENES))
+                if (!(view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES))
                 {
                     continue;
                 }
@@ -377,7 +377,7 @@ void World::Shutdown()
         {
             for (View* view : m_views)
             {
-                if (!(view->GetFlags() & ViewFlags::ALL_WORLD_SCENES))
+                if (!(view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES))
                 {
                     continue;
                 }
@@ -1472,7 +1472,7 @@ void World::AddScene(const Handle<Scene>& scene, bool addToStreamingLayer)
         {
             for (View* view : m_views)
             {
-                if (!(view->GetFlags() & ViewFlags::ALL_WORLD_SCENES))
+                if (!(view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES))
                 {
                     continue;
                 }
@@ -1598,7 +1598,7 @@ void World::AddView(View* view)
         }
 
         // Add all scenes to the view, if the view should collect all world scenes
-        if (view->GetFlags() & ViewFlags::ALL_WORLD_SCENES)
+        if (view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES)
         {
             for (const Handle<Scene>& scene : m_scenes)
             {
@@ -1630,7 +1630,7 @@ void World::RemoveView(View* view)
         view->m_rayTracingView.Reset();
 
         // Remove all scenes from the view, if the view should collect all world scenes
-        if (view->GetFlags() & ViewFlags::ALL_WORLD_SCENES)
+        if (view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES)
         {
             for (const Handle<Scene>& scene : m_scenes)
             {
@@ -1743,7 +1743,7 @@ void World::DeserializeNonStreamingScenes(const Array<Handle<Scene>>& scenes)
             {
                 for (View* view : m_views)
                 {
-                    if (!(view->GetFlags() & ViewFlags::ALL_WORLD_SCENES))
+                    if (!(view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES))
                     {
                         continue;
                     }

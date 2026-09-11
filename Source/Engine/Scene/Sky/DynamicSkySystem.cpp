@@ -154,7 +154,7 @@ void DynamicSkySystem::InitializeSky()
         topDownViewDesc.camera = m_topDownCamera;
         topDownViewDesc.flags = ViewFlags::COLLECT_STATIC_ENTITIES
             | ViewFlags::NO_SHADOW_VIEWS
-            | ViewFlags::ALL_WORLD_SCENES
+            | ViewFlags::ALL_FOREGROUND_SCENES
             | ViewFlags::NO_ASYNC_SHADER_LOADING
             | ViewFlags::NO_FRUSTUM_CULLING; // TEMP
 
