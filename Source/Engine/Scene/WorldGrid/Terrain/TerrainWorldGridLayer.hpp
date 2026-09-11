@@ -8,6 +8,8 @@
 
 #include <Scene/WorldGrid/WorldGridLayer.hpp>
 
+#include <Asset/AssetObject.hpp>
+
 #include <Core/Reflection/Handle.hpp>
 
 #include <Core/Memory/UniquePtr.hpp>
@@ -86,6 +88,17 @@ protected:
     UniquePtr<NoiseCombinator> m_noiseCombinator;
     FlatMap<Vec2i, WeakHandle<TerrainStreamingCell>> m_loadedCells;
     FlatMap<Vec2i, bool> m_cellsModifiedSinceStrokeEnd;
+
+    struct DeltaSampleCache
+    {
+        Handle<TerrainCellData> cell;
+        TSharedResLock<AssetObject> scope;
+        ConstByteView blobData;
+
+        void Invalidate();
+    };
+    
+    mutable DeltaSampleCache m_deltaSampleCache;
 };
 
 } // namespace Hyperion

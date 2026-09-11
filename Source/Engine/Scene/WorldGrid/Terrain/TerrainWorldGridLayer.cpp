@@ -59,9 +59,16 @@ static UniquePtr<NoiseCombinator> MakeTerrainNoiseCombinator(uint32 seed)
     return noiseCombinator;
 }
 
+static const Name s_terrainSceneName = NAME("TerrainScene");
+
 static Handle<Scene> MakeTerrainScene()
 {
-    return MakeHandle<Scene>(NAME("TerrainScene"), SceneFlags::FOREGROUND | SceneFlags::HAS_OCTREE);
+    Handle<Scene> scene = MakeHandle<Scene>(s_terrainSceneName, SceneFlags::FOREGROUND | SceneFlags::HAS_OCTREE);
+
+    // don't save; it's generated at runtime by the terrain layer
+    scene->SetIsTransient(true);
+
+    return scene;
 }
 
 TerrainWorldGridLayer::TerrainWorldGridLayer()
@@ -98,8 +105,11 @@ void TerrainWorldGridLayer::OnAdded(WorldGrid* worldGrid)
 
     AssertDebug(worldGrid != nullptr);
     AssertDebug(m_scene.IsValid());
-    
+
     AssertDebug(m_layerInfo.scale.y == 1.0f, "TerrainWorldGridLayer requires scale.y == 1.0f");
+
+    World* world = worldGrid->GetWorld();
+    AssertDebug(world != nullptr);
 
     m_scene->Initialize();
 
@@ -119,7 +129,7 @@ void TerrainWorldGridLayer::OnAdded(WorldGrid* worldGrid)
 
     m_noiseCombinator = MakeTerrainNoiseCombinator(m_layerInfo.seed);
 
-    worldGrid->GetWorld()->AddScene(m_scene);
+    world->AddScene(m_scene);
 }
 
 void TerrainWorldGridLayer::OnRemoved(WorldGrid* worldGrid)
@@ -243,9 +253,13 @@ void TerrainWorldGridLayer::ApplyBrush(const Vec3f& worldPos, float radius, floa
                 InitObject(cellData);
             }
 
-            Span<float> delta = cellData->EnsureSculptDelta(cellSize * cellSize);
+            // Drop any held read scope on this cell first - EnsureWritableSculptDelta() takes a
+            // write scope when it has to allocate, and a writer lock cannot nest inside our own
+            // read scope.
+            m_deltaSampleCache.Invalidate();
 
-            if (delta.Size() == 0)
+            // Pages persisted data in from disk / allocates the buffer (write scope) as needed.
+            if (!cellData->EnsureWritableSculptDelta(cellSize * cellSize))
             {
                 continue;
             }
@@ -257,29 +271,47 @@ void TerrainWorldGridLayer::ApplyBrush(const Vec3f& worldPos, float radius, floa
             int32 maxVertexX = -1;
             int32 maxVertexZ = -1;
 
-            for (uint32 z = 0; z < cellSize; z++)
             {
-                for (uint32 x = 0; x < cellSize; x++)
+                // Writer scope excludes concurrent readers (e.g. streaming mesh builds) while
+                // the brush mutates the delta.
+                auto cellDataWriteScope = cellData->GetWriteScope();
+
+                Span<float> delta = cellData->GetSculptDeltaMutable();
+
+                if (delta.Size() != 0)
                 {
-                    const Vec2f vertexWorldXZ = cellWorldMinXZ + Vec2f(float(x), float(z)) * Vec2f(layerInfo.scale.x, layerInfo.scale.z);
-
-                    const float dist = (vertexWorldXZ - worldPosXZ).Length();
-
-                    if (dist > radius)
+                    for (uint32 z = 0; z < cellSize; z++)
                     {
-                        continue;
+                        for (uint32 x = 0; x < cellSize; x++)
+                        {
+                            const Vec2f vertexWorldXZ = cellWorldMinXZ + Vec2f(float(x), float(z)) * Vec2f(layerInfo.scale.x, layerInfo.scale.z);
+
+                            const float dist = (vertexWorldXZ - worldPosXZ).Length();
+
+                            if (dist > radius)
+                            {
+                                continue;
+                            }
+
+                            const float falloff = 1.0f - (dist / radius);
+                            const float weight = falloff * falloff * (3.0f - 2.0f * falloff); // smoothstep
+
+                            delta[z * cellSize + x] += (raise ? 1.0f : -1.0f) * strength * weight;
+                            anyModified = true;
+
+                            minVertexX = MathUtil::Min(minVertexX, int32(x));
+                            minVertexZ = MathUtil::Min(minVertexZ, int32(z));
+                            maxVertexX = MathUtil::Max(maxVertexX, int32(x));
+                            maxVertexZ = MathUtil::Max(maxVertexZ, int32(z));
+                        }
                     }
 
-                    const float falloff = 1.0f - (dist / radius);
-                    const float weight = falloff * falloff * (3.0f - 2.0f * falloff); // smoothstep
-
-                    delta[z * cellSize + x] += (raise ? 1.0f : -1.0f) * strength * weight;
-                    anyModified = true;
-
-                    minVertexX = MathUtil::Min(minVertexX, int32(x));
-                    minVertexZ = MathUtil::Min(minVertexZ, int32(z));
-                    maxVertexX = MathUtil::Max(maxVertexX, int32(x));
-                    maxVertexZ = MathUtil::Max(maxVertexZ, int32(z));
+                    if (anyModified)
+                    {
+                        // Marked inside the write scope: dirty blob data is kept resident when
+                        // read scopes release, so unsaved writes can't be unpaged underneath us.
+                        cellData->MarkDirty();
+                    }
                 }
             }
 
@@ -287,8 +319,6 @@ void TerrainWorldGridLayer::ApplyBrush(const Vec3f& worldPos, float radius, floa
             {
                 continue;
             }
-
-            cellData->MarkDirty();
 
             if (isNewCellData)
             {
@@ -311,6 +341,16 @@ void TerrainWorldGridLayer::ApplyBrush(const Vec3f& worldPos, float radius, floa
             }
         }
     }
+}
+
+void TerrainWorldGridLayer::DeltaSampleCache::Invalidate()
+{
+    HYP_SCOPE;
+    
+    blobData = ConstByteView();
+
+    scope.Reset();
+    cell.Reset();
 }
 
 float TerrainWorldGridLayer::SampleHeightAt(const Vec2f& worldXZ) const
@@ -350,11 +390,17 @@ float TerrainWorldGridLayer::SampleHeightAt(const Vec2f& worldXZ) const
         return height;
     }
 
-    auto cellDataReadScope = cellData->GetReadScope();
+    if (m_deltaSampleCache.cell != cellData)
+    {
+        m_deltaSampleCache.scope.Reset(*cellData);
 
-    ConstByteView blob = cellData->GetSculptDelta();
+        m_deltaSampleCache.cell = cellData;
+        m_deltaSampleCache.blobData = cellData->GetSculptDelta();
+    }
 
-    if (blob.Size() != size_t(cellSize) * size_t(cellSize) * sizeof(float))
+    ConstByteView blobData = m_deltaSampleCache.blobData;
+
+    if (blobData.Size() != size_t(cellSize) * size_t(cellSize) * sizeof(float))
     {
         return height;
     }
@@ -369,7 +415,7 @@ float TerrainWorldGridLayer::SampleHeightAt(const Vec2f& worldXZ) const
         return height;
     }
 
-    return height + reinterpret_cast<const float*>(blob.Data())[size_t(lz) * size_t(cellSize) + size_t(lx)];
+    return height + reinterpret_cast<const float*>(blobData.Data())[size_t(lz) * size_t(cellSize) + size_t(lx)];
 }
 
 bool TerrainWorldGridLayer::RaycastSurface(const Ray& ray, Vec3f& outHitPoint) const

@@ -140,6 +140,14 @@ namespace Hyperion.Editor
             ResetLayout();
         }
 
+        private void OnToolDropDownClick(object? sender, RoutedEventArgs e)
+        {
+            if (sender is Control { ContextMenu: ContextMenu menu })
+            {
+                menu.Open();
+            }
+        }
+
         /// <summary>
         /// Records each dockable's content by id so "Reset Layout" can rebuild the default
         /// layout tree with the original panel views.

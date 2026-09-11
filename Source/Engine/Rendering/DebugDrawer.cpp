@@ -178,7 +178,7 @@ void SphereDebugDrawShape::operator()(const Vec3f& position, float radius, const
 
 void SphereDebugDrawShape::operator()(const Vec3f& position, float radius, const Color& color, const RenderableAttributeSet& attributes)
 {
-    if (!list.GetDebugDrawer()->IsEnabled())
+    if (!list.GetDebugDrawer()->IsEnabled() || list.IsFull())
     {
         return;
     }
@@ -225,7 +225,7 @@ void AmbientProbeDebugDrawShape::UpdateBufferData(DebugDrawCommand* cmd, Immedia
 
 void AmbientProbeDebugDrawShape::operator()(const Vec3f& position, float radius, const EnvProbe& envProbe)
 {
-    if (!list.GetDebugDrawer()->IsEnabled())
+    if (!list.GetDebugDrawer()->IsEnabled() || list.IsFull())
     {
         return;
     }
@@ -274,7 +274,7 @@ void ReflectionProbeDebugDrawShape::UpdateBufferData(DebugDrawCommand* cmd, Imme
 
 void ReflectionProbeDebugDrawShape::operator()(const Vec3f& position, float radius, const EnvProbe& envProbe)
 {
-    if (!list.GetDebugDrawer()->IsEnabled())
+    if (!list.GetDebugDrawer()->IsEnabled() || list.IsFull())
     {
         return;
     }
@@ -358,7 +358,7 @@ void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, con
 
 void BoxDebugDrawShape::operator()(const Vec3f& position, const Vec3f& size, const Color& color, const RenderableAttributeSet& attributes)
 {
-    if (!list.GetDebugDrawer()->IsEnabled())
+    if (!list.GetDebugDrawer()->IsEnabled() || list.IsFull())
     {
         return;
     }
@@ -392,7 +392,7 @@ void BoxDebugDrawShape::operator()(const Transform& transform, const Color& colo
 
 void BoxDebugDrawShape::operator()(const Transform& transform, const Color& color, const RenderableAttributeSet& attributes)
 {
-    if (!list.GetDebugDrawer()->IsEnabled())
+    if (!list.GetDebugDrawer()->IsEnabled() || list.IsFull())
     {
         return;
     }
@@ -474,7 +474,7 @@ void CylinderDebugDrawShape::operator()(const Transform& transform, const Color&
 
 void CylinderDebugDrawShape::operator()(const Transform& transform, const Color& color, const RenderableAttributeSet& attributes)
 {
-    if (!list.GetDebugDrawer()->IsEnabled())
+    if (!list.GetDebugDrawer()->IsEnabled() || list.IsFull())
     {
         return;
     }
@@ -546,7 +546,7 @@ void PlaneDebugDrawShape::operator()(const FixedArray<Vec3f, 4>& points, const C
 
 void PlaneDebugDrawShape::operator()(const FixedArray<Vec3f, 4>& points, const Color& color, const RenderableAttributeSet& attributes)
 {
-    if (!list.GetDebugDrawer()->IsEnabled())
+    if (!list.GetDebugDrawer()->IsEnabled() || list.IsFull())
     {
         return;
     }
@@ -681,7 +681,7 @@ void TriangleDebugDrawShape::operator()(const Vec3f& v0, const Vec3f& v1, const 
 
 void TriangleDebugDrawShape::operator()(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, const Color& color, const RenderableAttributeSet& attributes)
 {
-    if (!list.GetDebugDrawer()->IsEnabled())
+    if (!list.GetDebugDrawer()->IsEnabled() || list.IsFull())
     {
         return;
     }
@@ -861,9 +861,20 @@ void DebugDrawer::Update()
         // concat all command lists and take ownership of the data
         for (DebugDrawCommandHeader& header : it.m_headers)
         {
-            const uint32 newAlignedOffset = ByteUtil::AlignAs(bufferOffset, 16);
-
             void* vp = it.m_buffer.Data() + header.offset;
+
+            if (m_headers[idx].Size() >= MaxHeaders)
+            {
+                // drop excess commands to stay within limits
+                if (header.destructFn)
+                {
+                    header.destructFn(vp);
+                }
+
+                continue;
+            }
+
+            const uint32 newAlignedOffset = ByteUtil::AlignAs(bufferOffset, 16);
 
             if (buffer.Size() < newAlignedOffset + header.size)
             {
@@ -1270,6 +1281,13 @@ DebugDrawCommandList::~DebugDrawCommandList()
     m_headers.Clear();
     m_buffer.Clear();
     m_bufferOffset = 0;
+}
+
+bool DebugDrawCommandList::IsFull() const
+{
+    HYP_SCOPE;
+
+    return m_headers.Size() >= m_debugDrawer->MaxHeaders;
 }
 
 void* DebugDrawCommandList::Alloc(uint32 size, uint32 alignment, DebugDrawCommandHeader& outHeader)

@@ -86,33 +86,81 @@ Span<const float> TerrainCellData::GetSculptDeltaFloats() const
     return Span<const float>(reinterpret_cast<const float*>(blob.Data()), blob.Size() / sizeof(float));
 }
 
-Span<float> TerrainCellData::EnsureSculptDelta(uint32 numVertices)
+bool TerrainCellData::EnsureWritableSculptDelta(uint32 numVertices)
 {
     const size_t requiredSize = size_t(numVertices) * sizeof(float);
 
-    if (m_sculptDelta.size < requiredSize)
+    const auto IsResident = [this, requiredSize]()
     {
-        // allocate new if we're out.
+        return m_sculptDelta.raw != nullptr && m_sculptDelta.size >= requiredSize;
+    };
 
-        FreeBlobData(m_sculptDelta);
-        AllocateBlobData(m_sculptDelta, nullptr, requiredSize, alignof(float));
-
-        if (m_sculptDelta.raw != nullptr)
+    if (IsResident())
+    {
+        if (m_sculptDelta.readOnly)
         {
-            // new allocation, start it zeroed
-            Memory::Zero(m_sculptDelta.raw, requiredSize);
+            // Storage-mapped memory is read-only - make a private writable copy.
+            SetBlobDataResident(true);
+        }
+
+        return true;
+    }
+
+    {
+        // Page persisted data in from disk first, so we never allocate over a delta that only
+        // exists on disk.
+        auto readScope = GetReadScope();
+
+        if (IsResident())
+        {
+            if (m_sculptDelta.readOnly)
+            {
+                SetBlobDataResident(true);
+            }
+
+            // Dirty blob data is kept resident when read scopes release, so the write scope
+            // below (which cannot nest inside this read scope) still sees it.
+            MarkDirty();
+
+            return true;
         }
     }
 
-    // Bad sculpt data! BAD!
-    Assert(m_sculptDelta.raw && m_sculptDelta.size >= requiredSize);
+    // No usable delta in memory - allocate one. Mutating the asset, so writers scope.
+    auto writeScope = GetWriteScope();
 
-    if (!m_sculptDelta.raw || m_sculptDelta.size < requiredSize)
+    if (IsResident())
+    {
+        // Paged in by another thread in the meantime.
+        MarkDirty();
+
+        return true;
+    }
+
+    FreeBlobData(m_sculptDelta);
+    AllocateBlobData(m_sculptDelta, nullptr, requiredSize, alignof(float));
+
+    if (m_sculptDelta.raw == nullptr || m_sculptDelta.size < requiredSize)
+    {
+        return false;
+    }
+
+    Memory::Zero(m_sculptDelta.raw, requiredSize);
+
+    // Fresh buffer counts as a change; also keeps it resident after scopes release.
+    MarkDirty();
+
+    return true;
+}
+
+Span<float> TerrainCellData::GetSculptDeltaMutable()
+{
+    if (m_sculptDelta.raw == nullptr || m_sculptDelta.readOnly || m_sculptDelta.size == 0)
     {
         return Span<float>();
     }
 
-    return Span<float>(reinterpret_cast<float*>(m_sculptDelta.raw), numVertices);
+    return Span<float>(reinterpret_cast<float*>(m_sculptDelta.raw), m_sculptDelta.size / sizeof(float));
 }
 
 void TerrainCellData::PageBlobData()

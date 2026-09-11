@@ -273,6 +273,7 @@ void PlaceholderData::Initialize()
     };
 
     PlaceholderBufferData placeholderBufferTex2d {};
+    PlaceholderBufferData placeholderBufferSolidWhiteTex2d {};
     PlaceholderBufferData placeholderBufferTex3d {};
     PlaceholderBufferData placeholderBufferCubemap {};
 
@@ -363,7 +364,7 @@ void PlaceholderData::Initialize()
             TextureWrapMode::Repeat,
             1,
             ImageUsage::Sampled },
-        placeholderBufferTex2d,
+        placeholderBufferSolidWhiteTex2d,
         &FillPlaceholderBuffer_Tex2D<TextureFormat::RGBA8, FillPattern::SolidWhite>);
 
     LoadOrInitTexture(

@@ -42,7 +42,17 @@ public:
     ConstByteView GetSculptDelta() const;
     Span<const float> GetSculptDeltaFloats() const;
 
-    Span<float> EnsureSculptDelta(uint32 numVertices);
+    /*! Ensures a writable sculpt delta buffer exists with space for \p numVertices vertices,
+     *  paging persisted data in from disk when required. Allocation happens under a write
+     *  scope, so the caller must not hold any scope on this asset when calling (a held read
+     *  scope would deadlock the writer lock).
+     *  Returns true when the buffer is ready; use GetSculptDeltaMutable() under a write scope
+     *  to mutate it. */
+    bool EnsureWritableSculptDelta(uint32 numVertices);
+
+    /*! Mutable view over the sculpt delta. Only valid while a scope that keeps the blob data
+     *  resident is held. Returns an empty span when no delta is resident. */
+    Span<float> GetSculptDeltaMutable();
 
 protected:
     virtual void Init() override;

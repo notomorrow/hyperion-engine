@@ -2312,26 +2312,18 @@ void EditorSubsystem::DebugDrawTerrainSculptCursor(DebugDrawCommandList& debugDr
     }
 
     static constexpr float SurfaceOffset = 0.1f;
-    static constexpr uint32 RingSegments = 64;
-    static constexpr uint32 FalloffRingSegments = 40;
-    static constexpr uint32 SpokeCount = 8;
-    static constexpr uint32 SpokeSegments = 6;
+    static constexpr uint32 RingSegments = 96;
+    static constexpr uint32 GridLinesPerSide = 3;
+    static constexpr uint32 GridLineSegments = 24;
 
     const Color color = m_terrainSculptState.isPainting
         ? Color(1.0f, 0.55f, 0.1f, 1.0f)
         : Color(1.0f, 0.9f, 0.2f, 1.0f);
+    const Color gridColor = color * Color(0.35f, 0.35f, 0.35f, 1.0f);
 
     const Handle<TerrainWorldGridLayer> layer = m_terrainSculptState.hoveredLayer.Lock();
-
     if (!layer.IsValid())
     {
-        // Height field unavailable - fall back to a simple volume marker.
-        static constexpr float CursorHeight = 0.1f;
-
-        const Vec3f position = m_terrainSculptState.hoverWorldPos + Vec3f(0.0f, CursorHeight * 0.5f, 0.0f);
-
-        debugDrawCommandList.cylinder(position, m_terrainSculptState.radius, CursorHeight, Color(1.0f, 0.9f, 0.2f, 0.35f));
-
         return;
     }
 
@@ -2340,8 +2332,7 @@ void EditorSubsystem::DebugDrawTerrainSculptCursor(DebugDrawCommandList& debugDr
     const Vec2f centerXZ(m_terrainSculptState.hoverWorldPos.x, m_terrainSculptState.hoverWorldPos.z);
     const float radius = m_terrainSculptState.radius;
 
-    const float ribbonWidth = MathUtil::Clamp(radius * 0.04f, 0.08f, 0.4f);
-    const float spokeWidth = ribbonWidth * 0.6f;
+    const float ribbonWidth = MathUtil::Clamp(radius * 0.035f, 0.06f, 0.3f);
 
     Vec3f ringEdges[2][RingSegments];
 
@@ -2362,56 +2353,45 @@ void EditorSubsystem::DebugDrawTerrainSculptCursor(DebugDrawCommandList& debugDr
         /* closed */ true,
         color);
 
-    const float falloffRadius = radius * 0.5f;
-    const float falloffRibbonWidth = ribbonWidth * 0.8f;
+    const float gridSpacing = radius / float(GridLinesPerSide + 1);
 
-    Vec3f falloffEdges[2][FalloffRingSegments];
+    Vec3f gridEdges[2][GridLineSegments + 1];
 
-    for (uint32 i = 0; i < FalloffRingSegments; i++)
+    for (uint32 axis = 0; axis < 2; axis++)
     {
-        const float angle = 2.0f * MathUtil::pi<float> * (float(i) / float(FalloffRingSegments));
-        const Vec2f dir(MathUtil::Cos(angle), MathUtil::Sin(angle));
+        const Vec2f lineDir = (axis == 0)
+            ? Vec2f(0.0f, 1.0f)
+            : Vec2f(1.0f, 0.0f);
+        const Vec2f linePerp = (axis == 0)
+            ? Vec2f(1.0f, 0.0f)
+            : Vec2f(0.0f, 1.0f);
 
-        falloffEdges[0][i] = ProjectOntoTerrain(layer, centerXZ + dir * (falloffRadius - falloffRibbonWidth * 0.5f), SurfaceOffset);
-        falloffEdges[1][i] = ProjectOntoTerrain(layer, centerXZ + dir * (falloffRadius + falloffRibbonWidth * 0.5f), SurfaceOffset);
-    }
-
-    DrawTerrainRibbon(
-        debugDrawCommandList,
-        attributes,
-        Span<const Vec3f>(falloffEdges[0], FalloffRingSegments),
-        Span<const Vec3f>(falloffEdges[1], FalloffRingSegments),
-        /* closed */ true,
-        color);
-
-    Vec3f spokeEdges[2][SpokeSegments + 1];
-
-    for (uint32 spokeIndex = 0; spokeIndex < SpokeCount; spokeIndex++)
-    {
-        const float angle = 2.0f * MathUtil::pi<float> * (float(spokeIndex + 1) / float(SpokeCount) + 0.5f / float(SpokeCount));
-        const Vec2f dir(MathUtil::Cos(angle), MathUtil::Sin(angle));
-        const Vec2f perp(-dir.y, dir.x);
-
-        const float spokeLength = radius - ribbonWidth;
-
-        for (uint32 i = 0; i <= SpokeSegments; i++)
+        for (int32 lineIndex = -int32(GridLinesPerSide); lineIndex <= int32(GridLinesPerSide); lineIndex++)
         {
-            const float t = float(i) / float(SpokeSegments);
-            const Vec2f spokePoint = centerXZ + dir * (spokeLength * t);
+            const float offset = float(lineIndex) * gridSpacing;
+            const float chordHalfLength = MathUtil::Sqrt(MathUtil::Max(radius * radius - offset * offset, 0.0f)) * 0.96f;
 
-            const float halfWidth = spokeWidth * 0.5f * MathUtil::Clamp(t, 0.3f, 1.0f);
+            const bool isCenterLine = lineIndex == 0;
+            const float lineWidth = ribbonWidth * (isCenterLine ? 0.65f : 0.45f);
+            const Color& lineColor = isCenterLine ? color : gridColor;
 
-            spokeEdges[0][i] = ProjectOntoTerrain(layer, spokePoint - perp * halfWidth, SurfaceOffset);
-            spokeEdges[1][i] = ProjectOntoTerrain(layer, spokePoint + perp * halfWidth, SurfaceOffset);
+            for (uint32 i = 0; i <= GridLineSegments; i++)
+            {
+                const float t = -1.0f + 2.0f * (float(i) / float(GridLineSegments));
+                const Vec2f linePoint = centerXZ + linePerp * offset + lineDir * (t * chordHalfLength);
+
+                gridEdges[0][i] = ProjectOntoTerrain(layer, linePoint - linePerp * (lineWidth * 0.5f), SurfaceOffset);
+                gridEdges[1][i] = ProjectOntoTerrain(layer, linePoint + linePerp * (lineWidth * 0.5f), SurfaceOffset);
+            }
+
+            DrawTerrainRibbon(
+                debugDrawCommandList,
+                attributes,
+                Span<const Vec3f>(gridEdges[0], GridLineSegments + 1),
+                Span<const Vec3f>(gridEdges[1], GridLineSegments + 1),
+                /* closed */ false,
+                lineColor);
         }
-
-        DrawTerrainRibbon(
-            debugDrawCommandList,
-            attributes,
-            Span<const Vec3f>(spokeEdges[0], SpokeSegments + 1),
-            Span<const Vec3f>(spokeEdges[1], SpokeSegments + 1),
-            /* closed */ false,
-            color);
     }
 }
 
