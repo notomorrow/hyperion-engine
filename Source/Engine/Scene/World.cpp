@@ -29,6 +29,7 @@
 #include <Scene/Systems/ReplicationSystem.hpp>
 #include <Scene/Systems/ReplicationApplySystem.hpp>
 #include <Scene/Systems/SwatchOverrideSystem.hpp>
+#include <Scene/Systems/WeaponSystem.hpp>
 
 #include <Scene/Components/MeshComponent.hpp>
 #include <Scene/Components/TransformComponent.hpp>
@@ -265,6 +266,9 @@ void World::Initialize()
 
     if (!HasSystem<SwatchOverrideSystem>())
         AddSystem(MakeHandle<SwatchOverrideSystem>());
+    
+    if (!HasSystem<WeaponSystem>())
+        AddSystem(MakeHandle<WeaponSystem>());
 
     if (!(m_worldFlags & WorldFlags::Editor))
     {

@@ -84,7 +84,7 @@ namespace Hyperion
         Texture2DArray,
         CubemapArray,
 
-        Count
+        Max
     }
     [ClassBinding(Name = "ImageUsage")]
     [Flags]

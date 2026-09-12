@@ -43,8 +43,7 @@ public:
 
     void RebuildMesh(const Handle<TerrainCellData>& cellData, const Vec2i& minVertex, const Vec2i& maxVertex);
 
-    /*! (Re)creates this cell's splat map texture from the cell data and binds it on a per-cell
-     *  material clone. Called when the splat map is painted or when a painted cell loads. */
+    ///update cell data to apply the splat map, if one.
     void UpdateSplatMaterial(const Handle<TerrainCellData>& cellData);
 
     void RebuildPickBVH();
@@ -69,8 +68,6 @@ private:
 
     Handle<Mesh> m_mesh;
 
-    // Per-cell splat map rendering: cloned from the layer material with the cell's splat map
-    // texture bound to the TerrainSplatMap slot.
     Handle<Material> m_cellMaterial;
     Handle<Texture> m_splatTexture;
 

@@ -84,22 +84,28 @@ public:
 
     virtual ~WorldGridLayer() = default;
 
-    HYP_METHOD()
+    HYP_METHOD(Property = "Name")
     HYP_FORCE_INLINE Name GetName() const
     {
         return m_name;
     }
 
-    HYP_METHOD()
+    HYP_METHOD(Property = "Name")
     HYP_FORCE_INLINE void SetName(Name name)
     {
         m_name = name;
     }
 
-    HYP_METHOD()
+    HYP_METHOD(Property = "LayerInfo")
     HYP_FORCE_INLINE const WorldGridLayerInfo& GetLayerInfo() const
     {
         return m_layerInfo;
+    }
+
+    HYP_METHOD(Property = "LayerInfo")
+    HYP_FORCE_INLINE virtual void SetLayerInfo(const WorldGridLayerInfo& layerInfo)
+    {
+        m_layerInfo = layerInfo;
     }
 
     HYP_METHOD()

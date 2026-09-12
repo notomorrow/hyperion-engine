@@ -61,6 +61,9 @@ public:
     void SetSeed(uint32 seed);
 
     HYP_METHOD()
+    virtual void SetLayerInfo(const WorldGridLayerInfo& layerInfo) override;
+
+    HYP_METHOD()
     void ApplyBrush(const Vec3f& worldPos, float radius, float strength, bool raise);
 
     /*! Paints the splat map layer \p layerIndex (0-3) inside the brush. With \p erase the layer

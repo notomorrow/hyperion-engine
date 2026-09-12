@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Hyperion;
+using Hyperion.Editor.Views;
 using Hyperion.Editor.ViewModels;
 using Hyperion.Editor.Services;
 using Document = Dock.Model.Avalonia.Controls.Document;
@@ -62,6 +63,7 @@ namespace Hyperion.Editor
 
         private DropDownButton? _sceneDropDown;
         private EditorViewportControl? _editorViewport;
+        private WorldSettingsWindow? _worldSettingsWindow;
         private IDock? _dynamicPanelsDock;
         private readonly Dictionary<EditorPanelViewModel, Tool> _dynamicPanelTools = new();
         private int _frameCounter;
@@ -138,6 +140,11 @@ namespace Hyperion.Editor
         private void OnResetLayoutClick(object? sender, RoutedEventArgs e)
         {
             ResetLayout();
+        }
+
+        private void OnWorldSettingsClick(object? sender, RoutedEventArgs e)
+        {
+            ShowWorldSettingsWindow();
         }
 
         private void OnDropDownClick(object? sender, RoutedEventArgs e)
@@ -458,6 +465,30 @@ namespace Hyperion.Editor
                     rootDock.Window = windowModel;
                 }
             }
+        }
+
+        /// <summary>
+        /// The World Settings editor is a standalone modal window (not a PanelService
+        /// dynamic panel) - it is a long-lived properties surface similar in spirit to
+        /// VS Code's settings editor, so it bypasses the dock layout and panel stack.
+        /// </summary>
+        private async void ShowWorldSettingsWindow()
+        {
+            if (_worldSettingsWindow != null)
+            {
+                _worldSettingsWindow.Activate();
+                return;
+            }
+
+            var window = new WorldSettingsWindow
+            {
+                DataContext = new WorldSettingsPanelViewModel()
+            };
+
+            _worldSettingsWindow = window;
+            window.Closed += (_, _) => _worldSettingsWindow = null;
+
+            await window.ShowDialog(this);
         }
 
         private T? FindVisualChildByName<T>(string name) where T : Control

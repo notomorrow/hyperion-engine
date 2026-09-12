@@ -165,6 +165,16 @@ void TerrainWorldGridLayer::SetSeed(uint32 seed)
     m_layerInfo.seed = seed;
 }
 
+void TerrainWorldGridLayer::SetLayerInfo(const WorldGridLayerInfo& layerInfo)
+{
+    WorldGridLayerInfo adjustedLayerInfo = layerInfo;
+
+    // Terrain heights are generated in world units - vertical scaling is not supported.
+    adjustedLayerInfo.scale.y = 1.0f;
+
+    WorldGridLayer::SetLayerInfo(adjustedLayerInfo);
+}
+
 void TerrainWorldGridLayer::OnAdded(WorldGrid* worldGrid)
 {
     HYP_SCOPE;

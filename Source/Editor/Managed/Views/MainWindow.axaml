@@ -908,6 +908,7 @@
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
                         Spacing="8">
+
                         <DropDownButton
                             x:Name="ToolDropDown"
                             VerticalAlignment="Center"
@@ -920,6 +921,11 @@
                             </StackPanel>
                             <DropDownButton.ContextMenu>
                                 <ContextMenu Placement="Bottom">
+                                    <MenuItem Header="World Settings"
+                                              Click="OnWorldSettingsClick"
+                                              ToolTip.Tip="Manage settings for the game's world" />
+                                  
+                                    <Separator />
                                     <MenuItem Header="Layout">
                                         <MenuItem
                                             Click="OnResetLayoutClick"
@@ -1935,6 +1941,7 @@
                                                                     <MenuFlyout>
                                                                         <MenuItem Command="{Binding ContentBrowser.NewPhysicsShapeCommand}" Header="Physics Shape" />
                                                                         <MenuItem Command="{Binding ContentBrowser.NewMaterialCommand}" Header="Material" />
+                                                                        <MenuItem Command="{Binding ContentBrowser.NewWeaponCommand}" Header="Weapon" />
                                                                         <MenuItem Command="{Binding ContentBrowser.NewScriptCommand}" Header="Script" />
                                                                     </MenuFlyout>
                                                                 </Button.Flyout>

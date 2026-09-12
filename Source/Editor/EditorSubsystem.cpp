@@ -39,7 +39,6 @@
 #include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Scene/WorldGrid/WorldGrid.hpp>
-#include <Scene/WorldGrid/Terrain/TerrainWorldGridLayer.hpp>
 
 #include <Scene/Sky/DynamicSkySystem.hpp>
 

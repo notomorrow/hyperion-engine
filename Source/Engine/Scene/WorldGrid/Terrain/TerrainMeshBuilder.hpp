@@ -32,10 +32,7 @@ public:
 
     ~TerrainMeshBuilder();
 
-    /*! \brief CPU-only: builds vertex/index data for one terrain cell from procedural noise plus an
-     *  optional sculpt delta. Safe to call off the sim thread -- creates no GPU/Handle<Mesh> resources.
-     *  Normals are computed in local (unscaled, per-index-step) mesh space via finite differences;
-     *  they rely on the renderer's normal matrix to transform correctly under the cell's world scale. */
+    ///builds vertex/index data for one terrain cell from procedural noise, plus an optional sculpt delta view 
     CellMeshData BuildCellVertexData(
         const StreamingCellInfo& cellInfo,
         const NoiseCombinator& noise,

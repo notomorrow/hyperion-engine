@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -80,6 +81,7 @@ namespace Hyperion.Editor.ViewModels
 
         public ICommand NewScriptCommand { get; }
         public ICommand NewMaterialCommand { get; }
+        public ICommand NewWeaponCommand { get; }
         public ICommand NewPhysicsShapeCommand { get; }
 
         public ICommand DeleteAssetCommand { get; }
@@ -128,14 +130,47 @@ namespace Hyperion.Editor.ViewModels
                 PanelService.Instance.OpenPanel(panel);
             });
 
+            NewWeaponCommand = new RelayCommand(() =>
+            {
+                var panel = new NewWeaponPanelViewModel(weaponType =>
+                {
+                    if (weaponType == null)
+                    {
+                        Logger.Log(LogLevel.Warning, "New weapon creation cancelled.");
+                        return;
+                    }
+
+                    _ = EngineManager.PostToSimThread(() =>
+                    {
+                        // EditorCommandNewWeapon takes the WeaponType as an integer
+                        _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewWeapon"), Convert.ToString((int)weaponType.Value, CultureInfo.InvariantCulture));
+
+                        Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.Weapons.Value, "NewWeapon", openEditor: true));
+                    });
+                });
+
+                PanelService.Instance.OpenPanel(panel);
+            });
+
             NewMaterialCommand = new RelayCommand(() =>
             {
-                _ = EngineManager.PostToSimThread(() =>
+                var panel = new NewMaterialPanelViewModel(confirmed =>
                 {
-                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewMaterial"));
+                    if (!confirmed)
+                    {
+                        Logger.Log(LogLevel.Warning, "New material creation cancelled.");
+                        return;
+                    }
 
-                    Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.Materials.Value, "NewMaterial", openEditor: true));
+                    _ = EngineManager.PostToSimThread(() =>
+                    {
+                        _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewMaterial"));
+
+                        Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.Materials.Value, "NewMaterial", openEditor: true));
+                    });
                 });
+
+                PanelService.Instance.OpenPanel(panel);
             });
 
             NewPhysicsShapeCommand = new RelayCommand(() =>

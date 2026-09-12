@@ -10,7 +10,7 @@ namespace Hyperion
         Point,
         Spot,
         AreaRect,
-        Count
+        Max
     }
 
     [ClassBinding(Name = "LightFlags")]

@@ -56,8 +56,6 @@ public:
     bool EnsureSplatMapAllocated(uint32 numVertices);
 
 protected:
-    virtual void Init() override;
-
     virtual void PageBlobData() override;
     virtual void UnpageBlobData() override;
 

@@ -43,11 +43,6 @@ TerrainCellData::~TerrainCellData()
     FreeBlobData(m_splatMap);
 }
 
-void TerrainCellData::Init()
-{
-    AssetObject::Init();
-}
-
 void TerrainCellData::SetSculptDelta(ConstByteView view)
 {
     if (view.Size() == 0 && m_sculptDelta.size == 0)
@@ -187,12 +182,12 @@ bool TerrainCellData::EnsureSplatMapAllocated(uint32 numVertices)
 {
     const size_t requiredSize = size_t(numVertices) * NumSplatLayers;
 
-    const auto IsResident = [this, requiredSize]()
+    const auto checkIsResident = [this, requiredSize]()
     {
         return m_splatMap.raw != nullptr && m_splatMap.size >= requiredSize;
     };
 
-    if (IsResident())
+    if (checkIsResident())
     {
         if (m_splatMap.readOnly)
         {
@@ -205,7 +200,7 @@ bool TerrainCellData::EnsureSplatMapAllocated(uint32 numVertices)
     {
         auto readScope = GetReadScope();
 
-        if (IsResident())
+        if (checkIsResident())
         {
             if (m_splatMap.readOnly)
             {
@@ -221,7 +216,7 @@ bool TerrainCellData::EnsureSplatMapAllocated(uint32 numVertices)
     // No usable splat map in memory - allocate one. Mutating the asset, so writers scope.
     auto writeScope = GetWriteScope();
 
-    if (IsResident())
+    if (checkIsResident())
     {
         MarkDirty();
 
@@ -274,7 +269,7 @@ void TerrainCellData::PageBlobData()
     {
         if (!PageBlobDataFromStorage(m_sculptDelta))
         {
-            PageBlobDataFromFile(blobDirectory, "TRSC", m_sculptDelta);
+            PageBlobDataFromFile(blobDirectory, "TERA", m_sculptDelta);
         }
     }
 
@@ -284,7 +279,7 @@ void TerrainCellData::PageBlobData()
     {
         if (!PageBlobDataFromStorage(m_splatMap))
         {
-            PageBlobDataFromFile(blobDirectory, "TRSP", m_splatMap);
+            PageBlobDataFromFile(blobDirectory, "TSM", m_splatMap);
         }
     }
 }
