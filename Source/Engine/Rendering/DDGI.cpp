@@ -140,11 +140,11 @@ void DDGI::CreateStorageBuffers()
                 TextureType::Texture2D,
                 IrradianceFormat,
                 extent,
-                TFM_NEAREST,
-                TFM_NEAREST,
-                TWM_CLAMP_TO_EDGE,
+                TextureFilterMode::Nearest,
+                TextureFilterMode::Nearest,
+                TextureWrapMode::ClampToEdge,
                 1,
-                IU_STORAGE | IU_SAMPLED 
+                ImageUsage::Storage | ImageUsage::Sampled 
             });
 
         m_irradianceTexture->SetName(NAME("DDGIIrradianceTexture"));
@@ -164,11 +164,11 @@ void DDGI::CreateStorageBuffers()
                 TextureType::Texture2D,
                 DepthFormat,
                 extent,
-                TFM_NEAREST,
-                TFM_NEAREST,
-                TWM_CLAMP_TO_EDGE,
+                TextureFilterMode::Nearest,
+                TextureFilterMode::Nearest,
+                TextureWrapMode::ClampToEdge,
                 1,
-                IU_STORAGE | IU_SAMPLED
+                ImageUsage::Storage | ImageUsage::Sampled
             });
 
         m_visibilityTexture->SetName(NAME("DDGIVisibilityTexture"));
@@ -284,7 +284,7 @@ void DDGI::Render(Frame* frame, const RenderSetup& renderSetup)
 
     const StructuredBuffer& meshDescriptionsBuffer = tlas->GetMeshDescriptionsBuffer();
 
-    frame->cr << InsertBarrier(m_radianceBuffer, RS_UNORDERED_ACCESS);
+    frame->cr << InsertBarrier(m_radianceBuffer, ResourceState::UnorderedAccess);
 
     ShaderPropertySet shaderProperties;
     frame->cr << SetCurrentShader(ShaderDesc(NAME("DDGI"), shaderProperties));
@@ -308,13 +308,13 @@ void DDGI::Render(Frame* frame, const RenderSetup& renderSetup)
 
     frame->cr << TraceRays(Vec3u { NumProbes(m_gridInfo), m_gridInfo.numRaysPerProbe, 1u });
 
-    frame->cr << InsertBarrier(m_radianceBuffer, RS_UNORDERED_ACCESS);
+    frame->cr << InsertBarrier(m_radianceBuffer, ResourceState::UnorderedAccess);
 
     // Compute irradiance for ray traced probes
     const Vec3u probeCounts = NumProbesPerDimension(m_gridInfo);
 
-    frame->cr << InsertBarrier(m_irradianceTexture->GetGpuImage(), RS_UNORDERED_ACCESS);
-    frame->cr << InsertBarrier(m_visibilityTexture->GetGpuImage(), RS_UNORDERED_ACCESS);
+    frame->cr << InsertBarrier(m_irradianceTexture->GetGpuImage(), ResourceState::UnorderedAccess);
+    frame->cr << InsertBarrier(m_visibilityTexture->GetGpuImage(), ResourceState::UnorderedAccess);
 
     // Update irradiance
     shaderProperties = ShaderPropertySet();
@@ -328,7 +328,7 @@ void DDGI::Render(Frame* frame, const RenderSetup& renderSetup)
 
     frame->cr << DispatchCompute(Vec3u { probeCounts.x * probeCounts.y, probeCounts.z, 1u });
 
-    frame->cr << InsertBarrier(m_irradianceTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    frame->cr << InsertBarrier(m_irradianceTexture->GetGpuImage(), ResourceState::ShaderResource);
 
     // Update depth
     shaderProperties = ShaderPropertySet();
@@ -342,11 +342,11 @@ void DDGI::Render(Frame* frame, const RenderSetup& renderSetup)
 
     frame->cr << DispatchCompute(Vec3u { probeCounts.x * probeCounts.y, probeCounts.z, 1u });
 
-    frame->cr << InsertBarrier(m_visibilityTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    frame->cr << InsertBarrier(m_visibilityTexture->GetGpuImage(), ResourceState::ShaderResource);
 
 #if 0 // @FIXME: Properly implement an optimized way to copy border texels without invoking for each pixel in the images.
-    frame->cr << InsertBarrier(m_irradianceImage, RS_UNORDERED_ACCESS);
-    frame->cr << InsertBarrier(m_depthImage, RS_UNORDERED_ACCESS);
+    frame->cr << InsertBarrier(m_irradianceImage, ResourceState::UnorderedAccess);
+    frame->cr << InsertBarrier(m_depthImage, ResourceState::UnorderedAccess);
 
     // Copy border texels irradiance
     frame->cr << SetCurrentShader(ShaderDesc(NAME("RTCopyBorderTexelsIrradiance")));
@@ -374,8 +374,8 @@ void DDGI::Render(Frame* frame, const RenderSetup& renderSetup)
         1u
     });
 
-    frame->cr << InsertBarrier(m_irradianceImage, RS_SHADER_RESOURCE);
-    frame->cr << InsertBarrier(m_depthImage, RS_SHADER_RESOURCE);
+    frame->cr << InsertBarrier(m_irradianceImage, ResourceState::ShaderResource);
+    frame->cr << InsertBarrier(m_depthImage, ResourceState::ShaderResource);
 #endif
 }
 

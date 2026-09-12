@@ -17,6 +17,8 @@
 #include <Editor/EditorViewport.hpp>
 #include <Editor/EditorCommand.hpp>
 
+#include <Editor/Terrain/EditorTerrainState.hpp>
+
 #include <Scene/Systems/Editor/EditorSpriteSystem.hpp>
 
 #include <DotNET/DotNETHost.hpp>
@@ -36,6 +38,8 @@
 #include <Scene/Systems/MeshSystem.hpp>
 #include <Scene/Systems/SwatchOverrideSystem.hpp>
 
+#include <Scene/WorldGrid/WorldGrid.hpp>
+
 #include <Scene/Sky/DynamicSkySystem.hpp>
 
 #include <Scene/Camera/Camera.hpp>
@@ -47,6 +51,8 @@
 #include <Scene/Components/BoundingBoxComponent.hpp>
 #include <Scene/Components/TransformComponent.hpp>
 #include <Scene/Components/RigidBodyComponent.hpp>
+#include <Scene/Components/CharacterControllerComponent.hpp>
+#include <Scene/Components/TerrainCellComponent.hpp>
 
 #include <Physics/PhysicsShape.hpp>
 
@@ -2012,6 +2018,22 @@ bool VolumeEditorGizmo::OnKeyPress(const Handle<Camera>& camera, const KeyboardE
 
 #pragma endregion VolumeEditorGizmo
 
+#pragma region Terrain
+
+Handle<EditorTerrainState> EditorSubsystem::GetTerrainState()
+{
+    if (!m_terrainSculpting.IsValid())
+    {
+        m_terrainSculpting = MakeHandle<EditorTerrainState>();
+        InitObject(m_terrainSculpting);
+        m_terrainSculpting->Initialize(this);
+    }
+
+    return m_terrainSculpting;
+}
+
+#pragma endregion Terrain
+
 bool EditorSubsystem::IsMeshEditModeEnabled() const
 {
     AssertOnThread(g_simThread);
@@ -3000,7 +3022,7 @@ static RenderableAttributeSet MeshEditOverlayAttributes(FillMode fillMode)
 
     MeshAttributes& meshAttributes = attributes.GetMeshAttributes();
     meshAttributes.inputLayout = StaticVertexInputLayout<VT_Simple>;
-    meshAttributes.topology = TOP_TRIANGLES;
+    meshAttributes.topology = Topology::Triangles;
 
     MaterialAttributes& materialAttributes = attributes.GetMaterialAttributes();
     materialAttributes.bucket = RenderBucket::Debug;
@@ -3041,8 +3063,8 @@ static void DrawMeshEditFace(
         return;
     }
 
-    static const RenderableAttributeSet fillAttributes = MeshEditOverlayAttributes(FM_FILL);
-    static const RenderableAttributeSet outlineAttributes = MeshEditOverlayAttributes(FM_LINE);
+    static const RenderableAttributeSet fillAttributes = MeshEditOverlayAttributes(FillMode::Fill);
+    static const RenderableAttributeSet outlineAttributes = MeshEditOverlayAttributes(FillMode::Line);
 
     debugDrawCommandList.triangle(worldPositions[0], worldPositions[1], worldPositions[2], fillColor, fillAttributes);
     debugDrawCommandList.triangle(worldPositions[0], worldPositions[1], worldPositions[2], outlineColor, outlineAttributes);
@@ -3649,9 +3671,9 @@ EditorSubsystem::EditorSubsystem()
     : m_selectedManipulationMode(EditorManipulationMode::None),
       m_snapToGridEnabled(false),
       m_swatchOverrideMode(false),
+      m_gizmosHiddenByProximity(false),
       m_editorCameraEnabled(false),
-      m_shouldCancelNextClick(false),
-      m_gizmosHiddenByProximity(false)
+      m_shouldCancelNextClick(false)
 {
     m_gizmos.Insert(MakeHandle<NullEditorGizmo>());
     m_gizmos.Insert(MakeHandle<TranslateEditorGizmo>());
@@ -3660,6 +3682,9 @@ EditorSubsystem::EditorSubsystem()
     m_gizmos.Insert(MakeHandle<VolumeEditorGizmo>());
 
     m_editorDelegates = new EditorDelegates();
+
+    // Create eagerly so the managed side can always fetch it, regardless of the calling thread.
+    GetTerrainState();
 
     m_bakeStatusUpdateTimer = ClockTimer { 0.5f };
 
@@ -4015,11 +4040,11 @@ static RenderableAttributeSet PhysicsWireframeAttributes()
 
     MeshAttributes& meshAttributes = attributes.GetMeshAttributes();
     meshAttributes.inputLayout = StaticVertexInputLayout<VT_Simple>;
-    meshAttributes.topology = TOP_TRIANGLES;
+    meshAttributes.topology = Topology::Triangles;
 
     MaterialAttributes& materialAttributes = attributes.GetMaterialAttributes();
     materialAttributes.bucket = RenderBucket::Debug;
-    materialAttributes.fillMode = FM_LINE;
+    materialAttributes.fillMode = FillMode::Line;
     materialAttributes.blendFunction = BlendFunction::None();
     materialAttributes.flags = MAF_DEPTH_TEST;
 
@@ -4189,17 +4214,14 @@ void EditorSubsystem::Update(float delta)
 
     UpdateGizmoProximityVisibility();
 
-    if (!m_bakeStatusUpdateTimer.Waiting())
-    {
-        m_bakeStatusUpdateTimer.NextTick();
-
-        UpdateBakeStatus();
-    }
+    GetTerrainState()->Update();
+    UpdateBakeStatus();
 
     DebugDrawCommandList& dbg = DebugDrawer::GetInstance().CreateCommandList();
 
     DebugDrawMeshEditSelection(dbg);
     DebugDrawPhysicsShapes(dbg);
+    GetTerrainState()->DebugDrawCursor(dbg);
 
     if (m_currentProject.IsValid())
     {
@@ -4517,6 +4539,13 @@ void EditorSubsystem::InitViewport()
             //     return UIEventHandlerResult::STOP_BUBBLING;
             // }
 
+            if (GetTerrainState()->IsEnabled())
+            {
+                // Strokes are applied from OnMouseDown / OnMouseDrag / the per-frame update;
+                // clicking just shouldn't fall through to scene picking.
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
             if (m_meshEditState.enabled)
             {
                 const Ray ray = activeViewport->GetCamera()->GetPickRay(event.relativePos);
@@ -4648,6 +4677,15 @@ void EditorSubsystem::InitViewport()
                 return UIEventHandlerResult::OK;
             }
 
+            if (GetTerrainState()->IsEnabled() && event.mouseButtons[MouseButtonState::LEFT])
+            {
+                InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+
+                GetTerrainState()->UpdateStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
+
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
             if (IsMeshEditDragActive())
             {
                 UpdateMeshEditDrag(activeViewport->GetCamera(), event);
@@ -4701,6 +4739,25 @@ void EditorSubsystem::InitViewport()
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
+            }
+
+            if (GetTerrainState()->IsEnabled())
+            {
+                GetTerrainState()->UpdateHover(event.relativePos);
+
+                if (GetTerrainState()->IsStroking() && event.mouseButtons[MouseButtonState::LEFT])
+                {
+                    InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+
+                    GetTerrainState()->UpdateStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
+
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                }
+
+                if (!event.mouseButtons[MouseButtonState::LEFT])
+                {
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                }
             }
 
             if (m_meshEditState.enabled && !event.mouseButtons[MouseButtonState::LEFT] && !IsMeshEditDragActive())
@@ -4784,6 +4841,15 @@ void EditorSubsystem::InitViewport()
                 return UIEventHandlerResult::OK;
             }
 
+            if (GetTerrainState()->IsEnabled())
+            {
+                InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+
+                GetTerrainState()->BeginStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
+
+                return UIEventHandlerResult::STOP_BUBBLING;
+            }
+
             if (m_meshEditState.enabled && m_meshEditState.selectedFace)
             {
                 StartMeshEditDrag(activeViewport->GetCamera(), event);
@@ -4845,6 +4911,11 @@ void EditorSubsystem::InitViewport()
                 return UIEventHandlerResult::OK;
             }
 
+            if (GetTerrainState()->IsEnabled())
+            {
+                GetTerrainState()->EndStroke();
+            }
+
             CameraController* controller = activeViewport->GetCamera()->GetCameraController();
             
             if (controller != nullptr)
@@ -4885,6 +4956,46 @@ void EditorSubsystem::InitViewport()
             {
                 if (BackOutOfMeshEditState())
                 {
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                }
+            }
+
+            ///Keyboard shortcuts
+            if (g_appContext.IsValid()
+                && g_appContext->GetMainWindow() != nullptr
+                && g_appContext->GetMainWindow()->GetInputManager()->IsCtrlDown()
+                && !IsSimulating()
+                && !IsMeshEditDragActive())
+            {
+                const bool isShiftDown = g_appContext->GetMainWindow()->GetInputManager()->IsShiftDown();
+
+                Name commandName;
+
+                switch (event.keyCode)
+                {
+                case KeyCode::KEY_Z:
+                    commandName = isShiftDown ? NAME("EditorCommandRedo") : NAME("EditorCommandUndo");
+                    break;
+                case KeyCode::KEY_Y:
+                    commandName = NAME("EditorCommandRedo");
+                    break;
+                case KeyCode::KEY_C:
+                    commandName = NAME("EditorCommandCopy");
+                    break;
+                case KeyCode::KEY_V:
+                    commandName = NAME("EditorCommandPaste");
+                    break;
+                case KeyCode::KEY_A:
+                    commandName = NAME("EditorCommandSelectAll");
+                    break;
+                default:
+                    break;
+                }
+
+                if (commandName.IsValid())
+                {
+                    ExecuteCommandByName(commandName, String::empty);
+
                     return UIEventHandlerResult::STOP_BUBBLING;
                 }
             }
@@ -5123,16 +5234,27 @@ void EditorSubsystem::NewProject()
     sun->SetName(NAME("SunLight"));
     sun->SetDirection(Vec3f(-0.2f, 0.8f, 0.2f).Normalize());
     sun->SetColor(Color(Vec4f(1.0f, 0.9f, 0.8f, 1.0f)));
-    sun->SetIntensity(50.0f);
+    sun->SetIntensity(18.0f);
     InitObject(sun);
 
     mainScene->GetRoot()->AddChild(sun);
 
-    // Add primary camera
+    // Add player entity
+    Handle<Entity> playerEntity = MakeHandle<Entity>();
+    playerEntity->SetName(NAME("Player"));
+    playerEntity->SetWorldTranslation(Vec3f(0.0f, 1.0f, -5.0f));
+    playerEntity->SetIsDynamic(true);
+    InitObject(playerEntity);
+
+    Handle<CapsulePhysicsShape> capsuleShape = MakeHandle<CapsulePhysicsShape>();
+    capsuleShape->SetName(NAME_FMT("{}CapsuleShape", playerEntity->GetName()));
+    InitObject(capsuleShape);
+    GetCurrentAssetRegistry()->PutAssetUnique(capsuleShape);
+
     Handle<Camera> camera = MakeHandle<Camera>();
     camera->SetDimensions(Vec2i(1920, 1080));
     camera->SetName(NAME("Camera"));
-    camera->SetWorldTranslation(Vec3f(0.0f, 1.0f, -5.0f));
+    camera->SetLocalTranslation(Vec3f(0.0f, 1.6f, 0.0f));
     camera->SetCameraFlags(CameraFlags::MatchWindowSize | CameraFlags::HasStreamingVolume);
     camera->AddTag<EntityTag::PrimaryCamera>();
 
@@ -5141,7 +5263,13 @@ void EditorSubsystem::NewProject()
 
     InitObject(camera);
 
-    mainScene->GetRoot()->AddChild(camera);
+    mainScene->GetRoot()->AddChild(playerEntity);
+
+    CharacterControllerComponent characterControllerComponent;
+    characterControllerComponent.shape = capsuleShape;
+    playerEntity->AddComponent<CharacterControllerComponent>(characterControllerComponent);
+
+    playerEntity->AddChild(camera);
 
     // Handle<Scene> streamedScene = MakeHandle<Scene>();
     // streamedScene->SetName(NAME("StreamedScene"));
@@ -5355,6 +5483,28 @@ Handle<Scene> EditorSubsystem::GetActiveScene() const
 String EditorSubsystem::GetCodeEditor() const
 {
     return String(g_cvCodeEditor.Get());
+}
+
+Array<Name> EditorSubsystem::GetAvailableWorldGridLayerClassNames() const
+{
+    Array<Name> result;
+
+    auto functor =
+        [&result](const Class* cls)
+        {
+            if (cls == nullptr || cls->IsAbstract() || !cls->IsDerivedFrom(WorldGridLayer::StaticClass()))
+            {
+                return IterationResult::CONTINUE;
+            }
+
+            result.PushBack(cls->GetName());
+
+            return IterationResult::CONTINUE;
+        };
+
+    ClassRegistry::GetInstance().ForEachClass(functor);
+
+    return result;
 }
 
 Handle<Node> EditorSubsystem::GetFocusedNode() const
@@ -5951,6 +6101,13 @@ void EditorSubsystem::UpdateBakeStatus()
     {
         return;
     }
+
+    if (m_bakeStatusUpdateTimer.Waiting())
+    {
+        return;
+    }
+
+    m_bakeStatusUpdateTimer.NextTick();
 
     static const Name s_bakeStatusMessageKey = NAME("BakeStatus");
 

@@ -41,7 +41,7 @@ namespace Baking {
 
 class BakerBase;
 
-enum class LightmapShadingType : uint32; // forward decl from Lightmapper
+enum class PathTraceType : uint32; // forward decl from Lightmapper
 struct LightmapHit;                     // forward decl from Lightmapper
 
 struct BakerConfig; // forward decl from Lightmapper
@@ -126,7 +126,7 @@ public:
      *  \param rays The rays that were traced.
      *  \param hits The hits to integrate.
      */
-    virtual void IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, LightmapShadingType shadingType);
+    virtual void IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, PathTraceType shadingType);
 
     /*! \brief Gather next texels to process.
      *  \param maxTexels Maximum number of texels to gather.

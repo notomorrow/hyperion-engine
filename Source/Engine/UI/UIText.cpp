@@ -58,10 +58,10 @@ struct FontAtlasCharacterIterator
     float charWidth;
 };
 
-//-- UI Text allocator --
+///UI Text allocator --
 extern Arena* g_uiTextAllocator;
 using UITextAllocator = AllocatorInstance<Arena, &g_uiTextAllocator>;
-//--
+////////////////////
 
 template <class Callback>
 static void ForEachCharacter(

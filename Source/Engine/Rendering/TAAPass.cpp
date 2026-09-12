@@ -72,11 +72,11 @@ void TAAPass::CreateTextures()
         TextureType::Texture2D,
         TextureFormat::RGBA16F,
         Vec3u { m_extent.x, m_extent.y, 1 },
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Nearest,
+        TextureFilterMode::Nearest,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_STORAGE | IU_SAMPLED });
+        ImageUsage::Storage | ImageUsage::Sampled });
 
     m_resultTexture->SetName(NAME("TAA_ResultTexture"));
     Check(m_resultTexture->Create());
@@ -85,11 +85,11 @@ void TAAPass::CreateTextures()
         TextureType::Texture2D,
         TextureFormat::RGBA16F,
         Vec3u { m_extent.x, m_extent.y, 1 },
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Nearest,
+        TextureFilterMode::Nearest,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_STORAGE | IU_SAMPLED });
+        ImageUsage::Storage | ImageUsage::Sampled });
 
     m_historyTexture->SetName(NAME("TAA_HistoryTexture"));
     Check(m_historyTexture->Create());
@@ -135,7 +135,7 @@ void TAAPass::Render(Frame* frame, const RenderSetup& renderSetup)
     Texture* activeTexture = textures[m_pingPongIndex];
     Texture* prevTexture = textures[m_pingPongIndex ^ 1];
 
-    frame->cr << InsertBarrier(activeTexture->GetGpuImage(), RS_UNORDERED_ACCESS);
+    frame->cr << InsertBarrier(activeTexture->GetGpuImage(), ResourceState::UnorderedAccess);
 
     frame->cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
 
@@ -151,7 +151,7 @@ void TAAPass::Render(Frame* frame, const RenderSetup& renderSetup)
     frame->cr << SetShaderUniform(7, "TAAConstants"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
 
     frame->cr << DispatchCompute(Vec3u { (m_extent.x + 7) / 8, (m_extent.y + 7) / 8, 1 });
-    frame->cr << InsertBarrier(activeTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    frame->cr << InsertBarrier(activeTexture->GetGpuImage(), ResourceState::ShaderResource);
 
     m_pingPongIndex ^= 1;
 }

@@ -332,8 +332,8 @@ void FullScreenPass::CreateFramebuffer()
         AttachmentDesc {
             TextureType::Texture2D,
             m_imageFormat,
-            ShouldRenderCheckerboarded() ? LoadOperation::LOAD : LoadOperation::CLEAR,
-            StoreOperation::STORE
+            ShouldRenderCheckerboarded() ? LoadOperation::Load : LoadOperation::Clear,
+            StoreOperation::Store
         });
 
     Check(attachment->Create());
@@ -373,9 +373,9 @@ void FullScreenPass::CreateHistoryTexture()
         TextureType::Texture2D,
         m_imageFormat,
         Vec3u { m_extent.x, m_extent.y, 1 },
-        TFM_LINEAR,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE
+        TextureFilterMode::Linear,
+        TextureFilterMode::Linear,
+        TextureWrapMode::ClampToEdge
     });
 
     m_historyTexture->SetName(NAME_FMT("{}_FrameHistory", GetName()));
@@ -465,13 +465,13 @@ void FullScreenPass::CopyResultToPreviousTexture(Frame* frame, const RenderSetup
     const GpuImageRef& srcImage = m_framebuffer->GetAttachment(0)->GetGpuImage();
     const GpuImageRef& dstImage = m_historyTexture->GetGpuImage();
 
-    cr << InsertBarrier(srcImage, RS_COPY_SRC);
-    cr << InsertBarrier(dstImage, RS_COPY_DST);
+    cr << InsertBarrier(srcImage, ResourceState::CopySrc);
+    cr << InsertBarrier(dstImage, ResourceState::CopyDst);
 
     cr << CopyImage(srcImage, dstImage, srcImage->GetTextureDesc().extent);
 
-    cr << InsertBarrier(srcImage, RS_SHADER_RESOURCE);
-    cr << InsertBarrier(dstImage, RS_SHADER_RESOURCE);
+    cr << InsertBarrier(srcImage, ResourceState::ShaderResource);
+    cr << InsertBarrier(dstImage, ResourceState::ShaderResource);
 }
 
 void FullScreenPass::MergeCheckerboard(Frame* frame, const RenderSetup& renderSetup)
@@ -567,9 +567,9 @@ void FullScreenPass::RenderToFramebuffer_Internal(Frame* frame, const RenderSetu
 
     cr << SetDepthTest(false);
     cr << SetDepthWrite(false);
-    cr << SetFaceCullMode(FCM_NONE); // FCM_BACK);
-    cr << SetFillMode(FM_FILL);
-    cr << SetTopology(TOP_TRIANGLES);
+    cr << SetFaceCullMode(FaceCullMode::None); // FaceCullMode::Back);
+    cr << SetFillMode(FillMode::Fill);
+    cr << SetTopology(Topology::Triangles);
     cr << SetCurrentBlendFunction(m_blendFunction);
 
     RenderFullScreenQuad(frame, renderSetup);
@@ -621,14 +621,14 @@ void FullScreenPass::Begin(Frame* frame, const RenderSetup& renderSetup)
     }
 
     cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
-    cr << SetTopology(TOP_TRIANGLES);
+    cr << SetTopology(Topology::Triangles);
 
     cr << SetCurrentShader(m_shaderDesc);
 
     cr << SetDepthTest(false);
     cr << SetDepthWrite(false);
-    cr << SetFaceCullMode(FCM_NONE);//FCM_BACK);
-    cr << SetFillMode(FM_FILL);
+    cr << SetFaceCullMode(FaceCullMode::None);//FaceCullMode::Back);
+    cr << SetFillMode(FillMode::Fill);
     cr << SetCurrentBlendFunction(m_blendFunction);
 }
 

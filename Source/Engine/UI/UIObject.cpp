@@ -1916,7 +1916,7 @@ MaterialAttributes UIObject::GetMaterialAttributes() const
     MaterialAttributes attrs;
     attrs.shaderName = NAME("UIObject");
     attrs.blendFunction = BlendFunction(BlendModeFactor::SrcAlpha, BlendModeFactor::OneMinusSrcAlpha, BlendModeFactor::One, BlendModeFactor::OneMinusSrcAlpha);
-    attrs.cullFaces = FCM_NONE; // FCM_BACK;
+    attrs.cullFaces = FaceCullMode::None; // FaceCullMode::Back;
     attrs.flags = MAF_NONE;
 
     return attrs;

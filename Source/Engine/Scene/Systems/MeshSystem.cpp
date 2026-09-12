@@ -146,7 +146,15 @@ void MeshSystem::OnEntityRemoved(Entity* entity)
 {
     SystemBase::OnEntityRemoved(entity);
 
-    if (!ShouldProcessScene(entity->GetScene()))
+    Scene* scene = entity->GetScene();
+    Assert(scene != nullptr);
+
+    if (!scene)
+    {
+        return;
+    }
+
+    if (!ShouldProcessScene(scene))
     {
         return;
     }

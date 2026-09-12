@@ -92,17 +92,17 @@ struct BuildBLASCmd
 
         CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder();
 
-        cr << InsertBarrier(verticesStagingBuffer, RS_COPY_SRC);
-        cr << InsertBarrier(indicesStagingBuffer, RS_COPY_SRC);
+        cr << InsertBarrier(verticesStagingBuffer, ResourceState::CopySrc);
+        cr << InsertBarrier(indicesStagingBuffer, ResourceState::CopySrc);
 
-        cr << InsertBarrier(packedVerticesBuffer.Get(), RS_COPY_DST);
-        cr << InsertBarrier(packedIndicesBuffer.Get(), RS_COPY_DST);
+        cr << InsertBarrier(packedVerticesBuffer.Get(), ResourceState::CopyDst);
+        cr << InsertBarrier(packedIndicesBuffer.Get(), ResourceState::CopyDst);
 
         cr << CopyBuffer(verticesStagingBuffer, packedVerticesBuffer, packedVerticesSize);
         cr << CopyBuffer(indicesStagingBuffer, packedIndicesBuffer, packedIndicesSize);
 
-        cr << InsertBarrier(packedVerticesBuffer.Get(), RS_SHADER_RESOURCE);
-        cr << InsertBarrier(packedIndicesBuffer.Get(), RS_SHADER_RESOURCE);
+        cr << InsertBarrier(packedVerticesBuffer.Get(), ResourceState::ShaderResource);
+        cr << InsertBarrier(packedIndicesBuffer.Get(), ResourceState::ShaderResource);
 
         cr.Done();
 

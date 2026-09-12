@@ -65,13 +65,13 @@ namespace Hyperion.Editor.ViewModels
         private void OnConfirm()
         {
             _onCompleted(new NewSceneResult(SceneName, BuildSceneFlags()));
-            PanelService.Instance.ClosePanel();
+            PanelService.Instance.RemovePanel(this);
         }
 
         private void OnCancel()
         {
             _onCompleted(null);
-            PanelService.Instance.ClosePanel();
+            PanelService.Instance.RemovePanel(this);
         }
 
         private void BuildFlagEntries()

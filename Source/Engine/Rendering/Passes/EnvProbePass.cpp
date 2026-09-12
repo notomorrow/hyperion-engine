@@ -122,7 +122,7 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const Handle<Text
         bakedTexture->GetFormat(),
         bakedTexture->GetExtent());
 
-    cr << InsertBarrier(dstTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    cr << InsertBarrier(dstTexture->GetGpuImage(), ResourceState::ShaderResource);
 
     const bool aliasesDestination = inTexture == bakedTexture;
 
@@ -140,7 +140,7 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const Handle<Text
             bakedTexture->GetFormat(),
             inTexture->GetExtent());
 
-        cr << InsertBarrier(srcTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+        cr << InsertBarrier(srcTexture->GetGpuImage(), ResourceState::ShaderResource);
     }
 
     ConvolveProbeConstants constants {};
@@ -160,8 +160,8 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const Handle<Text
         subResource.baseArrayLayer = 0;
         subResource.numLayers = 6;
 
-        cr << InsertBarrier(src->GetGpuImage(), RS_COPY_SRC, subResource);
-        cr << InsertBarrier(dst->GetGpuImage(), RS_COPY_DST, subResource);
+        cr << InsertBarrier(src->GetGpuImage(), ResourceState::CopySrc, subResource);
+        cr << InsertBarrier(dst->GetGpuImage(), ResourceState::CopyDst, subResource);
 
         const Vec3u srcMipExtent = src->GetTextureDesc().extent;
         const Vec3u dstMipExtent = dst->GetTextureDesc().extent;
@@ -180,16 +180,16 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const Handle<Text
         }
 
         // back to shader resource state.
-        cr << InsertBarrier(src->GetGpuImage(), RS_SHADER_RESOURCE, subResource);
+        cr << InsertBarrier(src->GetGpuImage(), ResourceState::ShaderResource, subResource);
 
         // put ALL the remaining mips of dstImage into copy dst so we can generate mips on it
-        cr << InsertBarrier(dst->GetGpuImage(), RS_COPY_DST);
+        cr << InsertBarrier(dst->GetGpuImage(), ResourceState::CopyDst);
 
         // generate mips before running convolve shader using it as a source
         cr << GenerateMipmaps(dst);
 
-        cr << InsertBarrier(src->GetGpuImage(), RS_SHADER_RESOURCE);
-        cr << InsertBarrier(dst->GetGpuImage(), RS_SHADER_RESOURCE);
+        cr << InsertBarrier(src->GetGpuImage(), ResourceState::ShaderResource);
+        cr << InsertBarrier(dst->GetGpuImage(), ResourceState::ShaderResource);
     }
 
     GpuImageViewRef srcImageView = RI.textureViewCache->GetOrCreate(srcTexture);
@@ -231,7 +231,7 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const Handle<Text
 
         Assert(dstImageView.IsValid() && srcImageView.IsValid());
 
-        cr << InsertBarrier(dstTexture->GetGpuImage(), RS_UNORDERED_ACCESS, subResource);
+        cr << InsertBarrier(dstTexture->GetGpuImage(), ResourceState::UnorderedAccess, subResource);
 
         // @TODO Just write the env probe to constant buffer?
         cr << SetShaderUniform(0, "CurrentEnvProbe"_sh, RI.namedBuffers[NamedBuffer::EnvProbes], Resources::GetBinding(&envProbe));
@@ -244,8 +244,8 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const Handle<Text
 
         cr << DispatchCompute(Vec3u { (mipExtent.x + 7) / 8, (mipExtent.y + 7) / 8, 6 });
 
-        cr << InsertBarrier(dstTexture->GetGpuImage(), RS_COPY_SRC, subResource);
-        cr << InsertBarrier(bakedTexture->GetGpuImage(), RS_COPY_DST, subResource);
+        cr << InsertBarrier(dstTexture->GetGpuImage(), ResourceState::CopySrc, subResource);
+        cr << InsertBarrier(bakedTexture->GetGpuImage(), ResourceState::CopyDst, subResource);
 
         cr << CopyImage(dstTexture->GetGpuImage(), bakedTexture->GetGpuImage(),
                         Vec3u::Zero(), Vec3u::Zero(),
@@ -253,10 +253,10 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const Handle<Text
                         subResource, subResource);
 
         // put prefiltered map back into shader read
-        cr << InsertBarrier(bakedTexture->GetGpuImage(), RS_SHADER_RESOURCE, subResource);
+        cr << InsertBarrier(bakedTexture->GetGpuImage(), ResourceState::ShaderResource, subResource);
     }
 
-    cr << InsertBarrier(dstTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    cr << InsertBarrier(dstTexture->GetGpuImage(), ResourceState::ShaderResource);
 
     // readback on completion and write to cpu-side data if probe is baked
     if (envProbe.IsBaked())
@@ -337,8 +337,8 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const Handle<Text
 
         if (boundIndex != ~0u)
         {
-            cr << InsertBarrier(bakedTexture->GetGpuImage(), RS_COPY_SRC);
-            cr << InsertBarrier(RI.envProbesColorTexture->GetGpuImage(), RS_COPY_DST);
+            cr << InsertBarrier(bakedTexture->GetGpuImage(), ResourceState::CopySrc);
+            cr << InsertBarrier(RI.envProbesColorTexture->GetGpuImage(), ResourceState::CopyDst);
 
             const uint8 numMips = MathUtil::Min(
                 RI.envProbesColorTexture->GetTextureDesc().NumMips(),
@@ -382,8 +382,8 @@ void ConvolveEnvProbeCubemap(const Handle<Texture>& inTexture, const Handle<Text
                 }
             }
 
-            cr << InsertBarrier(bakedTexture->GetGpuImage(), RS_SHADER_RESOURCE);
-            cr << InsertBarrier(RI.envProbesColorTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+            cr << InsertBarrier(bakedTexture->GetGpuImage(), ResourceState::ShaderResource);
+            cr << InsertBarrier(RI.envProbesColorTexture->GetGpuImage(), ResourceState::ShaderResource);
         }
     }
 }
@@ -479,8 +479,8 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
         GpuBufferRef shBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, MathUtil::NextPowerOf2(ShDataSize));
         Check(shBuffer->Create());
 
-        cr << InsertBarrier(shTilesBuffers[0].gpuBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
-        cr << InsertBarrier(shBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
+        cr << InsertBarrier(shTilesBuffers[0].gpuBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+        cr << InsertBarrier(shBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
         ShaderPropertySet shaderProperties;
 
@@ -520,7 +520,7 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
         // MODE_CLEAR
         runPass(NAME("CLEAR"), constants, Vec3u { 1, 1, 1 }, shTilesBuffers[0], shTilesBuffers[1]);
 
-        cr << InsertBarrier(shTilesBuffers[0].gpuBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
+        cr << InsertBarrier(shTilesBuffers[0].gpuBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
         // MODE_BUILD_COEFFICIENTS
         runPass(NAME("BUILD_COEFFICIENTS"), constants, Vec3u { 1, 1, 1 }, shTilesBuffers[0], shTilesBuffers[1]);
@@ -530,7 +530,7 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
         {
             for (uint32 i = 1; i < ShNumLevels; i++)
             {
-                cr << InsertBarrier(shTilesBuffers[i - 1].gpuBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
+                cr << InsertBarrier(shTilesBuffers[i - 1].gpuBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
                 const Vec2u prevDimensions {
                     MathUtil::Max(1u, ShNumSamples.x >> (i - 1)),
@@ -566,8 +566,8 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
         const uint32 finalizeShBufferIndex = ShParallelReduce ? ShNumLevels - 1 : 0;
 
         // Finalize - build into final buffer
-        cr << InsertBarrier(shTilesBuffers[finalizeShBufferIndex].gpuBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
-        cr << InsertBarrier(shBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
+        cr << InsertBarrier(shTilesBuffers[finalizeShBufferIndex].gpuBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+        cr << InsertBarrier(shBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
         // MODE_FINALIZE
         runPass(
@@ -577,7 +577,7 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
             shTilesBuffers[finalizeShBufferIndex],
             shTilesBuffers[finalizeShBufferIndex]);
 
-        cr << InsertBarrier(shBuffer, RS_COPY_SRC, ShaderModuleType::Compute);
+        cr << InsertBarrier(shBuffer, ResourceState::CopySrc, ShaderModuleType::Compute);
 
         /// ========== READBACK ==========
 
@@ -589,7 +589,7 @@ void ComputeEnvProbeSphericalHarmonics(const EnvProbe& envProbe, const Texture& 
         Check(readbackBuffer->Create());
 
         // Copy to readback buffer
-        cr << InsertBarrier(readbackBuffer, RS_COPY_DST, ShaderModuleType::Compute);
+        cr << InsertBarrier(readbackBuffer, ResourceState::CopyDst, ShaderModuleType::Compute);
         cr << CopyBuffer(shBuffer, readbackBuffer, shBuffer->Size());
 
         struct ReadbackSphericalHarmonicsPayload
@@ -747,8 +747,8 @@ void ComputeEnvProbeHitMaskSH(EnvProbe& envProbe, const Texture& inHitMaskTextur
     GpuBufferRef shBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, MathUtil::NextPowerOf2(ShDataSize));
     Check(shBuffer->Create());
 
-    cr << InsertBarrier(shTilesBuffers[0].gpuBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
-    cr << InsertBarrier(shBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
+    cr << InsertBarrier(shTilesBuffers[0].gpuBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+    cr << InsertBarrier(shBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
     auto runPass = [&](Name mode, const ComputeSHConstants& passConstants, const Vec3u& dispatchGroupSize, const StructuredBuffer& inputBuffer, const StructuredBuffer& outputBuffer)
     {
@@ -783,16 +783,16 @@ void ComputeEnvProbeHitMaskSH(EnvProbe& envProbe, const Texture& inHitMaskTextur
 
     runPass(NAME("CLEAR"), constants, Vec3u { 1, 1, 1 }, shTilesBuffers[0], shTilesBuffers[1]);
 
-    cr << InsertBarrier(shTilesBuffers[0].gpuBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
+    cr << InsertBarrier(shTilesBuffers[0].gpuBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
     runPass(NAME("BUILD_COEFFICIENTS"), constants, Vec3u { 1, 1, 1 }, shTilesBuffers[0], shTilesBuffers[1]);
 
-    cr << InsertBarrier(shTilesBuffers[0].gpuBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
-    cr << InsertBarrier(shBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
+    cr << InsertBarrier(shTilesBuffers[0].gpuBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+    cr << InsertBarrier(shBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
     runPass(NAME("FINALIZE"), constants, Vec3u { 1, 1, 1 }, shTilesBuffers[0], shTilesBuffers[0]);
 
-    cr << InsertBarrier(shBuffer, RS_COPY_SRC, ShaderModuleType::Compute);
+    cr << InsertBarrier(shBuffer, ResourceState::CopySrc, ShaderModuleType::Compute);
 
     GpuBufferRef readbackBuffer = RI.MakeGpuBuffer(GpuBufferType::ReadbackBuffer, shBuffer->Size());
     readbackBuffer->SetIsCpuAccessible(true);
@@ -801,7 +801,7 @@ void ComputeEnvProbeHitMaskSH(EnvProbe& envProbe, const Texture& inHitMaskTextur
 #endif // HYP_DEBUG_MODE
     Check(readbackBuffer->Create());
 
-    cr << InsertBarrier(readbackBuffer, RS_COPY_DST, ShaderModuleType::Compute);
+    cr << InsertBarrier(readbackBuffer, ResourceState::CopyDst, ShaderModuleType::Compute);
     cr << CopyBuffer(shBuffer, readbackBuffer, shBuffer->Size());
 
     struct ReadbackHitMaskPayload
@@ -958,16 +958,16 @@ void UpdateEnvProbeVisibilityTexture(Frame* frame, EnvProbe* envProbe, bool shou
         dstExtent);
 
     // Blit framebuffer -> scratch
-    cr << InsertBarrier(srcTexture->GetGpuImage(), RS_COPY_SRC);
-    cr << InsertBarrier(scratchTexture->GetGpuImage(), RS_COPY_DST);
+    cr << InsertBarrier(srcTexture->GetGpuImage(), ResourceState::CopySrc);
+    cr << InsertBarrier(scratchTexture->GetGpuImage(), ResourceState::CopyDst);
 
     cr << Blit(srcTexture, scratchTexture.Get(), srcRect, dstRect, subResource, subResource);
 
-    cr << InsertBarrier(srcTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    cr << InsertBarrier(srcTexture->GetGpuImage(), ResourceState::ShaderResource);
 
     // Barriers: scratch -> SRV, visibility -> UAV
-    cr << InsertBarrier(scratchTexture->GetGpuImage(), RS_SHADER_RESOURCE);
-    cr << InsertBarrier(dstTexture->GetGpuImage(), RS_UNORDERED_ACCESS);
+    cr << InsertBarrier(scratchTexture->GetGpuImage(), ResourceState::ShaderResource);
+    cr << InsertBarrier(dstTexture->GetGpuImage(), ResourceState::UnorderedAccess);
 
     // Blur visibility
     {
@@ -1016,7 +1016,7 @@ void UpdateEnvProbeVisibilityTexture(Frame* frame, EnvProbe* envProbe, bool shou
             6 });
     }
 
-    cr << InsertBarrier(dstTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    cr << InsertBarrier(dstTexture->GetGpuImage(), ResourceState::ShaderResource);
 
     // Update in env probes depth texture array if bound
     const uint32 boundIndex = Resources::GetBinding(envProbe);
@@ -1025,7 +1025,7 @@ void UpdateEnvProbeVisibilityTexture(Frame* frame, EnvProbe* envProbe, bool shou
     {
         GpuImage* envProbesDepthImage = RI.envProbesDepthTexture->GetGpuImage();
 
-        cr << InsertBarrier(dstTexture->GetGpuImage(), RS_COPY_SRC);
+        cr << InsertBarrier(dstTexture->GetGpuImage(), ResourceState::CopySrc);
 
         ImageSubResource dstSubResource {};
         dstSubResource.baseMipLevel = 0;
@@ -1033,14 +1033,14 @@ void UpdateEnvProbeVisibilityTexture(Frame* frame, EnvProbe* envProbe, bool shou
         dstSubResource.baseArrayLayer = uint16(6 * boundIndex);
         dstSubResource.numLayers = 6;
 
-        cr << InsertBarrier(envProbesDepthImage, RS_COPY_DST, dstSubResource);
+        cr << InsertBarrier(envProbesDepthImage, ResourceState::CopyDst, dstSubResource);
 
         cr << CopyImage(dstTexture->GetGpuImage(), envProbesDepthImage, dstExtent, subResource, dstSubResource);
 
-        cr << InsertBarrier(envProbesDepthImage, RS_SHADER_RESOURCE, dstSubResource);
+        cr << InsertBarrier(envProbesDepthImage, ResourceState::ShaderResource, dstSubResource);
     }
 
-    cr << InsertBarrier(dstTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    cr << InsertBarrier(dstTexture->GetGpuImage(), ResourceState::ShaderResource);
 
     if (shouldReadback)
     {

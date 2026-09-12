@@ -1884,7 +1884,7 @@ void RenderInterface::CommitPipelineState(PSOType psoType, CommandBuffer* comman
         const ShaderRegister reg = uniformMappings[uniformIndex].reg;
         AssertDebug(reg == ShaderRegister::SRV || reg == ShaderRegister::UAV);
 
-        const ResourceState desiredResourceState = (reg == ShaderRegister::SRV) ? RS_SHADER_RESOURCE : RS_UNORDERED_ACCESS;
+        const ResourceState desiredResourceState = (reg == ShaderRegister::SRV) ? ResourceState::ShaderResource : ResourceState::UnorderedAccess;
 
         // normalize counts
         ImageSubResource subResource = imageView->GetImageSubResource();
@@ -2301,11 +2301,11 @@ void RenderInterface::CreateEnvProbesColorTexture()
     TextureDesc textureDesc;
     textureDesc.format = TextureFormat::RGBA16F;
     textureDesc.extent = Vec3u { 128, 128, 1 };
-    textureDesc.imageUsage = IU_SAMPLED;
+    textureDesc.imageUsage = ImageUsage::Sampled;
     textureDesc.type = TextureType::CubemapArray;
     textureDesc.numLayers = MaxBoundReflectionProbes;
-    textureDesc.filterModeMin = TFM_LINEAR_MIPMAP;
-    textureDesc.filterModeMag = TFM_LINEAR;
+    textureDesc.filterModeMin = TextureFilterMode::LinearMipmap;
+    textureDesc.filterModeMag = TextureFilterMode::Linear;
 
     envProbesColorTexture = MakeHandle<Texture>(textureDesc);
     envProbesColorTexture->SetName(NAME("EnvProbesColorTexture"));
@@ -2326,11 +2326,11 @@ void RenderInterface::CreateEnvProbesDepthTexture()
         EnvProbe::VisibilityTextureDimensions,
         1
     };
-    textureDesc.imageUsage = IU_SAMPLED;
+    textureDesc.imageUsage = ImageUsage::Sampled;
     textureDesc.type = TextureType::CubemapArray;
     textureDesc.numLayers = MaxBoundReflectionProbes;
-    textureDesc.filterModeMin = TFM_LINEAR;
-    textureDesc.filterModeMag = TFM_LINEAR;
+    textureDesc.filterModeMin = TextureFilterMode::Linear;
+    textureDesc.filterModeMag = TextureFilterMode::Linear;
 
     envProbesDepthTexture = MakeHandle<Texture>(textureDesc);
     envProbesDepthTexture->SetName(NAME("EnvProbesDepthTexture"));

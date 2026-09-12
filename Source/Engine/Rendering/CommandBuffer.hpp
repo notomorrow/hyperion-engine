@@ -39,7 +39,7 @@ public:
     virtual void End() = 0;
 
     virtual void BindVertexBuffer(const GpuBuffer* buffer) = 0;
-    virtual void BindIndexBuffer(const GpuBuffer* buffer, GpuElemType elemType = GET_UNSIGNED_INT) = 0;
+    virtual void BindIndexBuffer(const GpuBuffer* buffer, GpuElemType elemType = GpuElemType::UnsignedInt) = 0;
 
     virtual void DrawIndexed(
         uint32 numIndices,

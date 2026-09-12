@@ -71,7 +71,7 @@ class ScratchImageAllocator;
 struct IRenderProxy;
 
 enum class GpuBufferType : uint8;
-enum RenderTargetType : uint8;
+enum class RenderTargetType : uint8;
 
 namespace Resources {
 struct ResourceContainer;

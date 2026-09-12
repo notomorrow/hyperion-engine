@@ -66,8 +66,8 @@ VulkanGpuImage::~VulkanGpuImage()
         // reset back to default
         m_isHandleOwned = true;
 
-        m_resourceState = RS_UNDEFINED;
-        m_stencilState = RS_UNDEFINED;
+        m_resourceState = ResourceState::Undefined;
+        m_stencilState = ResourceState::Undefined;
         m_subResourceStates.Clear();
     }
 }
@@ -120,10 +120,10 @@ RendererResult VulkanGpuImage::GenerateMipmaps(VulkanCommandBuffer* commandBuffe
             InsertBarrier(
                 commandBuffer,
                 src,
-                RS_COPY_SRC,
+                ResourceState::CopySrc,
                 ShaderModuleType::None);
 
-            Assert(GetSubResourceState(dst) == RS_COPY_DST);
+            Assert(GetSubResourceState(dst) == ResourceState::CopyDst);
 
             if (i == int32(numMipmaps))
             {
@@ -131,7 +131,7 @@ RendererResult VulkanGpuImage::GenerateMipmaps(VulkanCommandBuffer* commandBuffe
                 {
                     /* all individual subresources have been set so we mark the whole
                      * resource as being int his state */
-                    SetResourceState(RS_COPY_SRC);
+                    SetResourceState(ResourceState::CopySrc);
                 }
 
                 break;
@@ -169,9 +169,9 @@ RendererResult VulkanGpuImage::GenerateMipmaps(VulkanCommandBuffer* commandBuffe
             vkCmdBlitImage(
                 commandBuffer->GetVulkanHandle(),
                 m_handle,
-                GetVkImageLayout(RS_COPY_SRC),
+                GetVkImageLayout(ResourceState::CopySrc),
                 m_handle,
-                GetVkImageLayout(RS_COPY_DST),
+                GetVkImageLayout(ResourceState::CopyDst),
                 1, &blit,
                 m_textureDesc.IsDepthStencil() ? VK_FILTER_NEAREST : VK_FILTER_LINEAR // TODO: base on filter mode
             );
@@ -188,7 +188,7 @@ RendererResult VulkanGpuImage::Create()
         return {};
     }
 
-    return Create(RS_UNDEFINED);
+    return Create(ResourceState::Undefined);
 }
 
 RendererResult VulkanGpuImage::Create(ResourceState initialState)
@@ -215,10 +215,10 @@ RendererResult VulkanGpuImage::Create(ResourceState initialState)
     const TextureFormat format = GetTextureFormat();
     const TextureType type = GetType();
 
-    const bool isAttachmentTexture = m_textureDesc.imageUsage[IU_ATTACHMENT];
+    const bool isAttachmentTexture = m_textureDesc.imageUsage[ImageUsage::Attachment];
     const bool isDepthStencil = m_textureDesc.IsDepthStencil();
-    const bool isRWTexture = m_textureDesc.imageUsage[IU_STORAGE];
-    const bool isExternalMemory = m_textureDesc.imageUsage[IU_EXTERNAL];
+    const bool isRWTexture = m_textureDesc.imageUsage[ImageUsage::Storage];
+    const bool isExternalMemory = m_textureDesc.imageUsage[ImageUsage::External];
 
     const bool isBlended = m_textureDesc.IsBlended();
     const bool isSrgb = m_textureDesc.IsSrgb();
@@ -277,11 +277,11 @@ RendererResult VulkanGpuImage::Create(ResourceState initialState)
 
         switch (GetMinFilterMode())
         {
-        case TFM_LINEAR: // fallthrough
-        case TFM_LINEAR_MIPMAP:
+        case TextureFilterMode::Linear: // fallthrough
+        case TextureFilterMode::LinearMipmap:
             vkFormatFeatures |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
             break;
-        case TFM_MINMAX_MIPMAP:
+        case TextureFilterMode::MinMaxMipmap:
             vkFormatFeatures |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_MINMAX_BIT;
             break;
         default:
@@ -442,15 +442,15 @@ RendererResult VulkanGpuImage::Resize(const Vec3u& extent)
         }
 
         m_handle = VK_NULL_HANDLE;
-        m_resourceState = RS_UNDEFINED;
-        m_stencilState = RS_UNDEFINED;
+        m_resourceState = ResourceState::Undefined;
+        m_stencilState = ResourceState::Undefined;
         m_subResourceStates.Clear();
 
         CheckResultOrReturn(Create());
 
-        if (previousResourceState != RS_UNDEFINED)
+        if (previousResourceState != ResourceState::Undefined)
         {
-            SetResourceState(RS_UNDEFINED);
+            SetResourceState(ResourceState::Undefined);
 
             VulkanFrame* frame = RI.GetCurrentFrame();
             CommandRecorder& cr = frame->cr;
@@ -494,7 +494,7 @@ void VulkanGpuImage::InsertBarrier(
     bool onlyDepth,
     bool onlyStencil)
 {
-    AssertDebug(newState != RS_UNDEFINED && newState != RS_PRE_INITIALIZED);
+    AssertDebug(newState != ResourceState::Undefined && newState != ResourceState::PreInitialized);
     AssertDebug(!commandBuffer->IsInRenderPass());
 
     if (m_handle == VK_NULL_HANDLE)
@@ -516,7 +516,7 @@ void VulkanGpuImage::InsertBarrier(
     const uint16 maxArrayLayers = uint16(subResource.baseArrayLayer + MathUtil::Min(subResource.numLayers, NumArrayLayers()));
     const uint8 maxMipLevels = uint8(subResource.baseMipLevel + MathUtil::Min(subResource.numLevels, NumMips()));
 
-    const bool isAttachmentTexture = m_textureDesc.imageUsage[IU_ATTACHMENT];
+    const bool isAttachmentTexture = m_textureDesc.imageUsage[ImageUsage::Attachment];
 
     const bool isDepthStencil = m_textureDesc.IsDepthStencil();
     const bool hasStencil = TextureUtils::HasStencilComponent(m_textureDesc.format);
@@ -532,7 +532,7 @@ void VulkanGpuImage::InsertBarrier(
 
     if (HasSubResourceStates())
     {
-        currResourceState = RS_UNDEFINED;
+        currResourceState = ResourceState::Undefined;
 
         bool firstSubResource = true;
         bool breakLoop = false;
@@ -573,7 +573,7 @@ void VulkanGpuImage::InsertBarrier(
                 }
                 else if (foundResourceState != currResourceState)
                 {
-                    currResourceState = RS_UNDEFINED;
+                    currResourceState = ResourceState::Undefined;
                     breakLoop = true;
 
                     break;
@@ -589,26 +589,26 @@ void VulkanGpuImage::InsertBarrier(
         {
             Assert(onlyStencil);
 
-            if (newState == RS_SHADER_RESOURCE)
+            if (newState == ResourceState::ShaderResource)
             {
-                Assert(currStencilState == RS_RENDER_TARGET);
+                Assert(currStencilState == ResourceState::RenderTarget);
             }
-            else if (newState == RS_RENDER_TARGET)
+            else if (newState == ResourceState::RenderTarget)
             {
-                Assert(currStencilState == RS_SHADER_RESOURCE);
+                Assert(currStencilState == ResourceState::ShaderResource);
             }
         }
         else if (currStencilState == newState)
         {
             Assert(onlyDepth);
 
-            if (newState == RS_SHADER_RESOURCE)
+            if (newState == ResourceState::ShaderResource)
             {
-                Assert(currResourceState == RS_RENDER_TARGET);
+                Assert(currResourceState == ResourceState::RenderTarget);
             }
-            else if (newState == RS_RENDER_TARGET)
+            else if (newState == ResourceState::RenderTarget)
             {
-                Assert(currResourceState == RS_SHADER_RESOURCE);
+                Assert(currResourceState == ResourceState::ShaderResource);
             }
         }
     }
@@ -642,20 +642,20 @@ void VulkanGpuImage::InsertBarrier(
     {
         switch (currResourceState)
         {
-        case RS_SHADER_RESOURCE:
+        case ResourceState::ShaderResource:
             switch (currStencilState)
             {
-            case RS_RENDER_TARGET:
+            case ResourceState::RenderTarget:
                 barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
                 break;
             default:
                 HYP_UNREACHABLE();
             }
             break;
-        case RS_RENDER_TARGET:
+        case ResourceState::RenderTarget:
             switch (currStencilState)
             {
-            case RS_SHADER_RESOURCE:
+            case ResourceState::ShaderResource:
                 barrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
                 break;
             default:
@@ -819,8 +819,8 @@ void VulkanGpuImage::Blit(
     const bool srcIsDepthStencil = srcImage->m_textureDesc.IsDepthStencil();
     const bool dstIsDepthStencil = m_textureDesc.IsDepthStencil();
 
-    const bool srcIsAttachmentTexture = srcImage->m_textureDesc.imageUsage[IU_ATTACHMENT];
-    const bool dstIsAttachmentTexture = m_textureDesc.imageUsage[IU_ATTACHMENT];
+    const bool srcIsAttachmentTexture = srcImage->m_textureDesc.imageUsage[ImageUsage::Attachment];
+    const bool dstIsAttachmentTexture = m_textureDesc.imageUsage[ImageUsage::Attachment];
 
     VkImageAspectFlags srcAspectFlagBits = 0;
 
@@ -872,8 +872,8 @@ void VulkanGpuImage::Blit(
         const ResourceState srcResourceState = srcImage->m_resourceState;
         const ResourceState dstResourceState = m_resourceState;
 
-        Assert(srcResourceState == RS_COPY_SRC);
-        Assert(dstResourceState == RS_COPY_DST);
+        Assert(srcResourceState == ResourceState::CopySrc);
+        Assert(dstResourceState == ResourceState::CopyDst);
 
         VkImageBlit blit {
             .srcSubresource = {
@@ -917,8 +917,8 @@ void VulkanGpuImage::Blit(
                 .numLayers = 1
             });
 
-            Assert(srcResourceState == RS_COPY_SRC);
-            Assert(dstResourceState == RS_COPY_DST);
+            Assert(srcResourceState == ResourceState::CopySrc);
+            Assert(dstResourceState == ResourceState::CopyDst);
 
             const Vec3u perMipSrcExtent = srcImage->GetTextureDesc().GetMipExtent(uint8(srcSubResource.baseMipLevel + mipLevel));
             const Vec3u perMipDstExtent = m_textureDesc.GetMipExtent(uint8(dstSubResource.baseMipLevel + mipLevel));
@@ -966,7 +966,7 @@ void VulkanGpuImage::CopyFromBuffer(
     VkImageAspectFlags aspectFlagBits = 0;
 
     const bool isDepthStencil = m_textureDesc.IsDepthStencil();
-    const bool isAttachmentTexture = m_textureDesc.imageUsage[IU_ATTACHMENT];
+    const bool isAttachmentTexture = m_textureDesc.imageUsage[ImageUsage::Attachment];
 
     if (isDepthStencil)
     {
@@ -1060,7 +1060,7 @@ void VulkanGpuImage::CopyToBuffer(
     newSubResource.numLevels = MathUtil::Min(subResource.numLevels, NumMips() - subResource.baseMipLevel);
 
     const bool isDepthStencil = m_textureDesc.IsDepthStencil();
-    const bool isAttachmentTexture = m_textureDesc.imageUsage[IU_ATTACHMENT];
+    const bool isAttachmentTexture = m_textureDesc.imageUsage[ImageUsage::Attachment];
 
     VkImageAspectFlags aspectFlagBits = 0;
 
@@ -1153,7 +1153,7 @@ void VulkanGpuImage::Fill(
     subresourceRange.baseArrayLayer = subResource.baseArrayLayer;
     subresourceRange.layerCount = subResource.numLayers != UINT16_MAX ? subResource.numLayers : 1;
 
-    InsertBarrier(commandBuffer, subResource, RS_COPY_DST, ShaderModuleType::None);
+    InsertBarrier(commandBuffer, subResource, ResourceState::CopyDst, ShaderModuleType::None);
 
     if (isDepthStencil)
     {
@@ -1193,8 +1193,8 @@ void VulkanGpuImage::CopyFrom(
     const bool srcIsDepthStencil = srcImage->GetTextureDesc().IsDepthStencil();
     const bool dstIsDepthStencil = m_textureDesc.IsDepthStencil();
 
-    const bool srcIsAttachmentTexture = srcImage->GetTextureDesc().imageUsage[IU_ATTACHMENT];
-    const bool dstIsAttachmentTexture = m_textureDesc.imageUsage[IU_ATTACHMENT];
+    const bool srcIsAttachmentTexture = srcImage->GetTextureDesc().imageUsage[ImageUsage::Attachment];
+    const bool dstIsAttachmentTexture = m_textureDesc.imageUsage[ImageUsage::Attachment];
 
     VkImageAspectFlags srcAspectFlagBits = 0;
 
@@ -1252,8 +1252,8 @@ void VulkanGpuImage::CopyFrom(
         const ResourceState srcResourceState = srcImage->m_resourceState;
         const ResourceState dstResourceState = m_resourceState;
 
-        Assert(srcResourceState == RS_COPY_SRC);
-        Assert(dstResourceState == RS_COPY_DST);
+        Assert(srcResourceState == ResourceState::CopySrc);
+        Assert(dstResourceState == ResourceState::CopyDst);
 
         VkImageCopy copy {};
         copy.extent = { clampedExtent.x, clampedExtent.y, clampedExtent.z };
@@ -1302,8 +1302,8 @@ void VulkanGpuImage::CopyFrom(
                 .numLayers = 1
             });
 
-            Assert(srcResourceState == RS_COPY_SRC);
-            Assert(dstResourceState == RS_COPY_DST);
+            Assert(srcResourceState == ResourceState::CopySrc);
+            Assert(dstResourceState == ResourceState::CopyDst);
 
             const Vec3u perMipSrcExtent = srcImage->GetTextureDesc().GetMipExtent(uint8(newSrcSubResource.baseMipLevel + mipLevel));
             const Vec3u perMipDstExtent = m_textureDesc.GetMipExtent(uint8(newDstSubResource.baseMipLevel + mipLevel));

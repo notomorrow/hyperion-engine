@@ -94,8 +94,8 @@ static void CreateNoiseMap(Handle<Texture>& tex)
     textureDesc.extent = Vec3u { 128, 128, 1 };
     textureDesc.type = TextureType::Texture2D;
     textureDesc.format = TextureFormat::R8;
-    textureDesc.filterModeMin = TFM_LINEAR;
-    textureDesc.filterModeMag = TFM_LINEAR;
+    textureDesc.filterModeMin = TextureFilterMode::Linear;
+    textureDesc.filterModeMag = TextureFilterMode::Linear;
 
     Bitmap_R8 noiseMap = SimplexNoiseGenerator(Seed).CreateBitmap(128, 128, 1024.0f);
 
@@ -129,12 +129,12 @@ static void ZeroizeBuffer(CommandRecorder& cr, GpuBuffer* dstBuffer)
 
     stagingBuffer->Memset(bufferSize, 0);
 
-    cr << InsertBarrier(stagingBuffer, RS_COPY_SRC);
-    cr << InsertBarrier(dstBuffer, RS_COPY_DST);
+    cr << InsertBarrier(stagingBuffer, ResourceState::CopySrc);
+    cr << InsertBarrier(dstBuffer, ResourceState::CopyDst);
 
     cr << CopyBuffer(stagingBuffer, dstBuffer, bufferSize);
 
-    cr << InsertBarrier(dstBuffer, RS_UNORDERED_ACCESS);
+    cr << InsertBarrier(dstBuffer, ResourceState::UnorderedAccess);
 }
 
 ParticlesPass::VolumeState& ParticlesPass::EnsureVolumeState(RenderProxyParticleVolume* proxy, CommandRecorder& cr)
@@ -177,13 +177,13 @@ ParticlesPass::VolumeState& ParticlesPass::EnsureVolumeState(RenderProxyParticle
     materialAttributes.shaderName = NAME("Particle");
     materialAttributes.bucket = RenderBucket::Translucent;
     materialAttributes.blendFunction = BlendFunction::AlphaBlending();
-    materialAttributes.cullFaces = FCM_BACK;
+    materialAttributes.cullFaces = FaceCullMode::Back;
     materialAttributes.flags = MAF_DEPTH_TEST; // depth test on, depth write off by default
 
     MeshAttributes meshAttributes {};
     meshAttributes.inputLayout = { VT_Simple };
-    meshAttributes.indexBufferElemType = GET_UNSIGNED_INT;
-    meshAttributes.topology = TOP_TRIANGLES;
+    meshAttributes.indexBufferElemType = GpuElemType::UnsignedInt;
+    meshAttributes.topology = Topology::Triangles;
     state.renderableAttributes = RenderableAttributeSet(meshAttributes, materialAttributes);
 
     return state;
@@ -238,7 +238,7 @@ void ParticlesPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     }
 
     // Reset zero staging buffer state
-    preflightCommands << InsertBarrier(stagingBuffer, RS_COPY_SRC);
+    preflightCommands << InsertBarrier(stagingBuffer, ResourceState::CopySrc);
 
     VolumeState& state = EnsureVolumeState(proxy, preflightCommands);
 
@@ -246,9 +246,9 @@ void ParticlesPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     Assert(state.indirectBuffer->Size() == sizeof(IndirectDrawCommand));
 
     { // zero out indirect buffer (ahead of frame compute + rendering)
-        preflightCommands << InsertBarrier(state.indirectBuffer, RS_COPY_DST);
+        preflightCommands << InsertBarrier(state.indirectBuffer, ResourceState::CopyDst);
         preflightCommands << CopyBuffer(stagingBuffer, state.indirectBuffer, sizeof(IndirectDrawCommand));
-        preflightCommands << InsertBarrier(state.indirectBuffer, RS_INDIRECT_ARG);
+        preflightCommands << InsertBarrier(state.indirectBuffer, ResourceState::IndirectArg);
     }
 
     // bind and dispatch compute
@@ -326,7 +326,7 @@ void ParticlesPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         const size_t maxParticles = proxy->bufferData.maxParticles;
         cr << DispatchCompute(Vec3u { uint32((maxParticles + 255) / 256), 1, 1 });
 
-        cr << InsertBarrier(state.indirectBuffer, RS_INDIRECT_ARG);
+        cr << InsertBarrier(state.indirectBuffer, ResourceState::IndirectArg);
     }
 
     state.lastFrame = GetFrameCounter();
@@ -348,7 +348,7 @@ void ParticlesPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         cr << SetDepthWrite(bool(state.renderableAttributes.GetMaterialAttributes().flags & MAF_DEPTH_WRITE));
         cr << SetStencilTest(bool(state.renderableAttributes.GetMaterialAttributes().flags & MAF_STENCIL_TEST));
         cr << SetStencilFunction(state.renderableAttributes.GetMaterialAttributes().stencilFunction);
-        cr << SetFaceCullMode(FCM_FRONT); // temp
+        cr << SetFaceCullMode(FaceCullMode::Front); // temp
 
         cr << SetShaderUniform(0, "ParticlesBuffer"_sh, state.particleBuffer, ShaderDataOffset(0, sizeof(ParticleShaderData)));
 
@@ -376,8 +376,8 @@ void ParticlesPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         cr << SetDepthTest(true);
         cr << SetDepthWrite(true);
         cr << SetStencilTest(false);
-        cr << SetFillMode(FM_FILL);
-        cr << SetFaceCullMode(FCM_BACK);
+        cr << SetFillMode(FillMode::Fill);
+        cr << SetFaceCullMode(FaceCullMode::Back);
     }
 }
 

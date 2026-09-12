@@ -331,8 +331,8 @@ AssetLoadResult OgreXMLModelLoader::LoadAsset(LoaderState& state) const
 
         MeshDesc meshDesc;
         meshDesc.meshAttributes.inputLayout = { VT_Simple | VT_Skeletal };
-        meshDesc.meshAttributes.indexBufferElemType = GET_UNSIGNED_INT;
-        meshDesc.meshAttributes.topology = TOP_TRIANGLES;
+        meshDesc.meshAttributes.indexBufferElemType = GpuElemType::UnsignedInt;
+        meshDesc.meshAttributes.topology = Topology::Triangles;
         meshDesc.lods[0].numVertices = uint32(model.vertexData.ByteSize() / sizeof(FatVertex));
         meshDesc.lods[0].numIndices = uint32(subMesh.indices.Size());
 

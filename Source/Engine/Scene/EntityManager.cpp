@@ -189,8 +189,6 @@ void EntityManager::NotifySystemOfAllEntitiesRemoved(SystemBase* system)
     Assert(m_world != nullptr, "EntityManager must be associated with a World before shutting down systems.");
 
     Assert(system != nullptr);
-    
-    FatArray<TypeId, InlineAllocator<16>> keys;
 
     for (auto& subtypeData : m_entities.GetSubtypeData())
     {
@@ -201,24 +199,13 @@ void EntityManager::NotifySystemOfAllEntitiesRemoved(SystemBase* system)
             Entity* entity = entityData.entityWeak.GetUnsafe();
             Assert(entity != nullptr);
 
-            const ComponentMap& componentIds = entityData.components;
-
-            keys.Resize(0);
-            keys.Reserve(componentIds.Size());
-
-            for (const auto& it : componentIds)
-            {
-                keys.PushBack(it.first);
-            }
-
-            if (system->ActsOnComponents(keys, true) && IsEntityInitializedForSystem(system, entity))
+            if (IsEntityInitializedForSystem(system, entity))
             {
                 { // critical section
                     TUniqueLock lock(m_systemEntityMapMutex);
 
                     auto systemEntityIt = m_systemEntityMap.Find(system);
 
-                    // Check if the system already has this entity initialized
                     if (systemEntityIt == m_systemEntityMap.End())
                     {
                         continue;
@@ -376,7 +363,7 @@ void EntityManager::Shutdown()
                 Assert(system != nullptr);
 
                 // Drain all remaining entities registered with this system in the system entity map
-                Array<Entity*> entities;
+                Set<Entity*> entities;
 
                 {
                     TUniqueLock lock(m_systemEntityMapMutex);
@@ -387,11 +374,12 @@ void EntityManager::Shutdown()
                     {
                         for (Entity* entity : systemEntityIt->second)
                         {
-                            entities.PushBack(entity);
-
-                            if (allEntities.FindAs(entity->Id()) == allEntities.End())
+                            if (entities.Insert(entity).second)
                             {
-                                allEntities.Add(MakeStrongRef(entity));
+                                if (allEntities.FindAs(entity->Id()) == allEntities.End())
+                                {
+                                    allEntities.Add(MakeStrongRef(entity));
+                                }
                             }
                         }
 
@@ -401,6 +389,13 @@ void EntityManager::Shutdown()
 
                 for (Entity* entity : entities)
                 {
+                    if (entity->GetEntityManager() != this)
+                    {
+                        HYP_LOG(Entity, Warning, "Entity {} tracked by system {} has a mismatched EntityManager - skipping OnEntityRemoved", entity->GetName(), system->InstanceClass()->GetName());
+
+                        continue;
+                    }
+
                     system->OnEntityRemoved(entity);
                 }
 
@@ -410,6 +405,13 @@ void EntityManager::Shutdown()
 
         for (const Handle<Entity>& entity : allEntities)
         {
+            if (entity->GetEntityManager() != this)
+            {
+                HYP_LOG(Entity, Warning, "Entity {} in Shutdown() no longer owned by this EntityManager - skipping", entity->GetName());
+
+                continue;
+            }
+
             entity->OnRemovedFromWorld(m_world);
 
             if (m_scene->GetSceneFlags() & SceneFlags::HAS_OCTREE)
@@ -426,7 +428,7 @@ void EntityManager::Shutdown()
 
             entity->OnRemovedFromScene(m_scene);
 
-            entity->m_entityManager = nullptr;
+            entity->SetEntityManagerRaw_Internal(nullptr);
         }
     }
 
@@ -456,7 +458,7 @@ void EntityManager::ClearEntities_Internal()
 
             entity->OnRemovedFromWorld(m_world);
 
-            entity->m_entityManager = nullptr;
+            entity->SetEntityManagerRaw_Internal(nullptr);
         }
 
         subtypeData.data.Clear();
@@ -506,7 +508,7 @@ void EntityManager::SetWorld(World* world)
 
                 entity->OnRemovedFromWorld(m_world);
 
-                entity->m_entityManager = nullptr;
+                entity->SetEntityManagerRaw_Internal(nullptr);
             }
         }
     }
@@ -528,12 +530,6 @@ void EntityManager::SetWorld(World* world)
             }
         }
 
-        // notify systems of entity added for the new world
-        for (SystemBase* system : systems)
-        {
-            NotifySystemOfExistingEntities(system);
-        }
-
         for (auto& subtypeData : m_entities.GetSubtypeData())
         {
             for (EntityData& entityData : subtypeData.data)
@@ -541,10 +537,16 @@ void EntityManager::SetWorld(World* world)
                 Entity* entity = entityData.entityWeak.GetUnsafe();
                 Assert(entity != nullptr);
 
-                entity->m_entityManager = this;
+                entity->SetEntityManagerRaw_Internal(this);
 
                 entity->OnAddedToWorld(m_world);
             }
+        }
+
+        // notify systems of entity added for the new world
+        for (SystemBase* system : systems)
+        {
+            NotifySystemOfExistingEntities(system);
         }
     }
 }
@@ -594,7 +596,7 @@ Handle<Entity> EntityManager::AddBasicEntity()
 
     m_entities.Add(entity);
 
-    entity->m_entityManager = this;
+    entity->SetEntityManagerRaw_Internal(this);
     entity->SetScene(m_scene);
 
     InitObject(entity);
@@ -659,7 +661,7 @@ Handle<Entity> EntityManager::AddTypedEntity(const Class* cls)
 
     m_entities.Add(entity);
 
-    entity->m_entityManager = this;
+    entity->SetEntityManagerRaw_Internal(this);
     entity->SetScene(m_scene);
 
     InitObject(entity);
@@ -740,7 +742,7 @@ void EntityManager::AddExistingEntity_Internal(const Handle<Entity>& entity)
 
     m_entities.Add(entity);
 
-    entity->m_entityManager = this;
+    entity->SetEntityManagerRaw_Internal(this);
 
     lock.Reset();
 
@@ -822,23 +824,11 @@ bool EntityManager::RemoveEntity(Entity* entity, bool calledFromEntityDestructor
     {
         NotifySystemsOfEntityRemoved(entity, entityData->components);
     }
-    else
+    else if (m_scene != nullptr && (m_scene->GetSceneFlags() & SceneFlags::HAS_OCTREE))
     {
-        if (m_world != nullptr)
-        {
-            TUniqueLock lock(m_systemEntityMapMutex);
-
-            for (auto& systemEntityPair : m_systemEntityMap)
-            {
-                systemEntityPair.second.Erase(entity);
-            }
-        }
-
-        if (m_scene != nullptr && (m_scene->GetSceneFlags() & SceneFlags::HAS_OCTREE))
-        {
-            m_scene->GetOctree().Remove(entity);
-        }
+        m_scene->GetOctree().Remove(entity);
     }
+
 
     for (auto componentInfoPairIt = entityData->components.Begin(); componentInfoPairIt != entityData->components.End();)
     {
@@ -903,7 +893,7 @@ bool EntityManager::RemoveEntity(Entity* entity, bool calledFromEntityDestructor
 
     if (!calledFromEntityDestructor)
     {
-        entity->m_entityManager = nullptr;
+        entity->SetEntityManagerRaw_Internal(nullptr);
     }
 
     m_entities.Remove(entityId);
@@ -1019,7 +1009,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
             }
         }
 
-        entity->m_entityManager = nullptr;
+        entity->SetEntityManagerRaw_Internal(nullptr);
 
         m_entities.Remove(entity);
     }
@@ -1045,7 +1035,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
 
         other->m_entities.Add(entity);
 
-        entity->m_entityManager = other;
+        entity->SetEntityManagerRaw_Internal(other.Get());
 
         lock.Reset();
 
@@ -1585,7 +1575,19 @@ void EntityManager::NotifySystemsOfEntityRemoved(Entity* entity, const Component
                 keys.PushBack(it.first);
             }
 
-            if (systemIt.second->ActsOnComponents(keys.ToSpan(), true))
+            bool systemAffected = false;
+
+            for (const TypeId key : keys)
+            {
+                if (systemIt.second->HasComponentTypeId(key, /* includeReadOnly */ false))
+                {
+                    systemAffected = true;
+
+                    break;
+                }
+            }
+
+            if (systemAffected)
             {
                 {
                     TUniqueLock lock(m_systemEntityMapMutex);
@@ -1678,6 +1680,21 @@ bool EntityManager::IsEntityInitializedForSystem(SystemBase* system, const Entit
     }
 
     return it->second.Find(const_cast<Entity*>(entity)) != it->second.End();
+}
+
+void EntityManager::UntrackEntityFromAllSystems(Entity* entity)
+{
+    if (m_world == nullptr)
+    {
+        return;
+    }
+
+    TUniqueLock lock(m_systemEntityMapMutex);
+
+    for (auto& systemEntityPair : m_systemEntityMap)
+    {
+        systemEntityPair.second.Erase(entity);
+    }
 }
 
 #pragma endregion EntityManager

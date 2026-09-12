@@ -3,11 +3,11 @@ Texture Checkerboard_3D {
         Type = Texture3D
         Format = RGBA8
         Extent = (1, 1, 1)
-        MinFilterMode = TFM_NEAREST
-        MagFilterMode = TFM_NEAREST
-        TextureWrapMode = TWM_CLAMP_TO_EDGE
+        MinFilterMode = Nearest
+        MagFilterMode = Nearest
+        TextureWrapMode = ClampToEdge
         NumLayers = 1
-        ImageUsage = IU_SAMPLED
+        ImageUsage = Sampled
         MipOffsets = [
             0
             0

@@ -402,8 +402,8 @@ struct FBXMesh
 
             MeshDesc meshDesc;
             meshDesc.meshAttributes.inputLayout = vertexArrayView.layoutDesc;
-            meshDesc.meshAttributes.indexBufferElemType = GET_UNSIGNED_INT;
-            meshDesc.meshAttributes.topology = TOP_TRIANGLES;
+            meshDesc.meshAttributes.indexBufferElemType = GpuElemType::UnsignedInt;
+            meshDesc.meshAttributes.topology = Topology::Triangles;
             meshDesc.lods[0].numVertices = uint32(vertexArrayView.vertexCount);
             meshDesc.lods[0].numIndices = uint32(indices.Size());
 

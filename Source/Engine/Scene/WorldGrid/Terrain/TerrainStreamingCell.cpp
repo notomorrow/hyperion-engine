@@ -7,7 +7,8 @@
 #include <ScenePch.hpp>
 
 #include <Scene/WorldGrid/Terrain/TerrainStreamingCell.hpp>
-#include <Scene/WorldGrid/Terrain/TerrainMeshBuilder.hpp>
+#include <Scene/WorldGrid/Terrain/TerrainWorldGridLayer.hpp>
+#include <Scene/WorldGrid/Terrain/TerrainCellData.hpp>
 
 #include <Scene/WorldGrid/WorldGrid.hpp>
 
@@ -20,6 +21,7 @@
 #include <Scene/Components/TransformComponent.hpp>
 #include <Scene/Components/VisibilityStateComponent.hpp>
 #include <Scene/Components/MeshComponent.hpp>
+#include <Scene/Components/TerrainCellComponent.hpp>
 
 #include <Rendering/Mesh.hpp>
 #include <Rendering/Material.hpp>
@@ -28,163 +30,19 @@
 
 #include <Core/IO/ByteWriter.hpp>
 
+#include <Core/Math/MathUtil.hpp>
+#include <Core/Memory/Memory.hpp>
+
 #include <Asset/Assets.hpp>
 #include <Asset/AssetRegistry.hpp>
 
 #include <Framework/EngineGlobals.hpp>
-
-#include <Util/NoiseFactory.hpp>
 
 #include <TerrainStreamingCell.generated.inl>
 
 namespace Hyperion {
 
 ENGINE_API HYP_DECLARE_LOG_CHANNEL(WorldGrid);
-
-static constexpr float BaseHeight = 6.0f;
-static constexpr float MountainHeight = 65.0f;
-static constexpr float NoiseScale = 1.0f;
-
-namespace terrain {
-
-struct TerrainHeight
-{
-    float height;
-    float Erosion;
-    float sediment;
-    float water;
-    float newWater;
-    float displacement;
-};
-
-struct TerrainHeightData
-{
-    StreamingCellInfo cellInfo;
-    Array<TerrainHeight> heights;
-
-    TerrainHeightData(const StreamingCellInfo& cellInfo)
-        : cellInfo(cellInfo)
-    {
-        heights.Resize(cellInfo.extent.x * cellInfo.extent.z);
-    }
-
-    TerrainHeightData(const TerrainHeightData& other) = delete;
-    TerrainHeightData& operator=(const TerrainHeightData& other) = delete;
-    TerrainHeightData(TerrainHeightData&& other) noexcept = delete;
-    TerrainHeightData& operator=(TerrainHeightData&& other) noexcept = delete;
-    ~TerrainHeightData() = default;
-
-    uint32 GetHeightIndex(int x, int z) const
-    {
-        return uint32(((x + cellInfo.extent.x) % cellInfo.extent.x)
-                      + ((z + cellInfo.extent.z) % cellInfo.extent.z) * cellInfo.extent.x);
-    }
-};
-
-class TerrainErosion
-{
-    static constexpr uint32 NumIterations = 250u;
-    static constexpr float ErosionScale = 0.08f;
-    static constexpr float Evaporation = 0.9f;
-    static constexpr float Erosion = 0.008f * ErosionScale;
-    static constexpr float Deposition = 0.0000002f * ErosionScale;
-
-    static constexpr FixedArray<Pair<int, int>, 8> Offsets = {
-        Pair<int, int> { 1, 0 },
-        Pair<int, int> { 1, 1 },
-        Pair<int, int> { 1, -1 },
-        Pair<int, int> { 0, 1 },
-        Pair<int, int> { 0, -1 },
-        Pair<int, int> { -1, 0 },
-        Pair<int, int> { -1, 1 },
-        Pair<int, int> { -1, -1 }
-    };
-
-public:
-    static void Erode(TerrainHeightData& heightData);
-};
-
-void TerrainErosion::Erode(TerrainHeightData& heightData)
-{
-    for (uint32 iteration = 0; iteration < NumIterations; iteration++)
-    {
-        for (int z = 1; z < heightData.cellInfo.extent.z - 2; z++)
-        {
-            for (int x = 1; x < heightData.cellInfo.extent.x - 2; x++)
-            {
-                TerrainHeight& heightInfo = heightData.heights[heightData.GetHeightIndex(x, z)];
-                heightInfo.displacement = 0.0f;
-
-                for (const auto& offset : Offsets)
-                {
-                    const auto& neighborHeightInfo = heightData.heights[heightData.GetHeightIndex(x + offset.first, z + offset.second)];
-
-                    heightInfo.displacement += MathUtil::Max(heightInfo.height - neighborHeightInfo.height, 0.0f);
-                }
-
-                if (heightInfo.displacement != 0.0f)
-                {
-                    float water = heightInfo.water * Evaporation;
-                    float stayingWater = (water * 0.0002f) / (heightInfo.displacement * ErosionScale + 1);
-                    water -= stayingWater;
-
-                    for (const auto& offset : Offsets)
-                    {
-                        auto& neighborHeightInfo = heightData.heights[heightData.GetHeightIndex(x + offset.first, z + offset.second)];
-
-                        neighborHeightInfo.newWater += MathUtil::Max(heightInfo.height - neighborHeightInfo.height, 0.0f) / heightInfo.displacement * water;
-                    }
-
-                    heightInfo.water = stayingWater + 1.0f;
-                }
-            }
-        }
-
-        for (int z = 1; z < heightData.cellInfo.extent.z - 2; z++)
-        {
-            for (int x = 1; x < heightData.cellInfo.extent.x - 2; x++)
-            {
-                TerrainHeight& heightInfo = heightData.heights[heightData.GetHeightIndex(x, z)];
-
-                heightInfo.water += heightInfo.newWater;
-                heightInfo.newWater = 0.0f;
-
-                const float oldHeight = heightInfo.height;
-                heightInfo.height += (-(heightInfo.displacement - (0.005f / ErosionScale)) * heightInfo.water) * Erosion + heightInfo.water * Deposition;
-                heightInfo.Erosion = oldHeight - heightInfo.height;
-
-                if (oldHeight < heightInfo.height)
-                {
-                    heightInfo.water = MathUtil::Max(heightInfo.water - (heightInfo.height - oldHeight) * 1000.0f, 0.0f);
-                }
-            }
-        }
-    }
-}
-
-static NoiseCombinator& GetTerrainNoiseCombinator()
-{
-    static struct TerrainNoiseCombinatorInitializer
-    {
-        NoiseCombinator noiseCombinator;
-        TerrainNoiseCombinatorInitializer()
-        {
-            noiseCombinator.Use<WorleyNoiseGenerator>(0, NoiseCombinator::Mode::ADDITIVE, MountainHeight, 0.0f, Vector3(0.35f, 0.35f, 0.0f) * NoiseScale)
-                .Use<SimplexNoiseGenerator>(1, NoiseCombinator::Mode::MULTIPLICATIVE, 0.5f, 0.5f, Vector3(50.0f, 50.0f, 0.0f) * NoiseScale)
-                .Use<SimplexNoiseGenerator>(2, NoiseCombinator::Mode::ADDITIVE, BaseHeight, 0.0f, Vector3(100.0f, 100.0f, 0.0f) * NoiseScale)
-                .Use<SimplexNoiseGenerator>(3, NoiseCombinator::Mode::ADDITIVE, BaseHeight * 0.5f, 0.0f, Vector3(50.0f, 50.0f, 0.0f) * NoiseScale)
-                .Use<SimplexNoiseGenerator>(4, NoiseCombinator::Mode::ADDITIVE, BaseHeight * 0.25f, 0.0f, Vector3(25.0f, 25.0f, 0.0f) * NoiseScale)
-                .Use<SimplexNoiseGenerator>(5, NoiseCombinator::Mode::ADDITIVE, BaseHeight * 0.125f, 0.0f, Vector3(12.5f, 12.5f, 0.0f) * NoiseScale)
-                .Use<SimplexNoiseGenerator>(6, NoiseCombinator::Mode::ADDITIVE, BaseHeight * 0.06f, 0.0f, Vector3(6.25f, 6.25f, 0.0f) * NoiseScale)
-                .Use<SimplexNoiseGenerator>(7, NoiseCombinator::Mode::ADDITIVE, BaseHeight * 0.03f, 0.0f, Vector3(3.125f, 3.125f, 0.0f) * NoiseScale)
-                .Use<SimplexNoiseGenerator>(8, NoiseCombinator::Mode::ADDITIVE, BaseHeight * 0.015f, 0.0f, Vector3(1.56f, 1.56f, 0.0f) * NoiseScale);
-        }
-    } s_initializer;
-
-    return s_initializer.noiseCombinator;
-}
-
-} // namespace terrain
 
 #pragma region TerrainStreamingCell
 
@@ -196,12 +54,14 @@ TerrainStreamingCell::TerrainStreamingCell()
 TerrainStreamingCell::TerrainStreamingCell(
     const StreamingCellInfo& cellInfo,
     const Handle<Scene>& scene,
-    const Handle<Mesh>& mesh,
-    const Handle<Material>& material)
+    const Handle<Material>& material,
+    const Handle<TerrainWorldGridLayer>& layer,
+    const Handle<TerrainCellData>& cellData)
     : StreamingCell(cellInfo),
       m_scene(scene),
-      m_mesh(mesh),
-      m_material(material)
+      m_material(material),
+      m_layer(layer),
+      m_cellData(cellData)
 {
 }
 
@@ -209,6 +69,56 @@ TerrainStreamingCell::~TerrainStreamingCell() = default;
 
 void TerrainStreamingCell::OnStreamStart()
 {
+    HYP_SCOPE;
+
+    Assert(m_layer.IsValid(), "Invalid terrain layer!");
+
+    const uint32 cellSize = m_layer->GetLayerInfo().cellSize;
+    TerrainMeshBuilder meshBuilder(cellSize);
+
+    if (!m_cellData.IsValid())
+    {
+        m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), Span<const float>());
+
+        return;
+    }
+
+    auto cellDataReadScope = m_cellData->GetReadScope();
+
+    m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), m_cellData->GetSculptDeltaFloat());
+}
+
+static void BuildMeshDescAndDataView(const TerrainMeshBuilder::CellMeshData& cellMeshData, MeshDesc& outMeshDesc, MeshDataView& outMeshData)
+{
+    outMeshDesc.meshAttributes.inputLayout = { VT_Simple };
+    outMeshDesc.lods[0].numIndices = uint32(cellMeshData.indices.Size());
+    outMeshDesc.lods[0].numVertices = uint32(cellMeshData.vertices.Size());
+
+    VertexArrayView vertexArrayView {};
+    vertexArrayView.floatData = reinterpret_cast<const float*>(cellMeshData.vertices.Data());
+    vertexArrayView.vertexCount = cellMeshData.vertices.Size();
+    vertexArrayView.layoutDesc = outMeshDesc.meshAttributes.inputLayout;
+
+    outMeshData.vertices[0] = vertexArrayView;
+    outMeshData.indices[0] = cellMeshData.indices.ToByteView();
+}
+
+Handle<Mesh> TerrainStreamingCell::BuildMeshFromCellMeshData() const
+{
+    Assert(m_cellMeshData.vertices.Any(), "No CPU-side terrain mesh data built yet");
+
+    MeshDesc meshDesc;
+    MeshDataView meshData {};
+    BuildMeshDescAndDataView(m_cellMeshData, meshDesc, meshData);
+
+    Handle<Mesh> mesh = MakeHandle<Mesh>();
+    mesh->SetName(NAME_FMT("TerrainChunkMesh_{}", m_cellInfo.coord));
+    mesh->SetMeshData(meshDesc, meshData);
+    mesh->SetIsTransient(true);
+    mesh->SetIsDynamicMesh(true);
+    InitObject(mesh);
+
+    return mesh;
 }
 
 void TerrainStreamingCell::OnLoaded()
@@ -217,11 +127,30 @@ void TerrainStreamingCell::OnLoaded()
     AssertOnThread(g_simThread);
 
     Assert(m_scene.IsValid(), "Invalid scene!");
-    Assert(m_mesh.IsValid(), "Invalid mesh!");
     Assert(m_material.IsValid(), "Invalid material!");
+    Assert(m_layer.IsValid(), "Invalid terrain layer!");
 
     const Handle<EntityManager>& entityManager = m_scene->GetEntityManager();
-    Assert(entityManager != nullptr);
+
+    if (!entityManager.IsValid())
+    {
+        // The cell was loaded, but the Scene was likely removed from the World.
+        // Can happen when we enter/exit simulation mode from the editor.
+
+        // Accept it and move on
+
+        // Ensure these are unset, since we use m_node's existance to determine if we were added to the layer or not.
+
+        m_node.Reset();
+        m_entity.Reset();
+
+        return;
+    }
+
+    m_mesh = BuildMeshFromCellMeshData();
+
+    // Free the CPU-side build data now that the GPU mesh has been created from it.
+    m_cellMeshData = TerrainMeshBuilder::CellMeshData();
 
     HYP_LOG(WorldGrid, Verbose, "Creating terrain patch at coord {} with extent {} and scale {}, bounds: {}\tMesh Id: #{}", m_cellInfo.coord, m_cellInfo.extent, m_cellInfo.scale, m_cellInfo.bounds, m_mesh.Id().Value());
 
@@ -229,23 +158,23 @@ void TerrainStreamingCell::OnLoaded()
     transform.SetTranslation(m_cellInfo.bounds.min);
     transform.SetScale(m_cellInfo.scale);
 
-    Handle<Entity> entity = entityManager->AddEntity();
-    entity->SetLocalBounds(m_mesh->GetAABB());
-    entity->SetIsStatic(true);
+    m_entity = entityManager->AddEntity();
+    m_entity->SetLocalBounds(m_mesh->GetAABB());
+    m_entity->SetIsStatic(true);
 
-    entityManager->GetComponent<TransformComponent>(entity) = TransformComponent {
-        .translation = transform.GetTranslation(),
-        .rotation = transform.GetRotation(),
-        .scale = transform.GetScale()
+    entityManager->GetComponent<TransformComponent>(m_entity) = TransformComponent {
+        transform.GetTranslation(),
+        transform.GetRotation(),
+        transform.GetScale()
     };
 
-    entityManager->GetComponent<VisibilityStateComponent>(entity) = VisibilityStateComponent { VisibilityStateFlags::ALWAYS_VISIBLE };
+    entityManager->GetComponent<VisibilityStateComponent>(m_entity) = VisibilityStateComponent { VisibilityStateFlags::ALWAYS_VISIBLE };
 
-    MeshComponent* meshComponent = entityManager->TryGetComponent<MeshComponent>(entity);
+    MeshComponent* meshComponent = entityManager->TryGetComponent<MeshComponent>(m_entity);
 
     if (!meshComponent)
     {
-        meshComponent = &entityManager->AddComponent<MeshComponent>(entity, MeshComponent { m_mesh, m_material });
+        meshComponent = &entityManager->AddComponent<MeshComponent>(m_entity, MeshComponent { m_mesh, m_material });
     }
     else
     {
@@ -253,28 +182,317 @@ void TerrainStreamingCell::OnLoaded()
         meshComponent->material = m_material;
     }
 
-    // terrain cells share a mesh, we can use instancing for them
-    // meshComponent->enableAutoInstancing = true;
-
-    entityManager->AddTag<EntityTag::UpdateRenderProxy>(entity);
+    entityManager->AddComponent<TerrainCellComponent>(m_entity, TerrainCellComponent {});
 
     m_node = m_scene->GetRoot()->AddChild();
     m_node->SetName(NAME_FMT("TerrainPatch_{}", m_cellInfo.coord));
-    m_node->AddChild(entity);
+    m_node->AddChild(m_entity);
     m_node->SetLocalTransform(transform);
     m_node->SetIsStatic(true);
+
+    // Painted cells load with their splat map bound.
+    if (m_cellData.IsValid() && m_cellData->HasSplatMap())
+    {
+        UpdateSplatMaterial(m_cellData);
+    }
+
+    m_layer->RegisterLoadedCell(m_cellInfo.coord, WeakHandleFromThis());
 }
 
 void TerrainStreamingCell::OnRemoved()
 {
     HYP_SCOPE;
     AssertOnThread(g_simThread);
+    
+    const bool isAddedToLayer = m_node.IsValid();
 
-    if (m_node.IsValid())
+    if (isAddedToLayer)
     {
+        if (m_layer.IsValid())
+        {
+            m_layer->UnregisterLoadedCell(m_cellInfo.coord);
+        }
+
         m_node->Remove(/* moveToDetached */ false);
         m_node.Reset();
+
+        m_entity.Reset();
     }
+
+    m_splatTexture.Reset();
+    m_cellMaterial.Reset();
+}
+
+void TerrainStreamingCell::UpdateSplatMaterial(const Handle<TerrainCellData>& cellData)
+{
+    HYP_SCOPE;
+    AssertOnThread(g_simThread);
+
+    Assert(m_layer.IsValid(), "Invalid terrain layer!");
+    Assert(m_entity.IsValid(), "Cell has not finished loading yet");
+    Assert(m_mesh.IsValid(), "Cell has not finished loading yet");
+
+    m_cellData = cellData;
+
+    const uint32 cellSize = m_layer->GetLayerInfo().cellSize;
+    const size_t requiredSize = size_t(cellSize) * size_t(cellSize) * 4;
+
+    if (!cellData.IsValid() || !cellData->HasSplatMap() || !m_material.IsValid())
+    {
+        return;
+    }
+
+    // Copy the splat data out while the blob data is paged in.
+    Array<ubyte> splatBytes;
+
+    {
+        auto readScope = cellData->GetReadScope();
+
+        ConstByteView splatData = cellData->GetSplatMap();
+
+        if (splatData.Size() < requiredSize)
+        {
+            return;
+        }
+
+        splatBytes.Resize(requiredSize);
+        Memory::Copy(splatBytes.Data(), splatData.Data(), requiredSize);
+    }
+
+    Array<ubyte> uploadBytes;
+    uploadBytes.Resize(requiredSize);
+
+    const size_t rowSize = size_t(cellSize) * 4;
+
+    for (uint32 z = 0; z < cellSize; z++)
+    {
+        const size_t srcRow = size_t(cellSize - 1 - z) * rowSize;
+        const size_t dstRow = size_t(z) * rowSize;
+
+        Memory::Copy(uploadBytes.Data() + dstRow, splatBytes.Data() + srcRow, rowSize);
+    }
+
+    // Create splat map texture
+    m_splatTexture = MakeHandle<Texture>();
+    m_splatTexture->SetName(NAME_FMT("TerrainCellSplatMap_{}", m_cellInfo.coord));
+
+    TextureDesc textureDesc;
+    textureDesc.type = TextureType::Texture2D;
+    textureDesc.format = TextureFormat::RGBA8;
+    textureDesc.extent = Vec3u(cellSize, cellSize, 1);
+    textureDesc.filterModeMin = TextureFilterMode::Linear;
+    textureDesc.filterModeMag = TextureFilterMode::Linear;
+
+    m_splatTexture->SetTextureDesc(textureDesc);
+    m_splatTexture->SetImageData(ConstByteView(uploadBytes.Data(), uploadBytes.Size()));
+    m_splatTexture->SetIsTransient(true);
+
+    InitObject(m_splatTexture);
+
+    if (!m_cellMaterial.IsValid())
+    {
+        m_cellMaterial = m_material->Clone();
+        m_cellMaterial->SetName(NAME_FMT("TerrainCellMaterial_{}", m_cellInfo.coord));
+        InitObject(m_cellMaterial);
+    }
+
+    m_cellMaterial->SetTexture(MaterialTextureKey::TerrainSplatMap, m_splatTexture);
+
+    const Handle<EntityManager>& entityManager = m_scene->GetEntityManager();
+
+    if (!entityManager.IsValid())
+    {
+        return;
+    }
+
+    if (MeshComponent* meshComponent = entityManager->TryGetComponent<MeshComponent>(m_entity))
+    {
+        meshComponent->material = m_cellMaterial;
+    }
+
+    entityManager->AddTag<EntityTag::UpdateRenderProxy>(m_entity);
+}
+
+void TerrainStreamingCell::RebuildMeshFull(const Handle<TerrainCellData>& cellData)
+{
+    HYP_SCOPE;
+    AssertOnThread(g_simThread);
+
+    Assert(m_layer.IsValid(), "Invalid terrain layer!");
+    Assert(m_entity.IsValid(), "Cell has not finished loading yet");
+    Assert(m_mesh.IsValid(), "Cell has not finished loading yet");
+
+    m_cellData = cellData;
+
+    TerrainMeshBuilder meshBuilder(m_layer->GetLayerInfo().cellSize);
+
+    if (!m_cellData.IsValid())
+    {
+        m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), Span<const float>());
+    }
+    else
+    {
+        auto cellDataReadScope = m_cellData->GetReadScope();
+
+        m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), m_cellData->GetSculptDeltaFloat());
+    }
+
+    MeshDesc meshDesc;
+    MeshDataView meshData {};
+    BuildMeshDescAndDataView(m_cellMeshData, meshDesc, meshData);
+
+    m_mesh->SetMeshData(meshDesc, meshData);
+    m_mesh->UploadGpuData();
+
+    m_cellMeshData = TerrainMeshBuilder::CellMeshData();
+
+    m_entity->SetLocalBounds(m_mesh->GetAABB());
+
+    const Handle<EntityManager>& entityManager = m_scene->GetEntityManager();
+
+    if (!entityManager.IsValid())
+    {
+        return;
+    }
+
+    entityManager->AddTag<EntityTag::UpdateRenderProxy>(m_entity);
+}
+
+void TerrainStreamingCell::RebuildMesh(const Handle<TerrainCellData>& cellData, const Vec2i& minVertex, const Vec2i& maxVertex)
+{
+    HYP_SCOPE;
+    AssertOnThread(g_simThread);
+
+    Assert(m_layer.IsValid(), "Invalid terrain layer!");
+    Assert(m_entity.IsValid(), "Cell has not finished loading yet");
+    Assert(m_mesh.IsValid(), "Cell has not finished loading yet");
+
+    m_cellData = cellData;
+
+    const WorldGridLayerInfo& layerInfo = m_layer->GetLayerInfo();
+    const uint32 cellSize = layerInfo.cellSize;
+
+    const VertexArrayView vertexData = m_mesh->GetVertexData(0);
+
+    if (vertexData.floatData == nullptr || vertexData.vertexCount != size_t(cellSize) * size_t(cellSize))
+    {
+        // CPU-side mesh data unavailable - fall back to rebuilding the whole cell.
+        RebuildMeshFull(cellData);
+
+        return;
+    }
+
+    const int32 minVertexX = MathUtil::Clamp(minVertex.x, 0, int32(cellSize) - 1);
+    const int32 maxVertexX = MathUtil::Clamp(maxVertex.x, 0, int32(cellSize) - 1);
+    const int32 minVertexZ = MathUtil::Clamp(minVertex.y, 0, int32(cellSize) - 1);
+    const int32 maxVertexZ = MathUtil::Clamp(maxVertex.y, 0, int32(cellSize) - 1);
+
+    if (minVertexX > maxVertexX || minVertexZ > maxVertexZ)
+    {
+        return;
+    }
+
+    // Update rows expanded by one vertex so normals along the border of the region can be
+    // recomputed as well.
+    const int32 updateMinX = MathUtil::Max(minVertexX - 1, 0);
+    const int32 updateMaxX = MathUtil::Min(maxVertexX + 1, int32(cellSize) - 1);
+    const int32 updateMinZ = MathUtil::Max(minVertexZ - 1, 0);
+    const int32 updateMaxZ = MathUtil::Min(maxVertexZ + 1, int32(cellSize) - 1);
+
+    // Heights sampled one vertex beyond the update window for finite-difference normals.
+    // Sampled through the layer so neighboring cells' sculpt deltas are included - this keeps
+    // normals consistent across cell seams.
+    const int32 heightsMinX = updateMinX - 1;
+    const int32 heightsMaxX = updateMaxX + 1;
+    const int32 heightsMinZ = updateMinZ - 1;
+    const int32 heightsMaxZ = updateMaxZ + 1;
+
+    const int32 heightsWidth = heightsMaxX - heightsMinX + 1;
+    const int32 heightsDepth = heightsMaxZ - heightsMinZ + 1;
+
+    m_scratchHeights.Resize(size_t(heightsWidth) * size_t(heightsDepth));
+
+    const Vec2f cellWorldMinXZ(m_cellInfo.bounds.min.x, m_cellInfo.bounds.min.z);
+    const Vec2f scaleXZ(layerInfo.scale.x, layerInfo.scale.z);
+
+    for (int32 z = heightsMinZ; z <= heightsMaxZ; z++)
+    {
+        for (int32 x = heightsMinX; x <= heightsMaxX; x++)
+        {
+            const Vec2f worldXZ = cellWorldMinXZ + Vec2f(float(x), float(z)) * scaleXZ;
+
+            m_scratchHeights[size_t(z - heightsMinZ) * size_t(heightsWidth) + size_t(x - heightsMinX)] = m_layer->SampleHeightAt(worldXZ);
+        }
+    }
+
+    const auto heightAt = [&](int32 x, int32 z) -> float
+    {
+        return m_scratchHeights[size_t(z - heightsMinZ) * size_t(heightsWidth) + size_t(x - heightsMinX)];
+    };
+
+    // Update whole rows so the modified range stays contiguous for a single GPU upload.
+    const uint32 firstVertex = uint32(updateMinZ) * cellSize;
+    const uint32 numRows = uint32(updateMaxZ - updateMinZ + 1);
+    const uint32 numVertices = numRows * cellSize;
+
+    const uint32 vertexSizeInFloats = vertexData.layoutDesc.VertexSize() / sizeof(float);
+
+    m_scratchVertices.Resize(numVertices);
+
+    Memory::Copy(
+        m_scratchVertices.Data(),
+        vertexData.floatData + (firstVertex * vertexSizeInFloats),
+        numVertices * vertexSizeInFloats * sizeof(float));
+
+    for (int32 z = minVertexZ; z <= maxVertexZ; z++)
+    {
+        for (int32 x = minVertexX; x <= maxVertexX; x++)
+        {
+            m_scratchVertices[size_t(z - updateMinZ) * cellSize + x].SetPosition(Vec3f { float(x), heightAt(x, z), float(z) });
+        }
+    }
+
+    for (int32 z = updateMinZ; z <= updateMaxZ; z++)
+    {
+        for (int32 x = updateMinX; x <= updateMaxX; x++)
+        {
+            const Vec3f tangentX(2.0f, heightAt(x + 1, z) - heightAt(x - 1, z), 0.0f);
+            const Vec3f tangentZ(0.0f, heightAt(x, z + 1) - heightAt(x, z - 1), 2.0f);
+
+            m_scratchVertices[size_t(z - updateMinZ) * cellSize + x].SetNormal(tangentZ.Cross(tangentX).Normalized());
+        }
+    }
+
+    VertexArrayView rangeView {};
+    rangeView.floatData = reinterpret_cast<const float*>(m_scratchVertices.Data());
+    rangeView.vertexCount = numVertices;
+    rangeView.layoutDesc = vertexData.layoutDesc;
+
+    m_mesh->UpdateDynamicVertexData(0, firstVertex, rangeView);
+
+    m_entity->SetLocalBounds(m_mesh->GetAABB());
+
+    const Handle<EntityManager>& entityManager = m_scene->GetEntityManager();
+
+    if (!entityManager.IsValid())
+    {
+        return;
+    }
+
+    entityManager->AddTag<EntityTag::UpdateRenderProxy>(m_entity);
+}
+
+void TerrainStreamingCell::RebuildPickBVH()
+{
+    HYP_SCOPE;
+    AssertOnThread(g_simThread);
+
+    if (!m_mesh.IsValid())
+    {
+        return;
+    }
+
+    m_mesh->UpdateDynamicBVH();
 }
 
 #pragma endregion TerrainStreamingCell

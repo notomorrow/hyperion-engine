@@ -55,7 +55,7 @@ public:
 
     void UpdateRenderProxy(struct RenderProxyFogVolume* proxy);
 
-    //-- Per-swatch stuff
+    ///Per-swatch stuff
 
     static Name GetVolumeTexturePropertyName()
     {

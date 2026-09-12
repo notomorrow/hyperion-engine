@@ -487,9 +487,9 @@ HYP_EXPORT void RunHMFTest()
             Check("TextureDesc: Type = Texture2D", text.Contains("Type = Texture2D"), text);
             Check("TextureDesc: Format = RGBA8", text.Contains("Format = RGBA8"), text);
             Check("TextureDesc: Extent = (1, 1, 1)", text.Contains("Extent = (1, 1, 1)"), text);
-            Check("TextureDesc: MinFilterMode = TFM_NEAREST", text.Contains("MinFilterMode = TFM_NEAREST"), text);
+            Check("TextureDesc: MinFilterMode = Nearest", text.Contains("MinFilterMode = Nearest"), text);
             Check("TextureDesc: NumLayers = 1", text.Contains("NumLayers = 1"), text);
-            Check("TextureDesc: ImageUsage = IU_SAMPLED", text.Contains("ImageUsage = IU_SAMPLED"), text);
+            Check("TextureDesc: ImageUsage = Sampled", text.Contains("ImageUsage = Sampled"), text);
             Check("TextureDesc: MipOffsets has 16 elements", text.Contains("0, 0, 0, 0"), text);
         }
     }
@@ -522,10 +522,10 @@ HYP_EXPORT void RunHMFTest()
             String text;
             ObjectToHMF(cls, obj, text);
 
-            Check("StencilFunction: PassOp = SO_REPLACE", text.Contains("PassOp = SO_REPLACE"), text);
-            Check("StencilFunction: FailOp = SO_KEEP", text.Contains("FailOp = SO_KEEP"), text);
-            Check("StencilFunction: DepthFailOp = SO_KEEP", text.Contains("DepthFailOp = SO_KEEP"), text);
-            Check("StencilFunction: CompareOp = SCO_ALWAYS", text.Contains("CompareOp = SCO_ALWAYS"), text);
+            Check("StencilFunction: PassOp = Replace", text.Contains("PassOp = Replace"), text);
+            Check("StencilFunction: FailOp = Keep", text.Contains("FailOp = Keep"), text);
+            Check("StencilFunction: DepthFailOp = Keep", text.Contains("DepthFailOp = Keep"), text);
+            Check("StencilFunction: CompareOp = Always", text.Contains("CompareOp = Always"), text);
         }
     }
 
@@ -638,10 +638,10 @@ CameraOrthoRect {
 
     {
         const String manifest = R"(StencilFunction {
-    PassOp = SO_REPLACE
-    FailOp = SO_KEEP
-    DepthFailOp = SO_KEEP
-    CompareOp = SCO_ALWAYS
+    PassOp = Replace
+    FailOp = Keep
+    DepthFailOp = Keep
+    CompareOp = Always
 }
 )";
 
@@ -655,12 +655,12 @@ CameraOrthoRect {
             const Class* cls = GetClass(result.GetValue().GetTypeId());
             if (cls)
             {
-                Check("PassOp == SO_REPLACE value",
-                      GetFieldUInt64(result.GetValue(), cls, "PassOp") == uint64(SO_REPLACE));
-                Check("FailOp == SO_KEEP value",
-                      GetFieldUInt64(result.GetValue(), cls, "FailOp") == uint64(SO_KEEP));
-                Check("CompareOp == SCO_ALWAYS value",
-                      GetFieldUInt64(result.GetValue(), cls, "CompareOp") == uint64(SCO_ALWAYS));
+                Check("PassOp == StencilOp::Replace value",
+                      GetFieldUInt64(result.GetValue(), cls, "PassOp") == uint64(StencilOp::Replace));
+                Check("FailOp == StencilOp::Keep value",
+                      GetFieldUInt64(result.GetValue(), cls, "FailOp") == uint64(StencilOp::Keep));
+                Check("CompareOp == StencilCompareOp::Always value",
+                      GetFieldUInt64(result.GetValue(), cls, "CompareOp") == uint64(StencilCompareOp::Always));
             }
         }
     }
@@ -796,12 +796,12 @@ CameraOrthoRect {
                 const Class* parsedCls = GetClass(result.GetValue().GetTypeId());
                 if (parsedCls)
                 {
-                    Check("RT PassOp == SO_REPLACE",
-                          GetFieldUInt64(result.GetValue(), parsedCls, "PassOp") == uint64(SO_REPLACE));
-                    Check("RT FailOp == SO_KEEP",
-                          GetFieldUInt64(result.GetValue(), parsedCls, "FailOp") == uint64(SO_KEEP));
-                    Check("RT CompareOp == SCO_ALWAYS",
-                          GetFieldUInt64(result.GetValue(), parsedCls, "CompareOp") == uint64(SCO_ALWAYS));
+                    Check("RT PassOp == StencilOp::Replace",
+                          GetFieldUInt64(result.GetValue(), parsedCls, "PassOp") == uint64(StencilOp::Replace));
+                    Check("RT FailOp == StencilOp::Keep",
+                          GetFieldUInt64(result.GetValue(), parsedCls, "FailOp") == uint64(StencilOp::Keep));
+                    Check("RT CompareOp == StencilCompareOp::Always",
+                          GetFieldUInt64(result.GetValue(), parsedCls, "CompareOp") == uint64(StencilCompareOp::Always));
                 }
             }
         }
@@ -1011,9 +1011,9 @@ CameraOrthoRect {
                     Check("TD: RT NumLayers == 7", GetFieldValue<uint16>(result.GetValue(), pc, "NumLayers") == 7);
                     Check("TD: RT Type == Texture2D", GetFieldUInt64(result.GetValue(), pc, "Type") == uint64(TextureType::Texture2D));
                     Check("TD: RT Format == RGBA8", GetFieldUInt64(result.GetValue(), pc, "Format") == uint64(TextureFormat::RGBA8));
-                    Check("TD: RT MinFilterMode", GetFieldUInt64(result.GetValue(), pc, "MinFilterMode") == uint64(TFM_NEAREST));
-                    Check("TD: RT TextureWrapMode", GetFieldUInt64(result.GetValue(), pc, "TextureWrapMode") == uint64(TWM_CLAMP_TO_EDGE));
-                    Check("TD: RT ImageUsage", GetFieldUInt64(result.GetValue(), pc, "ImageUsage") == uint64(ImageUsage::IU_SAMPLED));
+                    Check("TD: RT MinFilterMode", GetFieldUInt64(result.GetValue(), pc, "MinFilterMode") == uint64(TextureFilterMode::Nearest));
+                    Check("TD: RT TextureWrapMode", GetFieldUInt64(result.GetValue(), pc, "TextureWrapMode") == uint64(TextureWrapMode::ClampToEdge));
+                    Check("TD: RT ImageUsage", GetFieldUInt64(result.GetValue(), pc, "ImageUsage") == uint64(ImageUsage::Sampled));
                 }
             }
         }
@@ -1024,11 +1024,11 @@ CameraOrthoRect {
     Type = Texture3D
     Format = RGBA8
     Extent = (512, 512, 64)
-    MinFilterMode = TFM_LINEAR
-    MagFilterMode = TFM_LINEAR
-    TextureWrapMode = TWM_REPEAT
+    MinFilterMode = Linear
+    MagFilterMode = Linear
+    TextureWrapMode = Repeat
     NumLayers = 3
-    ImageUsage = IU_SAMPLED|IU_TRANSFER_DST
+    ImageUsage = Sampled|TransferDst
     MipOffsets = [0, 1024, 2048, 3072, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 }
 )";
@@ -1044,8 +1044,8 @@ CameraOrthoRect {
             if (pc)
             {
                 Check("Parse TD: Type == Texture3D", GetFieldUInt64(result.GetValue(), pc, "Type") == uint64(TextureType::Texture3D));
-                Check("Parse TD: MinFilterMode == TFM_LINEAR", GetFieldUInt64(result.GetValue(), pc, "MinFilterMode") == uint64(TFM_LINEAR));
-                Check("Parse TD: TextureWrapMode == TWM_REPEAT", GetFieldUInt64(result.GetValue(), pc, "TextureWrapMode") == uint64(TWM_REPEAT));
+                Check("Parse TD: MinFilterMode == TextureFilterMode::Linear", GetFieldUInt64(result.GetValue(), pc, "MinFilterMode") == uint64(TextureFilterMode::Linear));
+                Check("Parse TD: TextureWrapMode == TextureWrapMode::Repeat", GetFieldUInt64(result.GetValue(), pc, "TextureWrapMode") == uint64(TextureWrapMode::Repeat));
                 Check("Parse TD: NumLayers == 3", GetFieldValue<uint16>(result.GetValue(), pc, "NumLayers") == 3);
             }
         }
@@ -1628,16 +1628,16 @@ CameraOrthoRect {
         const String manifest = R"(MaterialAttributes {
     ShaderName = "GeometryPass"
     Bucket = Opaque
-    FillMode = FM_FILL
-    CullFaces = FCM_BACK
+    FillMode = Fill
+    CullFaces = Back
     Flags = MAF_DEPTH_WRITE|MAF_DEPTH_TEST
     StencilFunction = {
-        PassOp = SO_REPLACE
-        FailOp = SO_KEEP
-        DepthFailOp = SO_KEEP
-        CompareOp = SCO_ALWAYS
+        PassOp = Replace
+        FailOp = Keep
+        DepthFailOp = Keep
+        CompareOp = Always
     }
-    DepthCompareOp = DCO_LESS
+    DepthCompareOp = Less
     StencilReference = 3
     DepthBias = 50
     DepthBiasSlope = 1.5
@@ -1659,20 +1659,20 @@ CameraOrthoRect {
                 Check("MA HMF: StencilReference == 3", GetFieldValue<uint8>(result.GetValue(), cls, "StencilReference") == 3);
                 Check("MA HMF: Bucket == Opaque",
                       GetFieldUInt64(result.GetValue(), cls, "Bucket") == uint64(RenderBucket::Opaque));
-                Check("MA HMF: FillMode == FM_FILL",
-                      GetFieldUInt64(result.GetValue(), cls, "FillMode") == uint64(FM_FILL));
-                Check("MA HMF: CullFaces == FCM_BACK",
-                      GetFieldUInt64(result.GetValue(), cls, "CullFaces") == uint64(FCM_BACK));
+                Check("MA HMF: FillMode == FillMode::Fill",
+                      GetFieldUInt64(result.GetValue(), cls, "FillMode") == uint64(FillMode::Fill));
+                Check("MA HMF: CullFaces == FaceCullMode::Back",
+                      GetFieldUInt64(result.GetValue(), cls, "CullFaces") == uint64(FaceCullMode::Back));
             }
         }
     }
 
     {
         const String manifest = R"(SamplerDesc {
-    MinFilterMode = TFM_LINEAR_MIPMAP
-    MagFilterMode = TFM_LINEAR
-    WrapMode = TWM_REPEAT
-    CompareOp = SCO_LESS
+    MinFilterMode = LinearMipmap
+    MagFilterMode = Linear
+    WrapMode = Repeat
+    CompareOp = LessEq
 }
 )";
 
@@ -1686,10 +1686,10 @@ CameraOrthoRect {
             const Class* cls = GetClass(result.GetValue().GetTypeId());
             if (cls)
             {
-                Check("SamplerDesc: MinFilterMode == TFM_LINEAR_MIPMAP",
-                      GetFieldUInt64(result.GetValue(), cls, "MinFilterMode") == uint64(TFM_LINEAR_MIPMAP));
-                Check("SamplerDesc: WrapMode == TWM_REPEAT",
-                      GetFieldUInt64(result.GetValue(), cls, "WrapMode") == uint64(TWM_REPEAT));
+                Check("SamplerDesc: MinFilterMode == TextureFilterMode::LinearMipmap",
+                      GetFieldUInt64(result.GetValue(), cls, "MinFilterMode") == uint64(TextureFilterMode::LinearMipmap));
+                Check("SamplerDesc: WrapMode == TextureWrapMode::Repeat",
+                      GetFieldUInt64(result.GetValue(), cls, "WrapMode") == uint64(TextureWrapMode::Repeat));
             }
         }
     }
@@ -1833,11 +1833,11 @@ CameraOrthoRect {
         Type = Texture3D
         Format = RGBA8
         Extent = (256, 256, 32)
-        MinFilterMode = TFM_LINEAR
-        MagFilterMode = TFM_LINEAR
-        TextureWrapMode = TWM_REPEAT
+        MinFilterMode = Linear
+        MagFilterMode = Linear
+        TextureWrapMode = Repeat
         NumLayers = 2
-        ImageUsage = IU_SAMPLED|IU_TRANSFER_DST
+        ImageUsage = Sampled|TransferDst
         MipOffsets = [0, 65536, 81920, 86016, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     }
 }
@@ -1884,10 +1884,10 @@ CameraOrthoRect {
                               GetFieldUInt64(texVal, texCls, "Type") == uint64(TextureType::Texture3D));
                         Check("Nested Texture: Format == RGBA8",
                               GetFieldUInt64(texVal, texCls, "Format") == uint64(TextureFormat::RGBA8));
-                        Check("Nested Texture: MinFilterMode == TFM_LINEAR",
-                              GetFieldUInt64(texVal, texCls, "MinFilterMode") == uint64(TFM_LINEAR));
-                        Check("Nested Texture: TextureWrapMode == TWM_REPEAT",
-                              GetFieldUInt64(texVal, texCls, "TextureWrapMode") == uint64(TWM_REPEAT));
+                        Check("Nested Texture: MinFilterMode == TextureFilterMode::Linear",
+                              GetFieldUInt64(texVal, texCls, "MinFilterMode") == uint64(TextureFilterMode::Linear));
+                        Check("Nested Texture: TextureWrapMode == TextureWrapMode::Repeat",
+                              GetFieldUInt64(texVal, texCls, "TextureWrapMode") == uint64(TextureWrapMode::Repeat));
                         Check("Nested Texture: NumLayers == 2",
                               GetFieldValue<uint16>(texVal, texCls, "NumLayers") == 2);
                     }

@@ -19,7 +19,7 @@ namespace Hyperion
         OneMinusDstColor,
         OneMinusDstAlpha,
 
-        Count
+        Max
     }
 
     [ClassBinding(Name = "BlendFunction")]

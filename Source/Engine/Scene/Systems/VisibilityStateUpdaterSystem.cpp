@@ -33,22 +33,26 @@ void VisibilityStateUpdaterSystem::OnEntityRemoved(Entity* entity)
 {
     SystemBase::OnEntityRemoved(entity);
 
-    EntityManager& entityManager = *entity->GetEntityManager();
+    EntityManager* entityManager = entity->GetEntityManager();
 
-    // entity->GetScene() already reports the destination scene mid-move, so gate on the EntityManager's scene instead.
-    if (!ShouldProcessScene(entityManager.GetScene()))
+    if (!entityManager)
     {
         return;
     }
 
-    VisibilityStateComponent* visibilityStateComponent = entityManager.TryGetComponent<VisibilityStateComponent>(entity);
+    if (!ShouldProcessScene(entityManager->GetScene()))
+    {
+        return;
+    }
+
+    VisibilityStateComponent* visibilityStateComponent = entityManager->TryGetComponent<VisibilityStateComponent>(entity);
 
     if (!visibilityStateComponent)
     {
         return;
     }
 
-    SceneOctree& octree = entityManager.GetScene()->GetOctree();
+    SceneOctree& octree = entityManager->GetScene()->GetOctree();
 
     const SceneOctree::Result removeResult = octree.Remove(entity);
 

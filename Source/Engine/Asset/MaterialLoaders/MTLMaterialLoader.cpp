@@ -148,14 +148,14 @@ Map<String, Handle<Material>> MTLMaterialLoader::ParseMtl_Internal(LoaderState& 
     library.filepath = state.filepath;
 
     const FlatMap<String, TextureMapping> textureKeys {
-        Pair<String, TextureMapping> { "map_kd", TextureMapping { .key = MaterialTextureKey::Diffuse, .srgb = true, .filterMode = TFM_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "map_bump", TextureMapping { .key = MaterialTextureKey::Normals, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "bump", TextureMapping { .key = MaterialTextureKey::Normals, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "map_ka", TextureMapping { .key = MaterialTextureKey::Metalness, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "map_ks", TextureMapping { .key = MaterialTextureKey::Metalness, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "map_ns", TextureMapping { .key = MaterialTextureKey::Roughness, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } },
-        Pair<String, TextureMapping> { "map_height", TextureMapping { .key = MaterialTextureKey::Parallax, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } },    /* custom */
-        Pair<String, TextureMapping> { "map_ao", TextureMapping { .key = MaterialTextureKey::AmbientOcclusion, .srgb = false, .filterMode = TFM_LINEAR_MIPMAP } } /* custom */
+        Pair<String, TextureMapping> { "map_kd", TextureMapping { .key = MaterialTextureKey::Diffuse, .srgb = true, .filterMode = TextureFilterMode::LinearMipmap } },
+        Pair<String, TextureMapping> { "map_bump", TextureMapping { .key = MaterialTextureKey::Normals, .srgb = false, .filterMode = TextureFilterMode::LinearMipmap } },
+        Pair<String, TextureMapping> { "bump", TextureMapping { .key = MaterialTextureKey::Normals, .srgb = false, .filterMode = TextureFilterMode::LinearMipmap } },
+        Pair<String, TextureMapping> { "map_ka", TextureMapping { .key = MaterialTextureKey::Metalness, .srgb = false, .filterMode = TextureFilterMode::LinearMipmap } },
+        Pair<String, TextureMapping> { "map_ks", TextureMapping { .key = MaterialTextureKey::Metalness, .srgb = false, .filterMode = TextureFilterMode::LinearMipmap } },
+        Pair<String, TextureMapping> { "map_ns", TextureMapping { .key = MaterialTextureKey::Roughness, .srgb = false, .filterMode = TextureFilterMode::LinearMipmap } },
+        Pair<String, TextureMapping> { "map_height", TextureMapping { .key = MaterialTextureKey::Parallax, .srgb = false, .filterMode = TextureFilterMode::LinearMipmap } },    /* custom */
+        Pair<String, TextureMapping> { "map_ao", TextureMapping { .key = MaterialTextureKey::AmbientOcclusion, .srgb = false, .filterMode = TextureFilterMode::LinearMipmap } } /* custom */
     };
 
     Tokens tokens;
@@ -536,8 +536,8 @@ Map<String, Handle<Material>> MTLMaterialLoader::ParseMtl_Internal(LoaderState& 
 
             TextureDesc textureDesc = texture->GetTextureDesc();
             textureDesc.filterModeMin = it.mapping.filterMode;
-            textureDesc.filterModeMag = TFM_LINEAR;
-            textureDesc.wrapMode = TWM_REPEAT;
+            textureDesc.filterModeMag = TextureFilterMode::Linear;
+            textureDesc.wrapMode = TextureWrapMode::Repeat;
 
             if (it.mapping.srgb)
             {

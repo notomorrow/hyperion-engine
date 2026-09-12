@@ -1,0 +1,52 @@
+<UserControl
+    x:Class="Hyperion.Editor.Views.Panels.TerrainPaintPanelView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="clr-namespace:Hyperion.Editor.ViewModels;assembly=Hyperion.Editor"
+    x:DataType="vm:TerrainPaintPanelViewModel"
+    mc:Ignorable="d">
+    <ScrollViewer Padding="4,0" Offset="{Binding ScrollOffset, Mode=TwoWay}">
+        <StackPanel Margin="12,12,12,8" Spacing="12">
+
+            <StackPanel Spacing="6">
+                <TextBlock Classes="section-label" Text="Splat Layer" />
+                <ComboBox SelectedIndex="{Binding PaintLayerIndex}">
+                    <ComboBoxItem Content="Layer 0" />
+                    <ComboBoxItem Content="Layer 1" />
+                    <ComboBoxItem Content="Layer 2" />
+                    <ComboBoxItem Content="Layer 3" />
+                </ComboBox>
+                <TextBlock
+                    Classes="hint-text"
+                    Text="Hold Shift while painting to erase from the layer." />
+            </StackPanel>
+
+            <Separator />
+
+            <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Classes="section-label" Text="Radius" />
+                    <TextBlock Grid.Column="1" Classes="hint-text" Text="{Binding RadiusText}" />
+                </Grid>
+                <Slider
+                    Maximum="25"
+                    Minimum="0.5"
+                    Value="{Binding Radius}" />
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Classes="section-label" Text="Flow" />
+                    <TextBlock Grid.Column="1" Classes="hint-text" Text="{Binding StrengthText}" />
+                </Grid>
+                <Slider
+                    Maximum="10"
+                    Minimum="0.05"
+                    Value="{Binding Strength}" />
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

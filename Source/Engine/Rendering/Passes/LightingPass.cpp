@@ -207,7 +207,7 @@ void LightingPass::Create()
     // linear transform cosines texture data
     if (m_mode == DPM_DIRECT_LIGHTING && !m_ltcSampler)
     {
-        m_ltcSampler = RI.samplerCache->GetOrCreate(SamplerDesc { TFM_NEAREST, TFM_LINEAR, TWM_CLAMP_TO_EDGE });
+        m_ltcSampler = RI.samplerCache->GetOrCreate(SamplerDesc { TextureFilterMode::Nearest, TextureFilterMode::Linear, TextureWrapMode::ClampToEdge });
 
         // @TODO: Change these to be like other RawData/Texture Engine assets...
         //       should be pre-generated.
@@ -219,9 +219,9 @@ void LightingPass::Create()
                 TextureType::Texture2D,
                 TextureFormat::RGBA16F,
                 Vec3u { 64, 64, 1 },
-                TFM_LINEAR,
-                TFM_LINEAR,
-                TWM_CLAMP_TO_EDGE },
+                TextureFilterMode::Linear,
+                TextureFilterMode::Linear,
+                TextureWrapMode::ClampToEdge },
             ltcMatrixData.ToByteView());
 
         m_ltcMatrixTexture->SetName(NAME("LTC_Matrix"));
@@ -236,9 +236,9 @@ void LightingPass::Create()
                 TextureType::Texture2D,
                 TextureFormat::RGBA16F,
                 Vec3u { 64, 64, 1 },
-                TFM_LINEAR,
-                TFM_LINEAR,
-                TWM_CLAMP_TO_EDGE },
+                TextureFilterMode::Linear,
+                TextureFilterMode::Linear,
+                TextureWrapMode::ClampToEdge },
             ltcBrdfData.ToByteView());
 
         m_ltcBrdfTexture->SetName(NAME("LTC_BRDF"));
@@ -281,8 +281,8 @@ void LightingPass::RenderToFramebuffer_Internal(Frame* frame, const RenderSetup&
     cr << SetCurrentViewport(rs.viewport);
 
     cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
-    cr << SetTopology(TOP_TRIANGLES);
-    cr << SetFillMode(FM_FILL);
+    cr << SetTopology(Topology::Triangles);
+    cr << SetFillMode(FillMode::Fill);
     cr << SetCurrentBlendFunction(m_blendFunction);
     cr << SetDepthWrite(false);
     cr << SetDepthTest(false);
@@ -290,7 +290,7 @@ void LightingPass::RenderToFramebuffer_Internal(Frame* frame, const RenderSetup&
     //static constexpr uint8 StencilFilterMask = SkyStencilMask;
 
     //cr << SetStencilTest(true);
-    //cr << SetStencilFunction(StencilFunction { SO_KEEP, SO_KEEP, SO_KEEP, SCO_EQUAL });
+    //cr << SetStencilFunction(StencilFunction { StencilOp::Keep, StencilOp::Keep, StencilOp::Keep, StencilCompareOp::Equal });
     //cr << SetStencilState(0, StencilFilterMask, 0x0);
 
     HYP_DEFER({
@@ -304,7 +304,7 @@ void LightingPass::RenderToFramebuffer_Internal(Frame* frame, const RenderSetup&
 
     uint32 numShaderUniforms = 0;
 
-    Sampler* shadowSampler = RI.samplerCache->GetOrCreate(SamplerDesc { TFM_LINEAR, TFM_LINEAR, TWM_CLAMP_TO_EDGE, SamplerCompareOp::LessEq });
+    Sampler* shadowSampler = RI.samplerCache->GetOrCreate(SamplerDesc { TextureFilterMode::Linear, TextureFilterMode::Linear, TextureWrapMode::ClampToEdge, SamplerCompareOp::LessEq });
 
     cr << SetShaderUniform(numShaderUniforms++, "SamplerLinear"_sh, RI.placeholderData->GetSamplerLinearMipmap());
     cr << SetShaderUniform(numShaderUniforms++, "SamplerNearest"_sh, RI.placeholderData->GetSamplerNearest());

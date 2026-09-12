@@ -86,7 +86,7 @@ public:
     void End() override;
 
     void BindVertexBuffer(const DX12GpuBuffer* buffer) override;
-    void BindIndexBuffer(const DX12GpuBuffer* buffer, GpuElemType elemType = GET_UNSIGNED_INT) override;
+    void BindIndexBuffer(const DX12GpuBuffer* buffer, GpuElemType elemType = GpuElemType::UnsignedInt) override;
 
     void DrawIndexed(
         uint32 numIndices,

@@ -383,7 +383,7 @@ RendererResult DX12GraphicsPipeline::Rebuild()
 
     psoDesc.RasterizerState = {};
     psoDesc.RasterizerState.CullMode = ToDX12CullMode(m_faceCullMode);
-    psoDesc.RasterizerState.FillMode = (m_fillMode == FM_LINE) ? D3D12_FILL_MODE_WIREFRAME : D3D12_FILL_MODE_SOLID;
+    psoDesc.RasterizerState.FillMode = (m_fillMode == FillMode::Line) ? D3D12_FILL_MODE_WIREFRAME : D3D12_FILL_MODE_SOLID;
     psoDesc.RasterizerState.FrontCounterClockwise = TRUE;
     psoDesc.RasterizerState.DepthBias = m_depthBias;
     psoDesc.RasterizerState.DepthBiasClamp = 0.0f;

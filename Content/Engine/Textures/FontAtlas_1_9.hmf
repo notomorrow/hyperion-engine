@@ -3,11 +3,11 @@ Texture "FontAtlas_1_9" {
         Type = Texture2D
         Format = R8
         Extent = (2100, 640, 1)
-        MinFilterMode = TFM_NEAREST
-        MagFilterMode = TFM_NEAREST
-        TextureWrapMode = TWM_CLAMP_TO_EDGE
+        MinFilterMode = Nearest
+        MagFilterMode = Nearest
+        TextureWrapMode = ClampToEdge
         NumLayers = 1
-        ImageUsage = IU_SAMPLED
+        ImageUsage = Sampled
         MipOffsets = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     }
     ImageData = BlobDataReference {

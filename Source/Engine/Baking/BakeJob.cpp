@@ -9,7 +9,7 @@
 #include <Baking/BakeJob.hpp>
 #include <Baking/Baker.hpp>
 
-#include <Baking/Lightmaps/LightmapPathTraceGpu.hpp>
+#include <Baking/PathTracer/PathTracer.hpp>
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/RenderHelpers.hpp>
@@ -152,17 +152,14 @@ public:
             {
                 AssertDebug(pathTracer != nullptr);
 
-                const PathTracerRenderResult renderResult = pathTracer->Render(frame, renderSetup, job, *raysRc, rayOffset);
+                const PathTraceResult renderResult = pathTracer->Render(frame, renderSetup, job, *raysRc, rayOffset);
 
-                if (renderResult == PathTracerRenderResult::Deferred)
+                if (renderResult == PathTraceResult::Deferred)
                 {
-                    // Hold the remaining renderers back too, so the batch stays atomic and can be
-                    // re-queued as a whole. They build their acceleration structures on the same
-                    // batch, so they would all defer anyway.
                     break;
                 }
 
-                if (renderResult == PathTracerRenderResult::Failed)
+                if (renderResult == PathTraceResult::Failed)
                 {
                     // Retrying won't help, so consume the batch instead of spinning on it.
                     canRequeue = false;
@@ -334,7 +331,7 @@ uint32 BakeJobBase::ProcessTexels(Span<LightmapTexel*> texels, uint32 texelOffse
     return numTexels;
 }
 
-void BakeJobBase::IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, LightmapShadingType shadingType)
+void BakeJobBase::IntegrateRayHits(Span<const LightmapRay> rays, Span<const LightmapHit> hits, PathTraceType shadingType)
 {
     Assert(rays.Size() == hits.Size());
 
@@ -349,12 +346,12 @@ void BakeJobBase::IntegrateRayHits(Span<const LightmapRay> rays, Span<const Ligh
 
         switch (shadingType)
         {
-        case LightmapShadingType::DISTANCE:
+        case PathTraceType::Moments:
             // Distance moments (dist, dist^2) are accumulated into color1
             // so they don't conflict with FULL-mode color in color0.
             texel.color1 += hit.color;
             break;
-        case LightmapShadingType::BENT_NORMAL:
+        case PathTraceType::BentNormals:
             texel.bentNormal += hit.color;
             break;
         default:

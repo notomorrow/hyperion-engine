@@ -19,12 +19,16 @@ namespace Hyperion
         [FieldOffset(36)]
         public float maxDistance;
 
+        [FieldOffset(40)]
+        public uint seed;
+
         public WorldGridLayerInfo()
         {
             offset = new Vec3f(0.0f, 0.0f, 0.0f);
             scale = new Vec3f(1.0f, 1.0f, 1.0f);
             cellSize = 32;
             maxDistance = 1.0f;
+            seed = 0;
         }
     }
 

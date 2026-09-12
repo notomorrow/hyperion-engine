@@ -54,7 +54,7 @@ public:
     HYP_METHOD(Property = "ParticleMesh")
     void SetParticleMesh(const Handle<Mesh>& particleMesh);
 
-    //-- Per-layer stuff
+    ///Per-layer stuff
 
     static Name GetParticleTexturePropertyName()
     {

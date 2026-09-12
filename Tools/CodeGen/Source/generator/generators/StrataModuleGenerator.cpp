@@ -25,6 +25,7 @@
 #include <Core/IO/ByteWriter.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <utility>
 
 namespace Hyperion {
@@ -619,6 +620,54 @@ String StrataEnumUnderlyingType(const String& cxxUnderlying)
     return it != s_underlyingMap.End() ? it->second : String::empty;
 }
 
+// Conversions for C limit macros to use strata `.max` `.min` constants
+String TranslateLimitMacros(const String& value)
+{
+    static const Map<String, String> s_limitMacroMap {
+        { "INT8_MAX", "sbyte.max" },  { "INT16_MAX", "short.max" },
+        { "INT32_MAX", "int.max" },   { "INT64_MAX", "long.max" },
+        { "UINT8_MAX", "byte.max" },  { "UINT16_MAX", "ushort.max" },
+        { "UINT32_MAX", "uint.max" }, { "UINT64_MAX", "ulong.max" },
+        { "INT_MAX", "int.max" },     { "UINT_MAX", "uint.max" },
+        { "FLT_MAX", "float.max" },   { "FLT_MIN", "float.min" },
+        { "DBL_MAX", "double.max" },  { "DBL_MIN", "double.min" }
+    };
+
+    String result;
+
+    const char* chars = value.Data();
+    const size_t size = value.Size();
+
+    size_t i = 0;
+
+    while (i < size)
+    {
+        if (std::isalnum(static_cast<unsigned char>(chars[i])) || chars[i] == '_')
+        {
+            const size_t start = i;
+
+            while (i < size && (std::isalnum(static_cast<unsigned char>(chars[i])) || chars[i] == '_'))
+            {
+                ++i;
+            }
+
+            const String token(value.Substr(start, i));
+
+            const auto it = s_limitMacroMap.Find(token);
+
+            result += (it != s_limitMacroMap.End()) ? it->second : token;
+        }
+        else
+        {
+            result += chars[i];
+
+            ++i;
+        }
+    }
+
+    return result;
+}
+
 // Maps an extern param to its thunk signature param and forwarded call argument.
 TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const Set<String>& allHandleNames,
     const ASTType* paramType, const String& paramName, Array<String>& sigParams, Array<String>& callArgs)
@@ -659,7 +708,7 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
         const String elementCxxType = unwrappedParamType->templateArguments[0]->type->Format();
         const String arrayCxxTypeName = unwrappedParamType->typeName->ToString(/* includeNamespace */ false);
 
-        sigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::ArrayView<{}>* {}", elementCxxType, paramName));
+        sigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::SArray<{}>* {}", elementCxxType, paramName));
         callArgs.PushBack(HYP_FORMAT("{}<{}>({}->data, size_t({}->length))", arrayCxxTypeName, elementCxxType, paramName, paramName));
     }
     else if (paramTypeMapping.isVector)
@@ -915,7 +964,7 @@ Result StrataModuleGenerator::EmitEnums(const Analyzer& analyzer, ByteWriter& wr
             // Emit explicit values so bit-flag enums keep their C++ values.
             if (member.cxxDecl != nullptr && member.cxxDecl->value != nullptr)
             {
-                memberDecl += HYP_FORMAT(" = {}", member.cxxDecl->value->ToString());
+                memberDecl += HYP_FORMAT(" = {}", TranslateLimitMacros(member.cxxDecl->value->ToString()));
             }
 
             memberDecls.PushBack(memberDecl);
@@ -933,7 +982,7 @@ Result StrataModuleGenerator::EmitEnums(const Analyzer& analyzer, ByteWriter& wr
             writer.WriteString("    " + memberDecls[i] + (i + 1 < memberDecls.Size() ? ",\n" : "\n"));
         }
 
-        writer.WriteString("};\n");
+        writer.WriteString("}\n");
     }
 
     return {};
@@ -1492,12 +1541,12 @@ Result StrataModuleGenerator::EmitThunks(const Analyzer& analyzer, const Module&
 
                 const String returnElementCxxType = unwrappedReturnType->templateArguments[0]->type->Format();
 
-                allSigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::ArrayView<{}>* outReturn", returnElementCxxType));
+                allSigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::SArray<{}>* outReturn", returnElementCxxType));
             }
             else if (returnTypeMapping.isString)
             {
                 // `string` is a {ptr, len} fat; the host writes it via SetReturnString.
-                allSigParams.PushBack("::Hyperion::Strata::ArrayView<char>* outReturn");
+                allSigParams.PushBack("::Hyperion::Strata::SString* outReturn");
             }
             else if (returnsViaOutParam)
             {
@@ -1557,12 +1606,15 @@ Result StrataModuleGenerator::EmitThunks(const Analyzer& analyzer, const Module&
                         : HYP_FORMAT("self->{}", prop.getter->name);
 
                     // String getters write the {ptr, len} fat through an out-param.
+                    // -- Why? They don't have to, anymore --
+                    // They don't have to per se; but because strata extern char* returns do NOT hand off ownership,
+                    // we do it this way so ownership is created on the C++ side and strata takes it over.
                     Array<String> getterSigParams;
                     getterSigParams.PushBack(selfParam);
 
                     if (prop.mapping.isString)
                     {
-                        getterSigParams.PushBack("::Hyperion::Strata::ArrayView<char>* outReturn");
+                        getterSigParams.PushBack("::Hyperion::Strata::SString* outReturn");
                     }
 
                     String getterThunk = FormatThunkDefinition(prop.getterSymbol, prop.mapping, prop.getterValueType,

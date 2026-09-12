@@ -29,6 +29,7 @@
 #include <Scene/Systems/ReplicationSystem.hpp>
 #include <Scene/Systems/ReplicationApplySystem.hpp>
 #include <Scene/Systems/SwatchOverrideSystem.hpp>
+#include <Scene/Systems/WeaponSystem.hpp>
 
 #include <Scene/Components/MeshComponent.hpp>
 #include <Scene/Components/TransformComponent.hpp>
@@ -170,7 +171,7 @@ void World::Initialize()
 
         ViewDesc rayTracingViewDesc {};
         rayTracingViewDesc.flags = ViewFlags::RAY_TRACING | ViewFlags::NO_DRAW_CALLS
-            | ViewFlags::ALL_WORLD_SCENES | ViewFlags::COLLECT_ALL_ENTITIES
+            | ViewFlags::ALL_FOREGROUND_SCENES | ViewFlags::COLLECT_ALL_ENTITIES
             | ViewFlags::SKIP_LIGHTS
             | ViewFlags::SKIP_LIGHTMAP_VOLUMES
             | ViewFlags::SKIP_ENV_PROBES
@@ -209,7 +210,7 @@ void World::Initialize()
         {
             for (View* view : m_views)
             {
-                if (!(view->GetFlags() & ViewFlags::ALL_WORLD_SCENES))
+                if (!(view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES))
                 {
                     continue;
                 }
@@ -265,6 +266,9 @@ void World::Initialize()
 
     if (!HasSystem<SwatchOverrideSystem>())
         AddSystem(MakeHandle<SwatchOverrideSystem>());
+    
+    if (!HasSystem<WeaponSystem>())
+        AddSystem(MakeHandle<WeaponSystem>());
 
     if (!(m_worldFlags & WorldFlags::Editor))
     {
@@ -377,7 +381,7 @@ void World::Shutdown()
         {
             for (View* view : m_views)
             {
-                if (!(view->GetFlags() & ViewFlags::ALL_WORLD_SCENES))
+                if (!(view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES))
                 {
                     continue;
                 }
@@ -1472,7 +1476,7 @@ void World::AddScene(const Handle<Scene>& scene, bool addToStreamingLayer)
         {
             for (View* view : m_views)
             {
-                if (!(view->GetFlags() & ViewFlags::ALL_WORLD_SCENES))
+                if (!(view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES))
                 {
                     continue;
                 }
@@ -1513,9 +1517,10 @@ bool World::RemoveScene(Scene* scene, bool removeFromStreamingLayer)
         {
             if (removeFromStreamingLayer && (m_worldFlags & WorldFlags::HasSceneStreamingLayer))
             {
-                Handle<WorldGridLayer> scenesStreamingLayer = GetOrCreateStreamingLayer(s_nameStreamingLayerScenes);
-                AssertDebug(scenesStreamingLayer != nullptr);
-                scenesStreamingLayer->RemoveStreamingObject(scene);
+                if (Handle<WorldGridLayer> scenesStreamingLayer = GetStreamingLayer(s_nameStreamingLayerScenes); scenesStreamingLayer)
+                {
+                    scenesStreamingLayer->RemoveStreamingObject(scene);
+                }
             }
 
             OnSceneRemoved.Fire(this, this, scene);
@@ -1598,7 +1603,7 @@ void World::AddView(View* view)
         }
 
         // Add all scenes to the view, if the view should collect all world scenes
-        if (view->GetFlags() & ViewFlags::ALL_WORLD_SCENES)
+        if (view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES)
         {
             for (const Handle<Scene>& scene : m_scenes)
             {
@@ -1630,7 +1635,7 @@ void World::RemoveView(View* view)
         view->m_rayTracingView.Reset();
 
         // Remove all scenes from the view, if the view should collect all world scenes
-        if (view->GetFlags() & ViewFlags::ALL_WORLD_SCENES)
+        if (view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES)
         {
             for (const Handle<Scene>& scene : m_scenes)
             {
@@ -1686,10 +1691,10 @@ void World::DeserializeNonStreamingScenes(const Array<Handle<Scene>>& scenes)
     {
         if (m_worldFlags & WorldFlags::HasSceneStreamingLayer)
         {
-            // Remove scene from streaming layer if its currently enabled
-            Handle<WorldGridLayer> scenesStreamingLayer = GetOrCreateStreamingLayer(s_nameStreamingLayerScenes);
-            AssertDebug(scenesStreamingLayer != nullptr);
-            scenesStreamingLayer->RemoveStreamingObject(scene);
+            if (Handle<WorldGridLayer> scenesStreamingLayer = GetStreamingLayer(s_nameStreamingLayerScenes); scenesStreamingLayer)
+            {
+                scenesStreamingLayer->RemoveStreamingObject(scene);
+            }
         }
 
         scene->SetWorld(nullptr);
@@ -1743,7 +1748,7 @@ void World::DeserializeNonStreamingScenes(const Array<Handle<Scene>>& scenes)
             {
                 for (View* view : m_views)
                 {
-                    if (!(view->GetFlags() & ViewFlags::ALL_WORLD_SCENES))
+                    if (!(view->GetFlags() & ViewFlags::ALL_FOREGROUND_SCENES))
                     {
                         continue;
                     }
@@ -1852,6 +1857,28 @@ Handle<WorldGridLayer> World::GetOrCreateStreamingLayer(Name streamingLayerName)
     m_worldGrid->AddLayer(layer);
 
     return layer;
+}
+
+Handle<WorldGridLayer> World::GetStreamingLayer(Name streamingLayerName) const
+{
+    AssertDebug(streamingLayerName.IsValid());
+    if (!streamingLayerName.IsValid() || !m_worldGrid)
+    {
+        return Handle<WorldGridLayer>::Null();
+    }
+
+    auto it = m_worldGrid->GetLayers().FindIf(
+        [streamingLayerName](const Handle<WorldGridLayer>& layer)
+        {
+            return layer->GetName() == streamingLayerName;
+        });
+
+    if (it != m_worldGrid->GetLayers().End())
+    {
+        return *it;
+    }
+
+    return Handle<WorldGridLayer>::Null();
 }
 
 void World::DeserializeStreamingLayers(const Array<WGLayerDesc, DynamicAllocator>& streamingLayers)

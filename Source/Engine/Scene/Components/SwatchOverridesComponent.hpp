@@ -37,7 +37,7 @@ struct SwatchOverridesComponent
     HYP_FIELD(Transient)
     Array<EntitySwatchOverrideSet> sets;
 
-    //--  managed by SwatchOverrideSystem  --
+    /// managed by SwatchOverrideSystem  --
 
     // Name of the swatch active
     HYP_FIELD(Transient)
@@ -49,6 +49,6 @@ struct SwatchOverridesComponent
     Array<Pair<Name, BoxedValue>> baseSnapshot;
 };
 
-//--
+////////////////////
 
 } // namespace Hyperion

@@ -201,7 +201,7 @@ void UISubsystem::OnAddedToWorld()
     ViewDesc viewDesc {};
     viewDesc.flags = ViewFlags::UI_VIEW
         | ViewFlags::EXTERNAL_RENDERTARGET
-        | (ViewFlags::DEFAULT & ~(ViewFlags::ALL_WORLD_SCENES | ViewFlags::MATCH_CAMERA_DIMENSIONS));
+        | (ViewFlags::DEFAULT & ~(ViewFlags::ALL_FOREGROUND_SCENES | ViewFlags::MATCH_CAMERA_DIMENSIONS));
 
     viewDesc.scenes = { m_uiStage->GetScene() };
     viewDesc.camera = m_uiStage->GetCamera();

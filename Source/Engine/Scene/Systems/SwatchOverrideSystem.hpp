@@ -38,7 +38,7 @@ class SwatchOverrideSystem final : public SystemBase
 public:
     virtual ~SwatchOverrideSystem() override = default;
 
-    //-- Queries
+    ///Queries
 
     Name GetAppliedOverrideSwatch(const Entity* entity) const;
 
@@ -54,7 +54,7 @@ public:
     bool HasAnyOverriddenProperty(const Entity* entity, Name swatchName) const;
     Array<Pair<Name, BoxedValue>> GetSwatchOverrideEntries(const Entity* entity, Name swatchName) const;
 
-    //-- Editing
+    ///Editing
 
     bool AddSwatchOverrideSet(Entity* entity, Name swatchName);
     bool RemoveSwatchOverrideSet(Entity* entity, Name swatchName);
@@ -64,12 +64,12 @@ public:
     bool RemoveSwatchOverrideValue(Entity* entity, Name swatchName, Name propertyName);
     bool SetSwatchOverrideBaseValue(Entity* entity, Name propertyName, BoxedValue value);
 
-    //-- Copy
+    ///Copy
 
     Array<SwatchPropertyCopyEntry> BuildSwatchPropertyCopyPlan(Entity* entity, Name sourceSwatch, Name targetSwatch) const;
     void ApplySwatchPropertyCopyEntries(Entity* entity, Name targetSwatch, const Array<SwatchPropertyCopyEntry>& entries, bool applyNewState);
 
-    //-- Apply / revert
+    ///Apply / revert
 
     void ApplyOverrides(Entity* entity, Name swatchName);
     void RevertOverrides(Entity* entity);
@@ -80,7 +80,7 @@ public:
 
     void OnEntityAddedToWorld(Entity* entity);
 
-    //-- SystemBase
+    ///SystemBase
 
     bool AllowUpdate() const override
     {

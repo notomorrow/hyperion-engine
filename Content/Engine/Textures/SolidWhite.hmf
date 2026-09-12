@@ -3,11 +3,11 @@ Texture SolidWhite {
         Type = Texture2D
         Format = RGBA8
         Extent = (1, 1, 1)
-        MinFilterMode = TFM_NEAREST
-        MagFilterMode = TFM_NEAREST
-        TextureWrapMode = TWM_REPEAT
+        MinFilterMode = Nearest
+        MagFilterMode = Nearest
+        TextureWrapMode = Repeat
         NumLayers = 1
-        ImageUsage = IU_SAMPLED
+        ImageUsage = Sampled
         MipOffsets = [
             0
             0
@@ -29,6 +29,6 @@ Texture SolidWhite {
     }
     ImageData = {
         Key = "Engine://Textures/SolidWhite.TEX"
-        Size = 256
+        Size = 4
     }
 }

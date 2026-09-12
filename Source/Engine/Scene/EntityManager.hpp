@@ -856,6 +856,8 @@ private:
      */
     bool RemoveEntity(Entity* entity, bool calledFromEntityDestructor = false);
 
+    void UntrackEntityFromAllSystems(Entity* entity);
+
     bool IsEntityInitializedForSystem(SystemBase* system, const Entity* entity) const;
 
     // Thread safe way to create new entity set if one doesn't exist

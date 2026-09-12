@@ -78,7 +78,7 @@ public:
         return m_entityManager;
     }
 
-    //-- Component/Tags --
+    ///Component/Tags --
 
     template <class Component, class EntityManagerPtr = EntityManager*>
     Component& GetComponent() const;
@@ -104,7 +104,7 @@ public:
     template <EntityTag Tag, class EntityManagerPtr = EntityManager*>
     bool HasTag() const;
 
-    //-- Layers --
+    ///Layers --
 
     HYP_METHOD()
     HYP_FORCE_INLINE bool HasNoLayers() const
@@ -140,12 +140,12 @@ public:
     HYP_METHOD()
     void RemoveFromLayerByName(Name layerName);
 
-    //-- Swatch overrides --
+    ///Swatch overrides --
 
     void SetPendingSwatchOverrides(Array<EntitySwatchOverrideSet>&& sets);
     void FlushPendingSwatchOverrides();
 
-    //-- Tick --
+    ///Tick --
 
     HYP_METHOD()
     bool ReceivesUpdate() const;
@@ -153,16 +153,16 @@ public:
     HYP_METHOD()
     void SetReceivesUpdate(bool receivesUpdate);
 
-    //-- Lock and load --
+    ///Lock and load --
 
     virtual void LockTransform() override;
     virtual void UnlockTransform() override;
 
-    //-- Bounds --
+    ///Bounds --
 
     virtual void SetLocalBounds(const BoundingBox& aabb) override;
 
-    //-- RenderProxy --
+    ///RenderProxy --
 
     void UpdateRenderProxy(RenderProxyMesh* proxy);
 
@@ -176,10 +176,10 @@ public:
         ++m_renderProxyVersion;
     }
 
-    //--
+    ////////////////////
 
 protected:
-    //-- Overrides --
+    ///Overrides --
     virtual void Init() override;
 
     virtual void Update(float delta)
@@ -209,14 +209,15 @@ protected:
     virtual void OnTransformUpdated() override;
     virtual void OnMobilityChanged(bool isStatic) override;
 
-    //--
+    ////////////////////
 
     EntityInitInfo m_entityInitInfo;
 
 private:
     void SetEntityManager(const Handle<EntityManager>& entityManager);
+    void SetEntityManagerRaw_Internal(EntityManager* entityManager);
 
-    //-- Serialization --
+    ///Serialization --
 
     HYP_METHOD(Property = "Tags", NoScriptBindings)
     Array<Name> SerializeTags() const;
@@ -236,7 +237,7 @@ private:
     HYP_METHOD(Property = "Layers", NoScriptBindings, LoadOrder = 1002)
     void DeserializeLayers(const Array<Name>& layerNames);
 
-    //-- Transient properties
+    ///Transient properties
 
     EntityManager* m_entityManager;
 
@@ -248,7 +249,7 @@ private:
     HYP_FIELD(Transient)
     LayersMask m_layersMask;
 
-    //--
+    ////////////////////
 };
 
 #include <Scene/Entity.inl>

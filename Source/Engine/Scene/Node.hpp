@@ -567,7 +567,7 @@ public:
     /*! \brief Get the flags of the Node.
      *  \see NodeFlagBits
      *  \returns The flags of the Node. */
-    HYP_METHOD(Property = "NodeFlags", Serialize, EditorOrder = 3)
+    HYP_METHOD(Property = "NodeFlags", Serialize)
     HYP_FORCE_INLINE EnumFlags<NodeFlags> GetNodeFlags() const
     {
         return m_nodeFlags;
@@ -933,7 +933,7 @@ public:
     static ScriptableDelegate<void, Node*> TransformUpdated;
 
 protected:
-    // -- Overrides --
+    ///Overrides
     virtual void Init() override;
 
     virtual void OnAttachedToNode(Node* node);
@@ -947,20 +947,20 @@ protected:
 
     virtual void SetScene_Internal(Scene* scene, bool moveToDetached);
 
-    //-- Serialization --
+    ///Serialization
 
     HYP_METHOD(Property = "Children", NoScriptBindings, Serialize)
     void SetChildren(const NodeList& children); // use setter so we can manage parent pointers
 
-    //-- Fields --
+    ///Fields
 
-    HYP_FIELD(Property = "UUID", Serialize, Editor, EditEnabled = false)
+    HYP_FIELD(Property = "UUID", Serialize, Editor, EditorOrder = 1, EditEnabled = false)
     UUID m_uuid;
 
-    HYP_FIELD(Property = "Name", Serialize, EditorOrder = 1)
+    HYP_FIELD(Property = "Name", Serialize, EditorOrder = 0)
     Name m_name;
 
-    HYP_FIELD(Property = "NodeFlags", Serialize)
+    HYP_FIELD(Property = "NodeFlags", Serialize, EditorState = 2)
     EnumFlags<NodeFlags> m_nodeFlags;
 
     HYP_FIELD(Property = "Parent", Transient, Editor = false)
@@ -969,13 +969,15 @@ protected:
     HYP_FIELD(Property = "Children", LoadOrder = -1, Editor = false, Serialize)
     NodeList m_childNodes;
 
-    HYP_FIELD(Property = "LocalTransform", Serialize, Label = "Local-space Transform")
+    HYP_FIELD(Property = "LocalTransform", Serialize, Label = "Local-space Transform", EditorOrder = 3)
     Transform m_localTransform;
 
     HYP_FIELD(Transient, Editor = false)
     Mat4f m_worldMatrix;
 
-    HYP_FIELD(Property = "LocalBounds", Serialize, Label = "Bounding Box", Description = "The bounds for the content of this node. Does not take into account child nodes or transform.")
+    HYP_FIELD(Property = "LocalBounds", Serialize,
+        Label = "Bounding Box",
+        Description = "The bounds for the content of this node. Does not take into account child nodes or transform.")
     BoundingBox m_localBounds;
 
     HYP_FIELD(Property = "Scene", Transient, Editor = false)
@@ -984,11 +986,9 @@ protected:
     HYP_FIELD(Property = "NodeTags", Serialize, Editor = false)
     NodeTagSet m_tags;
 
-    //-- BitFlags --
+    ///BitFlags
 
     bool m_transformLocked : 1;
-
-    //--
 };
 
 struct NodeUnlockTransformScope

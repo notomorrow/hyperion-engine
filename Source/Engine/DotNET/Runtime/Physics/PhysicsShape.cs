@@ -12,7 +12,7 @@ namespace Hyperion
         ConvexHull,
         Capsule,
 
-        Count
+        Max
     }
 
     [ClassBinding(Name = "PhysicsShape")]

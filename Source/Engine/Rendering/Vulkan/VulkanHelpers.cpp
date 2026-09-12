@@ -30,11 +30,11 @@ VkIndexType ToVkIndexType(GpuElemType elemType)
 {
     switch (elemType)
     {
-    case GET_UNSIGNED_BYTE:
+    case GpuElemType::UnsignedByte:
         return VK_INDEX_TYPE_UINT8_EXT;
-    case GET_UNSIGNED_SHORT:
+    case GpuElemType::UnsignedShort:
         return VK_INDEX_TYPE_UINT16;
-    case GET_UNSIGNED_INT:
+    case GpuElemType::UnsignedInt:
         return VK_INDEX_TYPE_UINT32;
     default:
         HYP_FAIL("Unsupported gpu element type to vulkan index type conversion: %d", int(elemType));
@@ -122,12 +122,12 @@ VkFilter ToVkFilter(TextureFilterMode filterMode)
 {
     switch (filterMode)
     {
-    case TFM_NEAREST: // fallthrough
-    case TFM_NEAREST_MIPMAP:
+    case TextureFilterMode::Nearest: // fallthrough
+    case TextureFilterMode::NearestMipmap:
         return VK_FILTER_NEAREST;
-    case TFM_MINMAX_MIPMAP: // fallthrough
-    case TFM_LINEAR_MIPMAP: // fallthrough
-    case TFM_LINEAR:
+    case TextureFilterMode::MinMaxMipmap: // fallthrough
+    case TextureFilterMode::LinearMipmap: // fallthrough
+    case TextureFilterMode::Linear:
         return VK_FILTER_LINEAR;
     default:
         break;
@@ -140,11 +140,11 @@ VkSamplerAddressMode ToVkSamplerAddressMode(TextureWrapMode textureWrapMode)
 {
     switch (textureWrapMode)
     {
-    case TWM_CLAMP_TO_EDGE:
+    case TextureWrapMode::ClampToEdge:
         return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    case TWM_CLAMP_TO_BORDER:
+    case TextureWrapMode::ClampToBorder:
         return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-    case TWM_REPEAT:
+    case TextureWrapMode::Repeat:
         return VK_SAMPLER_ADDRESS_MODE_REPEAT;
     default:
         return VK_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -244,14 +244,14 @@ VkImageLayout GetVkImageLayout(ResourceState state,
 {
     switch (state)
     {
-    case RS_UNDEFINED:
+    case ResourceState::Undefined:
         return VK_IMAGE_LAYOUT_UNDEFINED;
-    case RS_PRE_INITIALIZED:
+    case ResourceState::PreInitialized:
         return VK_IMAGE_LAYOUT_PREINITIALIZED;
-    case RS_COMMON:
-    case RS_UNORDERED_ACCESS:
+    case ResourceState::Common:
+    case ResourceState::UnorderedAccess:
         return VK_IMAGE_LAYOUT_GENERAL;
-    case RS_RENDER_TARGET:
+    case ResourceState::RenderTarget:
         if (isDepthStencil)
         {
             if (onlyDepth)
@@ -264,11 +264,11 @@ VkImageLayout GetVkImageLayout(ResourceState state,
         }
         else
             return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    case RS_RESOLVE_DST:
+    case ResourceState::ResolveDst:
         return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    case RS_DEPTH_STENCIL:
+    case ResourceState::DepthStencil:
         return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    case RS_SHADER_RESOURCE:
+    case ResourceState::ShaderResource:
         if (isDepthStencil)
         {
             if (onlyDepth)
@@ -281,13 +281,13 @@ VkImageLayout GetVkImageLayout(ResourceState state,
         }
         else
             return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    case RS_RESOLVE_SRC:
+    case ResourceState::ResolveSrc:
         return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    case RS_COPY_DST:
+    case ResourceState::CopyDst:
         return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    case RS_COPY_SRC:
+    case ResourceState::CopySrc:
         return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    case RS_PRESENT:
+    case ResourceState::Present:
         return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     default:
         HYP_FAIL("Unknown ResourceState {}!", state);
@@ -298,37 +298,37 @@ VkAccessFlags GetVkAccessMask(ResourceState state, bool isDepthStencil)
 {
     switch (state)
     {
-    case RS_UNDEFINED:
-    case RS_PRESENT:
-    case RS_COMMON:
-    case RS_PRE_INITIALIZED:
+    case ResourceState::Undefined:
+    case ResourceState::Present:
+    case ResourceState::Common:
+    case ResourceState::PreInitialized:
         return VkAccessFlagBits(0);
-    case RS_VERTEX_BUFFER:
+    case ResourceState::VertexBuffer:
         return VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-    case RS_CONSTANT_BUFFER:
+    case ResourceState::ConstantBuffer:
         return VK_ACCESS_UNIFORM_READ_BIT;
-    case RS_INDEX_BUFFER:
+    case ResourceState::IndexBuffer:
         return VK_ACCESS_INDEX_READ_BIT;
-    case RS_RENDER_TARGET:
+    case ResourceState::RenderTarget:
         if (isDepthStencil)
             return VkAccessFlagBits(VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
         else
             return VkAccessFlagBits(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT);
-    case RS_UNORDERED_ACCESS:
+    case ResourceState::UnorderedAccess:
         return VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-    case RS_DEPTH_STENCIL:
+    case ResourceState::DepthStencil:
         return VkAccessFlagBits(VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
-    case RS_SHADER_RESOURCE:
+    case ResourceState::ShaderResource:
         return VK_ACCESS_SHADER_READ_BIT;
-    case RS_INDIRECT_ARG:
+    case ResourceState::IndirectArg:
         return VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-    case RS_COPY_DST:
+    case ResourceState::CopyDst:
         return VK_ACCESS_TRANSFER_WRITE_BIT;
-    case RS_COPY_SRC:
+    case ResourceState::CopySrc:
         return VK_ACCESS_TRANSFER_READ_BIT;
-    case RS_RESOLVE_DST:
+    case ResourceState::ResolveDst:
         return VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    case RS_RESOLVE_SRC:
+    case ResourceState::ResolveSrc:
         return VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
     default:
         HYP_UNREACHABLE();
@@ -340,9 +340,9 @@ VkPipelineStageFlags GetVkShaderStageMask(ResourceState state,
 {
     switch (state)
     {
-    case RS_UNDEFINED:
-    case RS_PRE_INITIALIZED:
-    case RS_COMMON:
+    case ResourceState::Undefined:
+    case ResourceState::PreInitialized:
+    case ResourceState::Common:
         if (!isSrc)
         {
             HYP_LOG(RenderingBackend, Warning,
@@ -353,12 +353,12 @@ VkPipelineStageFlags GetVkShaderStageMask(ResourceState state,
         }
 
         return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    case RS_VERTEX_BUFFER:
-    case RS_INDEX_BUFFER:
+    case ResourceState::VertexBuffer:
+    case ResourceState::IndexBuffer:
         return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-    case RS_UNORDERED_ACCESS:
-    case RS_CONSTANT_BUFFER:
-    case RS_SHADER_RESOURCE:
+    case ResourceState::UnorderedAccess:
+    case ResourceState::ConstantBuffer:
+    case ResourceState::ShaderResource:
         switch (shaderType)
         {
         case ShaderModuleType::Vertex:
@@ -406,21 +406,21 @@ VkPipelineStageFlags GetVkShaderStageMask(ResourceState state,
         default:
             HYP_UNREACHABLE();
         }
-    case RS_RENDER_TARGET:
+    case ResourceState::RenderTarget:
         if (isDepthStencil)
             return isSrc ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT : VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         else
             return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    case RS_DEPTH_STENCIL:
+    case ResourceState::DepthStencil:
         return isSrc ? VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT : VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    case RS_INDIRECT_ARG:
+    case ResourceState::IndirectArg:
         return VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    case RS_COPY_DST:
-    case RS_COPY_SRC:
-    case RS_RESOLVE_DST:
-    case RS_RESOLVE_SRC:
+    case ResourceState::CopyDst:
+    case ResourceState::CopySrc:
+    case ResourceState::ResolveDst:
+    case ResourceState::ResolveSrc:
         return VK_PIPELINE_STAGE_TRANSFER_BIT;
-    case RS_PRESENT:
+    case ResourceState::Present:
         return isSrc ? (VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     default:
         HYP_UNREACHABLE();
@@ -571,7 +571,7 @@ VmaAllocationCreateFlags GetVkAllocationCreateFlags(GpuBufferType type, bool cpu
 
 VkImageLayout GetInitialLayout(LoadOperation loadOperation, bool isDepthStencil, bool onlyDepth, bool onlyStencil)
 {
-    const uint8 loadOperationIndex = loadOperation == LoadOperation::LOAD ? 1 : 0;
+    const uint8 loadOperationIndex = loadOperation == LoadOperation::Load ? 1 : 0;
 
     return GetVkImageLayout(PreRenderResourceStates[loadOperationIndex], isDepthStencil, onlyDepth, onlyStencil);
 }
@@ -585,14 +585,14 @@ VkAttachmentLoadOp ToVkLoadOp(LoadOperation loadOperation)
 {
     switch (loadOperation)
     {
-    case LoadOperation::UNDEFINED:
+    case LoadOperation::Undefined:
         return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    case LoadOperation::NONE:
+    case LoadOperation::None:
          // VK_ATTACHMENT_LOAD_OP_NONE-EXT is an extension and not guaranteed to be supported, so we use DONT_CARE for now
         return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    case LoadOperation::CLEAR:
+    case LoadOperation::Clear:
         return VK_ATTACHMENT_LOAD_OP_CLEAR;
-    case LoadOperation::LOAD:
+    case LoadOperation::Load:
         return VK_ATTACHMENT_LOAD_OP_LOAD;
     default:
         return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -603,11 +603,11 @@ VkAttachmentStoreOp ToVkStoreOp(StoreOperation storeOperation)
 {
     switch (storeOperation)
     {
-    case StoreOperation::UNDEFINED:
+    case StoreOperation::Undefined:
         return VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    case StoreOperation::NONE:
+    case StoreOperation::None:
         return VK_ATTACHMENT_STORE_OP_NONE;
-    case StoreOperation::STORE:
+    case StoreOperation::Store:
         return VK_ATTACHMENT_STORE_OP_STORE;
     default:
         return VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -663,15 +663,15 @@ VkStencilOp ToVkStencilOp(StencilOp stencilOp)
 {
     switch (stencilOp)
     {
-    case SO_KEEP:
+    case StencilOp::Keep:
         return VK_STENCIL_OP_KEEP;
-    case SO_ZERO:
+    case StencilOp::Zero:
         return VK_STENCIL_OP_ZERO;
-    case SO_REPLACE:
+    case StencilOp::Replace:
         return VK_STENCIL_OP_REPLACE;
-    case SO_INCREMENT:
+    case StencilOp::Increment:
         return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
-    case SO_DECREMENT:
+    case StencilOp::Decrement:
         return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
     default:
         return VK_STENCIL_OP_KEEP;
@@ -682,13 +682,13 @@ VkCompareOp ToVkCompareOp(StencilCompareOp compareOp)
 {
     switch (compareOp)
     {
-    case SCO_ALWAYS:
+    case StencilCompareOp::Always:
         return VK_COMPARE_OP_ALWAYS;
-    case SCO_NEVER:
+    case StencilCompareOp::Never:
         return VK_COMPARE_OP_NEVER;
-    case SCO_EQUAL:
+    case StencilCompareOp::Equal:
         return VK_COMPARE_OP_EQUAL;
-    case SCO_NOT_EQUAL:
+    case StencilCompareOp::NotEqual:
         return VK_COMPARE_OP_NOT_EQUAL;
     default:
         return VK_COMPARE_OP_ALWAYS;
@@ -699,21 +699,21 @@ VkCompareOp ToVkDepthCompareOp(DepthCompareOp compareOp)
 {
     switch (compareOp)
     {
-    case DCO_LESS:
+    case DepthCompareOp::Less:
         return VK_COMPARE_OP_LESS;
-    case DCO_LESS_OR_EQUAL:
+    case DepthCompareOp::LessOrEqual:
         return VK_COMPARE_OP_LESS_OR_EQUAL;
-    case DCO_GREATER:
+    case DepthCompareOp::Greater:
         return VK_COMPARE_OP_GREATER;
-    case DCO_GREATER_OR_EQUAL:
+    case DepthCompareOp::GreaterOrEqual:
         return VK_COMPARE_OP_GREATER_OR_EQUAL;
-    case DCO_EQUAL:
+    case DepthCompareOp::Equal:
         return VK_COMPARE_OP_EQUAL;
-    case DCO_NOT_EQUAL:
+    case DepthCompareOp::NotEqual:
         return VK_COMPARE_OP_NOT_EQUAL;
-    case DCO_ALWAYS:
+    case DepthCompareOp::Always:
         return VK_COMPARE_OP_ALWAYS;
-    case DCO_NEVER:
+    case DepthCompareOp::Never:
         return VK_COMPARE_OP_NEVER;
     default:
         return VK_COMPARE_OP_LESS;

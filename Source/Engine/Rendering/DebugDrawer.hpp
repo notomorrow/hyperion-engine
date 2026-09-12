@@ -244,6 +244,8 @@ public:
         return m_debugDrawer;
     }
 
+    bool IsFull() const;
+
     void* Alloc(uint32 size, uint32 alignment, DebugDrawCommandHeader& outHeader);
     void Push(const DebugDrawCommandHeader& header);
 
@@ -270,6 +272,10 @@ public:
     using Buffer = DebugDrawBuffer;
 
     static constexpr uint32 BufferCount = 3;
+
+    // max. before dropping to prevent running out of pool memory for structured buffers
+    // 16384*sizeof(ImmediateDrawShaderData) = 1,310,720 bytes
+    static constexpr size_t MaxHeaders = 16384;
 
     static DebugDrawer& GetInstance();
 

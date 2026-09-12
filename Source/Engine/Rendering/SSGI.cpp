@@ -132,11 +132,11 @@ void SSGI::Create()
         TextureType::Texture2D,
         SSGIFormat,
         Vec3u(m_extent, 1),
-        TFM_LINEAR,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Linear,
+        TextureFilterMode::Linear,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_STORAGE | IU_SAMPLED });
+        ImageUsage::Storage | ImageUsage::Sampled });
     m_ssgiTexture->SetIsTransient(true);
     m_ssgiTexture->SetName(NAME("SSGITexture"));
     Check(m_ssgiTexture->Create());
@@ -149,11 +149,11 @@ void SSGI::Create()
             TextureType::Texture2D,
             SSGIFormat,
             Vec3u(MathUtil::Max(m_extent / (2 * (i + 1)), Vec2u::One()), 1),
-            TFM_LINEAR,
-            TFM_LINEAR,
-            TWM_CLAMP_TO_EDGE,
+            TextureFilterMode::Linear,
+            TextureFilterMode::Linear,
+            TextureWrapMode::ClampToEdge,
             1,
-            IU_SAMPLED });
+            ImageUsage::Sampled });
         m_downsampleTextures[i]->SetName(NAME_FMT("SSGIDownsampleTexture{}", i));
         Check(m_downsampleTextures[i]->Create());
     }
@@ -378,7 +378,7 @@ void SSGI::Render(Frame* frame, const RenderSetup& renderSetup)
         const uint32 numDispatchCalls = (totalPixelsInImage + 255) / 256;
 
         // put sample image in writeable state
-        cr << InsertBarrier(m_ssgiTexture->GetGpuImage(), RS_UNORDERED_ACCESS);
+        cr << InsertBarrier(m_ssgiTexture->GetGpuImage(), ResourceState::UnorderedAccess);
 
         cr << SetCurrentShader(ShaderDesc(NAME("SSGI"), GetShaderProperties()));
 
@@ -422,15 +422,15 @@ void SSGI::Render(Frame* frame, const RenderSetup& renderSetup)
     {
         if (i == 0)
         {
-            cr << InsertBarrier(m_ssgiTexture->GetGpuImage(), RS_COPY_SRC);
-            cr << InsertBarrier(m_downsampleTextures[i]->GetGpuImage(), RS_COPY_DST);
+            cr << InsertBarrier(m_ssgiTexture->GetGpuImage(), ResourceState::CopySrc);
+            cr << InsertBarrier(m_downsampleTextures[i]->GetGpuImage(), ResourceState::CopyDst);
 
             cr << Blit(m_ssgiTexture, m_downsampleTextures[i]);
         }
         else
         {
-            cr << InsertBarrier(m_downsampleTextures[i - 1]->GetGpuImage(), RS_COPY_SRC);
-            cr << InsertBarrier(m_downsampleTextures[i]->GetGpuImage(), RS_COPY_DST);
+            cr << InsertBarrier(m_downsampleTextures[i - 1]->GetGpuImage(), ResourceState::CopySrc);
+            cr << InsertBarrier(m_downsampleTextures[i]->GetGpuImage(), ResourceState::CopyDst);
 
             cr << Blit(m_downsampleTextures[i - 1], m_downsampleTextures[i]);
         }
@@ -495,12 +495,12 @@ void SSGI::Render(Frame* frame, const RenderSetup& renderSetup)
 
         if (i == 0)
         {
-            cr << InsertBarrier(pass->GetAttachment(0)->GetGpuImage(), RS_SHADER_RESOURCE);
+            cr << InsertBarrier(pass->GetAttachment(0)->GetGpuImage(), ResourceState::ShaderResource);
         }
     }
 
     // transition sample image back into read state
-    cr << InsertBarrier(m_upsamplePasses[NumDownsamplePasses - 1]->GetAttachment(0)->GetGpuImage(), RS_SHADER_RESOURCE);
+    cr << InsertBarrier(m_upsamplePasses[NumDownsamplePasses - 1]->GetAttachment(0)->GetGpuImage(), ResourceState::ShaderResource);
 
     if (SSGIUseTemporalBlending && m_temporalBlending != nullptr)
     {

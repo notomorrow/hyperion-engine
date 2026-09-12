@@ -6,6 +6,8 @@
 
 #include <Editor/Tasks/EditorTasks.hpp>
 
+#include <Editor/Terrain/EditorTerrainState.hpp>
+
 #include <Scene/Scene.hpp>
 #include <Scene/World.hpp>
 #include <Scene/EntityManager.hpp>
@@ -20,6 +22,9 @@
 #include <Scene/TextSprite.hpp>
 #include <Scene/Node.hpp>
 #include <Scene/Prefab.hpp>
+
+#include <Scene/WorldGrid/WorldGrid.hpp>
+#include <Scene/WorldGrid/Terrain/TerrainWorldGridLayer.hpp>
 
 #include <Scene/Systems/SwatchOverrideSystem.hpp>
 
@@ -50,6 +55,8 @@
 
 #include <Core/CLI/CommandLine.hpp>
 
+#include <random>
+
 #include <Asset/Assets.hpp>
 #include <Asset/AssetBatch.hpp>
 #include <Asset/AssetRegistry.hpp>
@@ -63,6 +70,8 @@
 #include <Scene/Animation/Skeleton.hpp>
 
 #include <Framework/EngineGlobals.hpp>
+
+#include <Framework/Gameplay/Weapon.hpp>
 
 #include <System/OpenFileDialog.hpp>
 #include <System/SaveFileDialog.hpp>
@@ -1321,7 +1330,6 @@ public:
 
     virtual void Execute(EditorSubsystem* subsystem) override
     {
-
         const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
         if (!currentProject.IsValid())
         {
@@ -1341,7 +1349,7 @@ public:
         Handle<ParticleVolume> particleVolume = MakeHandle<ParticleVolume>(BoundingBox(Vec3f(-20.0f, 0.0f, -20.0f), Vec3f(20.0f, 20.0f, 20.0f)));
         particleVolume->SetName(activeScene->GetUniqueNodeNameT<ParticleVolume>());
 
-        particleVolume->texture = g_assetManager->Load<Texture>("Textures/spark.png").GetValue().ExtractAs<Handle<Texture>>();
+        //particleVolume->texture = g_assetManager->Load<Texture>("Textures/spark.png").GetValue().ExtractAs<Handle<Texture>>();
         particleVolume->mesh = MeshBuilder::Quad();
         particleVolume->origin = Vec3f(0.0f, 10.0f, 0.0f); // temp
         particleVolume->maxParticles = 2048;
@@ -2154,6 +2162,141 @@ DEFINE_EDITOR_COMMAND(ReparentNode);
 
 #pragma endregion EditorCommandReparentNode
 
+#pragma region EditorCommandMoveNodeToScene
+
+class EditorCommandMoveNodeToScene final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandMoveNodeToScene);
+
+public:
+    EditorCommandMoveNodeToScene() = default;
+
+    virtual ~EditorCommandMoveNodeToScene() override = default;
+
+    virtual String GetText() const override
+    {
+        return m_text.Length() ? m_text : EditorCommandBase::GetText();
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        uint64 nodeAddress = 0;
+        uint64 targetSceneAddress = 0;
+
+        if (!StringUtil::Parse(GetArgument(0), &nodeAddress) || !StringUtil::Parse(GetArgument(1), &targetSceneAddress)
+            || nodeAddress == NULL || targetSceneAddress == NULL)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: invalid node or scene address");
+            return;
+        }
+
+        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: no project loaded");
+            return;
+        }
+
+        World* projectWorld = currentProject->GetWorld().Get();
+        if (!projectWorld)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: project has no world");
+            return;
+        }
+
+        Handle<Node> node = MakeStrongRef(reinterpret_cast<Node*>(nodeAddress));
+        Handle<Scene> targetScene = MakeStrongRef(reinterpret_cast<Scene*>(targetSceneAddress));
+
+        if (!node.IsValid() || !targetScene.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: invalid node or scene");
+            return;
+        }
+
+        bool targetSceneInWorld = false;
+
+        for (const Handle<Scene>& scene : projectWorld->GetScenes())
+        {
+            if (scene == targetScene)
+            {
+                targetSceneInWorld = true;
+
+                break;
+            }
+        }
+
+        if (!targetSceneInWorld)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: target scene does not belong to the project's world");
+            return;
+        }
+
+        Scene* nodeScene = node->GetScene();
+
+        if (!nodeScene)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: node has no scene, cannot move");
+            return;
+        }
+
+        if (nodeScene == targetScene.Get())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandMoveNodeToScene: node is already in the target scene");
+            return;
+        }
+
+        Node* previousParent = node->GetParent();
+        if (!previousParent)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: node has no parent, cannot move scene root");
+            return;
+        }
+
+        Handle<Node> targetRoot = targetScene->GetRoot();
+        if (!targetRoot.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: target scene has no root node");
+            return;
+        }
+
+        m_text = HYP_FORMAT("Move '{}' to scene '{}'", node->GetName(), targetScene->GetName());
+
+        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+            GetText(),
+            Proc<EditorActionFunctions()>(
+                [node, targetRoot, previousParent = MakeStrongRef(previousParent)]() -> EditorActionFunctions
+                {
+                    return EditorActionFunctions {
+                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [node, targetRoot](EditorSubsystem*, EditorProject*)
+                            {
+                                node->Remove();
+                                targetRoot->AddChild(node);
+                            }),
+                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [node, previousParent](EditorSubsystem*, EditorProject*)
+                            {
+                                node->Remove();
+                                previousParent->AddChild(node);
+                            })
+                    };
+                }));
+
+        InitObject(action);
+
+        currentProject->GetActionStack()->PushAction(action);
+    }
+
+private:
+    String m_text;
+};
+
+DEFINE_EDITOR_COMMAND(MoveNodeToScene);
+
+#pragma endregion EditorCommandMoveNodeToScene
+
 #pragma region RenameNode
 
 class EditorCommandRenameNode final : public EditorCommandBase
@@ -2856,6 +2999,116 @@ DEFINE_EDITOR_COMMAND(SelectAll);
 
 #pragma endregion SelectAll
 
+#pragma region SelectAllInViewport
+
+class EditorCommandSelectAllInViewport final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSelectAllInViewport);
+
+public:
+    virtual ~EditorCommandSelectAllInViewport() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Select All in Viewport";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        const Handle<Scene> activeScene = subsystem->GetActiveScene();
+        if (!activeScene.IsValid())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSelectAllInViewport: no active scene");
+            return;
+        }
+
+        const Handle<Node>& root = activeScene->GetRoot();
+        if (!root.IsValid())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSelectAllInViewport: scene has no root node");
+            return;
+        }
+
+        EditorViewport* activeViewport = subsystem->GetActiveViewport();
+        if (activeViewport == nullptr || !activeViewport->GetCamera().IsValid())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSelectAllInViewport: no active viewport");
+            return;
+        }
+
+        const Frustum& frustum = activeViewport->GetCamera()->GetFrustum();
+
+        Array<Handle<Node>> visibleNodes;
+
+        for (Node* descendant : root->GetDescendantsArray())
+        {
+            if (descendant == nullptr || descendant->IsRoot())
+            {
+                continue;
+            }
+
+            Handle<Node> nodeStrong = MakeStrongRef(descendant);
+
+            const BoundingBox worldBounds = nodeStrong->GetWorldBounds();
+
+            if (!worldBounds.IsValid() || !worldBounds.IsFinite())
+            {
+                continue;
+            }
+
+            if (frustum.ContainsAABB(worldBounds))
+            {
+                visibleNodes.PushBack(nodeStrong);
+            }
+        }
+
+        if (visibleNodes.Empty())
+        {
+            return;
+        }
+
+        subsystem->SetSelectedNodes(visibleNodes);
+        subsystem->SetFocusedNode(visibleNodes[0], true);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SelectAllInViewport);
+
+#pragma endregion SelectAllInViewport
+
+#pragma region SelectNone
+
+class EditorCommandSelectNone final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSelectNone);
+
+public:
+    virtual ~EditorCommandSelectNone() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Select None";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        if (subsystem->GetFocusedNode().IsValid())
+        {
+            subsystem->SetFocusedNode(Handle<Node>::Null(), true);
+        }
+
+        subsystem->ClearSelection();
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SelectNone);
+
+#pragma endregion SelectNone
+
 #pragma region NewScript
 
 class EditorCommandNewScript final : public EditorCommandBase
@@ -3034,6 +3287,73 @@ public:
 DEFINE_EDITOR_COMMAND(NewScript);
 
 #pragma endregion NewScript
+
+#pragma region NewWeapon
+
+class EditorCommandNewWeapon final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandNewWeapon);
+
+public:
+    virtual ~EditorCommandNewWeapon() override = default;
+
+    virtual String GetText() const override
+    {
+        return "New Weapon";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Error, "No project loaded; cannot create weapon asset!");
+
+            return;
+        }
+
+        
+        const String& weaponTypeArg = GetArgument(0);
+
+        uint32 weaponTypeIndex;
+        if (!StringUtil::Parse(weaponTypeArg, &weaponTypeIndex) || (weaponTypeIndex >= uint32(WeaponType::Max)))
+        {
+            HYP_LOG(Editor, Error, "Invalid WeaponType passed");
+
+            return;
+        }
+
+        Handle<Weapon> weapon = MakeHandle<Weapon>(Name::Unique("NewWeapon"), WeaponType(weaponTypeIndex));
+        InitObject(weapon);
+
+        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+            GetText(),
+            Proc<EditorActionFunctions()>(
+                [weapon]() -> EditorActionFunctions
+                {
+                    return EditorActionFunctions {
+                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [weapon](EditorSubsystem*, EditorProject*)
+                            {
+                                GetCurrentAssetRegistry()->PutAssetUnique(weapon);
+                            }),
+                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [weapon](EditorSubsystem*, EditorProject*)
+                            {
+                                GetCurrentAssetRegistry()->RemoveAsset(weapon);
+                            })
+                    };
+                }));
+
+        InitObject(action);
+
+        currentProject->GetActionStack()->PushAction(action);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(NewWeapon);
+
+#pragma endregion NewWeapon
 
 #pragma region NewMaterial
 
@@ -3653,6 +3973,284 @@ public:
 DEFINE_EDITOR_COMMAND(AddCube);
 
 #pragma endregion AddCube
+
+#pragma region AddWorldGridLayer
+
+class EditorCommandAddWorldGridLayer final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandAddWorldGridLayer);
+
+public:
+    virtual ~EditorCommandAddWorldGridLayer() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Add World Grid Layer";
+    }
+
+    static Name CreateLayerName(const Class* cls)
+    {
+        ANSIString name = cls->GetName().LookupString();
+
+        const ANSIStringView suffix = "WorldGridLayer";
+
+        if (name.EndsWith(suffix))
+        {
+            name = name.Substr(0, name.Size() - suffix.Size());
+        }
+
+        if (name.Empty())
+        {
+            name = String(cls->GetName().LookupString());
+        }
+
+        return Name(name);
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        if (NumArguments() < 1)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandAddWorldGridLayer: missing layer class name argument!");
+
+            return;
+        }
+
+        const Class* layerClass = ClassRegistry::GetInstance().GetClass(Name(ANSIString(GetArgument(0))));
+
+        if (!layerClass || !layerClass->IsDerivedFrom(WorldGridLayer::StaticClass()) || layerClass->IsAbstract())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandAddWorldGridLayer: '{}' is not a valid WorldGridLayer class!", GetArgument(0));
+
+            return;
+        }
+
+        Handle<EditorProject> currentProject = subsystem->GetCurrentProject();
+
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Error, "No project loaded; cannot add world grid layer!");
+
+            return;
+        }
+
+        Handle<Scene> activeScene = subsystem->GetActiveScene();
+
+        if (!activeScene.IsValid() || !activeScene->GetWorld())
+        {
+            HYP_LOG(Editor, Error, "No active scene/world; cannot add world grid layer!");
+
+            return;
+        }
+
+        World* world = activeScene->GetWorld();
+
+        Handle<WorldGrid> worldGrid = world->GetWorldGrid();
+
+        if (!worldGrid.IsValid())
+        {
+            HYP_LOG(Editor, Error, "Active world has no WorldGrid (streaming disabled); cannot add world grid layer!");
+
+            return;
+        }
+
+        BoxedValue instanceData;
+        if (!layerClass->CreateInstance(instanceData, /* allowAbstract */ false))
+        {
+            HYP_LOG(Editor, Error, "Failed to create instance of world grid layer class '{}'!", GetArgument(0));
+
+            return;
+        }
+
+        AssertDebug(instanceData.Is<Handle<WorldGridLayer>>());
+
+        Handle<WorldGridLayer>& layer = instanceData.Get<Handle<WorldGridLayer>>();
+        AssertDebug(layer != nullptr);
+
+        std::random_device randomDevice;
+
+        WorldGridLayerInfo layerInfo;
+        layerInfo.cellSize = 64;
+        layerInfo.maxDistance = 3.0f;
+        layerInfo.seed = randomDevice();
+
+        layer->SetLayerInfo(layerInfo);
+        layer->SetName(CreateLayerName(layerClass));
+
+        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+            HYP_FORMAT("Add {} Layer", GetArgument(0)),
+            Proc<EditorActionFunctions()>(
+                [layer, worldGrid]() -> EditorActionFunctions
+                {
+                    return EditorActionFunctions {
+                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [layer, worldGrid](EditorSubsystem*, EditorProject*)
+                            {
+                                worldGrid->AddLayer(layer);
+                            }),
+                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [layer, worldGrid](EditorSubsystem*, EditorProject*)
+                            {
+                                worldGrid->RemoveLayer(layer.Get());
+                            })
+                    };
+                }));
+
+        InitObject(action);
+
+        currentProject->GetActionStack()->PushAction(action);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(AddWorldGridLayer);
+
+#pragma endregion AddWorldGridLayer
+
+#pragma region ToggleTerrainSculptMode
+
+class EditorCommandToggleTerrainSculptMode final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandToggleTerrainSculptMode);
+
+public:
+    virtual ~EditorCommandToggleTerrainSculptMode() override = default;
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        if (IsOnThread(g_simThread))
+        {
+                    subsystem->GetTerrainState()->SetEnabled(!subsystem->GetTerrainState()->IsEnabled());
+        }
+        else
+        {
+            GetThreadById(g_simThread)->GetScheduler().Enqueue(
+                [subsystem = MakeStrongRef(subsystem)]()
+                {
+            subsystem->GetTerrainState()->SetEnabled(!subsystem->GetTerrainState()->IsEnabled());
+                },
+                TaskEnqueueFlags::FIRE_AND_FORGET);
+        }
+    }
+};
+
+DEFINE_EDITOR_COMMAND(ToggleTerrainSculptMode);
+
+#pragma endregion ToggleTerrainSculptMode
+
+#pragma region SetTerrainSculptMode
+
+class EditorCommandSetTerrainSculptMode final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSetTerrainSculptMode);
+
+public:
+    virtual ~EditorCommandSetTerrainSculptMode() override = default;
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        TerrainSculptMode mode = TerrainSculptMode::Raise;
+
+        if (GetArgument(0) == "lower")
+        {
+            mode = TerrainSculptMode::Lower;
+        }
+        else if (GetArgument(0) == "paint")
+        {
+            mode = TerrainSculptMode::PaintSplat;
+        }
+
+        subsystem->GetTerrainState()->SetEnabled(true);
+        subsystem->GetTerrainState()->SetMode(mode);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SetTerrainSculptMode);
+
+#pragma endregion SetTerrainSculptMode
+
+#pragma region SetTerrainSculptRadius
+
+class EditorCommandSetTerrainSculptRadius final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSetTerrainSculptRadius);
+
+public:
+    virtual ~EditorCommandSetTerrainSculptRadius() override = default;
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        float radius = 0.0f;
+
+        if (!StringUtil::Parse(GetArgument(0), &radius))
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSetTerrainSculptRadius: invalid radius '{}'", GetArgument(0));
+
+            return;
+        }
+
+        subsystem->GetTerrainState()->SetRadius(radius);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SetTerrainSculptRadius);
+
+#pragma endregion SetTerrainSculptRadius
+
+#pragma region SetTerrainSculptStrength
+
+class EditorCommandSetTerrainSculptStrength final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSetTerrainSculptStrength);
+
+public:
+    virtual ~EditorCommandSetTerrainSculptStrength() override = default;
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        float strength = 0.0f;
+
+        if (!StringUtil::Parse(GetArgument(0), &strength))
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSetTerrainSculptStrength: invalid strength '{}'", GetArgument(0));
+
+            return;
+        }
+
+        subsystem->GetTerrainState()->SetStrength(strength);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SetTerrainSculptStrength);
+
+#pragma endregion SetTerrainSculptStrength
+
+#pragma region SetTerrainSculptPaintLayer
+
+class EditorCommandSetTerrainSculptPaintLayer final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSetTerrainSculptPaintLayer);
+
+public:
+    virtual ~EditorCommandSetTerrainSculptPaintLayer() override = default;
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        int paintLayer = 0;
+
+        if (!StringUtil::Parse(GetArgument(0), &paintLayer))
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSetTerrainSculptPaintLayer: invalid layer '{}'", GetArgument(0));
+
+            return;
+        }
+
+        subsystem->GetTerrainState()->SetPaintLayer(paintLayer);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SetTerrainSculptPaintLayer);
+
+#pragma endregion SetTerrainSculptPaintLayer
 
 #pragma region AddNormalizedCubeSphere
 

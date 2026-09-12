@@ -93,8 +93,8 @@ void ReflectionsPass::CreateFramebuffer()
         AttachmentDesc {
             TextureType::Texture2D,
             m_imageFormat,
-            LoadOperation::LOAD,
-            StoreOperation::STORE
+            LoadOperation::Load,
+            StoreOperation::Store
         });
 
     Check(attachment->Create());
@@ -140,7 +140,7 @@ void ReflectionsPass::Render(Frame* frame, const RenderSetup& rs)
 
     cr << SetCurrentFramebuffer(GetFramebuffer());
 
-    cr << SetTopology(TOP_TRIANGLES);
+    cr << SetTopology(Topology::Triangles);
     cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
 
     cr << SetCurrentViewport(rs.viewport);
@@ -150,8 +150,8 @@ void ReflectionsPass::Render(Frame* frame, const RenderSetup& rs)
     cr << SetDepthTest(false);
     cr << SetDepthWrite(false);
     cr << SetStencilTest(false);
-    cr << SetFillMode(FM_FILL);
-    cr << SetFaceCullMode(FCM_BACK);
+    cr << SetFillMode(FillMode::Fill);
+    cr << SetFaceCullMode(FaceCullMode::Back);
 
     cr << SetCurrentBlendFunction(BlendFunction(
         BlendModeFactor::SrcAlpha,

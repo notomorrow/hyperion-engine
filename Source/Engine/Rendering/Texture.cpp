@@ -277,8 +277,8 @@ static RendererResult CreateGpuImage(Texture& texture, GpuImage& image, Resource
 
         stagingBuffer->Flush(0, imageData.Size());
 
-        cr << InsertBarrier(stagingBuffer, RS_COPY_SRC);
-        cr << InsertBarrier(&image, RS_COPY_DST);
+        cr << InsertBarrier(stagingBuffer, ResourceState::CopySrc);
+        cr << InsertBarrier(&image, ResourceState::CopyDst);
 
         if (hasMips || numArrayLayers > 1)
         {
@@ -351,7 +351,7 @@ static RendererResult CreateGpuImage(Texture& texture, GpuImage& image, Resource
 
         cr << InsertBarrier(&image, initialState);
     }
-    else if (initialState != RS_UNDEFINED)
+    else if (initialState != ResourceState::Undefined)
     {
         // Transition to initial state
         cr << InsertBarrier(&image, initialState);
@@ -369,9 +369,9 @@ Texture::Texture()
           TextureType::Texture2D,
           TextureFormat::RGBA8,
           Vec3u::One(),
-          TFM_NEAREST,
-          TFM_NEAREST,
-          TWM_CLAMP_TO_EDGE })
+          TextureFilterMode::Nearest,
+          TextureFilterMode::Nearest,
+          TextureWrapMode::ClampToEdge })
 {
 }
 
@@ -450,7 +450,7 @@ RendererResult Texture::Create()
         }
 #endif
 
-        CheckResultOrReturn(CreateGpuImage(*this, *gpuImage, RS_SHADER_RESOURCE, shouldUploadTextureData));
+        CheckResultOrReturn(CreateGpuImage(*this, *gpuImage, ResourceState::ShaderResource, shouldUploadTextureData));
 
         // done with image data
         readScope.Reset();
@@ -895,8 +895,8 @@ void Texture::Readback(GpuBufferRef& outBuffer)
         {
             const ResourceState previousResourceState = m_gpuImage->GetResourceState();
 
-            cr << InsertBarrier(m_gpuImage, RS_COPY_SRC);
-            cr << InsertBarrier(outBuffer, RS_COPY_DST);
+            cr << InsertBarrier(m_gpuImage, ResourceState::CopySrc);
+            cr << InsertBarrier(outBuffer, ResourceState::CopyDst);
 
             ImageSubResource sr;
             sr.baseArrayLayer = 0;
@@ -906,13 +906,13 @@ void Texture::Readback(GpuBufferRef& outBuffer)
 
             cr << CopyImageToBuffer(m_gpuImage, outBuffer, sr);
 
-            if (previousResourceState != RS_UNDEFINED && previousResourceState != RS_PRE_INITIALIZED)
+            if (previousResourceState != ResourceState::Undefined && previousResourceState != ResourceState::PreInitialized)
             {
                 cr << InsertBarrier(m_gpuImage, previousResourceState);
             }
             else
             {
-                cr << InsertBarrier(m_gpuImage, RS_SHADER_RESOURCE);
+                cr << InsertBarrier(m_gpuImage, ResourceState::ShaderResource);
             }
         });
 
@@ -982,8 +982,8 @@ void Texture::EnqueueReadback(Proc<void(GpuBuffer&)>&& callback)
     CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder();
     HYP_DEFER({ cr.Done(); });
 
-    cr << InsertBarrier(m_gpuImage, RS_COPY_SRC);
-    cr << InsertBarrier(readbackBuffer, RS_COPY_DST);
+    cr << InsertBarrier(m_gpuImage, ResourceState::CopySrc);
+    cr << InsertBarrier(readbackBuffer, ResourceState::CopyDst);
 
     ImageSubResource sr;
     sr.baseArrayLayer = 0;
@@ -993,13 +993,13 @@ void Texture::EnqueueReadback(Proc<void(GpuBuffer&)>&& callback)
 
     cr << CopyImageToBuffer(m_gpuImage, readbackBuffer, sr);
 
-    if (previousResourceState != RS_UNDEFINED && previousResourceState != RS_PRE_INITIALIZED)
+    if (previousResourceState != ResourceState::Undefined && previousResourceState != ResourceState::PreInitialized)
     {
         cr << InsertBarrier(m_gpuImage, previousResourceState);
     }
     else
     {
-        cr << InsertBarrier(m_gpuImage, RS_SHADER_RESOURCE);
+        cr << InsertBarrier(m_gpuImage, ResourceState::ShaderResource);
     }
 
     struct ReadbackPayload

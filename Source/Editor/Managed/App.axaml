@@ -26,11 +26,23 @@
         <DataTemplate DataType="vm:AddNewLayerPanelViewModel">
             <panels:AddNewLayerPanelView />
         </DataTemplate>
+        <DataTemplate DataType="vm:NewWeaponPanelViewModel">
+            <panels:NewWeaponPanelView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:NewMaterialPanelViewModel">
+            <panels:NewMaterialPanelView />
+        </DataTemplate>
         <DataTemplate DataType="vm:AddNormalizedCubeSpherePanelViewModel">
             <panels:AddNormalizedCubeSpherePanelView />
         </DataTemplate>
         <DataTemplate DataType="vm:AssetObjectEditPanelViewModel">
             <panels:AssetObjectEditPanelView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:TerrainSculptPanelViewModel">
+            <panels:TerrainSculptPanelView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:TerrainPaintPanelViewModel">
+            <panels:TerrainPaintPanelView />
         </DataTemplate>
     </Application.DataTemplates>
 

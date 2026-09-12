@@ -7,6 +7,7 @@
 #pragma once
 
 #include <Scene/WorldGrid/WorldGridLayer.hpp>
+#include <Scene/WorldGrid/Terrain/TerrainMeshBuilder.hpp>
 
 #include <Streaming/StreamingCell.hpp>
 
@@ -18,6 +19,10 @@ class Scene;
 class Material;
 class Mesh;
 class Node;
+class Entity;
+class Texture;
+class TerrainWorldGridLayer;
+class TerrainCellData;
 
 HYP_CLASS()
 class TerrainStreamingCell : public StreamingCell
@@ -30,10 +35,18 @@ public:
     TerrainStreamingCell(
         const StreamingCellInfo& cellInfo,
         const Handle<Scene>& scene,
-        const Handle<Mesh>& mesh,
-        const Handle<Material>& material);
+        const Handle<Material>& material,
+        const Handle<TerrainWorldGridLayer>& layer,
+        const Handle<TerrainCellData>& cellData);
 
     virtual ~TerrainStreamingCell() override;
+
+    void RebuildMesh(const Handle<TerrainCellData>& cellData, const Vec2i& minVertex, const Vec2i& maxVertex);
+
+    ///update cell data to apply the splat map, if one.
+    void UpdateSplatMaterial(const Handle<TerrainCellData>& cellData);
+
+    void RebuildPickBVH();
 
 protected:
     virtual void OnStreamStart() override final;
@@ -41,9 +54,26 @@ protected:
     virtual void OnLoaded() override final;
     virtual void OnRemoved() override final;
 
+    Handle<Mesh> BuildMeshFromCellMeshData() const;
+
+private:
+    void RebuildMeshFull(const Handle<TerrainCellData>& cellData);
+
     Handle<Scene> m_scene;
-    Handle<Mesh> m_mesh;
     Handle<Material> m_material;
+    Handle<TerrainWorldGridLayer> m_layer;
+    Handle<TerrainCellData> m_cellData;
     Handle<Node> m_node;
+    Handle<Entity> m_entity;
+
+    Handle<Mesh> m_mesh;
+
+    Handle<Material> m_cellMaterial;
+    Handle<Texture> m_splatTexture;
+
+    Array<float> m_scratchHeights;
+    Array<SimpleVertex> m_scratchVertices;
+
+    TerrainMeshBuilder::CellMeshData m_cellMeshData;
 };
 } // namespace Hyperion

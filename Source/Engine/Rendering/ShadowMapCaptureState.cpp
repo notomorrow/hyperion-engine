@@ -73,11 +73,11 @@ void ShadowMapCaptureState::Begin()
         isOmni ? TextureType::Cubemap : TextureType::Texture2D,
         TextureFormat::D16,
         Vec3u { dimensions, 1 },
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Nearest,
+        TextureFilterMode::Nearest,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_SAMPLED | IU_ATTACHMENT });
+        ImageUsage::Sampled | ImageUsage::Attachment });
 
     m_texture->SetName(NAME_FMT("{}_BakedShadowMap", m_light->GetName()));
     m_texture->SetIsTransient(true);
@@ -120,7 +120,7 @@ void ShadowMapCaptureState::Begin()
     materialAttributes.flags = MAF_DEPTH_WRITE | MAF_DEPTH_TEST | MAF_DEPTH_BIAS | MAF_DEPTH_CLAMP;
     materialAttributes.depthBias = int32(MathUtil::Round(depthBias * depthRange));
     materialAttributes.depthBiasSlope = 2.0f;
-    materialAttributes.cullFaces = FCM_BACK;
+    materialAttributes.cullFaces = FaceCullMode::Back;
 
     Scene* scene = m_light->GetScene();
 
@@ -132,8 +132,8 @@ void ShadowMapCaptureState::Begin()
         framebufferDesc.attachments[0] = AttachmentDesc {
             isOmni ? TextureType::Cubemap : TextureType::Texture2D,
             TextureFormat::D16,
-            LoadOperation::CLEAR,
-            StoreOperation::STORE
+            LoadOperation::Clear,
+            StoreOperation::Store
         };
 
         FramebufferRef framebuffer = RI.MakeFramebuffer(framebufferDesc);

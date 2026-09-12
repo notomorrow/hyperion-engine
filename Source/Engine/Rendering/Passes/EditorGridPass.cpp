@@ -62,12 +62,12 @@ void EditorGridPass::Render(Frame* frame, const RenderSetup& renderSetup)
 
     ENGINE_STAT_GPU_SCOPE(&s_statDrawEditorGrid, &cr);
 
-    cr << SetFillMode(FM_FILL);
+    cr << SetFillMode(FillMode::Fill);
     cr << SetDepthWrite(false);
     cr << SetDepthTest(true);
     cr << SetStencilTest(false);
-    cr << SetFaceCullMode(FCM_NONE);
-    cr << SetTopology(TOP_TRIANGLES);
+    cr << SetFaceCullMode(FaceCullMode::None);
+    cr << SetTopology(Topology::Triangles);
     cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
     cr << SetCurrentBlendFunction(GetBlendFunction());
 

@@ -58,7 +58,7 @@ DX12GpuBuffer::DX12GpuBuffer(DX12GpuBuffer&& other) noexcept
     other.m_resource.Reset();
     other.m_allocation.Reset();
     other.m_mapping = nullptr;
-    other.m_resourceState = RS_UNDEFINED;
+    other.m_resourceState = ResourceState::Undefined;
 }
 
 DX12GpuBuffer& DX12GpuBuffer::operator=(DX12GpuBuffer&& other) noexcept
@@ -81,7 +81,7 @@ DX12GpuBuffer& DX12GpuBuffer::operator=(DX12GpuBuffer&& other) noexcept
                 resource.Reset();
             }));
 
-        m_resourceState = RS_UNDEFINED;
+        m_resourceState = ResourceState::Undefined;
     }
 
     m_type = other.m_type;
@@ -95,7 +95,7 @@ DX12GpuBuffer& DX12GpuBuffer::operator=(DX12GpuBuffer&& other) noexcept
     other.m_resource.Reset();
     other.m_allocation.Reset();
     other.m_mapping = nullptr;
-    other.m_resourceState = RS_UNDEFINED;
+    other.m_resourceState = ResourceState::Undefined;
 
     return *this;
 }
@@ -118,7 +118,7 @@ DX12GpuBuffer::~DX12GpuBuffer()
             resource.Reset();
         }));
 
-    m_resourceState = RS_UNDEFINED;
+    m_resourceState = ResourceState::Undefined;
 }
 
 RendererResult DX12GpuBuffer::Create()
@@ -205,8 +205,8 @@ RendererResult DX12GpuBuffer::Create()
     }
 
     m_resourceState = finalState == D3D12_RESOURCE_STATE_GENERIC_READ
-        ? RS_READ_GENERIC
-        : RS_COMMON;
+        ? ResourceState::ReadGeneric
+        : ResourceState::Common;
 #ifdef HYP_RHI_DEBUG_NAMES
     if (m_debugName && m_resource)
     {
@@ -301,8 +301,8 @@ void DX12GpuBuffer::CopyFrom(
         return;
     }
 
-    commandBuffer->AssertResourceState(*this, RS_COPY_DST);
-    commandBuffer->AssertResourceState(*srcBuffer, RS_COPY_SRC);
+    commandBuffer->AssertResourceState(*this, ResourceState::CopyDst);
+    commandBuffer->AssertResourceState(*srcBuffer, ResourceState::CopySrc);
 
     Assert(count <= Size(), "Copy count exceeds destination buffer size!");
 
@@ -332,8 +332,8 @@ void DX12GpuBuffer::CopyFrom(
         return;
     }
 
-    commandBuffer->AssertResourceState(*this, RS_COPY_DST);
-    commandBuffer->AssertResourceState(*srcBuffer, RS_COPY_SRC);
+    commandBuffer->AssertResourceState(*this, ResourceState::CopyDst);
+    commandBuffer->AssertResourceState(*srcBuffer, ResourceState::CopySrc);
 
     Assert((srcOffset + count <= srcBuffer->Size()) && (dstOffset + count <= Size()), "Copy out of bounds! Buffer debug name: {}",
             GetDebugName());
@@ -376,7 +376,7 @@ RendererResult DX12GpuBuffer::EnsureCapacity(
                 resource.Reset();
             }));
 
-        m_resourceState = RS_UNDEFINED;
+        m_resourceState = ResourceState::Undefined;
     }
 
     m_size = minimumSize;

@@ -177,7 +177,7 @@ void FogVolumePass::Render(Frame* frame, const RenderSetup& renderSetup)
 
     CommandRecorder& cr = frame->cr;
     
-    cr << SetFillMode(FM_FILL);
+    cr << SetFillMode(FillMode::Fill);
     cr << SetDepthWrite(false);
     cr << SetDepthTest(false);
     cr << SetStencilTest(false);
@@ -193,12 +193,12 @@ void FogVolumePass::Render(Frame* frame, const RenderSetup& renderSetup)
     //if (rpl.GetFogVolumes().NumCurrent() == 1)
     //{
     //    // We don't want to cull front faces inside volume
-    //    cr << SetFaceCullMode(FCM_FRONT);
+    //    cr << SetFaceCullMode(FaceCullMode::Front);
     //}
     //else
     //{
         // Because multiple vols can overlap, we don't want to skip drawing backfaces
-        cr << SetFaceCullMode(FCM_NONE);
+        cr << SetFaceCullMode(FaceCullMode::None);
     //}
 
     const bool useClusteredLights = g_cvFogVolumesClusteredLights.Get();
@@ -383,7 +383,7 @@ void FogVolumePass::Render(Frame* frame, const RenderSetup& renderSetup)
         }
     }
 
-    cr << SetFaceCullMode(FCM_NONE);
+    cr << SetFaceCullMode(FaceCullMode::None);
 
     // Now upsampling passes
     for (uint32 i = 0; i < NumUpsamplePasses; i++)

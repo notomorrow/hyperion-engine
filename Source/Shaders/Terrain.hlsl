@@ -1,5 +1,22 @@
 #include "include/Defines.hlsli"
 
+PERMUTE(INSTANCING);
+PERMUTE(SHADING_TYPE, DEFERRED);
+
+#define TERRAIN_SPLAT_SCALE 0.002
+#define TERRAIN_LAYER0_SCALE 0.08
+#define TERRAIN_LAYER1_SCALE 0.045
+#define TERRAIN_LAYER2_SCALE 0.06
+#define TERRAIN_LAYER3_SCALE 0.10
+
+#define TERRAIN_SLOPE_BLEND_START 0.25
+#define TERRAIN_SLOPE_BLEND_END 0.55
+
+#define TERRAIN_LAYER0_ROUGHNESS 0.90
+#define TERRAIN_LAYER1_ROUGHNESS 0.85
+#define TERRAIN_LAYER2_ROUGHNESS 0.85
+#define TERRAIN_LAYER3_ROUGHNESS 0.60
+
 struct PSInput
 {
     float4 position_cs : SV_POSITION;
@@ -9,6 +26,7 @@ struct PSInput
     float2 texcoord1 : TEXCOORD1;
     float3 tangent : TANGENT;
     float3 bitangent : BINORMAL;
+    float4 color : TEXCOORD2;
     nointerpolation float3 camera_position : TEXCOORD3;
     float4 position_ndc : TEXCOORD4;
     float4 previous_position_ndc : TEXCOORD5;
@@ -29,57 +47,106 @@ DECLARE_SAMPLER(Default, SamplerNearest) SamplerState sampler_nearest;
 
 #define texture_sampler sampler_linear
 
-#define HAS_REFRACTION 1
+#include "include/Material.hlsli"
 
-#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#define MATERIAL_TEXTURE_TerrainSplatMap 6
+#define MATERIAL_TEXTURE_TerrainLayer0 7
+#define MATERIAL_TEXTURE_TerrainLayer1 8
+#define MATERIAL_TEXTURE_TerrainLayer2 9
+#define MATERIAL_TEXTURE_TerrainLayer3 10
+#define MATERIAL_TEXTURE_TerrainNormal0 11
+#define MATERIAL_TEXTURE_TerrainNormal1 12
+#define MATERIAL_TEXTURE_TerrainNormal2 13
+#define MATERIAL_TEXTURE_TerrainNormal3 14
+
+#ifndef HYP_FEATURES_BINDLESS_TEXTURES
+DECLARE_SRV(Material, TerrainSplatMap) Texture2D TerrainSplatMap;
+DECLARE_SRV(Material, TerrainLayer0) Texture2D TerrainLayer0;
+DECLARE_SRV(Material, TerrainLayer1) Texture2D TerrainLayer1;
+DECLARE_SRV(Material, TerrainLayer2) Texture2D TerrainLayer2;
+DECLARE_SRV(Material, TerrainLayer3) Texture2D TerrainLayer3;
+DECLARE_SRV(Material, TerrainNormal0) Texture2D TerrainNormal0;
+DECLARE_SRV(Material, TerrainNormal1) Texture2D TerrainNormal1;
+DECLARE_SRV(Material, TerrainNormal2) Texture2D TerrainNormal2;
+DECLARE_SRV(Material, TerrainNormal3) Texture2D TerrainNormal3;
+#endif // !HYP_FEATURES_BINDLESS_TEXTURES
 
 #include "include/Scene.hlsli"
-#include "include/Material.hlsli"
-#include "include/Entity.hlsli"
 #include "include/Packing.hlsli"
-
 #include "include/EnvProbes.hlsli"
 #include "include/Gbuffer.hlsli"
+#include "include/Entity.hlsli"
 
-#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-
-DECLARE_SRV(Default, GBufferMipChain) Texture2D GBufferMipChain;
-
-DECLARE_SRV_DYNAMIC(Default, CamerasBuffer) StructuredBuffer<Camera> _cameras_buffer;
-#define camera _cameras_buffer[0]
-
-DECLARE_SRV(Default, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
-#define world_shader_data _worlds_buffer[0]
-
-DECLARE_SRV(Default, ShadowMapsTextureArray) Texture2DArray<float> shadow_maps;
-DECLARE_SRV(Default, PointLightShadowMapsTextureArray) TextureCubeArray point_shadow_maps;
-
-#ifdef LIGHTING_FORWARD
-#include "include/BRDF.hlsli"
-#include "deferred/DeferredLighting.hlsli"
-#include "include/Shadows.hlsli"
-#endif
-
-DECLARE_SRV_DYNAMIC(Default, CurrentEnvProbe) StructuredBuffer<EnvProbe> current_env_probe_buffer;
-#define current_env_probe current_env_probe_buffer[0]
-
-#ifdef INSTANCING
-DECLARE_SRV(Default, EntitiesBuffer) StructuredBuffer<Entity> entities;
-#endif // INSTANCING
-
-DECLARE_SRV_DYNAMIC(Default, CurrentLight) StructuredBuffer<Light> current_light_buffer;
-#define light current_light_buffer[0]
-
-#ifndef INSTANCING
 DECLARE_BUFFER_DYNAMIC(Default, CBuffer) cbuffer CBuffer
 {
+#ifndef INSTANCING
     Entity entity;
-};
+#else // INSTANCING
+    Entity dummyEntity;
 #endif // !INSTANCING
+    Camera camera;
+    Material material;
+    float4x4 vpMatrix;
+};
 
-#ifndef CURRENT_MATERIAL
-#define CURRENT_MATERIAL material
-#endif
+float TerrainValueNoise(float2 p)
+{
+    float2 i = floor(p);
+    float2 f = frac(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    float a = frac(sin(dot(i, float2(127.1, 311.7))) * 43758.5453);
+    float b = frac(sin(dot(i + float2(1.0, 0.0), float2(127.1, 311.7))) * 43758.5453);
+    float c = frac(sin(dot(i + float2(0.0, 1.0), float2(127.1, 311.7))) * 43758.5453);
+    float d = frac(sin(dot(i + float2(1.0, 1.0), float2(127.1, 311.7))) * 43758.5453);
+
+    return lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
+}
+
+float4 SampleTriplanarScaled(Texture2D tex, float3 position, float3 normal, float scale)
+{
+    float3 blending = GetTriplanarBlend(normal);
+
+    float4 sample_x = SAMPLE_TEXTURE_2D(texture_sampler, tex, position.zy * scale);
+    float4 sample_y = SAMPLE_TEXTURE_2D(texture_sampler, tex, position.xz * scale);
+    float4 sample_z = SAMPLE_TEXTURE_2D(texture_sampler, tex, position.xy * scale);
+
+    return sample_x * blending.x + sample_y * blending.y + sample_z * blending.z;
+}
+
+float4 SampleTerrainLayer(uint layerIndex, float3 position, float3 normal)
+{
+    Texture2D tex;
+    float scale;
+
+    switch (layerIndex)
+    {
+    case 0: tex = GET_TEXTURE(material, TerrainLayer0); scale = TERRAIN_LAYER0_SCALE; break;
+    case 1: tex = GET_TEXTURE(material, TerrainLayer1); scale = TERRAIN_LAYER1_SCALE; break;
+    case 2: tex = GET_TEXTURE(material, TerrainLayer2); scale = TERRAIN_LAYER2_SCALE; break;
+    default: tex = GET_TEXTURE(material, TerrainLayer3); scale = TERRAIN_LAYER3_SCALE; break;
+    }
+
+    return SampleTriplanarScaled(tex, position, normal, scale);
+}
+
+void SampleTerrainLayerNormal(uint layerIndex, float3 position, float3 normal, out float3 tangentNormal)
+{
+    Texture2D tex;
+    float scale;
+
+    switch (layerIndex)
+    {
+    case 0: tex = GET_TEXTURE(material, TerrainNormal0); scale = TERRAIN_LAYER0_SCALE; break;
+    case 1: tex = GET_TEXTURE(material, TerrainNormal1); scale = TERRAIN_LAYER1_SCALE; break;
+    case 2: tex = GET_TEXTURE(material, TerrainNormal2); scale = TERRAIN_LAYER2_SCALE; break;
+    default: tex = GET_TEXTURE(material, TerrainNormal3); scale = TERRAIN_LAYER3_SCALE; break;
+    }
+
+    float4 sample_value = SampleTriplanarScaled(tex, position, normal, scale);
+
+    tangentNormal = sample_value.rgb * 2.0 - 1.0;
+}
 
 PSOutput PSMain(PSInput input)
 {
@@ -87,51 +154,146 @@ PSOutput PSMain(PSInput input)
 
     float3x3 tbn_matrix = float3x3(normalize(input.tangent), normalize(input.bitangent), normalize(input.normal));
 
-    float3 view_vector = normalize(input.camera_position - input.position);
+    const float3 P = input.position.xyz;
+
     float3 N = normalize(input.normal);
-    float NdotV = dot(N, view_vector);
 
-    float3 tangent_view = mul(transpose(tbn_matrix), view_vector);
-    float3 tangent_position = mul(tbn_matrix, input.position);
+    const float slope = saturate(1.0 - N.y);
 
-    float3 reflection_vector = reflect(view_vector, N);
+    float4 weights;
 
-    output.gbuffer_albedo = CURRENT_MATERIAL.albedo;
-    output.gbuffer_albedo.a = 1.0;
+    if (HAS_TEXTURE(material, TerrainSplatMap))
+    {
+        // Per-cell splat maps: one RGBA8 texel per terrain vertex, sampled with the cell's UVs.
+        weights = SAMPLE_TEXTURE_2D(texture_sampler, GET_TEXTURE(material, TerrainSplatMap), input.texcoord0);
+    }
+    else
+    {
+        const float threshold_jitter = (TerrainValueNoise(P.xz * 0.015) - 0.5) * 0.3;
 
-    float ao = 1.0;
-    float metalness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_METALNESS);
-    float roughness = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_ROUGHNESS);
-    float transmission = GET_MATERIAL_PARAM(CURRENT_MATERIAL, MATERIAL_PARAM_TRANSMISSION);
+        const float rock_blend = smoothstep(
+            TERRAIN_SLOPE_BLEND_START + threshold_jitter,
+            TERRAIN_SLOPE_BLEND_END + threshold_jitter,
+            slope);
 
-    float2 texcoord = input.texcoord0 * CURRENT_MATERIAL.uv_scale;
+        weights = float4(1.0 - rock_blend, rock_blend, 0.0, 0.0);
+    }
+    
+    weights.x *= float(HAS_TEXTURE(material, TerrainLayer0));
+    weights.y *= float(HAS_TEXTURE(material, TerrainLayer1));
+    weights.z *= float(HAS_TEXTURE(material, TerrainLayer2));
+    weights.w *= float(HAS_TEXTURE(material, TerrainLayer3));
 
-#if HAS_DIFFUSE_MAP
-    float4 albedo_texture = SAMPLE_MATERIAL_TEXTURE_TRIPLANAR(CURRENT_MATERIAL, DiffuseMap, input.position, N);
+    const float total_weight = weights.x + weights.y + weights.z + weights.w;
 
-    output.gbuffer_albedo = float4(albedo_texture.rgb, 1.0);
-#endif
+    const bool any_layers = total_weight > 0.0001;
 
-    float4 normals_texture = (float4)0.0;
+    if (any_layers)
+    {
+        weights /= total_weight;
+    }
 
-#if HAS_NORMAL_MAP
-    normals_texture = SAMPLE_MATERIAL_TEXTURE_TRIPLANAR(CURRENT_MATERIAL, NormalMap, input.position, N) * 2.0 - 1.0;
-    N = normalize(mul(tbn_matrix, normals_texture.rgb));
-#endif
+    float3 albedo = material.albedo.rgb;
+    float roughness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS);
+    const float metalness = GET_MATERIAL_PARAM(material, MATERIAL_PARAM_METALNESS);
 
-#if HAS_ROUGHNESS_MAP
-    float roughness_sample = SAMPLE_MATERIAL_TEXTURE_TRIPLANAR(CURRENT_MATERIAL, RoughnessMap, input.position, N).r;
+    if (any_layers)
+    {
+        albedo = float3(0.0, 0.0, 0.0);
+        roughness = 0.0;
 
-    roughness = roughness_sample;
-#endif
+        if (weights.x > 0.001)
+        {
+            albedo += weights.x * SampleTerrainLayer(0, P, N).rgb;
+            roughness += weights.x * TERRAIN_LAYER0_ROUGHNESS;
+        }
 
-    float2 velocity = ((input.position_ndc.xy / input.position_ndc.w) * 0.5 + 0.5)
-        - ((input.previous_position_ndc.xy / input.previous_position_ndc.w) * 0.5 + 0.5);
+        if (weights.y > 0.001)
+        {
+            albedo += weights.y * SampleTerrainLayer(1, P, N).rgb;
+            roughness += weights.y * TERRAIN_LAYER1_ROUGHNESS;
+        }
+
+        if (weights.z > 0.001)
+        {
+            albedo += weights.z * SampleTerrainLayer(2, P, N).rgb;
+            roughness += weights.z * TERRAIN_LAYER2_ROUGHNESS;
+        }
+
+        if (weights.w > 0.001)
+        {
+            albedo += weights.w * SampleTerrainLayer(3, P, N).rgb;
+            roughness += weights.w * TERRAIN_LAYER3_ROUGHNESS;
+        }
+
+        if (HAS_TEXTURE(material, TerrainNormal0)
+            || HAS_TEXTURE(material, TerrainNormal1)
+            || HAS_TEXTURE(material, TerrainNormal2)
+            || HAS_TEXTURE(material, TerrainNormal3))
+        {
+            float3 layer_normal;
+            float3 blended_normal = float3(0.0, 0.0, 0.0);
+
+            if (weights.x > 0.001 && HAS_TEXTURE(material, TerrainNormal0))
+            {
+                SampleTerrainLayerNormal(0, P, N, layer_normal);
+                blended_normal += weights.x * layer_normal;
+            }
+
+            if (weights.y > 0.001 && HAS_TEXTURE(material, TerrainNormal1))
+            {
+                SampleTerrainLayerNormal(1, P, N, layer_normal);
+                blended_normal += weights.y * layer_normal;
+            }
+
+            if (weights.z > 0.001 && HAS_TEXTURE(material, TerrainNormal2))
+            {
+                SampleTerrainLayerNormal(2, P, N, layer_normal);
+                blended_normal += weights.z * layer_normal;
+            }
+
+            if (weights.w > 0.001 && HAS_TEXTURE(material, TerrainNormal3))
+            {
+                SampleTerrainLayerNormal(3, P, N, layer_normal);
+                blended_normal += weights.w * layer_normal;
+            }
+
+            if (abs(blended_normal.x) + abs(blended_normal.y) + abs(blended_normal.z) > 0.001)
+            {
+                N = normalize(mul(blended_normal, tbn_matrix));
+            }
+        }
+    }
+
+    output.gbuffer_albedo = float4(albedo, 1.0);
+
+    roughness = roughness * roughness;
+
+    float2 velocity = float2(
+        ((input.position_ndc.xy / input.position_ndc.w) * 0.5 + 0.5)
+            - ((input.previous_position_ndc.xy / input.previous_position_ndc.w) * 0.5 + 0.5));
+
+    uint mask = input.object_mask;
+
+    GBufferMaterialParams materialParams;
+    materialParams.roughness = roughness;
+    materialParams.metalness = metalness;
+    materialParams.mask = mask;
 
     output.gbuffer_normals = GBufferPackNormal(N);
-    output.gbuffer_velocity = velocity;
+
+    float roughnessAndMetalPacked;
+    uint maskPacked;
+    GBufferPackMaterialParams(materialParams, roughnessAndMetalPacked, maskPacked);
+
+    output.gbuffer_normals.x = roughnessAndMetalPacked;
 
     output.gbuffer_material = 0;
+
+    // Mask is stored in the upper 4 bits of gbuffer_material
+    output.gbuffer_material |= (maskPacked << 28u);
+
+    output.gbuffer_velocity = velocity;
 
     return output;
 }

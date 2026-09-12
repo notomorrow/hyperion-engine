@@ -97,5 +97,5 @@ compile_commands.json
 
 Tools/*/build/**/*
 
-# Generated engine bindings for Strata.
-Engine.strata
+# Ignore Data stuff. it's ont used anymore except for staging assets
+Data/**/*

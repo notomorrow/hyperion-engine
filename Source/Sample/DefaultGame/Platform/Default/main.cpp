@@ -20,7 +20,7 @@ int main(int argc, char** argv)
     }
 
 #if defined(HYP_TESTS) && defined(HYP_STRATA) && defined(HYP_STRATA_JIT)
-    Hyperion::tests::script::RunScriptBenchmark();
+    ///Hyperion::tests::script::RunScriptBenchmark();
 #endif
 
     Handle<Game> defaultGame = Game::CreateGame("DefaultGame"_sh);

@@ -26,7 +26,7 @@ public:
         {
             MaterialTextureKey key;
             bool srgb = false;
-            TextureFilterMode filterMode = TFM_LINEAR;
+            TextureFilterMode filterMode = TextureFilterMode::Linear;
         };
 
         struct TextureDef

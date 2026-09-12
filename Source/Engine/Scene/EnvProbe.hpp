@@ -49,7 +49,8 @@ enum EnvProbeFlags : uint32
     EPF_ORIGIN_FROM_CENTER = 0x8, //!< @title="Origin from center"
     EPF_VISIBILITY = 0x10,        //!< @title="Prevent light leaking" @description="This EnvProbe stores distance values to a texture, used to prevent light leaks at the cost of more memory usage and rendering time."
     EPF_PATH_TRACED = 0x20,       //!< @title="Path traced" @description="Bake this probe using hardware ray tracing"
-    EPF_HIT_MASK = 0x40           //!< @editor=false
+    EPF_HIT_MASK = 0x40,          //!< @editor=false
+    EPF_ONLY_SAME_SCENE = 0x80    //!< @title="Only capture entities in same Scene" @description="When enabled, the EnvProbe will capture Entity instances that are in the current Scene as the EnvProbe. Otherwise, will capture Entity instances across Scenes."
 };
 
 // clang-format on
@@ -217,7 +218,7 @@ public:
     HYP_METHOD(Property = "DiffuseStrength")
     void SetDiffuseStrength(float diffuseStrength);
 
-    //-- Data & textures
+    ///Data & textures
 
     HYP_FORCE_INLINE const Handle<Texture>& GetPrefilteredEnvMap() const
     {
@@ -251,7 +252,7 @@ public:
     HYP_METHOD(Property = "SHData", NoScriptBindings)
     void SetSphericalHarmonicsData(const SphericalHarmonicsData& shData);
 
-    //-- Per-swatch stuff
+    ///Per-swatch stuff
 
     static Name GetBakedTexturePropertyName()
     {
@@ -288,7 +289,7 @@ public:
 
     void SetHitMaskData(const Vec4f& hitMaskData);
 
-    //-- Raster capture
+    ///Raster capture
 
     HYP_FORCE_INLINE EnvProbeCaptureState* GetCaptureState() const
     {
@@ -314,7 +315,7 @@ public:
         return m_pendingCaptureReadbacks.Get(MemoryOrder::ACQUIRE) <= 0;
     }
 
-    //--
+    ////////////////////
 
     virtual void Invalidate(bool forceRerender = false);
     virtual void Update(float delta) override;
@@ -411,7 +412,7 @@ protected:
     HYP_FIELD(Property = "HitMaskData", Editor = false, Serialize)
     Vec4f m_hitMaskData;
 
-    //-- Capture / readback
+    ///Capture / readback
 
     /// Number of outstanding read backs
     AtomicVar<int32> m_pendingCaptureReadbacks;
@@ -423,7 +424,7 @@ protected:
     /// for reading/writing back data
     SharedMutex m_mutex;
 
-    //--
+    ////////////////////
 };
 
 HYP_CLASS()

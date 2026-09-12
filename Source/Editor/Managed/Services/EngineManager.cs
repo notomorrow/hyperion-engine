@@ -18,9 +18,8 @@ namespace Hyperion.Editor
 
         public static EditorProject? CurrentProject { get; private set; }
 
-
         private static List<EditorViewport> _registeredViewports = new List<EditorViewport>();
-        private static Lock _lockViewports = new Lock();
+        private static Lock _lockViewports = new();
 
         private static DelegateHandler? _onCurrentProjectChanged;
 
@@ -162,16 +161,12 @@ namespace Hyperion.Editor
 
             CurrentProject = editorState.CurrentProject;
 
-            _onSceneAddedHandler?.Remove();
-            _onSceneRemovedHandler?.Remove();
+            BindWorldSceneDelegates(CurrentProject?.World);
 
             _onCurrentProjectChanged?.Remove();
             _onCurrentProjectChanged = editorState.GetOnCurrentProjectChangedDelegate().Bind((EditorProject newProject, bool isSimulationStateChange) =>
             {
                 Debug.Assert(newProject != CurrentProject);
-
-                _onSceneAddedHandler?.Remove();
-                _onSceneRemovedHandler?.Remove();
 
                 // If we are just switching to simulate mode, we don't want to dispose the project
                 // Otherwise, when returning to edit mode, the project's managed resources would be cleaned up and cause a crash.
@@ -192,26 +187,45 @@ namespace Hyperion.Editor
 
                 Logger.Log(LogLevel.Verbose, "Current project changed to: " + (CurrentProject != null ? CurrentProject.Name : "null"));
 
-                // The !isSimulationStateChange is there because World may be null if it is just simulation state change and
-                // world is loading
+                // When returning to edit mode from simulation, isSimulationStateChange is true and the scene delegates
+                // are left unbound here - InitializeEditor() is called afterwards and rebinds them for the edit world.
+                // The !isSimulationStateChange check is there because World may be null if it is just simulation state
+                // change and world is loading
                 if (CurrentProject != null && !isSimulationStateChange)
                 {
                     World? world = CurrentProject.World;
                     Debug.Assert(world != null);
 
-                    _onSceneAddedHandler = world.GetOnSceneAddedDelegate().Bind((World world, Scene scene) =>
-                    {
-                        SceneAdded?.Invoke(world, scene);
-                    });
-
-                    _onSceneRemovedHandler = world.GetOnSceneRemovedDelegate().Bind((World world, Scene scene) =>
-                    {
-                        SceneRemoved?.Invoke(world, scene);
-                    });
+                    BindWorldSceneDelegates(world);
+                }
+                else
+                {
+                    BindWorldSceneDelegates(null);
                 }
             });
 
             SetEditorViewportsEnabled(true);
+        }
+
+        private static void BindWorldSceneDelegates(World? world)
+        {
+            _onSceneAddedHandler?.Remove();
+            _onSceneRemovedHandler?.Remove();
+
+            if (world == null)
+            {
+                return;
+            }
+
+            _onSceneAddedHandler = world.GetOnSceneAddedDelegate().Bind((World world, Scene scene) =>
+            {
+                SceneAdded?.Invoke(world, scene);
+            });
+
+            _onSceneRemovedHandler = world.GetOnSceneRemovedDelegate().Bind((World world, Scene scene) =>
+            {
+                SceneRemoved?.Invoke(world, scene);
+            });
         }
 
         public static void InitializeGame(Game game)
@@ -227,17 +241,7 @@ namespace Hyperion.Editor
             _onCurrentProjectChanged?.Remove();
             _onCurrentProjectChanged = null;
 
-            _onSceneAddedHandler?.Remove();
-            _onSceneAddedHandler = world.GetOnSceneAddedDelegate().Bind((World world, Scene scene) =>
-            {
-                SceneAdded?.Invoke(world, scene);
-            });
-
-            _onSceneRemovedHandler?.Remove();
-            _onSceneRemovedHandler = world.GetOnSceneRemovedDelegate().Bind((World world, Scene scene) =>
-            {
-                SceneRemoved?.Invoke(world, scene);
-            });
+            BindWorldSceneDelegates(world);
 
             EngineDriver.Instance.GameInstance = game;
             GameInstance = game;
@@ -330,6 +334,8 @@ namespace Hyperion.Editor
                 }
             }
         }
+
+        public static bool IsOnSimThread => SimThread.IsOnIt;
 
         public static async Task PostToSimThread(Action action)
         {

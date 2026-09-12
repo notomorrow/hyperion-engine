@@ -69,7 +69,7 @@ static bool HandleSwatchOverridesSection(BoxedValue& owner, Array<HMF::SchemaSec
     return true;
 }
 
-//-- DI for $Swatches parsing.
+///DI for $Swatches parsing.
 
 static struct InitializeSwatchOverridesSinks
 {

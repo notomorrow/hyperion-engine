@@ -247,7 +247,7 @@ void DX12CommandBuffer::BindVertexBuffer(const DX12GpuBuffer* buffer)
     AssertDebug(buffer->GetBufferType() == GpuBufferType::VertexBuffer,
                 "Not a vertex buffer! Got buffer type: {}", buffer->GetBufferType());
 
-    AssertResourceState(*buffer, RS_VERTEX_BUFFER);
+    AssertResourceState(*buffer, ResourceState::VertexBuffer);
 
     D3D12_VERTEX_BUFFER_VIEW vbView {};
     vbView.BufferLocation = buffer->GetResource()->GetGPUVirtualAddress();
@@ -274,7 +274,7 @@ void DX12CommandBuffer::BindIndexBuffer(const DX12GpuBuffer* buffer, GpuElemType
     AssertDebug(buffer->GetBufferType() == GpuBufferType::IndexBuffer,
                 "Not an index buffer! Got buffer type: {}", buffer->GetBufferType());
 
-    AssertResourceState(*buffer, RS_INDEX_BUFFER);
+    AssertResourceState(*buffer, ResourceState::IndexBuffer);
 
     D3D12_INDEX_BUFFER_VIEW ibView {};
     ibView.BufferLocation = buffer->GetResource()->GetGPUVirtualAddress();
@@ -299,7 +299,7 @@ void DX12CommandBuffer::DrawIndexed(uint32 numIndices, uint32 numInstances, uint
 void DX12CommandBuffer::DrawIndexedIndirect(const DX12GpuBuffer* buffer, uint32 bufferOffset) const
 {
     AssertDebug(m_boundGraphicsPipeline != nullptr);
-    AssertResourceState(*buffer, RS_INDIRECT_ARG);
+    AssertResourceState(*buffer, ResourceState::IndirectArg);
 
     AssertDebug(bufferOffset % 4 == 0);
 

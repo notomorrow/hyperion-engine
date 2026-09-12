@@ -59,7 +59,7 @@ enum class ViewFlags : uint32
 
     GBUFFER = 0x1,
 
-    ALL_WORLD_SCENES = 0x2,         //!< If set, all scenes added to the world will be added view, and removed when removed from the world. Otherwise, the View itself manages the scenes it contains.
+    ALL_FOREGROUND_SCENES = 0x2,         //!< If set, all scenes added to the world as foreground will be added view, and removed when removed from the world. Otherwise, the View itself manages the scenes it contains.
 
     COLLECT_STATIC_ENTITIES = 0x4,  //!< If set, the view will collect static entities (those that are not dynamic). Dynamic entities are those that move or are animated.
     COLLECT_DYNAMIC_ENTITIES = 0x8, //!< If set, the view will collect dynamic entities (those that are not static). Static entities are those that do not move and are not animated.
@@ -102,7 +102,7 @@ enum class ViewFlags : uint32
 
     NO_ASYNC_SHADER_LOADING = 0x40000000,   //!< Draws for this view will block until shaders are loaded rather than skipping draws for async loading shaders.
 
-    DEFAULT = ALL_WORLD_SCENES | COLLECT_ALL_ENTITIES
+    DEFAULT = ALL_FOREGROUND_SCENES | COLLECT_ALL_ENTITIES
 };
 
 // clang-format on

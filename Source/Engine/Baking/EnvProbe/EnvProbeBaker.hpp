@@ -47,19 +47,19 @@ public:
 
     virtual uint32 GetShadingTypesMask() const override
     {
-        uint32 mask = 1u << int(LightmapShadingType::FULL);
+        uint32 mask = 1u << int(PathTraceType::Radiance);
 
         if (m_envProbe)
         {
             if (m_envProbe->GetEnvProbeType() == EPT_AMBIENT)
             {
                 // NOTE: assignment intentional; overriding FULL
-                mask = 1u << int(LightmapShadingType::IRRADIANCE);
+                mask = 1u << int(PathTraceType::Irradiance);
             }
 
             if (m_envProbe->GetEnvProbeFlags() & EPF_VISIBILITY)
             {
-                mask |= 1u << int(LightmapShadingType::DISTANCE);
+                mask |= 1u << int(PathTraceType::Moments);
             }
         }
 

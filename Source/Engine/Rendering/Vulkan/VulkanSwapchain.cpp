@@ -76,7 +76,7 @@ static RendererResult AcquireNextImage(
 
     // After vkAcquireNextImageKHR, the acquired image is in VK_IMAGE_LAYOUT_UNDEFINED.
     // Reset the tracked state so subsequent barriers use the correct oldLayout.
-    swapchain->GetImages()[*index]->SetResourceState(RS_UNDEFINED);
+    swapchain->GetImages()[*index]->SetResourceState(ResourceState::Undefined);
 
     return {};
 }
@@ -380,8 +380,8 @@ RendererResult VulkanSwapchain::Create()
             AttachmentDesc {
                 TextureType::Texture2D,
                 image->GetTextureFormat(),
-                LoadOperation::CLEAR,
-                StoreOperation::STORE },
+                LoadOperation::Clear,
+                StoreOperation::Store },
             RI.MakeImageView(image));
 
         CheckResultOrReturn(framebuffer->Create());

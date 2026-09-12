@@ -409,13 +409,13 @@ void SpritePass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     static const bool s_isBindlessSupported = s_renderConfig.bindlessTextures;
 
     cr << SetCurrentViewport(renderSetup.viewport);
-    cr << SetTopology(Topology::TOP_TRIANGLES);
+    cr << SetTopology(Topology::Triangles);
     cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
 
     Sampler* sampler = RI.samplerCache->GetOrCreate(SamplerDesc {
-        TFM_LINEAR,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Linear,
+        TextureFilterMode::Linear,
+        TextureWrapMode::ClampToEdge,
         SamplerCompareOp::None
     });
 
@@ -442,7 +442,7 @@ void SpritePass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         cr << SetCurrentBlendFunction(BlendFunction::AlphaBlending());
         cr << SetDepthTest(true);
         cr << SetDepthWrite(true);
-        cr << SetFaceCullMode(FCM_BACK);
+        cr << SetFaceCullMode(FaceCullMode::Back);
 
         cr << CommitDrawState();
 
@@ -494,7 +494,7 @@ void SpritePass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         cr << SetCurrentBlendFunction(BlendFunction::AlphaBlending());
         cr << SetDepthTest(true);
         cr << SetDepthWrite(true);
-        cr << SetFaceCullMode(FCM_BACK);
+        cr << SetFaceCullMode(FaceCullMode::Back);
 
         cr << SetShaderUniform(0, "SamplerLinear"_sh, sampler);
 
@@ -522,7 +522,7 @@ void SpritePass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         cr << DrawIndexed(m_textQuadBackMesh->NumIndices(0), charDataBack.Size());
 
         // reset
-        cr << SetFaceCullMode(FCM_BACK);
+        cr << SetFaceCullMode(FaceCullMode::Back);
 
         numToDraw = 0;
     };

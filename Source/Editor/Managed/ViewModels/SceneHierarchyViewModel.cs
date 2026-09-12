@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using Avalonia.Threading;
 using Hyperion;
 using Hyperion.Editor.Services;
@@ -28,16 +29,16 @@ namespace Hyperion.Editor.ViewModels
             }
         }
 
-        public event Action<Node?>? SelectedNodeChanged;
-
-        public ObservableCollection<NodeViewModel> SelectedNodes { get; } = new ObservableCollection<NodeViewModel>();
-
-        public event Action? SelectionChanged;
-
         private Scene? _scene;
         public Scene? Scene => _scene;
 
+        public ObservableCollection<NodeViewModel> SelectedNodes { get; } = new ObservableCollection<NodeViewModel>();
+
+        public event Action<Node?>? SelectedNodeChanged;
         private DelegateHandler? _onSelectedNodeChanged;
+
+        public event Action? SelectionChanged;
+        public event Action<Scene>? SceneChildrenChanged;
 
         private readonly NodeViewModelIndex _nodeViewModelIndex = new NodeViewModelIndex();
 
@@ -67,7 +68,7 @@ namespace Hyperion.Editor.ViewModels
             Node? root = scene.RootNode;
             if (root != null)
             {
-                RootNodes.Add(new NodeViewModel(root, onChildrenChanged: RefreshFilter, index: _nodeViewModelIndex));
+                RootNodes.Add(new NodeViewModel(root, onChildrenChanged: HandleChildrenChanged, index: _nodeViewModelIndex));
             }
 
             RefreshFilter();
@@ -83,12 +84,21 @@ namespace Hyperion.Editor.ViewModels
 
                     if (newRoot != null)
                     {
-                        RootNodes.Add(new NodeViewModel(newRoot, onChildrenChanged: RefreshFilter, index: _nodeViewModelIndex));
+                        RootNodes.Add(new NodeViewModel(newRoot, onChildrenChanged: HandleChildrenChanged, index: _nodeViewModelIndex));
                     }
 
                     RefreshFilter();
                 });
             });
+        }
+
+        private void HandleChildrenChanged()
+        {
+            RefreshFilter();
+
+            Debug.Assert(_scene != null);
+
+            SceneChildrenChanged?.Invoke(_scene);
         }
 
         public void RefreshFilter()
@@ -120,6 +130,7 @@ namespace Hyperion.Editor.ViewModels
             }
         }
 
+        /// @TODO: Refactor to take a HashSet of WeakReference<Node> ?
         private void ApplyHiddenNodes(HashSet<IntPtr> hiddenNativeAddresses)
         {
             foreach (NodeViewModel root in RootNodes)
@@ -389,15 +400,16 @@ namespace Hyperion.Editor.ViewModels
 
         public static bool IsAncestorOf(NodeViewModel potentialAncestor, NodeViewModel node)
         {
-            // @NOTE Not thread safe currently, needs to be called on sim thread!
-
             NodeViewModel? current = node.Parent;
+
             while (current != null)
             {
                 if (current == potentialAncestor)
                     return true;
+
                 current = current.Parent;
             }
+
             return false;
         }
     }

@@ -187,11 +187,11 @@ void TemporalBlending::CreateImages()
         TextureType::Texture2D,
         m_imageFormat,
         Vec3u(m_extent, 1),
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Nearest,
+        TextureFilterMode::Nearest,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_STORAGE | IU_SAMPLED });
+        ImageUsage::Storage | ImageUsage::Sampled });
 
     m_resultTexture->SetName(NAME("TemporalBlendingResult"));
     Check(m_resultTexture->Create());
@@ -200,11 +200,11 @@ void TemporalBlending::CreateImages()
         TextureType::Texture2D,
         m_imageFormat,
         Vec3u(m_extent, 1),
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Nearest,
+        TextureFilterMode::Nearest,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_STORAGE | IU_SAMPLED });
+        ImageUsage::Storage | ImageUsage::Sampled });
 
     m_historyTexture->SetName(NAME("TemporalBlendingHistory"));
     Check(m_historyTexture->Create());
@@ -231,7 +231,7 @@ void TemporalBlending::Render(Frame* frame, const RenderSetup& renderSetup)
 
     m_currentResultTexture = activeTexture;
 
-    frame->cr << InsertBarrier(activeTexture->GetGpuImage(), RS_UNORDERED_ACCESS);
+    frame->cr << InsertBarrier(activeTexture->GetGpuImage(), ResourceState::UnorderedAccess);
 
     const Vec3u& extent = activeTexture->GetExtent();
 
@@ -278,7 +278,7 @@ void TemporalBlending::Render(Frame* frame, const RenderSetup& renderSetup)
     frame->cr << SetShaderUniform(9, "CamerasBuffer"_sh, RI.namedBuffers[NamedBuffer::Cameras], Resources::GetBinding(renderSetup.view->GetCamera()));
 
     frame->cr << DispatchCompute(Vec3u { (extent.x + 7) / 8, (extent.y + 7) / 8, 1 });
-    frame->cr << InsertBarrier(activeTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    frame->cr << InsertBarrier(activeTexture->GetGpuImage(), ResourceState::ShaderResource);
 
     m_blendingFrameCounter = m_technique == TemporalBlendTechnique::TECHNIQUE_4
         ? m_blendingFrameCounter + 1

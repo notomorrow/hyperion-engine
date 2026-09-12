@@ -78,11 +78,11 @@ void ShadowMapAllocator::Initialize()
         TextureType::Texture2DArray,
         TextureFormat::D16,
         Vec3u { m_atlasDimensions, 1 },
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Nearest,
+        TextureFilterMode::Nearest,
+        TextureWrapMode::ClampToEdge,
         uint16(m_atlases.Size()),
-        IU_SAMPLED | IU_ATTACHMENT });
+        ImageUsage::Sampled | ImageUsage::Attachment });
 
     m_atlasTextureArray->SetName(NAME("Shadows"));
     m_atlasTextureArray->SetIsTransient(true);
@@ -94,11 +94,11 @@ void ShadowMapAllocator::Initialize()
         TextureType::CubemapArray,
         TextureFormat::D16,
         Vec3u { 256, 256, 1 },
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Nearest,
+        TextureFilterMode::Nearest,
+        TextureWrapMode::ClampToEdge,
         MaxBoundOmniShadowMaps,
-        IU_SAMPLED | IU_ATTACHMENT
+        ImageUsage::Sampled | ImageUsage::Attachment
     });
 
     m_pointLightTextureArray->SetName(NAME("OmniShadows"));
@@ -111,11 +111,11 @@ void ShadowMapAllocator::Initialize()
         TextureType::Texture2DArray,
         TextureFormat::D16,
         Vec3u { m_atlasDimensions, 1 },
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Nearest,
+        TextureFilterMode::Nearest,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_SAMPLED | IU_ATTACHMENT });
+        ImageUsage::Sampled | ImageUsage::Attachment });
 
     m_clearTexture->SetName(NAME("ShadowMapClearTexture"));
     Check(m_clearTexture->Create());
@@ -123,9 +123,9 @@ void ShadowMapAllocator::Initialize()
     { // Clear that clear texture
         CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder();
 
-        cr << InsertBarrier(m_clearTexture->GetGpuImage(), RS_COPY_DST);
+        cr << InsertBarrier(m_clearTexture->GetGpuImage(), ResourceState::CopyDst);
         cr << FillImage(m_clearTexture->GetGpuImage(), 1.0f, ImageSubResource {});
-        cr << InsertBarrier(m_clearTexture->GetGpuImage(), RS_COPY_SRC);
+        cr << InsertBarrier(m_clearTexture->GetGpuImage(), ResourceState::CopySrc);
 
         cr.Done();
     }
@@ -207,7 +207,7 @@ ShadowMap* ShadowMapAllocator::AllocateShadowMap(ShadowMapType shadowMapType, co
 
             cr << InsertBarrier(
                 m_pointLightTextureArray->GetGpuImage(),
-                RS_COPY_DST,
+                ResourceState::CopyDst,
                 subResource);
 
             for (uint32 face = 0; face < 6; face++)
@@ -338,7 +338,7 @@ bool ShadowMapAllocator::FreeShadowMap(ShadowMap* shadowMap, bool clearTextureRe
 
                     cr << InsertBarrier(
                         m_atlasTextureArray->GetGpuImage(),
-                        RS_COPY_DST,
+                        ResourceState::CopyDst,
                         dstSubResource);
 
                     cr << CopyImage(

@@ -16,7 +16,7 @@ void GpuImageBase::SetStencilState(ResourceState newState)
 {
     if (!TextureUtils::HasStencilComponent(m_textureDesc.format))
     {
-        m_stencilState = RS_UNDEFINED;
+        m_stencilState = ResourceState::Undefined;
         return;
     }
 
@@ -26,7 +26,7 @@ void GpuImageBase::SetStencilState(ResourceState newState)
 void GpuImageBase::SetResourceState(ResourceState newState)
 {
     m_resourceState = newState;
-    m_stencilState = TextureUtils::HasStencilComponent(m_textureDesc.format) ? newState : RS_UNDEFINED;
+    m_stencilState = TextureUtils::HasStencilComponent(m_textureDesc.format) ? newState : ResourceState::Undefined;
 
     m_subResourceStates.Clear();
 }
@@ -53,7 +53,7 @@ ResourceState GpuImageBase::GetSubResourceState(const ImageSubResource& subResou
     // Multi-layer / multi-mip range: subresources may be tracked in divergent states
     // (e.g. individual cubemap faces rendered into a shared image via separate render passes).
     // Iterate every subresource in the range and only return a state if they all agree; if any
-    // diverge, return RS_UNDEFINED so callers emit a safe (discard) transition rather than
+    // diverge, return ResourceState::Undefined so callers emit a safe (discard) transition rather than
     // assuming the base layer's state applies to the whole range.
     const uint8 maxMip = MathUtil::Min(subResource.baseMipLevel + subResource.numLevels, m_textureDesc.NumMips());
     const uint16 maxLayer = MathUtil::Min(subResource.baseArrayLayer + subResource.numLayers, m_textureDesc.NumArrayLayers());
@@ -87,7 +87,7 @@ ResourceState GpuImageBase::GetSubResourceState(const ImageSubResource& subResou
             }
             else if (foundState != commonState)
             {
-                return RS_UNDEFINED;
+                return ResourceState::Undefined;
             }
         }
     }

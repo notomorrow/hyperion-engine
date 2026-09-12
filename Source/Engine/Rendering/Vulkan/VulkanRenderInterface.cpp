@@ -961,15 +961,18 @@ void VulkanRenderInterface::PrepareFrame(VulkanFrame* frame)
         {
             VulkanFence& fence = *it;
 
-            if (fence.isSubmitted)
+            if (vkGetFenceStatus(m_instance->GetDevice()->GetDevice(), fence.handle) != VK_SUCCESS)
             {
-                ENGINE_STAT_SCOPE(&s_statVulkanFrameSync);
-                ENGINE_STAT_SCOPE(&g_statTotalStallTime);
+                if (fence.isSubmitted)
+                {
+                    ENGINE_STAT_SCOPE(&s_statVulkanFrameSync);
+                    ENGINE_STAT_SCOPE(&g_statTotalStallTime);
 
-                fence.Wait(true);
-
-                fence.Reset();
+                    fence.Wait(true);
+                }
             }
+
+            fence.Reset();
 
             m_recycledTransientCommandBufferFences.PushBack(std::move(fence));
 

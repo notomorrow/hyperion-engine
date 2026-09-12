@@ -526,7 +526,7 @@ void DefaultGame::ShowConnectScreen()
     const bool hasCliHost = cliHostAddress != nullptr && *cliHostAddress != '\0';
     const String cliHostAddressStr = hasCliHost ? String(cliHostAddress) : String::empty;
 
-    //--
+    ////////////////////
 
     Handle<UITextbox> hostTextbox = connectPanel->CreateUIObject<UITextbox>(Vec2i { 0, 30 }, UIObjectSize { { 300, UIObjectSize::PIXEL }, { 30, UIObjectSize::PIXEL } });
     hostTextbox->SetPlaceholder("Enter host address");
@@ -536,36 +536,36 @@ void DefaultGame::ShowConnectScreen()
     hostTextbox->SetParentAlignment(UIObjectAlignment::CENTER);
     connectPanel->AddChildUIObject(hostTextbox);
 
-    //--
+    ////////////////////
 
     Handle<UIListView> connectButtonsPanel = connectPanel->CreateUIObject<UIListView>(Vec2i { 0, 80 }, UIObjectSize { { 0, UIObjectSize::AUTO }, { 40, UIObjectSize::PIXEL } });
     connectButtonsPanel->SetOrientation(UIListViewOrientation::HORIZONTAL);
     connectButtonsPanel->SetOriginAlignment(UIObjectAlignment::CENTER);
     connectButtonsPanel->SetParentAlignment(UIObjectAlignment::CENTER);
     
-    //-- play SP
+    ///play SP
     Handle<UIButton> spButton = connectButtonsPanel->CreateUIObject<UIButton>(Vec2i { 0, 0 }, UIObjectSize { { 150, UIObjectSize::PIXEL }, { 100, UIObjectSize::PERCENT } });
     spButton->SetTextSize(16.0f);
     spButton->SetText("Play Single Player");
     connectButtonsPanel->AddChildUIObject(spButton);
 
-    //--
+    ////////////////////
 
     Handle<UISpacer> spacer = connectButtonsPanel->CreateUIObject<UISpacer>(Vec2i { 0, 0 }, UIObjectSize { { 250, UIObjectSize::PIXEL }, { 100, UIObjectSize::PERCENT } });
     connectButtonsPanel->AddChildUIObject(spacer);
 
-    //-- connect
+    ///connect
 
     Handle<UIButton> connectButton = connectButtonsPanel->CreateUIObject<UIButton>(Vec2i { 0, 0 }, UIObjectSize { { 150, UIObjectSize::PIXEL }, { 100, UIObjectSize::PERCENT } });
     connectButton->SetTextSize(16.0f);
     connectButton->SetText("Connect");
     connectButtonsPanel->AddChildUIObject(connectButton);
 
-    //--
+    ////////////////////
     
     connectPanel->AddChildUIObject(connectButtonsPanel);
 
-    //--
+    ////////////////////
 
     auto submitHost = [this, cliHostAddressStr, hostTextbox]()
     {

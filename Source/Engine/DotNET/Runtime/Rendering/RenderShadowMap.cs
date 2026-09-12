@@ -9,6 +9,6 @@ namespace Hyperion
         Directional = 0,
         Spot,
         Omni,
-        Count
+        Max
     }
 }

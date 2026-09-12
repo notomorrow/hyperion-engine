@@ -6,15 +6,25 @@
 
 #pragma once
 
-#include <Core/Reflection/Handle.hpp>
+#include <Core/Containers/Array.hpp>
+#include <Core/Utilities/Span.hpp>
+
+#include <Rendering/Vertex.hpp>
 
 namespace Hyperion {
 
-class Mesh;
+class NoiseCombinator;
+struct StreamingCellInfo;
 
 class TerrainMeshBuilder
 {
 public:
+    struct CellMeshData
+    {
+        Array<SimpleVertex> vertices;
+        Array<uint32> indices;
+    };
+
     explicit TerrainMeshBuilder(uint32 cellSize);
 
     TerrainMeshBuilder(const TerrainMeshBuilder& other) = delete;
@@ -22,11 +32,14 @@ public:
 
     ~TerrainMeshBuilder();
 
-    const Handle<Mesh>& GetMesh();
+    ///builds vertex/index data for one terrain cell from procedural noise, plus an optional sculpt delta view 
+    CellMeshData BuildCellVertexData(
+        const StreamingCellInfo& cellInfo,
+        const NoiseCombinator& noise,
+        Span<const float> sculptDelta) const;
 
 private:
     uint32 m_cellSize;
-    Handle<Mesh> m_mesh;
 };
 
 } // namespace Hyperion

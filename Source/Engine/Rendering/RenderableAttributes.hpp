@@ -52,13 +52,13 @@ struct MaterialAttributes final
     RenderBucket bucket = RenderBucket::Opaque;
 
     HYP_FIELD(Property = "FillMode", Serialize, Editor)
-    FillMode fillMode = FM_FILL;
+    FillMode fillMode = FillMode::Fill;
 
     HYP_FIELD(Property = "BlendFunction", Serialize, Editor)
     BlendFunction blendFunction = BlendFunction::None();
 
     HYP_FIELD(Property = "FaceCullMode", Serialize, Editor)
-    FaceCullMode cullFaces = FCM_BACK;
+    FaceCullMode cullFaces = FaceCullMode::Back;
 
     HYP_FIELD(Property = "Flags", Serialize, Editor)
     EnumFlags<MaterialAttributeFlags> flags = MAF_DEPTH_WRITE | MAF_DEPTH_TEST;
@@ -67,7 +67,7 @@ struct MaterialAttributes final
     StencilFunction stencilFunction;
 
     HYP_FIELD(Property = "DepthCompareOp", Serialize, Editor)
-    DepthCompareOp depthCompareOp = DCO_LESS;
+    DepthCompareOp depthCompareOp = DepthCompareOp::Less;
 
     HYP_FIELD(Property = "StencilReference", Serialize, Editor)
     uint8 stencilReference = 0;
@@ -119,10 +119,10 @@ struct MeshAttributes final
     VertexInputLayoutDesc inputLayout = { VT_Simple };
 
     HYP_FIELD(Property = "Topology")
-    Topology topology = TOP_TRIANGLES;
+    Topology topology = Topology::Triangles;
 
     HYP_FIELD(Property = "IndexBufferElemType")
-    GpuElemType indexBufferElemType = GET_UNSIGNED_INT;
+    GpuElemType indexBufferElemType = GpuElemType::UnsignedInt;
 
     uint8 padding = 0;
 

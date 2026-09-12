@@ -134,17 +134,17 @@ public:
             (payload->dimensions.z + 3) / 4
         };
 
-        cr << InsertBarrier(payload->outputBuffer.gpuBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::Compute);
+        cr << InsertBarrier(payload->outputBuffer.gpuBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
         cr << DispatchCompute(groupCount);
 
-        cr << InsertBarrier(payload->outputBuffer.gpuBuffer, RS_COPY_SRC, ShaderModuleType::Compute);
+        cr << InsertBarrier(payload->outputBuffer.gpuBuffer, ResourceState::CopySrc, ShaderModuleType::Compute);
 
         GpuBufferRef readbackBuffer = RI.MakeGpuBuffer(GpuBufferType::ReadbackBuffer, payload->outputBuffer.gpuBuffer->Size());
         readbackBuffer->SetIsCpuAccessible(true);
         Check(readbackBuffer->Create());
 
-        cr << InsertBarrier(readbackBuffer, RS_COPY_DST, ShaderModuleType::Compute);
+        cr << InsertBarrier(readbackBuffer, ResourceState::CopyDst, ShaderModuleType::Compute);
         cr << CopyBuffer(payload->outputBuffer.gpuBuffer, readbackBuffer, payload->outputBuffer.gpuBuffer->Size());
 
         cr.Done();
@@ -246,9 +246,9 @@ void BakeJob<FogVolume>::DispatchOcclusionBake()
         TextureType::Texture3D,
         sdfBitmap.GetFormat(),
         Vec3u { sdfBitmap.GetWidth(), sdfBitmap.GetHeight(), sdfBitmap.GetDepth() },
-        TFM_LINEAR,
-        TFM_LINEAR,
-        TWM_CLAMP_TO_EDGE
+        TextureFilterMode::Linear,
+        TextureFilterMode::Linear,
+        TextureWrapMode::ClampToEdge
     };
 
     Handle<Texture> sdfTexture = MakeHandle<Texture>(sdfTextureDesc, sdfBitmap.ToByteView());

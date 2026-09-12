@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -80,6 +81,7 @@ namespace Hyperion.Editor.ViewModels
 
         public ICommand NewScriptCommand { get; }
         public ICommand NewMaterialCommand { get; }
+        public ICommand NewWeaponCommand { get; }
         public ICommand NewPhysicsShapeCommand { get; }
 
         public ICommand DeleteAssetCommand { get; }
@@ -117,8 +119,34 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewScript"), $"{languageArg} {name}");
-                    FocusAsset(AssetBucket.Scripts.Value, name);
+                    _ = EngineManager.PostToSimThread(() =>
+                    {
+                        _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewScript"), $"{languageArg} {name}");
+
+                        Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.Scripts.Value, name));
+                    });
+                });
+
+                PanelService.Instance.OpenPanel(panel);
+            });
+
+            NewWeaponCommand = new RelayCommand(() =>
+            {
+                var panel = new NewWeaponPanelViewModel(weaponType =>
+                {
+                    if (weaponType == null)
+                    {
+                        Logger.Log(LogLevel.Warning, "New weapon creation cancelled.");
+                        return;
+                    }
+
+                    _ = EngineManager.PostToSimThread(() =>
+                    {
+                        // EditorCommandNewWeapon takes the WeaponType as an integer
+                        _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewWeapon"), Convert.ToString((int)weaponType.Value, CultureInfo.InvariantCulture));
+
+                        Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.Weapons.Value, "NewWeapon", openEditor: true));
+                    });
                 });
 
                 PanelService.Instance.OpenPanel(panel);
@@ -126,8 +154,23 @@ namespace Hyperion.Editor.ViewModels
 
             NewMaterialCommand = new RelayCommand(() =>
             {
-                _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewMaterial"));
-                FocusAsset(AssetBucket.Materials.Value, "NewMaterial", openEditor: true);
+                var panel = new NewMaterialPanelViewModel(confirmed =>
+                {
+                    if (!confirmed)
+                    {
+                        Logger.Log(LogLevel.Warning, "New material creation cancelled.");
+                        return;
+                    }
+
+                    _ = EngineManager.PostToSimThread(() =>
+                    {
+                        _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewMaterial"));
+
+                        Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.Materials.Value, "NewMaterial", openEditor: true));
+                    });
+                });
+
+                PanelService.Instance.OpenPanel(panel);
             });
 
             NewPhysicsShapeCommand = new RelayCommand(() =>
@@ -140,7 +183,6 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    // Task hell...
                     _ = EngineManager.PostToSimThread(() =>
                     {
                         AssetRegistry? registry = EngineManager.EditorGame?.AssetRegistry;
@@ -148,10 +190,7 @@ namespace Hyperion.Editor.ViewModels
 
                         registry.PutAssetUnique(shape);
 
-                        Dispatcher.UIThread.Post(() =>
-                        {
-                            FocusAsset(AssetBucket.PhysicsShapes.Value, shape.GetName().ToString());
-                        });
+                        Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.PhysicsShapes.Value, shape.GetName().ToString()));
                     });
                 });
 

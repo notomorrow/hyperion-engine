@@ -180,6 +180,20 @@ void Mesh::SetIndexData(uint8 lodIndex, Span<const ubyte> indexData)
     MarkDirty();
 }
 
+void Mesh::SetIsDynamicMesh(bool isDynamic)
+{
+    if (isDynamic)
+    {
+        m_flags |= MeshFlags::DynamicMesh;
+    }
+    else
+    {
+        m_flags &= ~MeshFlags::DynamicMesh;
+    }
+
+    MarkDirty();
+}
+
 class PlaceholderVertexIndexCache
 {
 public:
@@ -601,7 +615,6 @@ void Mesh::UploadGpuData()
 
     auto writeScope = GetWriteScope();
 
-    isUploaded.Store(false);
 
     // Ensure vertex buffer is not empty (at least one vertex)
     if (vertices.Empty())
@@ -622,18 +635,34 @@ void Mesh::UploadGpuData()
     const size_t packedVerticesSize = vertices.ByteSize();
     const size_t packedIndicesSize = indices.Size();
 
-    GpuBufferRef vertexBuffer = RI.MakeGpuBuffer(GpuBufferType::VertexBuffer, packedVerticesSize);
-    GpuBufferRef indexBuffer = RI.MakeGpuBuffer(GpuBufferType::IndexBuffer, packedIndicesSize);
+    const bool reuseBuffers = m_vertexBuffers[lodIndex].IsValid()
+        && m_indexBuffers[lodIndex].IsValid()
+        && m_vertexBuffers[lodIndex]->Size() >= packedVerticesSize
+        && m_indexBuffers[lodIndex]->Size() >= packedIndicesSize;
+
+    GpuBufferRef vertexBuffer;
+    GpuBufferRef indexBuffer;
+
+    if (reuseBuffers)
+    {
+        vertexBuffer = m_vertexBuffers[lodIndex];
+        indexBuffer = m_indexBuffers[lodIndex];
+    }
+    else
+    {
+        vertexBuffer = RI.MakeGpuBuffer(GpuBufferType::VertexBuffer, packedVerticesSize);
+        indexBuffer = RI.MakeGpuBuffer(GpuBufferType::IndexBuffer, packedIndicesSize);
 
 #ifdef HYP_RHI_DEBUG_NAMES
-    vertexBuffer->SetDebugName(NAME_FMT("{}_VBO", GetName()));
-    indexBuffer->SetDebugName(NAME_FMT("{}_IBO", GetName()));
+        vertexBuffer->SetDebugName(NAME_FMT("{}_VBO", GetName()));
+        indexBuffer->SetDebugName(NAME_FMT("{}_IBO", GetName()));
 #endif
 
-    Check(vertexBuffer->Create());
-    Check(indexBuffer->Create());
+        Check(vertexBuffer->Create());
+        Check(indexBuffer->Create());
 
-    AssertDebug(vertexBuffer.IsValid() && indexBuffer.IsValid());
+        AssertDebug(vertexBuffer.IsValid() && indexBuffer.IsValid());
+    }
 
     const size_t bufferSizeCombined = packedVerticesSize + packedIndicesSize;
 
@@ -644,33 +673,133 @@ void Mesh::UploadGpuData()
 
     CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder();
 
-    cr << InsertBarrier(stagingBuffer, RS_COPY_SRC);
+    cr << InsertBarrier(stagingBuffer, ResourceState::CopySrc);
 
-    cr << InsertBarrier(vertexBuffer, RS_COPY_DST);
-    cr << InsertBarrier(indexBuffer, RS_COPY_DST);
+    cr << InsertBarrier(vertexBuffer, ResourceState::CopyDst);
+    cr << InsertBarrier(indexBuffer, ResourceState::CopyDst);
 
     cr << CopyBuffer(stagingBuffer, vertexBuffer, packedVerticesSize);
     cr << CopyBuffer(stagingBuffer, indexBuffer, packedVerticesSize, 0, packedIndicesSize);
 
-    cr << InsertBarrier(vertexBuffer, RS_VERTEX_BUFFER);
-    cr << InsertBarrier(indexBuffer, RS_INDEX_BUFFER);
+    cr << InsertBarrier(vertexBuffer, ResourceState::VertexBuffer);
+    cr << InsertBarrier(indexBuffer, ResourceState::IndexBuffer);
 
-    if (m_vertexBuffers[lodIndex].IsValid())
+    if (!reuseBuffers)
     {
-        EnqueueDeletion(std::move(m_vertexBuffers[lodIndex]));
-    }
+        if (m_vertexBuffers[lodIndex].IsValid())
+        {
+            EnqueueDeletion(std::move(m_vertexBuffers[lodIndex]));
+        }
 
-    if (m_indexBuffers[lodIndex].IsValid())
-    {
-        EnqueueDeletion(std::move(m_indexBuffers[lodIndex]));
-    }
+        if (m_indexBuffers[lodIndex].IsValid())
+        {
+            EnqueueDeletion(std::move(m_indexBuffers[lodIndex]));
+        }
 
-    m_vertexBuffers[lodIndex] = std::move(vertexBuffer);
-    m_indexBuffers[lodIndex] = std::move(indexBuffer);
+        m_vertexBuffers[lodIndex] = std::move(vertexBuffer);
+        m_indexBuffers[lodIndex] = std::move(indexBuffer);
+    }
 
     isUploaded.Store(true);
 
     cr.Done();
+}
+
+void Mesh::UpdateDynamicVertexData(uint8 lodIndex, uint32 firstVertex, const VertexArrayView& vertexRange)
+{
+    Assert(IsDynamicMesh());
+
+    if (EngineGlobals::IsHeadless())
+    {
+        return;
+    }
+
+    if (!vertexRange.floatData || vertexRange.vertexCount == 0)
+    {
+        return;
+    }
+
+    const bool validRange = (firstVertex + vertexRange.vertexCount <= m_meshDesc.lods[lodIndex].numVertices);
+    Assert(validRange);
+
+    if (!validRange)
+    {
+        return;
+    }
+
+    auto writeScope = GetWriteScope();
+
+    const size_t srcVertexSize = m_meshDesc.meshAttributes.inputLayout.VertexSize();
+    Assert(srcVertexSize != 0);
+
+    BlobDataReference& vertexBlob = m_lodData[lodIndex].vertexData;
+
+    if (!vertexBlob.raw || vertexBlob.readOnly || vertexBlob.size < (firstVertex + vertexRange.vertexCount) * srcVertexSize)
+    {
+        // needs a full upload
+
+        writeScope.Reset();
+
+        UploadGpuData();
+
+        return;
+    }
+
+    Memory::Copy(
+        (char*)vertexBlob.raw + firstVertex * srcVertexSize,
+        vertexRange.floatData,
+        vertexRange.vertexCount * srcVertexSize);
+
+    // sync bounds
+    m_aabb = CalculateAABB();
+
+    GpuBufferRef& vertexBuffer = m_vertexBuffers[lodIndex];
+
+    const size_t rangeOffset = firstVertex * srcVertexSize;
+    const size_t rangeSize = vertexRange.vertexCount * srcVertexSize;
+
+    if (!vertexBuffer.IsValid() || vertexBuffer->Size() < rangeOffset + rangeSize)
+    {
+        // not yet created
+
+        return;
+    }
+
+    GpuBuffer* stagingBuffer = RI.stagingBufferPool->AcquireStagingBuffer(rangeSize);
+    stagingBuffer->Copy(rangeSize, vertexRange.floatData);
+    stagingBuffer->Flush(0, rangeSize);
+
+    CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder(CommandRecorderQueue::PreRender);
+
+    cr << InsertBarrier(stagingBuffer, ResourceState::CopySrc);
+    cr << InsertBarrier(vertexBuffer, ResourceState::CopyDst);
+
+    cr << CopyBuffer(stagingBuffer, vertexBuffer, 0, uint32(rangeOffset), uint32(rangeSize));
+
+    cr << InsertBarrier(vertexBuffer, ResourceState::VertexBuffer);
+
+    // Gets submitted along with the frame - not transient cmd buffer
+    // @FIXME: This could be changed in the future, but right now we're getting some validation errors with it - needs an eye on it
+    cr.Done();
+}
+
+void Mesh::UpdateDynamicBVH()
+{
+    Assert(IsDynamicMesh());
+
+    BVHNode bvh;
+
+    {
+        auto readScope = GetReadScope();
+        BuildBVH(bvh);
+    }
+
+    {
+        auto writeScope = GetWriteScope();
+        m_bvh = std::move(bvh);
+    }
+
+    // No mark dirty - intentional
 }
 
 void Mesh::ReleaseGpuData()

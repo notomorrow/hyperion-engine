@@ -132,11 +132,11 @@ void ShadowsPassBase::RenderShadowMapCapture(
         rpl.BeginRead();
         HYP_DEFER({ rpl.EndRead(); });
 
-        frame->cr << InsertBarrier(resultImage, RS_RENDER_TARGET, target->GetImageView()->GetImageSubResource());
+        frame->cr << InsertBarrier(resultImage, ResourceState::RenderTarget, target->GetImageView()->GetImageSubResource());
 
         renderCollector.ExecuteDrawCalls(frame, rs, BucketMask);
 
-        frame->cr << InsertBarrier(resultImage, RS_SHADER_RESOURCE, target->GetImageView()->GetImageSubResource());
+        frame->cr << InsertBarrier(resultImage, ResourceState::ShaderResource, target->GetImageView()->GetImageSubResource());
 
         renderedFacesMask |= (1u << faceIndex);
         captureState->SetRenderedFacesMask(renderedFacesMask);
@@ -322,7 +322,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
         Assert(firstShadowView != nullptr);
 
-        //-- Time slicing CSM
+        ///Time slicing CSM
         if (isDirectional && g_cvCSMTimeSlicingEnabled.Get())
         {
             View* cascadeView = shadowViewDynamic ? shadowViewDynamic : shadowViewStatic;
@@ -364,15 +364,15 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                 cascadeRpl.EndRead();
             }
 
-            //--
+            ////////////////////
             // for lights with a separate static shadow view, the static stage (rendering statics into the
             // atlas + refreshing its cached texture) only executes inside the draw loop below. so a
             // static-only change (e.g. static geometry moved) must also be able to trigger a draw here,
             // otherwise the static layer stays frozen until the camera moves.
-            //--
+            ////////////////////
             // the diff is also latched into the static view's pass data, because the draw (and with it the
             // static re-render) may be delayed by the budget, at which point the diff is no longer live.
-            //--
+            ////////////////////
             if (shadowViewDynamic && shadowViewStatic)
             {
                 RenderProxyList& staticRpl = GetConsumerProxyList(shadowViewStatic);
@@ -391,16 +391,16 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                 }
             }
 
-            //--
+            ////////////////////
             // the RPL diffs are the dirty signal: they are already scoped to this cascade (entities outside
             // its frustum are not collected, so they never bump them), and they are only live for the single
             // frame the change syncs, so latch them into pendingListRedraw where they stay set until the
             // cascade actually redraws (budget permitting).
-            //--
+            ////////////////////
             // note: the octree entry hash cannot be AND-ed with them -- the hash lags the diff by one
             // frame (it is only rebuilt at the start of the next tick), so a change happening on a
             // single frame would never have both signals set simultaneously.
-            //--
+            ////////////////////
             if (isRplDirty || isStaticRplDirty)
             {
                 cachedData->pendingListRedraw[cascadeIndex] = true;
@@ -600,8 +600,8 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
                 Assert(TextureUtils::BytesPerComponent(depthTarget->GetFormat()) == TextureUtils::BytesPerComponent(bakedShadowMap->GetFormat()));
 
-                frame->cr << InsertBarrier(bakedShadowMap->GetGpuImage(), RS_COPY_SRC, srcImageSubResource);
-                frame->cr << InsertBarrier(depthTarget->GetGpuImage(), RS_COPY_DST, dstImageSubResource);
+                frame->cr << InsertBarrier(bakedShadowMap->GetGpuImage(), ResourceState::CopySrc, srcImageSubResource);
+                frame->cr << InsertBarrier(depthTarget->GetGpuImage(), ResourceState::CopyDst, dstImageSubResource);
 
                 frame->cr << CopyImage(
                     bakedShadowMap->GetGpuImage(),
@@ -618,11 +618,11 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                 if (localPasses[ShadowStage_Dynamic] != nullptr)
                 {
                     // get it ready for rendering to! (for dynamic shadows)
-                    frame->cr << InsertBarrier(depthTarget->GetGpuImage(), RS_RENDER_TARGET, dstImageSubResource);
+                    frame->cr << InsertBarrier(depthTarget->GetGpuImage(), ResourceState::RenderTarget, dstImageSubResource);
                 }
                 else
                 {
-                    frame->cr << InsertBarrier(depthTarget->GetGpuImage(), RS_SHADER_RESOURCE, dstImageSubResource);
+                    frame->cr << InsertBarrier(depthTarget->GetGpuImage(), ResourceState::ShaderResource, dstImageSubResource);
                 }
             }
             else if (cacheStaticShadowMaps || onlyStaticShadowMaps)
@@ -702,8 +702,8 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                             dstImageSubResource.baseArrayLayer = (atlasElement.layerIndex * 6) + viewIndex;
                         }
 
-                        frame->cr << InsertBarrier(cachedShadowMapTexture->GetGpuImage(), RS_COPY_SRC, srcImageSubResource);
-                        frame->cr << InsertBarrier(depthTarget->GetGpuImage(), RS_COPY_DST, dstImageSubResource);
+                        frame->cr << InsertBarrier(cachedShadowMapTexture->GetGpuImage(), ResourceState::CopySrc, srcImageSubResource);
+                        frame->cr << InsertBarrier(depthTarget->GetGpuImage(), ResourceState::CopyDst, dstImageSubResource);
 
                         frame->cr << CopyImage(
                             cachedShadowMapTexture->GetGpuImage(),
@@ -716,7 +716,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
                         if (!localPasses[ShadowStage_Dynamic])
                         {
-                            frame->cr << InsertBarrier(depthTarget->GetGpuImage(), RS_SHADER_RESOURCE, dstImageSubResource);
+                            frame->cr << InsertBarrier(depthTarget->GetGpuImage(), ResourceState::ShaderResource, dstImageSubResource);
                         }
                     }
                     
@@ -786,7 +786,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
                 renderProxyLists[numRenderProxyLists++] = &rpl;
 
-                frame->cr << InsertBarrier(resultImage, RS_RENDER_TARGET, target->GetImageView()->GetImageSubResource());
+                frame->cr << InsertBarrier(resultImage, ResourceState::RenderTarget, target->GetImageView()->GetImageSubResource());
 
                 RenderCollector& renderCollector = GetRenderCollector(shadowView);
                 renderCollector.ExecuteDrawCalls(frame, rs, BucketMask);
@@ -816,10 +816,10 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                     }
 
                     // need to transition atlas section to COPY_SRC
-                    frame->cr << InsertBarrier(resultImage, RS_COPY_SRC, srcImageSubResource);
+                    frame->cr << InsertBarrier(resultImage, ResourceState::CopySrc, srcImageSubResource);
 
                     // and our cache texture should be COPY_DST
-                    frame->cr << InsertBarrier(cachedShadowMapTexture->GetGpuImage(), RS_COPY_DST, dstImageSubResource);
+                    frame->cr << InsertBarrier(cachedShadowMapTexture->GetGpuImage(), ResourceState::CopyDst, dstImageSubResource);
 
                     frame->cr << CopyImage(
                         resultImage,
@@ -832,7 +832,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                 }
 
                 // transition atlas section back to shader read
-                frame->cr << InsertBarrier(resultImage, RS_SHADER_RESOURCE, target->GetImageView()->GetImageSubResource());
+                frame->cr << InsertBarrier(resultImage, ResourceState::ShaderResource, target->GetImageView()->GetImageSubResource());
             }
         }
     }

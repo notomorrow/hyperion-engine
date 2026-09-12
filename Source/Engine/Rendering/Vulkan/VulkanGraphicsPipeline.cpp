@@ -215,21 +215,21 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
 
     switch (m_topology)
     {
-    case TOP_TRIANGLES:
+    case Topology::Triangles:
         inputAsmInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         break;
 #ifndef HYP_APPLE
-    case TOP_TRIANGLE_FAN:
+    case Topology::TriangleFan:
         inputAsmInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN; // not supported on metal
         break;
 #endif
-    case TOP_TRIANGLE_STRIP:
+    case Topology::TriangleStrip:
         inputAsmInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
         break;
-    case TOP_LINES:
+    case Topology::Lines:
         inputAsmInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
         break;
-    case TOP_POINTS:
+    case Topology::Points:
         inputAsmInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
         break;
     default:
@@ -270,13 +270,13 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
 
     switch (m_faceCullMode)
     {
-    case FCM_BACK:
+    case FaceCullMode::Back:
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
         break;
-    case FCM_FRONT:
+    case FaceCullMode::Front:
         rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
         break;
-    case FCM_NONE:
+    case FaceCullMode::None:
         rasterizer.cullMode = VK_CULL_MODE_NONE;
         break;
     default:
@@ -285,11 +285,11 @@ RendererResult VulkanGraphicsPipeline::Rebuild()
 
     switch (m_fillMode)
     {
-    case FM_LINE:
+    case FillMode::Line:
         rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
         rasterizer.lineWidth = 1.0f; // 2.5f; // have to set VK_DYNAMIC_STATE_LINE_WIDTH and wideLines feature to use any non-1.0 value
         break;
-    case FM_FILL: // fallthrough
+    case FillMode::Fill: // fallthrough
     default:
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;

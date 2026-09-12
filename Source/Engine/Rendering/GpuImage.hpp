@@ -243,16 +243,16 @@ public:
 
 protected:
     explicit GpuImageBase(EnumFlags<GpuImageFlags> flags = GpuImageFlags::NONE)
-        : m_resourceState(RS_UNDEFINED),
-          m_stencilState(RS_UNDEFINED),
+        : m_resourceState(ResourceState::Undefined),
+          m_stencilState(ResourceState::Undefined),
           m_flags(flags)
     {
     }
 
     explicit GpuImageBase(const TextureDesc& textureDesc, EnumFlags<GpuImageFlags> flags = GpuImageFlags::NONE)
         : m_textureDesc(textureDesc),
-          m_resourceState(RS_UNDEFINED),
-          m_stencilState(RS_UNDEFINED),
+          m_resourceState(ResourceState::Undefined),
+          m_stencilState(ResourceState::Undefined),
           m_flags(flags)
     {
     }

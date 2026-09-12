@@ -360,8 +360,8 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer)
                 }
 
 #ifdef HYP_VULKAN
-                src->GetGpuImage()->InsertBarrier(commandBuffer, srcSubResource, RS_COPY_SRC, ShaderModuleType::None);
-                dst->GetGpuImage()->InsertBarrier(commandBuffer, dstSubResource, RS_COPY_DST, ShaderModuleType::None);
+                src->GetGpuImage()->InsertBarrier(commandBuffer, srcSubResource, ResourceState::CopySrc, ShaderModuleType::None);
+                dst->GetGpuImage()->InsertBarrier(commandBuffer, dstSubResource, ResourceState::CopyDst, ShaderModuleType::None);
 
                 dst->GetGpuImage()->Blit(commandBuffer, src->GetGpuImage(), srcRect, dstRect, srcSubResource, dstSubResource);
 #else
@@ -398,7 +398,7 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer)
                     state.attributes.SetShaderName(NAME("GenerateMipmap"));
                     state.attributes.SetShaderProperties(ShaderPropertySet {});
 
-                    Sampler* linearSampler = RI.samplerCache->GetOrCreate(SamplerDesc { TFM_LINEAR, TFM_LINEAR, TWM_REPEAT });
+                    Sampler* linearSampler = RI.samplerCache->GetOrCreate(SamplerDesc { TextureFilterMode::Linear, TextureFilterMode::Linear, TextureWrapMode::Repeat });
 
                     struct BlitUniforms
                     {
@@ -445,8 +445,8 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer)
                             const GpuImageViewRef& inputView = RI.textureViewCache->GetOrCreate(src, srcViewSubResource, TextureType::Texture2D);
                             const GpuImageViewRef& outputView = RI.textureViewCache->GetOrCreate(tempImage, dstViewSubResource, TextureType::Texture2D);
 
-                            src->GetGpuImage()->InsertBarrier(commandBuffer, srcViewSubResource, RS_SHADER_RESOURCE, ShaderModuleType::None);
-                            tempImage->GetGpuImage()->InsertBarrier(commandBuffer, RS_UNORDERED_ACCESS, ShaderModuleType::None);
+                            src->GetGpuImage()->InsertBarrier(commandBuffer, srcViewSubResource, ResourceState::ShaderResource, ShaderModuleType::None);
+                            tempImage->GetGpuImage()->InsertBarrier(commandBuffer, ResourceState::UnorderedAccess, ShaderModuleType::None);
 
                             BlitUniforms uniforms;
                             uniforms.srcDimensions = { srcExtent.x, srcExtent.y };
@@ -490,15 +490,15 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer)
 #ifdef HYP_DX12
                             tempImage->GetGpuImage()->InsertUAVBarrier(commandBuffer);
 #endif
-                            tempImage->GetGpuImage()->InsertBarrier(commandBuffer, RS_COPY_SRC, ShaderModuleType::None);
+                            tempImage->GetGpuImage()->InsertBarrier(commandBuffer, ResourceState::CopySrc, ShaderModuleType::None);
 
-                            dst->GetGpuImage()->InsertBarrier(commandBuffer, dstViewSubResource, RS_COPY_DST, ShaderModuleType::None);
+                            dst->GetGpuImage()->InsertBarrier(commandBuffer, dstViewSubResource, ResourceState::CopyDst, ShaderModuleType::None);
 
                             dst->GetGpuImage()->CopyFrom(commandBuffer, tempImage->GetGpuImage().Get(),
                                                          Vec3u::Zero(), Vec3u::Zero(), dstExtent,
                                                          ImageSubResource { 0, 1, 0, 1 }, dstViewSubResource);
 
-                            dst->GetGpuImage()->InsertBarrier(commandBuffer, dstViewSubResource, RS_SHADER_RESOURCE, ShaderModuleType::None);
+                            dst->GetGpuImage()->InsertBarrier(commandBuffer, dstViewSubResource, ResourceState::ShaderResource, ShaderModuleType::None);
                         }
                     }
                 }
@@ -512,14 +512,14 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer)
                 EndCurrentPass(commandBuffer);
 
                 // Transition src,dst before inserting copy cmd
-                //if (cmd->srcImage->GetSubResourceState(cmd->srcSubResource) != RS_COPY_SRC)
+                //if (cmd->srcImage->GetSubResourceState(cmd->srcSubResource) != ResourceState::CopySrc)
                 //{
-                //    cmd->srcImage->InsertBarrier(commandBuffer, cmd->srcSubResource, RS_COPY_SRC, ShaderModuleType::None);
+                //    cmd->srcImage->InsertBarrier(commandBuffer, cmd->srcSubResource, ResourceState::CopySrc, ShaderModuleType::None);
                 //}
                 //
-                //if (cmd->dstImage->GetSubResourceState(cmd->dstSubResource) != RS_COPY_DST)
+                //if (cmd->dstImage->GetSubResourceState(cmd->dstSubResource) != ResourceState::CopyDst)
                 //{
-                //    cmd->dstImage->InsertBarrier(commandBuffer, cmd->dstSubResource, RS_COPY_DST, ShaderModuleType::None);
+                //    cmd->dstImage->InsertBarrier(commandBuffer, cmd->dstSubResource, ResourceState::CopyDst, ShaderModuleType::None);
                 //}
 
                 cmd->dstImage->CopyFrom(commandBuffer, cmd->srcImage, cmd->srcOffset, cmd->dstOffset, cmd->extent, cmd->srcSubResource, cmd->dstSubResource);
@@ -596,7 +596,7 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer)
                 state.attributes.SetShaderName(NAME("GenerateMipmap"));
                 state.attributes.SetShaderProperties(ShaderPropertySet {});
 
-                Sampler* linearSampler = RI.samplerCache->GetOrCreate(SamplerDesc { TFM_LINEAR, TFM_LINEAR, TWM_REPEAT });
+                Sampler* linearSampler = RI.samplerCache->GetOrCreate(SamplerDesc { TextureFilterMode::Linear, TextureFilterMode::Linear, TextureWrapMode::Repeat });
 
                 if (!linearSampler)
                 {
@@ -635,9 +635,9 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer)
                     inTexture->GetGpuImage()->InsertBarrier(
                         commandBuffer,
                         ImageSubResource { .baseMipLevel = 0, .numLevels = 1, .baseArrayLayer = layer, .numLayers = 1 },
-                        RS_COPY_SRC, ShaderModuleType::None);
+                        ResourceState::CopySrc, ShaderModuleType::None);
 
-                    tempImage->GetGpuImage()->InsertBarrier(commandBuffer, RS_COPY_DST, ShaderModuleType::None);
+                    tempImage->GetGpuImage()->InsertBarrier(commandBuffer, ResourceState::CopyDst, ShaderModuleType::None);
 
                     tempImage->GetGpuImage()->CopyFrom(
                         commandBuffer, inTexture->GetGpuImage(),
@@ -690,12 +690,12 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer)
                         tempImage->GetGpuImage()->InsertBarrier(
                             commandBuffer,
                             ImageSubResource { .baseMipLevel = srcMip, .numLevels = 1, .baseArrayLayer = 0, .numLayers = 1 },
-                            RS_SHADER_RESOURCE, ShaderModuleType::None);
+                            ResourceState::ShaderResource, ShaderModuleType::None);
 
                         tempImage->GetGpuImage()->InsertBarrier(
                             commandBuffer,
                             ImageSubResource { .baseMipLevel = mip, .numLevels = 1, .baseArrayLayer = 0, .numLayers = 1 },
-                            RS_UNORDERED_ACCESS, ShaderModuleType::None);
+                            ResourceState::UnorderedAccess, ShaderModuleType::None);
 
                         state.shaderUniforms[0] = ShaderUniform("InputTexture"_sh, inputViews[srcMip]);
                         state.dirtyUniforms |= 1u << 0;
@@ -741,12 +741,12 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer)
                         tempImage->GetGpuImage()->InsertBarrier(
                             commandBuffer,
                             ImageSubResource { .baseMipLevel = mip, .numLevels = 1, .baseArrayLayer = 0, .numLayers = 1 },
-                            RS_COPY_SRC, ShaderModuleType::None);
+                            ResourceState::CopySrc, ShaderModuleType::None);
 
                         inTexture->GetGpuImage()->InsertBarrier(
                             commandBuffer,
                             ImageSubResource { .baseMipLevel = mip, .numLevels = 1, .baseArrayLayer = layer, .numLayers = 1 },
-                            RS_COPY_DST, ShaderModuleType::None);
+                            ResourceState::CopyDst, ShaderModuleType::None);
 
                         inTexture->GetGpuImage()->CopyFrom(
                             commandBuffer, tempImage->GetGpuImage().Get(),
@@ -757,12 +757,12 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer)
                         inTexture->GetGpuImage()->InsertBarrier(
                             commandBuffer,
                             ImageSubResource { .baseMipLevel = mip, .numLevels = 1, .baseArrayLayer = layer, .numLayers = 1 },
-                            RS_SHADER_RESOURCE, ShaderModuleType::None);
+                            ResourceState::ShaderResource, ShaderModuleType::None);
                     }
                 }
 #endif
 
-                inTexture->GetGpuImage()->InsertBarrier(commandBuffer, RS_SHADER_RESOURCE, ShaderModuleType::None);
+                inTexture->GetGpuImage()->InsertBarrier(commandBuffer, ResourceState::ShaderResource, ShaderModuleType::None);
             }
             break;
             case CommandType::DispatchCompute:

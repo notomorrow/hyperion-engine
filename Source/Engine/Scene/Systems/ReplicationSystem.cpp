@@ -230,10 +230,17 @@ void ReplicationSystem::OnEntityRemoved(Entity* entity)
 
     m_netIdToEntity.Erase(netId);
 
-    if (const net::NetConnectionId ownerConnectionId = GetOwnerConnectionId(entity); ownerConnectionId != Invalid<net::NetConnectionId>)
+    for (auto it = m_connectionIdToEntity.Begin(); it != m_connectionIdToEntity.End(); ++it)
     {
-        m_connectionIdToEntity.Erase(ownerConnectionId);
-        m_playerMoveQueues.Erase(ownerConnectionId);
+        if (it->second != entity)
+        {
+            continue;
+        }
+
+        m_playerMoveQueues.Erase(it->first);
+        m_connectionIdToEntity.Erase(it);
+
+        break;
     }
 
     HYP_LOG(Replication, Info, "Entity {} removed from replication (netId={}), broadcasting EntityDespawn",

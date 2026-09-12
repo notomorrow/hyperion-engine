@@ -295,9 +295,9 @@ protected:
 
     VertexInputLayoutDesc m_inputLayout = {};
 
-    Topology m_topology = TOP_TRIANGLES;
-    FaceCullMode m_faceCullMode = FCM_BACK;
-    FillMode m_fillMode = FM_FILL;
+    Topology m_topology = Topology::Triangles;
+    FaceCullMode m_faceCullMode = FaceCullMode::Back;
+    FillMode m_fillMode = FillMode::Fill;
     BlendFunction m_blendFunction = BlendFunction::None();
 
     bool m_depthTest : 1 = true;
@@ -306,7 +306,7 @@ protected:
 
     bool m_stencilWrite : 1 = false;
 
-    DepthCompareOp m_depthCompareOp = DCO_LESS;
+    DepthCompareOp m_depthCompareOp = DepthCompareOp::Less;
 
     Optional<StencilFunction> m_stencilFunction;
     uint8 m_stencilWriteMask = 0;

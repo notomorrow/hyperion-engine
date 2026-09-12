@@ -36,8 +36,8 @@ AttachmentBase::AttachmentBase(
     {
         m_textureDesc.type = attachmentDesc.imageType;
         m_textureDesc.format = attachmentDesc.format;
-        m_textureDesc.imageUsage |= IU_SAMPLED | IU_ATTACHMENT;
-        m_textureDesc.imageUsage &= ~(IU_STORAGE | IU_EXTERNAL);
+        m_textureDesc.imageUsage |= ImageUsage::Sampled | ImageUsage::Attachment;
+        m_textureDesc.imageUsage &= ~(ImageUsage::Storage | ImageUsage::External);
 
         m_gpuImage = RI.MakeImage(m_textureDesc);
         Assert(m_gpuImage.IsValid());
@@ -52,8 +52,8 @@ AttachmentBase::AttachmentBase(
       m_framebuffer(framebuffer),
       m_attachmentDesc(attachmentDesc)
 {
-    m_textureDesc.imageUsage |= IU_SAMPLED | IU_ATTACHMENT;
-    m_textureDesc.imageUsage &= ~(IU_STORAGE | IU_EXTERNAL);
+    m_textureDesc.imageUsage |= ImageUsage::Sampled | ImageUsage::Attachment;
+    m_textureDesc.imageUsage &= ~(ImageUsage::Storage | ImageUsage::External);
 
     m_gpuImage = RI.MakeImage(m_textureDesc);
     Assert(m_gpuImage.IsValid());

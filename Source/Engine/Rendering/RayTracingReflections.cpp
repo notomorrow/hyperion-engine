@@ -127,7 +127,7 @@ void RayTracingReflections::Render(Frame* frame, const RenderSetup& renderSetup)
         cameraProxy->pathTracerResetTemporalAccum = false;
     }
 
-    frame->cr << InsertBarrier(m_texture->GetGpuImage(), RS_UNORDERED_ACCESS);
+    frame->cr << InsertBarrier(m_texture->GetGpuImage(), ResourceState::UnorderedAccess);
 
     // Set shader and uniforms
     ShaderPropertySet shaderProperties;
@@ -270,7 +270,7 @@ void RayTracingReflections::Render(Frame* frame, const RenderSetup& renderSetup)
     const size_t numPixels = imageExtent.Volume();
 
     frame->cr << TraceRays(Vec3u { uint32(numPixels), 1, 1 });
-    frame->cr << InsertBarrier(m_texture->GetGpuImage(), RS_SHADER_RESOURCE);
+    frame->cr << InsertBarrier(m_texture->GetGpuImage(), ResourceState::ShaderResource);
 
     // Create a new RenderSetup for temporal blending as it will need to bind View descriptors,
     // which we don't have on RayTracingPassData
@@ -288,11 +288,11 @@ void RayTracingReflections::CreateImages()
         TextureType::Texture2D,
         TextureFormat::RGBA16F,
         Vec3u(m_gbuffer->GetExtent(), 1),
-        TFM_NEAREST,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::Nearest,
+        TextureFilterMode::Nearest,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_SAMPLED | IU_STORAGE });
+        ImageUsage::Sampled | ImageUsage::Storage });
 
     m_texture->SetName(NAME("RayTracingReflectionsTexture"));
 

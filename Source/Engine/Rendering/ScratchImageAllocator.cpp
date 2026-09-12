@@ -145,11 +145,11 @@ struct ScratchImageAllocatorImpl
             type,
             format,
             alignedExtent,
-            TFM_LINEAR_MIPMAP,
-            TFM_LINEAR,
-            TWM_CLAMP_TO_EDGE,
+            TextureFilterMode::LinearMipmap,
+            TextureFilterMode::Linear,
+            TextureWrapMode::ClampToEdge,
             1,
-            IU_SAMPLED | IU_STORAGE
+            ImageUsage::Sampled | ImageUsage::Storage
         });
 
         newEntry.texture->SetIsTransient(true);

@@ -184,7 +184,7 @@ protected:
             TaskSystem::GetInstance().Start();
         }
 
-        //-- running commandlet standalone will do this to ya
+        ///running commandlet standalone will do this to ya
         if (!g_shaderCompiler)
         {
             g_shaderCompiler = new ShaderCompiler;
@@ -201,7 +201,7 @@ protected:
 
             SetEngineAssetRegistry(engineRegistry);
         }
-        //--
+        ////////////////////
 
         HYP_LOG(Engine, Info, "Precompiling shaders...");
 

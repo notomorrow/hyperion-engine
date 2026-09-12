@@ -30,7 +30,7 @@ class Texture;
 class TemporalBlending;
 class GBuffer;
 struct RenderSetup;
-enum RenderTargetType : uint8;
+enum class RenderTargetType : uint8;
 
 enum FullScreenPassFlags : uint32
 {

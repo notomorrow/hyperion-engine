@@ -6,7 +6,7 @@
 #include "../../include/Noise.hlsli"
 #include "../../include/Packing.hlsli"
 
-PERMUTE(MODE, LIGHTMAP, IRRADIANCE, FULL, DISTANCE, BENT_NORMAL);
+PERMUTE(MODE, LIGHTMAP, IRRADIANCE, RADIANCE, MOMENTS, BENT_NORMALS);
 
 DECLARE_SAMPLER(LightmapPathTracer, SamplerNearest) SamplerState sampler_nearest;
 DECLARE_SAMPLER(LightmapPathTracer, SamplerLinear) SamplerState sampler_linear;
@@ -69,11 +69,11 @@ DECLARE_BUFFER(LightmapPathTracer, CBuffer) cbuffer CBuffer
 #define NUM_BOUNCES 4
 #define NUM_SAMPLES 256
 #define ENVIRONMENT_INTENSITY 1.0
-#elif defined(MODE_FULL) || defined(MODE_IRRADIANCE)
+#elif defined(MODE_RADIANCE) || defined(MODE_IRRADIANCE)
 #define NUM_BOUNCES 8
 #define NUM_SAMPLES 32
 #define ENVIRONMENT_INTENSITY 1.0
-#elif defined(MODE_BENT_NORMAL)
+#elif defined(MODE_BENT_NORMALS)
 #define NUM_BOUNCES 1
 #define NUM_SAMPLES 32
 #define ENVIRONMENT_INTENSITY 1.0
@@ -83,7 +83,7 @@ DECLARE_BUFFER(LightmapPathTracer, CBuffer) cbuffer CBuffer
 #define ENVIRONMENT_INTENSITY 1.0
 #endif
 
-#if defined(MODE_FULL) || defined(MODE_IRRADIANCE) || defined(MODE_LIGHTMAP)
+#if defined(MODE_RADIANCE) || defined(MODE_IRRADIANCE) || defined(MODE_LIGHTMAP)
 
 #define MAX_SAMPLE_LUMINANCE 8.0
 
@@ -137,7 +137,7 @@ float3 DebugTest_Albedo(in float3 position, in float3 normal, inout RayPayload p
     return albedo;
 }
 
-#if defined(MODE_IRRADIANCE) || defined(MODE_FULL) || defined(MODE_LIGHTMAP)
+#if defined(MODE_IRRADIANCE) || defined(MODE_RADIANCE) || defined(MODE_LIGHTMAP)
 
 float3 SampleDirectLighting(in float3 hitPos, in float3 N)
 {
@@ -413,7 +413,7 @@ void RayGenMain()
     }
 
     float4 finalColor = float4(radiance, 1.0);
-#elif defined(MODE_FULL) || defined(MODE_IRRADIANCE)
+#elif defined(MODE_RADIANCE) || defined(MODE_IRRADIANCE)
     // path traced diffuse-only light.
     float4 accumRadiance = (float4)0.0;
 
@@ -447,8 +447,8 @@ void RayGenMain()
 
             if (payload.distance < 0.0)
             {
-#ifdef MODE_FULL
-                // sample environment if miss but only for MODE_FULL
+#ifdef MODE_RADIANCE
+                // sample environment if miss but only for MODE_RADIANCE
                 Li += float4(beta * SampleEnvironment(origin, direction).rgb, 1.0);
 #endif
     
@@ -512,7 +512,7 @@ void RayGenMain()
     
     float4 finalColor = accumRadiance / float(NUM_SAMPLES);
 
-#elif defined(MODE_DISTANCE)
+#elif defined(MODE_MOMENTS)
     payload.distance = -1.0;
     payload.throughput = float4(1.0, 1.0, 1.0, 1.0);
     payload.emissive = float4(0.0, 0.0, 0.0, 0.0);
@@ -543,7 +543,7 @@ void RayGenMain()
         static const float missDistance = rayTracingConstants.maxDistance;
         finalColor = float4(missDistance, missDistance * missDistance, 0.0, 1.0);
     }
-#elif defined(MODE_BENT_NORMAL)
+#elif defined(MODE_BENT_NORMALS)
     const float3 N = firstRayDirection;
     const float3 origin = ray.origin + N * RAY_OFFSET;
 

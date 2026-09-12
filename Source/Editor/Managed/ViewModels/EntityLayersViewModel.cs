@@ -175,7 +175,7 @@ namespace Hyperion.Editor.ViewModels
                 Debug.Assert(project != null, "No active project found when adding an entity to a layer");
 
                 project?.ActionStack?.PushAction(new EditorAction(
-                    $"Add Layer: {layerName}",
+                    $"Add to Layer: {layerName}",
                     execute: (_, _) => capturedEntity.AddToLayerByName(name),
                     revert: (_, _) => capturedEntity.RemoveFromLayerByName(name)));
             });

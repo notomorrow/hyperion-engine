@@ -5,6 +5,8 @@ namespace Hyperion
 {
     public static class SimThread
     {
+        public static bool IsOnIt => (SimThread_IsOnIt() != 0);
+
         public static async Task<T> PostTask<T>(Func<T> func)
         {
             TaskCompletionSource<T> tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -78,6 +80,9 @@ namespace Hyperion
 
             await tcs.Task.ConfigureAwait(false);
         }
+
+        [DllImport("hyperion", EntryPoint = "SimThread_IsOnIt")]
+        private static extern int SimThread_IsOnIt();
 
         [DllImport("hyperion", EntryPoint = "SimThread_PostTask")]
         private static extern void SimThread_PostTask(IntPtr pAction);

@@ -71,11 +71,11 @@ void DepthPyramidRenderer::Create()
         TextureType::Texture2D,
         TextureFormat::RG32F,   // store both min and maxes.
         depthImage->GetExtent(),
-        TFM_NEAREST_MIPMAP,
-        TFM_NEAREST,
-        TWM_CLAMP_TO_EDGE,
+        TextureFilterMode::NearestMipmap,
+        TextureFilterMode::Nearest,
+        TextureWrapMode::ClampToEdge,
         1,
-        IU_SAMPLED | IU_STORAGE
+        ImageUsage::Sampled | ImageUsage::Storage
     });
 
     m_hzbTexture->SetName(NAME("HZBTexture"));
@@ -124,7 +124,7 @@ Vec2u DepthPyramidRenderer::GetExtent() const
 
 void DepthPyramidRenderer::Render(Frame* frame)
 {
-    Sampler* depthPyramidSampler = RI.samplerCache->GetOrCreate(SamplerDesc { TFM_NEAREST_MIPMAP, TFM_NEAREST, TWM_CLAMP_TO_EDGE });
+    Sampler* depthPyramidSampler = RI.samplerCache->GetOrCreate(SamplerDesc { TextureFilterMode::NearestMipmap, TextureFilterMode::Nearest, TextureWrapMode::ClampToEdge });
 
     const uint8 numDepthPyramidMipLevels = uint8(m_mipImageViews.Size());
 
@@ -169,7 +169,7 @@ void DepthPyramidRenderer::Render(Frame* frame)
             // transitioned to a readable state before we bind it as InImage's SRV.
             frame->cr << InsertBarrier(
                 m_hzbTexture->GetGpuImage(),
-                RS_SHADER_RESOURCE,
+                ResourceState::ShaderResource,
                 ImageSubResource { .baseMipLevel = uint8(mipLevel - 1), .numLevels = 1, .baseArrayLayer = 0, .numLayers = 1 },
                 ShaderModuleType::Compute);
 
@@ -180,7 +180,7 @@ void DepthPyramidRenderer::Render(Frame* frame)
         // final barrier below) -- neither implies UAV write access, so it needs an explicit transition.
         frame->cr << InsertBarrier(
             m_hzbTexture->GetGpuImage(),
-            RS_UNORDERED_ACCESS,
+            ResourceState::UnorderedAccess,
             ImageSubResource { .baseMipLevel = mipLevel, .numLevels = 1, .baseArrayLayer = 0, .numLayers = 1 },
             ShaderModuleType::Compute);
 
@@ -193,7 +193,7 @@ void DepthPyramidRenderer::Render(Frame* frame)
         frame->cr << InsertUAVBarrier(m_hzbTexture->GetGpuImage());
     }
 
-    frame->cr << InsertBarrier(m_hzbTexture->GetGpuImage(), RS_SHADER_RESOURCE);
+    frame->cr << InsertBarrier(m_hzbTexture->GetGpuImage(), ResourceState::ShaderResource);
 
     m_isRendered = true;
 }

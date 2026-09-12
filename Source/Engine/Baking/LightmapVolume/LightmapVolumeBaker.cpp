@@ -9,7 +9,7 @@
 #include <Baking/LightmapVolume/LightmapVolumeBaker.hpp>
 #include <Baking/LightmapVolume/LightmapVolumeBakeJob.hpp>
 
-#include <Baking/Lightmaps/LightmapPathTraceGpu.hpp>
+#include <Baking/PathTracer/PathTracer.hpp>
 
 #include <Asset/Assets.hpp>
 #include <Asset/AssetRegistry.hpp>
@@ -75,16 +75,16 @@ static float ComputeLightmapVolumeOverlapWeight(const BoundingBox& entityAabb, c
     return MathUtil::Clamp(overlapVolume / entityVolume, 0.0f, 1.0f);
 }
 
-static LightmapShadingType AtlasTextureTypeToShadingType(LightmapVolume::AtlasTextureType type)
+static PathTraceType AtlasTextureTypeToShadingType(LightmapVolume::AtlasTextureType type)
 {
     switch (type)
     {
     case LightmapVolume::IrradianceTexture:
-        return LightmapShadingType::LIGHTMAP;
+        return PathTraceType::Lightmap;
     case LightmapVolume::BentNormalTexture:
-        return LightmapShadingType::BENT_NORMAL;
+        return PathTraceType::BentNormals;
     default:
-        return LightmapShadingType::MAX;
+        return PathTraceType::Max;
     }
 }
 
@@ -116,9 +116,9 @@ static void UpdateAtlasTextures(
                 TextureType::Texture2D,
                 irradiance->GetFormat(),
                 Vec3u { atlasDimensions, 1 },
-                TFM_LINEAR,
-                TFM_LINEAR,
-                TWM_CLAMP_TO_EDGE
+                TextureFilterMode::Linear,
+                TextureFilterMode::Linear,
+                TextureWrapMode::ClampToEdge
             },
             irradiance->ToByteView());
 
@@ -132,9 +132,9 @@ static void UpdateAtlasTextures(
                 TextureType::Texture2D,
                 bentNormal->GetFormat(),
                 Vec3u { atlasDimensions, 1 },
-                TFM_LINEAR,
-                TFM_LINEAR,
-                TWM_CLAMP_TO_EDGE
+                TextureFilterMode::Linear,
+                TextureFilterMode::Linear,
+                TextureWrapMode::ClampToEdge
             },
             bentNormal->ToByteView());
 
@@ -222,13 +222,13 @@ static bool BuildElementTextures(
 
     LightmapElementBitmaps atlasBitmaps;
 
-    if (shadingTypesMask & (1u << uint32(LightmapShadingType::LIGHTMAP)))
+    if (shadingTypesMask & (1u << uint32(PathTraceType::Lightmap)))
     {
         atlasBitmaps.irradiance = MakeUniqueWithAllocator<LightmapColorBitmap, BakerAllocator>(
             BuildAtlasBitmap(bakeData.ToBitmapIrradiance(bakeAtlasIndex), element, atlas.atlasDimensions, reuseExistingPacking));
     }
 
-    if (shadingTypesMask & (1u << uint32(LightmapShadingType::BENT_NORMAL)))
+    if (shadingTypesMask & (1u << uint32(PathTraceType::BentNormals)))
     {
         atlasBitmaps.bentNormal = MakeUniqueWithAllocator<LightmapBentNormalBitmap, BakerAllocator>(
             BuildAtlasBitmap(bakeData.ToBitmapBentNormal(bakeAtlasIndex), element, atlas.atlasDimensions, reuseExistingPacking));
@@ -334,7 +334,7 @@ void Baker<LightmapVolume>::CreateLightmapRenderers()
 
     const uint32 shadingTypesMask = GetShadingTypesMask();
 
-    for (uint32 i = 0; i < uint32(LightmapShadingType::MAX); i++)
+    for (uint32 i = 0; i < uint32(PathTraceType::Max); i++)
     {
         if (!(shadingTypesMask & (1u << i)))
         {
@@ -344,7 +344,7 @@ void Baker<LightmapVolume>::CreateLightmapRenderers()
         const uint32 maxTexelsPerFrame = MaxTexelsPerFrame();
         AssertDebug(maxTexelsPerFrame > 0);
 
-        const UniquePtr<PathTracer>& pathTracer = m_pathTracers.PushBack(CreatePathTracer(LightmapShadingType(i), maxTexelsPerFrame));
+        const UniquePtr<PathTracer>& pathTracer = m_pathTracers.PushBack(CreatePathTracer(PathTraceType(i), maxTexelsPerFrame));
 
         if (!pathTracer)
         {

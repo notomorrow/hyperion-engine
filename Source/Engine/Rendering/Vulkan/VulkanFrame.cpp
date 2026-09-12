@@ -147,9 +147,9 @@ void VulkanFrame::WriteCommandBuffer(VulkanCommandBuffer* commandBuffer)
 
         VulkanGpuImage* image = swapchain->GetImages()[swapchain->GetAcquiredImageIndex()].Get();
 
-        if (image->GetResourceState() != RS_PRESENT)
+        if (image->GetResourceState() != ResourceState::Present)
         {
-            image->InsertBarrier(commandBuffer, RS_PRESENT, ShaderModuleType::None);
+            image->InsertBarrier(commandBuffer, ResourceState::Present, ShaderModuleType::None);
         }
     }
 }

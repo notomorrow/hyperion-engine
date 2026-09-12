@@ -819,7 +819,7 @@ void EngineDriver::Simulate(float delta, Game* gameInstance)
         scene->GetEntityManager()->Lock();
     }
 
-    //-- Push rendering data
+    ///Push rendering data
     {
         if (!UseRingBuffer && !s_isHeadless)
         {
@@ -908,7 +908,7 @@ void EngineDriver::Simulate(float delta, Game* gameInstance)
         }
     }
 
-    //-- End push rendering data
+    ///End push rendering data
 
     for (Scene* scene : scenes)
     {
