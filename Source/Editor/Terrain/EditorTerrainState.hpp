@@ -30,13 +30,13 @@ enum class TerrainSculptMode : uint8
 };
 
 HYP_CLASS(Serialize = false)
-class EDITOR_API TerrainSculpting : public ObjectBase
+class EDITOR_API EditorTerrainState : public ObjectBase
 {
-    HYP_OBJECT_BODY(TerrainSculpting);
+    HYP_OBJECT_BODY(EditorTerrainState);
 
 public:
-    TerrainSculpting();
-    ~TerrainSculpting() override;
+    EditorTerrainState();
+    ~EditorTerrainState() override;
 
     void Initialize(EditorSubsystem* subsystem);
 
@@ -63,6 +63,18 @@ public:
 
     HYP_METHOD()
     void SetMode(TerrainSculptMode mode);
+
+    HYP_METHOD()
+    bool IsSculptActive() const;
+
+    HYP_METHOD()
+    bool IsPaintActive() const;
+
+    HYP_METHOD()
+    void ActivateSculpt();
+
+    HYP_METHOD()
+    void ActivatePaint();
 
     HYP_METHOD()
     int GetPaintLayer() const;
@@ -95,7 +107,10 @@ private:
     EditorSubsystem* m_subsystem = nullptr;
 
     bool m_enabled = false;
+    
     TerrainSculptMode m_mode = TerrainSculptMode::Raise;
+    TerrainSculptMode m_sculptDirection = TerrainSculptMode::Raise;
+
     float m_radius = 5.0f;
     float m_strength = 2.0f;
     uint32 m_paintLayer = 0;

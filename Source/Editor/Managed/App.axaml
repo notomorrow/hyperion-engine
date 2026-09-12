@@ -35,6 +35,9 @@
         <DataTemplate DataType="vm:TerrainSculptPanelViewModel">
             <panels:TerrainSculptPanelView />
         </DataTemplate>
+        <DataTemplate DataType="vm:TerrainPaintPanelViewModel">
+            <panels:TerrainPaintPanelView />
+        </DataTemplate>
     </Application.DataTemplates>
 
     <Application.Resources>

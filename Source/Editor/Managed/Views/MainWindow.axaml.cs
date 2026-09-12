@@ -140,7 +140,7 @@ namespace Hyperion.Editor
             ResetLayout();
         }
 
-        private void OnToolDropDownClick(object? sender, RoutedEventArgs e)
+        private void OnDropDownClick(object? sender, RoutedEventArgs e)
         {
             if (sender is Control { ContextMenu: ContextMenu menu })
             {

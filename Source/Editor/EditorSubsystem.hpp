@@ -52,7 +52,7 @@ class EditorViewport;
 class LightmapVolume;
 class VolumeBase;
 class TerrainWorldGridLayer;
-class TerrainSculpting;
+class EditorTerrainState;
 class AppContextBase;
 struct Ray;
 
@@ -556,7 +556,7 @@ public:
     //-- Terrain
 
     HYP_METHOD()
-    Handle<TerrainSculpting> GetTerrainSculpting();
+    Handle<EditorTerrainState> GetTerrainState();
 
     //-- Mesh edits
 
@@ -864,7 +864,7 @@ private:
 
     //--
 
-    Handle<TerrainSculpting> m_terrainSculpting;
+    Handle<EditorTerrainState> m_terrainSculpting;
 
     //--
 

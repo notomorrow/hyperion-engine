@@ -16,7 +16,8 @@
 #include <Editor/EditorState.hpp>
 #include <Editor/EditorViewport.hpp>
 #include <Editor/EditorCommand.hpp>
-#include <Editor/Terrain/TerrainSculpting.hpp>
+
+#include <Editor/Terrain/EditorTerrainState.hpp>
 
 #include <Scene/Systems/Editor/EditorSpriteSystem.hpp>
 
@@ -2020,11 +2021,11 @@ bool VolumeEditorGizmo::OnKeyPress(const Handle<Camera>& camera, const KeyboardE
 
 #pragma region Terrain
 
-Handle<TerrainSculpting> EditorSubsystem::GetTerrainSculpting()
+Handle<EditorTerrainState> EditorSubsystem::GetTerrainState()
 {
     if (!m_terrainSculpting.IsValid())
     {
-        m_terrainSculpting = MakeHandle<TerrainSculpting>();
+        m_terrainSculpting = MakeHandle<EditorTerrainState>();
         InitObject(m_terrainSculpting);
         m_terrainSculpting->Initialize(this);
     }
@@ -3684,7 +3685,7 @@ EditorSubsystem::EditorSubsystem()
     m_editorDelegates = new EditorDelegates();
 
     // Create eagerly so the managed side can always fetch it, regardless of the calling thread.
-    GetTerrainSculpting();
+    GetTerrainState();
 
     m_bakeStatusUpdateTimer = ClockTimer { 0.5f };
 
@@ -4214,14 +4215,14 @@ void EditorSubsystem::Update(float delta)
 
     UpdateGizmoProximityVisibility();
 
-    GetTerrainSculpting()->Update();
+    GetTerrainState()->Update();
     UpdateBakeStatus();
 
     DebugDrawCommandList& dbg = DebugDrawer::GetInstance().CreateCommandList();
 
     DebugDrawMeshEditSelection(dbg);
     DebugDrawPhysicsShapes(dbg);
-    GetTerrainSculpting()->DebugDrawCursor(dbg);
+    GetTerrainState()->DebugDrawCursor(dbg);
 
     if (m_currentProject.IsValid())
     {
@@ -4539,7 +4540,7 @@ void EditorSubsystem::InitViewport()
             //     return UIEventHandlerResult::STOP_BUBBLING;
             // }
 
-            if (GetTerrainSculpting()->IsEnabled())
+            if (GetTerrainState()->IsEnabled())
             {
                 // Strokes are applied from OnMouseDown / OnMouseDrag / the per-frame update;
                 // clicking just shouldn't fall through to scene picking.
@@ -4677,11 +4678,11 @@ void EditorSubsystem::InitViewport()
                 return UIEventHandlerResult::OK;
             }
 
-            if (GetTerrainSculpting()->IsEnabled() && event.mouseButtons[MouseButtonState::LEFT])
+            if (GetTerrainState()->IsEnabled() && event.mouseButtons[MouseButtonState::LEFT])
             {
                 InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
 
-                GetTerrainSculpting()->UpdateStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
+                GetTerrainState()->UpdateStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
 
                 return UIEventHandlerResult::STOP_BUBBLING;
             }
@@ -4741,15 +4742,15 @@ void EditorSubsystem::InitViewport()
                 return UIEventHandlerResult::OK;
             }
 
-            if (GetTerrainSculpting()->IsEnabled())
+            if (GetTerrainState()->IsEnabled())
             {
-                GetTerrainSculpting()->UpdateHover(event.relativePos);
+                GetTerrainState()->UpdateHover(event.relativePos);
 
-                if (GetTerrainSculpting()->IsStroking() && event.mouseButtons[MouseButtonState::LEFT])
+                if (GetTerrainState()->IsStroking() && event.mouseButtons[MouseButtonState::LEFT])
                 {
                     InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
 
-                    GetTerrainSculpting()->UpdateStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
+                    GetTerrainState()->UpdateStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
 
                     return UIEventHandlerResult::STOP_BUBBLING;
                 }
@@ -4841,11 +4842,11 @@ void EditorSubsystem::InitViewport()
                 return UIEventHandlerResult::OK;
             }
 
-            if (GetTerrainSculpting()->IsEnabled())
+            if (GetTerrainState()->IsEnabled())
             {
                 InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
 
-                GetTerrainSculpting()->BeginStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
+                GetTerrainState()->BeginStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
 
                 return UIEventHandlerResult::STOP_BUBBLING;
             }
@@ -4911,9 +4912,9 @@ void EditorSubsystem::InitViewport()
                 return UIEventHandlerResult::OK;
             }
 
-            if (GetTerrainSculpting()->IsEnabled())
+            if (GetTerrainState()->IsEnabled())
             {
-                GetTerrainSculpting()->EndStroke();
+                GetTerrainState()->EndStroke();
             }
 
             CameraController* controller = activeViewport->GetCamera()->GetCameraController();

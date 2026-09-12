@@ -39,43 +39,31 @@ public:
 
     void SetSculptDelta(ConstByteView view);
 
+    ByteView GetSculptDelta();
     ConstByteView GetSculptDelta() const;
-    Span<const float> GetSculptDeltaFloats() const;
 
-    /*! Ensures a writable sculpt delta buffer exists with space for \p numVertices vertices,
-     *  paging persisted data in from disk when required. Allocation happens under a write
-     *  scope, so the caller must not hold any scope on this asset when calling (a held read
-     *  scope would deadlock the writer lock).
-     *  Returns true when the buffer is ready; use GetSculptDeltaMutable() under a write scope
-     *  to mutate it. */
+    Span<const float> GetSculptDeltaFloat() const;
+
     bool EnsureWritableSculptDelta(uint32 numVertices);
 
-    /*! Mutable view over the sculpt delta. Only valid while a scope that keeps the blob data
-     *  resident is held. Returns an empty span when no delta is resident. */
-    Span<float> GetSculptDeltaMutable();
-
-    /*! Splat map: RGBA8 weights per vertex (one texel per vertex, R=layer0 .. A=layer3).
-     *  The shader normalizes the weights, so painting a channel simply accumulates into it. */
     static constexpr uint32 NumSplatLayers = 4;
 
-    /*! True when a splat map blob is resident (or persisted) for this cell. */
     bool HasSplatMap() const;
 
+    ByteView GetSplatMap();
     ConstByteView GetSplatMap() const;
 
-    /*! Same allocation protocol as EnsureWritableSculptDelta: must be called without holding a
-     *  scope on this asset. New buffers are initialized to layer 0 fully painted. */
     bool EnsureSplatMapAllocated(uint32 numVertices);
-
-    /*! Mutable view over the splat map (numVertices * NumSplatLayers bytes). Only valid while a
-     *  scope that keeps the blob data resident is held. */
-    Span<ubyte> GetSplatMapMutable();
 
 protected:
     virtual void Init() override;
 
     virtual void PageBlobData() override;
     virtual void UnpageBlobData() override;
+
+    /*! Reads a single blob file (<name>.<magic>.raw.blob) from \p directory into \p reference.
+     *  \returns true when data was paged in. */
+    bool PageBlobDataFromFile(const FilePath& directory, const char* magic, BlobDataReference& reference);
 
     virtual void CollectBlobDataReferences(Array<Tuple<const char*, uint16, BlobDataReference*>>& outReferences) override
     {

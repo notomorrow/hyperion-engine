@@ -27,7 +27,7 @@ namespace Hyperion
             set => this.SetActiveScene(value);
         }
 
-        public TerrainSculpting? TerrainSculpting => InvokeNativeMethod<TerrainSculpting>(new Name("GetTerrainSculpting"));
+        public EditorTerrainState? EditorTerrainState => InvokeNativeMethod<EditorTerrainState>(new Name("GetTerrainState"));
 
         public void ExecuteCommandByName(Name commandName, params string[] arguments)
         {

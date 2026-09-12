@@ -6,7 +6,7 @@
 
 #include <EditorPch.hpp>
 
-#include <Editor/Terrain/TerrainSculpting.hpp>
+#include <Editor/Terrain/EditorTerrainState.hpp>
 #include <Editor/EditorSubsystem.hpp>
 #include <Editor/EditorViewport.hpp>
 
@@ -25,17 +25,17 @@
 
 #include <Core/Math/MathUtil.hpp>
 
-#include <TerrainSculpting.generated.inl>
+#include <EditorTerrainState.generated.inl>
 
 namespace Hyperion {
 
-#pragma region TerrainSculpting
+#pragma region EditorTerrainState
 
-TerrainSculpting::TerrainSculpting() = default;
+EditorTerrainState::EditorTerrainState() = default;
 
-TerrainSculpting::~TerrainSculpting() = default;
+EditorTerrainState::~EditorTerrainState() = default;
 
-void TerrainSculpting::Initialize(EditorSubsystem* subsystem)
+void EditorTerrainState::Initialize(EditorSubsystem* subsystem)
 {
     AssertDebug(subsystem != nullptr);
 
@@ -60,12 +60,12 @@ void DispatchToSimThread(Callable&& callable)
 
 } // anonymous namespace
 
-bool TerrainSculpting::IsEnabled() const
+bool EditorTerrainState::IsEnabled() const
 {
     return m_enabled;
 }
 
-void TerrainSculpting::SetEnabled(bool enabled)
+void EditorTerrainState::SetEnabled(bool enabled)
 {
     DispatchToSimThread([this, enabled]()
     {
@@ -80,12 +80,12 @@ void TerrainSculpting::SetEnabled(bool enabled)
     });
 }
 
-float TerrainSculpting::GetRadius() const
+float EditorTerrainState::GetRadius() const
 {
     return m_radius;
 }
 
-void TerrainSculpting::SetRadius(float radius)
+void EditorTerrainState::SetRadius(float radius)
 {
     DispatchToSimThread([this, radius]()
     {
@@ -95,12 +95,12 @@ void TerrainSculpting::SetRadius(float radius)
     });
 }
 
-float TerrainSculpting::GetStrength() const
+float EditorTerrainState::GetStrength() const
 {
     return m_strength;
 }
 
-void TerrainSculpting::SetStrength(float strength)
+void EditorTerrainState::SetStrength(float strength)
 {
     DispatchToSimThread([this, strength]()
     {
@@ -110,27 +110,76 @@ void TerrainSculpting::SetStrength(float strength)
     });
 }
 
-TerrainSculptMode TerrainSculpting::GetMode() const
+TerrainSculptMode EditorTerrainState::GetMode() const
 {
     return m_mode;
 }
 
-void TerrainSculpting::SetMode(TerrainSculptMode mode)
+void EditorTerrainState::SetMode(TerrainSculptMode mode)
 {
     DispatchToSimThread([this, mode]()
     {
         AssertOnThread(g_simThread);
 
+        if (mode != TerrainSculptMode::PaintSplat)
+        {
+            m_sculptDirection = mode;
+        }
+
         m_mode = mode;
     });
 }
 
-int TerrainSculpting::GetPaintLayer() const
+bool EditorTerrainState::IsSculptActive() const
+{
+    return m_enabled && m_mode != TerrainSculptMode::PaintSplat;
+}
+
+bool EditorTerrainState::IsPaintActive() const
+{
+    return m_enabled && m_mode == TerrainSculptMode::PaintSplat;
+}
+
+void EditorTerrainState::ActivateSculpt()
+{
+    DispatchToSimThread([this]()
+    {
+        AssertOnThread(g_simThread);
+
+        // already active
+        if (IsSculptActive())
+        {
+            return;
+        }
+
+        SetMode(m_sculptDirection);
+        SetEnabled(true);
+    });
+}
+
+void EditorTerrainState::ActivatePaint()
+{
+    DispatchToSimThread([this]()
+    {
+        AssertOnThread(g_simThread);
+        
+        // already active
+        if (IsPaintActive())
+        {
+            return;
+        }
+
+        SetMode(TerrainSculptMode::PaintSplat);
+        SetEnabled(true);
+    });
+}
+
+int EditorTerrainState::GetPaintLayer() const
 {
     return int(m_paintLayer);
 }
 
-void TerrainSculpting::SetPaintLayer(int paintLayer)
+void EditorTerrainState::SetPaintLayer(int paintLayer)
 {
     DispatchToSimThread([this, paintLayer]()
     {
@@ -140,7 +189,7 @@ void TerrainSculpting::SetPaintLayer(int paintLayer)
     });
 }
 
-bool TerrainSculpting::CanSculptTerrainForScene(const Handle<Scene>& scene) const
+bool EditorTerrainState::CanSculptTerrainForScene(const Handle<Scene>& scene) const
 {
     AssertOnThread(g_simThread);
 
@@ -156,7 +205,7 @@ bool TerrainSculpting::CanSculptTerrainForScene(const Handle<Scene>& scene) cons
     return setView.Begin() != setView.End();
 }
 
-bool TerrainSculpting::TryGetTerrainHit(const Vec2f& relativePos, Handle<TerrainWorldGridLayer>& outLayer, Vec3f& outWorldPos) const
+bool EditorTerrainState::TryGetTerrainHit(const Vec2f& relativePos, Handle<TerrainWorldGridLayer>& outLayer, Vec3f& outWorldPos) const
 {
     AssertOnThread(g_simThread);
 
@@ -206,7 +255,7 @@ bool TerrainSculpting::TryGetTerrainHit(const Vec2f& relativePos, Handle<Terrain
     return false;
 }
 
-bool TerrainSculpting::TryApplyAtScreenPos(const Vec2f& relativePos, bool invert, float dt)
+bool EditorTerrainState::TryApplyAtScreenPos(const Vec2f& relativePos, bool invert, float dt)
 {
     AssertOnThread(g_simThread);
 
@@ -250,7 +299,7 @@ bool TerrainSculpting::TryApplyAtScreenPos(const Vec2f& relativePos, bool invert
     return true;
 }
 
-void TerrainSculpting::BeginStroke(const Vec2f& relativePos, bool invert)
+void EditorTerrainState::BeginStroke(const Vec2f& relativePos, bool invert)
 {
     AssertOnThread(g_simThread);
 
@@ -272,7 +321,7 @@ void TerrainSculpting::BeginStroke(const Vec2f& relativePos, bool invert)
     }
 }
 
-void TerrainSculpting::UpdateStroke(const Vec2f& relativePos, bool invert)
+void EditorTerrainState::UpdateStroke(const Vec2f& relativePos, bool invert)
 {
     AssertOnThread(g_simThread);
 
@@ -285,7 +334,7 @@ void TerrainSculpting::UpdateStroke(const Vec2f& relativePos, bool invert)
     m_strokeScreenPos = relativePos;
 }
 
-void TerrainSculpting::EndStroke()
+void EditorTerrainState::EndStroke()
 {
     AssertOnThread(g_simThread);
 
@@ -319,7 +368,7 @@ void TerrainSculpting::EndStroke()
     }
 }
 
-void TerrainSculpting::Update()
+void EditorTerrainState::Update()
 {
     HYP_SCOPE;
 
@@ -352,7 +401,7 @@ void TerrainSculpting::Update()
     }
 }
 
-void TerrainSculpting::UpdateHover(const Vec2f& relativePos)
+void EditorTerrainState::UpdateHover(const Vec2f& relativePos)
 {
     AssertOnThread(g_simThread);
 
@@ -469,7 +518,7 @@ static void DrawTerrainRibbon(
     }
 }
 
-void TerrainSculpting::DebugDrawCursor(DebugDrawCommandList& debugDrawCommandList)
+void EditorTerrainState::DebugDrawCursor(DebugDrawCommandList& debugDrawCommandList)
 {
     if (!m_enabled || !m_hasHover)
     {
@@ -638,6 +687,6 @@ void TerrainSculpting::DebugDrawCursor(DebugDrawCommandList& debugDrawCommandLis
     }
 }
 
-#pragma endregion TerrainSculpting
+#pragma endregion EditorTerrainState
 
 } // namespace Hyperion

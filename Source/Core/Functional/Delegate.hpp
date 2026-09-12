@@ -563,6 +563,15 @@ public:
 
                     callingThread->GetScheduler().Enqueue([current, argsTuple = Tuple<Args...>(args...)]()
                         {
+                            if (current->IsMarkedForRemoval())
+                            {
+                                // handler was removed while this task was queued; other queued tasks may still
+                                // reference this entry, so release the Proc and drop our read access without calling
+                                current->proc.Reset();
+                                current->mask.Decrement(2, MemoryOrder::RELEASE);
+                                return;
+                            }
+
                             Apply(current->proc, argsTuple);
 
                             if (current->IsMarkedForRemoval())

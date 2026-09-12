@@ -123,8 +123,7 @@ static void LoadTerrainMaterialTextures(MaterialTextures& textures)
         textures[layer.normalKey] = LoadTerrainTexture(layer.normalName);
     }
 
-    // NOTE: the splat map is not bound here - each painted cell gets its own splat texture on a
-    // per-cell material (TerrainStreamingCell::UpdateSplatMaterial), sampled with per-cell UVs.
+    // NOTE: the splat map is not bound here - each painted cell gets its own splat texture on a per-cell material
 }
 
 static const Name s_terrainSceneName = NAME("TerrainScene");
@@ -325,12 +324,8 @@ void TerrainWorldGridLayer::ApplyBrush(const Vec3f& worldPos, float radius, floa
                 InitObject(cellData);
             }
 
-            // Drop any held read scope on this cell first - EnsureWritableSculptDelta() takes a
-            // write scope when it has to allocate, and a writer lock cannot nest inside our own
-            // read scope.
             m_deltaSampleCache.Invalidate();
 
-            // Pages persisted data in from disk / allocates the buffer (write scope) as needed.
             if (!cellData->EnsureWritableSculptDelta(cellSize * cellSize))
             {
                 continue;
@@ -344,11 +339,9 @@ void TerrainWorldGridLayer::ApplyBrush(const Vec3f& worldPos, float radius, floa
             int32 maxVertexZ = -1;
 
             {
-                // Writer scope excludes concurrent readers (e.g. streaming mesh builds) while
-                // the brush mutates the delta.
                 auto cellDataWriteScope = cellData->GetWriteScope();
 
-                Span<float> delta = cellData->GetSculptDeltaMutable();
+                ByteView delta = cellData->GetSculptDelta();
 
                 if (delta.Size() != 0)
                 {
@@ -368,7 +361,7 @@ void TerrainWorldGridLayer::ApplyBrush(const Vec3f& worldPos, float radius, floa
                             const float falloff = 1.0f - (dist / radius);
                             const float weight = falloff * falloff * (3.0f - 2.0f * falloff); // smoothstep
 
-                            delta[z * cellSize + x] += (raise ? 1.0f : -1.0f) * strength * weight;
+                            reinterpret_cast<float*>(delta.Data())[z * cellSize + x] += (raise ? 1.0f : -1.0f) * strength * weight;
                             anyModified = true;
 
                             minVertexX = MathUtil::Min(minVertexX, int32(x));
@@ -380,8 +373,6 @@ void TerrainWorldGridLayer::ApplyBrush(const Vec3f& worldPos, float radius, floa
 
                     if (anyModified)
                     {
-                        // Marked inside the write scope: dirty blob data is kept resident when
-                        // read scopes release, so unsaved writes can't be unpaged underneath us.
                         cellData->MarkDirty();
                     }
                 }
@@ -489,8 +480,6 @@ void TerrainWorldGridLayer::PaintSplat(const Vec3f& worldPos, float radius, floa
                 InitObject(cellData);
             }
 
-            // Same scope protocol as the sculpt brush - invalidate the sample cache so no read
-            // scope of ours is held, then page in / allocate the splat map.
             m_deltaSampleCache.Invalidate();
 
             if (!cellData->EnsureSplatMapAllocated(cellSize * cellSize))
@@ -503,7 +492,7 @@ void TerrainWorldGridLayer::PaintSplat(const Vec3f& worldPos, float radius, floa
             {
                 auto cellDataWriteScope = cellData->GetWriteScope();
 
-                Span<ubyte> splatMap = cellData->GetSplatMapMutable();
+                ByteView splatMap = cellData->GetSplatMap();
 
                 if (splatMap.Size() != 0)
                 {

@@ -204,6 +204,14 @@ void SimThread::Update()
             Event event;
             while (mainWindow->GetInputManager()->PollEvent(event))
             {
+#ifdef _WIN32
+                if (event.GetType() == EventType::MOUSEBUTTON_DOWN)
+                {
+                    // hacky hack hack
+                //    SetFocus(mainWindow->GetHWND());
+                }
+#endif
+
                 if (m_gameInstance != nullptr)
                 {
                     m_gameInstance->HandleEvent(std::move(event));

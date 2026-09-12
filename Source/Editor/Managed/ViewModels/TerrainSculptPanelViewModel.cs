@@ -1,43 +1,48 @@
 using System;
-using System.Collections.ObjectModel;
+using System.Windows.Input;
 using Hyperion;
-using Hyperion.Editor.Services;
+using Hyperion.Editor.Commands;
 
 namespace Hyperion.Editor.ViewModels
 {
-    public class TerrainSculptModeEntry
-    {
-        public string DisplayName { get; }
-        public TerrainSculptMode Mode { get; }
-
-        public TerrainSculptModeEntry(string displayName, TerrainSculptMode mode)
-        {
-            DisplayName = displayName;
-            Mode = mode;
-        }
-    }
-
     public class TerrainSculptPanelViewModel : EditorPanelViewModel
     {
-        private readonly TerrainSculpting _terrainSculpting;
+        private readonly EditorTerrainState _terrainState;
 
-        public ObservableCollection<TerrainSculptModeEntry> Modes { get; } = new();
-
-        private TerrainSculptModeEntry? _selectedMode;
-        public TerrainSculptModeEntry? SelectedMode
+        private bool _isRaiseMode;
+        public bool IsRaiseMode
         {
-            get => _selectedMode;
-            set
+            get => _isRaiseMode;
+            private set
             {
-                if (SetProperty(ref _selectedMode, value) && value != null)
+                if (SetProperty(ref _isRaiseMode, value) && value)
                 {
-                    _terrainSculpting.SetMode(value.Mode);
-                    OnPropertyChanged(nameof(IsPaintMode));
+                    _isLowerMode = false;
+                    OnPropertyChanged(nameof(IsLowerMode));
+
+                    _terrainState.SetMode(TerrainSculptMode.Raise);
                 }
             }
         }
 
-        public bool IsPaintMode => SelectedMode?.Mode == TerrainSculptMode.PaintSplat;
+        private bool _isLowerMode;
+        public bool IsLowerMode
+        {
+            get => _isLowerMode;
+            private set
+            {
+                if (SetProperty(ref _isLowerMode, value) && value)
+                {
+                    _isRaiseMode = false;
+                    OnPropertyChanged(nameof(IsRaiseMode));
+
+                    _terrainState.SetMode(TerrainSculptMode.Lower);
+                }
+            }
+        }
+
+        public ICommand SetRaiseModeCommand { get; }
+        public ICommand SetLowerModeCommand { get; }
 
         private double _radius = 5.0;
         public double Radius
@@ -47,7 +52,7 @@ namespace Hyperion.Editor.ViewModels
             {
                 if (SetProperty(ref _radius, value))
                 {
-                    _terrainSculpting.SetRadius((float)value);
+                    _terrainState.SetRadius((float)value);
                     OnPropertyChanged(nameof(RadiusText));
                 }
             }
@@ -63,7 +68,7 @@ namespace Hyperion.Editor.ViewModels
             {
                 if (SetProperty(ref _strength, value))
                 {
-                    _terrainSculpting.SetStrength((float)value);
+                    _terrainState.SetStrength((float)value);
                     OnPropertyChanged(nameof(StrengthText));
                 }
             }
@@ -71,30 +76,16 @@ namespace Hyperion.Editor.ViewModels
 
         public string StrengthText => $"{_strength:0.00}";
 
-        private int _paintLayerIndex = 0;
-        public int PaintLayerIndex
+        public TerrainSculptPanelViewModel(EditorTerrainState terrainState, Action? onClosed)
+            : base("Terrain Sculpting", onClosed)
         {
-            get => _paintLayerIndex;
-            set
-            {
-                if (SetProperty(ref _paintLayerIndex, value))
-                {
-                    _terrainSculpting.SetPaintLayer(value);
-                }
-            }
-        }
+            _terrainState = terrainState ?? throw new ArgumentNullException(nameof(terrainState));
 
-        public TerrainSculptPanelViewModel(TerrainSculpting terrainSculpting, Action? onClosed)
-            : base("Terrain Sculptor", onClosed)
-        {
-            _terrainSculpting = terrainSculpting ?? throw new ArgumentNullException(nameof(terrainSculpting));
+            SetRaiseModeCommand = new RelayCommand(() => IsRaiseMode = true);
+            SetLowerModeCommand = new RelayCommand(() => IsLowerMode = true);
 
-            Modes.Add(new TerrainSculptModeEntry("Raise", TerrainSculptMode.Raise));
-            Modes.Add(new TerrainSculptModeEntry("Lower", TerrainSculptMode.Lower));
-            Modes.Add(new TerrainSculptModeEntry("Paint Splat", TerrainSculptMode.PaintSplat));
-
-            _selectedMode = Modes[(int)terrainSculpting.GetMode()];
-            _paintLayerIndex = terrainSculpting.GetPaintLayer();
+            _isRaiseMode = terrainState.GetMode() != TerrainSculptMode.Lower;
+            _isLowerMode = !_isRaiseMode;
         }
     }
 }

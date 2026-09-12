@@ -65,6 +65,16 @@ void TerrainCellData::SetSculptDelta(ConstByteView view)
     MarkDirty();
 }
 
+ByteView TerrainCellData::GetSculptDelta()
+{
+    if (m_sculptDelta.raw == nullptr || m_sculptDelta.readOnly || m_sculptDelta.size == 0)
+    {
+        return ByteView();
+    }
+
+    return ByteView((ubyte*)m_sculptDelta.raw, m_sculptDelta.size);
+}
+
 ConstByteView TerrainCellData::GetSculptDelta() const
 {
     if (m_sculptDelta.raw == nullptr || m_sculptDelta.size == 0)
@@ -75,7 +85,7 @@ ConstByteView TerrainCellData::GetSculptDelta() const
     return ConstByteView((const ubyte*)m_sculptDelta.raw, m_sculptDelta.size);
 }
 
-Span<const float> TerrainCellData::GetSculptDeltaFloats() const
+Span<const float> TerrainCellData::GetSculptDeltaFloat() const
 {
     ConstByteView blob = GetSculptDelta();
 
@@ -148,19 +158,19 @@ bool TerrainCellData::EnsureWritableSculptDelta(uint32 numVertices)
     return true;
 }
 
-Span<float> TerrainCellData::GetSculptDeltaMutable()
-{
-    if (m_sculptDelta.raw == nullptr || m_sculptDelta.readOnly || m_sculptDelta.size == 0)
-    {
-        return Span<float>();
-    }
-
-    return Span<float>((float*)m_sculptDelta.raw, m_sculptDelta.size / sizeof(float));
-}
-
 bool TerrainCellData::HasSplatMap() const
 {
     return m_splatMap.size != 0;
+}
+
+ByteView TerrainCellData::GetSplatMap()
+{
+    if (m_splatMap.raw == nullptr || m_splatMap.readOnly || m_splatMap.size == 0)
+    {
+        return ByteView();
+    }
+
+    return ByteView((ubyte*)m_splatMap.raw, m_splatMap.size);
 }
 
 ConstByteView TerrainCellData::GetSplatMap() const
@@ -193,8 +203,6 @@ bool TerrainCellData::EnsureSplatMapAllocated(uint32 numVertices)
     }
 
     {
-        // Page persisted data in from disk first, so we never allocate over a splat map that
-        // only exists on disk.
         auto readScope = GetReadScope();
 
         if (IsResident())
@@ -243,16 +251,6 @@ bool TerrainCellData::EnsureSplatMapAllocated(uint32 numVertices)
     return true;
 }
 
-Span<ubyte> TerrainCellData::GetSplatMapMutable()
-{
-    if (m_splatMap.raw == nullptr || m_splatMap.readOnly || m_splatMap.size == 0)
-    {
-        return Span<ubyte>();
-    }
-
-    return Span<ubyte>((ubyte*)m_splatMap.raw, m_splatMap.size);
-}
-
 void TerrainCellData::PageBlobData()
 {
     if (IsTransient() || !IsRegistered())
@@ -268,40 +266,58 @@ void TerrainCellData::PageBlobData()
         return;
     }
 
+    const FilePath blobDirectory = registry->GetRootPath() / AssetBuckets::Terrain.GetName();
+
     if (m_sculptDelta.raw == nullptr
         && m_sculptDelta.key
         && m_sculptDelta.size != 0)
     {
-        if (PageBlobDataFromStorage(m_sculptDelta))
+        if (!PageBlobDataFromStorage(m_sculptDelta))
         {
-            return;
+            PageBlobDataFromFile(blobDirectory, "TRSC", m_sculptDelta);
         }
-
-        const Name blobKey = m_sculptDelta.key;
-        const uint64 expectedSize = m_sculptDelta.size;
-
-        FileByteReader stream { registry->GetRootPath() / AssetBuckets::Terrain.GetName() / (String(*GetName()) + ".TERA.raw.blob") };
-
-        if (!stream.Eof())
-        {
-            if (stream.Max() != expectedSize)
-            {
-                HYP_LOG(WorldGrid, Error, "Local blob data for terrain cell data asset '{}' is {} bytes but the manifest expects {}, ignoring it",
-                        GetName(), stream.Max(), expectedSize);
-
-                return;
-            }
-
-            ByteBuffer buffer = stream.Read(stream.Max());
-
-            AllocateBlobData(m_sculptDelta, buffer.Data(), buffer.Size(), 1);
-            m_sculptDelta.key = blobKey;
-
-            return;
-        }
-
-        m_sculptDelta.readOnly = true;
     }
+
+    if (m_splatMap.raw == nullptr
+        && m_splatMap.key
+        && m_splatMap.size != 0)
+    {
+        if (!PageBlobDataFromStorage(m_splatMap))
+        {
+            PageBlobDataFromFile(blobDirectory, "TRSP", m_splatMap);
+        }
+    }
+}
+
+bool TerrainCellData::PageBlobDataFromFile(const FilePath& directory, const char* magic, BlobDataReference& reference)
+{
+    const Name blobKey = reference.key;
+    const uint64 expectedSize = reference.size;
+
+    FileByteReader stream { directory / (String(*GetName()) + "." + magic + ".raw.blob") };
+
+    if (stream.Eof())
+    {
+        // No local blob data on disk - mark read-only so we don't retry until persisted.
+        reference.readOnly = true;
+
+        return false;
+    }
+
+    if (stream.Max() != expectedSize)
+    {
+        HYP_LOG(WorldGrid, Error, "Local blob data for terrain cell data asset '{}' is {} bytes but the manifest expects {}, ignoring it",
+                GetName(), stream.Max(), expectedSize);
+
+        return false;
+    }
+
+    ByteBuffer buffer = stream.Read(stream.Max());
+
+    AllocateBlobData(reference, buffer.Data(), buffer.Size(), 1);
+    reference.key = blobKey;
+
+    return true;
 }
 
 void TerrainCellData::UnpageBlobData()
@@ -316,6 +332,15 @@ void TerrainCellData::UnpageBlobData()
     }
 
     m_sculptDelta.raw = nullptr;
+
+    AssertBlobDataPersisted(m_splatMap);
+
+    if (!m_splatMap.readOnly)
+    {
+        FreeBlobData(m_splatMap);
+    }
+
+    m_splatMap.raw = nullptr;
 }
 
 #pragma endregion TerrainCellData

@@ -116,6 +116,16 @@ uint32 NextWindowClassId()
     return s_counter.Increment(1, MemoryOrder::RELAXED);
 }
 
+/// [AI]
+/// Posted back to the subclassed parent (Avalonia) window so that ParentSubclassProc can
+/// forward WM_ACTIVATE to Avalonia's own WndProc outside of the call stack that produced it.
+/// WM_ACTIVATE can arrive here nested inside our own SetFocus() call (from the viewport's
+/// WM_LBUTTONDOWN handling), and Avalonia reacts to deactivation by synchronously destroying
+/// any open Popup, which can deadlock against UI Automation's COM/RPC teardown notification
+/// while still that deep in a nested SendMessage chain. Posting instead of forwarding
+/// synchronously breaks the reentrancy without changing when SetFocus() itself runs.
+static constexpr UINT DeferredActivateMessage = WM_APP + 0x271;
+
 } // namespace
 
 void Win32_RegisterWindowClass(const WideString& className)
@@ -284,7 +294,6 @@ bool HandleWindowEvent(
         event.GetEventData().Set(EnumFlags<MouseButtonState>(MouseButtonState::LEFT));
 
         SetFocus(window->GetHWND());
-
         return true;
     case WM_LBUTTONUP:
         event = Event(EventType::MOUSEBUTTON_UP, window, platformEvent);
@@ -367,8 +376,6 @@ static LRESULT CALLBACK EngineWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
         if (eventType != EventType::INVALID)
         {
             windowHandle->GetInputManager()->ProcessEvent(std::move(event));
-
-            return 0;
         }
 
         return 0;
@@ -385,31 +392,29 @@ LRESULT CALLBACK Win32ApplicationWindow::ParentSubclassProc(HWND hWnd, UINT msg,
     {
         auto* self = reinterpret_cast<Win32ApplicationWindow*>(dwRefData);
 
-        if (!AliveWindows::GetInstance().Contains(self))
+        if (AliveWindows::GetInstance().Contains(self) && self->GetInputManager())
         {
-            break;
+            PlatformEvent platformEvent {};
+            platformEvent.win32Event = Win32Event();
+            platformEvent.win32Event.hwnd = hWnd;
+            platformEvent.win32Event.message = msg;
+            platformEvent.win32Event.wParam = wParam;
+            platformEvent.win32Event.lParam = lParam;
+
+            bool isActive = (LOWORD(wParam) != WA_INACTIVE);
+
+            Event event(isActive ? EventType::WINDOW_FOCUS_GAINED : EventType::WINDOW_FOCUS_LOST, self, platformEvent);
+
+            self->GetInputManager()->ProcessEvent(std::move(event));
         }
 
-        PlatformEvent platformEvent {};
-        platformEvent.win32Event = Win32Event();
-        platformEvent.win32Event.hwnd = hWnd;
-        platformEvent.win32Event.message = msg;
-        platformEvent.win32Event.wParam = wParam;
-        platformEvent.win32Event.lParam = lParam;
+        /// Don't forward to Avalonia (DefSubclassProc) synchronously here, see DeferredActivateMessage.
+        PostMessageW(hWnd, DeferredActivateMessage, wParam, lParam);
 
-        bool isActive = (LOWORD(wParam) != WA_INACTIVE);
-
-        Event event(isActive ? EventType::WINDOW_FOCUS_GAINED : EventType::WINDOW_FOCUS_LOST, self, platformEvent);
-
-        if (!self->GetInputManager())
-        {
-            break;
-        }
-
-        self->GetInputManager()->ProcessEvent(std::move(event));
-
-        break;
+        return 0;
     }
+    case DeferredActivateMessage:
+        return DefSubclassProc(hWnd, WM_ACTIVATE, wParam, lParam);
     case WM_DESTROY:
     {
         RemoveWindowSubclass(hWnd, &Win32ApplicationWindow::ParentSubclassProc, uIdSubclass);

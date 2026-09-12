@@ -5,19 +5,10 @@ using Hyperion.Editor.Commands;
 
 namespace Hyperion.Editor.ViewModels
 {
-    public class ScriptLanguageEntry
-    {
-        public string DisplayName { get; }
-        public string LanguageArg { get; }
-        public string Extension { get; }
-
-        public ScriptLanguageEntry(string displayName, string languageArg, string extension)
-        {
-            DisplayName = displayName;
-            LanguageArg = languageArg;
-            Extension = extension;
-        }
-    }
+    public readonly record struct ScriptLanguageEntry(
+        string DisplayName,
+        string LanguageArg,
+        string Extension);
 
     public class NewScriptPanelViewModel : EditorPanelViewModel
     {
@@ -25,7 +16,7 @@ namespace Hyperion.Editor.ViewModels
         private readonly Action<string, string> _onCompleted;
 
         private string _scriptName = "NewScript";
-        private ScriptLanguageEntry _selectedLanguage = null!;
+        private ScriptLanguageEntry _selectedLanguage;
 
         public ScriptLanguageEntry[] Languages { get; } =
         {
@@ -82,8 +73,7 @@ namespace Hyperion.Editor.ViewModels
 
         private void OnConfirm()
         {
-            // Script names are identifiers; they must not contain spaces because
-            // the command parses args by splitting on spaces.
+            // Script names are identifiers; they must not contain spaces because the command parses args by splitting on spaces.
             string name = (ScriptName ?? string.Empty).Trim();
 
             if (string.IsNullOrWhiteSpace(name) || name.Contains(' '))

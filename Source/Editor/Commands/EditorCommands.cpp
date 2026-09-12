@@ -6,7 +6,7 @@
 
 #include <Editor/Tasks/EditorTasks.hpp>
 
-#include <Editor/Terrain/TerrainSculpting.hpp>
+#include <Editor/Terrain/EditorTerrainState.hpp>
 
 #include <Scene/Scene.hpp>
 #include <Scene/World.hpp>
@@ -1328,7 +1328,6 @@ public:
 
     virtual void Execute(EditorSubsystem* subsystem) override
     {
-
         const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
         if (!currentProject.IsValid())
         {
@@ -1348,7 +1347,7 @@ public:
         Handle<ParticleVolume> particleVolume = MakeHandle<ParticleVolume>(BoundingBox(Vec3f(-20.0f, 0.0f, -20.0f), Vec3f(20.0f, 20.0f, 20.0f)));
         particleVolume->SetName(activeScene->GetUniqueNodeNameT<ParticleVolume>());
 
-        particleVolume->texture = g_assetManager->Load<Texture>("Textures/spark.png").GetValue().ExtractAs<Handle<Texture>>();
+        //particleVolume->texture = g_assetManager->Load<Texture>("Textures/spark.png").GetValue().ExtractAs<Handle<Texture>>();
         particleVolume->mesh = MeshBuilder::Quad();
         particleVolume->origin = Vec3f(0.0f, 10.0f, 0.0f); // temp
         particleVolume->maxParticles = 2048;
@@ -3892,14 +3891,14 @@ public:
     {
         if (IsOnThread(g_simThread))
         {
-                    subsystem->GetTerrainSculpting()->SetEnabled(!subsystem->GetTerrainSculpting()->IsEnabled());
+                    subsystem->GetTerrainState()->SetEnabled(!subsystem->GetTerrainState()->IsEnabled());
         }
         else
         {
             GetThreadById(g_simThread)->GetScheduler().Enqueue(
                 [subsystem = MakeStrongRef(subsystem)]()
                 {
-            subsystem->GetTerrainSculpting()->SetEnabled(!subsystem->GetTerrainSculpting()->IsEnabled());
+            subsystem->GetTerrainState()->SetEnabled(!subsystem->GetTerrainState()->IsEnabled());
                 },
                 TaskEnqueueFlags::FIRE_AND_FORGET);
         }
@@ -3932,8 +3931,8 @@ public:
             mode = TerrainSculptMode::PaintSplat;
         }
 
-        subsystem->GetTerrainSculpting()->SetEnabled(true);
-        subsystem->GetTerrainSculpting()->SetMode(mode);
+        subsystem->GetTerrainState()->SetEnabled(true);
+        subsystem->GetTerrainState()->SetMode(mode);
     }
 };
 
@@ -3961,7 +3960,7 @@ public:
             return;
         }
 
-        subsystem->GetTerrainSculpting()->SetRadius(radius);
+        subsystem->GetTerrainState()->SetRadius(radius);
     }
 };
 
@@ -3989,7 +3988,7 @@ public:
             return;
         }
 
-        subsystem->GetTerrainSculpting()->SetStrength(strength);
+        subsystem->GetTerrainState()->SetStrength(strength);
     }
 };
 
@@ -4017,7 +4016,7 @@ public:
             return;
         }
 
-        subsystem->GetTerrainSculpting()->SetPaintLayer(paintLayer);
+        subsystem->GetTerrainState()->SetPaintLayer(paintLayer);
     }
 };
 

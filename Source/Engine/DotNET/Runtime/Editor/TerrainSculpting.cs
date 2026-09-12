@@ -10,10 +10,14 @@ namespace Hyperion
         PaintSplat = 2
     }
 
-    [ClassBinding(Name = "TerrainSculpting")]
-    public class TerrainSculpting : ObjectBase
+    [ClassBinding(Name = "EditorTerrainState")]
+    public class EditorTerrainState : ObjectBase
     {
         public bool IsEnabled => this.IsEnabled();
+
+        public bool IsSculptActive => this.IsSculptActive();
+
+        public bool IsPaintActive => this.IsPaintActive();
 
         public float Radius => this.GetRadius();
 

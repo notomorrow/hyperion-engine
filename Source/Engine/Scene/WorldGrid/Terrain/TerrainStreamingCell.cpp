@@ -85,7 +85,7 @@ void TerrainStreamingCell::OnStreamStart()
 
     auto cellDataReadScope = m_cellData->GetReadScope();
 
-    m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), m_cellData->GetSculptDeltaFloats());
+    m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), m_cellData->GetSculptDeltaFloat());
 }
 
 static void BuildMeshDescAndDataView(const TerrainMeshBuilder::CellMeshData& cellMeshData, MeshDesc& outMeshDesc, MeshDataView& outMeshData)
@@ -334,7 +334,7 @@ void TerrainStreamingCell::RebuildMeshFull(const Handle<TerrainCellData>& cellDa
     {
         auto cellDataReadScope = m_cellData->GetReadScope();
 
-        m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), m_cellData->GetSculptDeltaFloats());
+        m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), m_cellData->GetSculptDeltaFloat());
     }
 
     MeshDesc meshDesc;

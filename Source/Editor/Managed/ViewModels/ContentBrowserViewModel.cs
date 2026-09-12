@@ -117,8 +117,12 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewScript"), $"{languageArg} {name}");
-                    FocusAsset(AssetBucket.Scripts.Value, name);
+                    _ = EngineManager.PostToSimThread(() =>
+                    {
+                        _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewScript"), $"{languageArg} {name}");
+
+                        Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.Scripts.Value, name));
+                    });
                 });
 
                 PanelService.Instance.OpenPanel(panel);
@@ -126,8 +130,12 @@ namespace Hyperion.Editor.ViewModels
 
             NewMaterialCommand = new RelayCommand(() =>
             {
-                _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewMaterial"));
-                FocusAsset(AssetBucket.Materials.Value, "NewMaterial", openEditor: true);
+                _ = EngineManager.PostToSimThread(() =>
+                {
+                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewMaterial"));
+
+                    Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.Materials.Value, "NewMaterial", openEditor: true));
+                });
             });
 
             NewPhysicsShapeCommand = new RelayCommand(() =>
@@ -140,7 +148,6 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    // Task hell...
                     _ = EngineManager.PostToSimThread(() =>
                     {
                         AssetRegistry? registry = EngineManager.EditorGame?.AssetRegistry;
@@ -148,10 +155,7 @@ namespace Hyperion.Editor.ViewModels
 
                         registry.PutAssetUnique(shape);
 
-                        Dispatcher.UIThread.Post(() =>
-                        {
-                            FocusAsset(AssetBucket.PhysicsShapes.Value, shape.GetName().ToString());
-                        });
+                        Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.PhysicsShapes.Value, shape.GetName().ToString()));
                     });
                 });
 
