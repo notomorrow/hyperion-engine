@@ -197,7 +197,7 @@ struct AssetLoadingContext
 {
 };
 
-//-- helpers
+///helpers
 
 static constexpr AssetRegistryId GetAssetRegistryIndex(StringHash hash)
 {
@@ -233,7 +233,7 @@ static constexpr const char* GetAssetRegistryName(AssetRegistryId registryId)
     return "Game";
 }
 
-//--
+////////////////////
 
 ENGINE_API Handle<AssetRegistry> GetCurrentAssetRegistry();
 

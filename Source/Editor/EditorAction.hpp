@@ -42,7 +42,7 @@ public:
     virtual void Revert(EditorSubsystem* editorSubsystem, EditorProject* project);
 
 protected:
-    //-- These methods below are expected to be implemented by any deriving class.
+    ///These methods below are expected to be implemented by any deriving class.
     //   They are called by the base, if there is no managed C# override.
 
     virtual String GetText_Impl() const
@@ -60,7 +60,7 @@ protected:
         HYP_NOT_IMPLEMENTED();
     }
 
-    //--
+    ////////////////////
 };
 
 struct EditorActionFunctions

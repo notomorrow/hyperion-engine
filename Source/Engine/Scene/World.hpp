@@ -138,7 +138,7 @@ public:
     HYP_METHOD()
     const GameState& GetGameState() const;
 
-    //-- Subsystems
+    ///Subsystems
 
     template <class T>
     HYP_FORCE_INLINE const Handle<T>& AddSubsystem()
@@ -178,7 +178,7 @@ public:
     HYP_METHOD()
     bool RemoveSubsystem(Subsystem* subsystem);
 
-    //-- Swatches
+    ///Swatches
 
     HYP_METHOD()
     Array<Name> GetSwatchNames() const;
@@ -196,7 +196,7 @@ public:
     const Handle<Swatch>& TryGetSwatchById(SwatchId swatchId) const;
     const Handle<Swatch>& GetOrCreateSwatch(Name swatchName);
 
-    //-- Layers
+    ///Layers
 
     HYP_METHOD()
     HYP_FORCE_INLINE const LayersMask& GetActiveLayers() const
@@ -221,7 +221,7 @@ public:
     HYP_METHOD()
     void SetLayerActive(Name layerName, bool layerActive);
 
-    //-- Scenes
+    ///Scenes
 
     HYP_METHOD()
     void AddScene(const Handle<Scene>& scene, bool addToStreamingLayer = true);
@@ -246,7 +246,7 @@ public:
         return m_scenes;
     }
 
-    //-- View
+    ///View
 
     HYP_METHOD()
     void AddView(View* view);
@@ -263,7 +263,7 @@ public:
     /*! \brief Adds a View for processing asynchronously for this frame. */
     void ProcessViewAsync(View* view);
 
-    //-- Systems
+    ///Systems
 
     /*! \brief Adds a System to the World.
      *  \param[in] system The System to add.
@@ -337,7 +337,7 @@ public:
         return GetSystem<SystemType>() != nullptr;
     }
 
-    //--
+    ////////////////////
 
     HYP_FORCE_INLINE const Array<SystemExecutionGroup*>& GetSystemExecutionGroups() const
     {
@@ -378,7 +378,7 @@ private:
 
     Handle<WorldGridLayer> GetOrCreateStreamingLayer(Name streamingLayerName);
 
-    //-- Serialization Only Properties --
+    ///Serialization Only Properties --
 
     /// Needs Swatches to load before
     HYP_METHOD(Property = "NonStreamingScenes", Serialize, LoadOrder = 5)
@@ -406,7 +406,7 @@ private:
     HYP_METHOD(Property = "ActiveLayers", Serialize)
     Array<Name> SerializeActiveLayers() const;
 
-    //--
+    ////////////////////
 
     HYP_FIELD(Property = "GameInstance", Transient)
     Game* m_gameInstance;
@@ -417,7 +417,7 @@ private:
     HYP_FIELD(Property = "Scenes", Transient)
     Array<Handle<Scene>> m_scenes;
 
-    //-- Swatches
+    ///Swatches
 
     HYP_FIELD(Property = "Swatches", Serialize, LoadOrder = 0)
     Array<Handle<Swatch>> m_swatches;
@@ -428,7 +428,7 @@ private:
     HYP_FIELD(Property = "ActiveSwatchId", Transient)
     SwatchId m_activeSwatchId;
 
-    //-- Laeyrs
+    ///Laeyrs
 
     HYP_FIELD(Property = "Layers", Serialize, LoadOrder = 0)
     Array<Handle<Layer>> m_layers;
@@ -436,7 +436,7 @@ private:
     HYP_FIELD(Property = "ActiveLayers", Serialize)
     LayersMask m_activeLayers;
 
-    //-- Systems
+    ///Systems
 
     // systems must load after flags are set
     HYP_FIELD(Property = "Systems", LoadOrder = 200)
@@ -445,7 +445,7 @@ private:
     Array<SystemExecutionGroup*> m_systemExecutionGroups;
     SystemExecutionGroup* m_rootSynchronousExecutionGroup;
 
-    //-- Views
+    ///Views
 
     /// Sim thread owned views list
     Array<View*, SceneAllocator> m_views;
@@ -458,7 +458,7 @@ private:
 
     View* m_rayTracingView;
 
-    //--
+    ////////////////////
 
     SubsystemsMap m_subsystems;
     Array<Subsystem*, SceneAllocator> m_subsystemsArray;

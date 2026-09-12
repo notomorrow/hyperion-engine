@@ -398,7 +398,7 @@ namespace Hyperion.Editor.ViewModels
             Action<BoxedValue>? capturedSetter = _valueSetter;
             InspectorPropertyViewModelBase capturedThis = this;
 
-            //-- Swatch override routing
+            ///Swatch override routing
             if (capturedSetter == null && capturedResolver == null
                 && capturedProperty.Name != new Name("Name", weak: true)
                 && SwatchOverrideEditContext.CurrentEntity is Entity overrideEntity

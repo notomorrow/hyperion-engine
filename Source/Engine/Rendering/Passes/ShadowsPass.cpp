@@ -322,7 +322,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
         Assert(firstShadowView != nullptr);
 
-        //-- Time slicing CSM
+        ///Time slicing CSM
         if (isDirectional && g_cvCSMTimeSlicingEnabled.Get())
         {
             View* cascadeView = shadowViewDynamic ? shadowViewDynamic : shadowViewStatic;
@@ -364,15 +364,15 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                 cascadeRpl.EndRead();
             }
 
-            //--
+            ////////////////////
             // for lights with a separate static shadow view, the static stage (rendering statics into the
             // atlas + refreshing its cached texture) only executes inside the draw loop below. so a
             // static-only change (e.g. static geometry moved) must also be able to trigger a draw here,
             // otherwise the static layer stays frozen until the camera moves.
-            //--
+            ////////////////////
             // the diff is also latched into the static view's pass data, because the draw (and with it the
             // static re-render) may be delayed by the budget, at which point the diff is no longer live.
-            //--
+            ////////////////////
             if (shadowViewDynamic && shadowViewStatic)
             {
                 RenderProxyList& staticRpl = GetConsumerProxyList(shadowViewStatic);
@@ -391,16 +391,16 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                 }
             }
 
-            //--
+            ////////////////////
             // the RPL diffs are the dirty signal: they are already scoped to this cascade (entities outside
             // its frustum are not collected, so they never bump them), and they are only live for the single
             // frame the change syncs, so latch them into pendingListRedraw where they stay set until the
             // cascade actually redraws (budget permitting).
-            //--
+            ////////////////////
             // note: the octree entry hash cannot be AND-ed with them -- the hash lags the diff by one
             // frame (it is only rebuilt at the start of the next tick), so a change happening on a
             // single frame would never have both signals set simultaneously.
-            //--
+            ////////////////////
             if (isRplDirty || isStaticRplDirty)
             {
                 cachedData->pendingListRedraw[cascadeIndex] = true;

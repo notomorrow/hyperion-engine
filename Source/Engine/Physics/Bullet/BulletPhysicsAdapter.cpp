@@ -69,13 +69,13 @@ struct CharacterControllerInternalData
 
     Vec3f pushVelocity;
 
-    //-- servo
+    ///servo
     btVector3 ghostTravel { 0.0f, 0.0f, 0.0f };
     btScalar characterTime = 0.0f;
     int idleCharacterTicks = 0;
     btVector3 targetVelocity { 0.0f, 0.0f, 0.0f };
     btVector3 shadowVelocity { 0.0f, 0.0f, 0.0f };
-    //--
+    ////////////////////
 
     SharedPtr<btRigidBody> shadowBody;
     SharedPtr<btMotionState> shadowMotionState;

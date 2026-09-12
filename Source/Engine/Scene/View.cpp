@@ -663,7 +663,7 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                     ? shadowViewsDynamic[shadowViewIndex]
                     : shadowViewsStatic[shadowViewIndex];
 
-                //-- Cascade Budget
+                ///Cascade Budget
 
                 if (!g_cvCSMTimeSlicingEnabled.Get() || csmInvalidated || !currentCascadeView)
                 {
@@ -699,7 +699,7 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                     csmState.lastCommittedFrame[shadowViewIndex] = GetFrameCounter();
                 }
 
-                //--
+                ////////////////////
             }
 
             if (!isDirectional)
@@ -754,12 +754,12 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
 
                 if (isStaticView && !lightForceRedraw)
                 {
-                    //--
+                    ////////////////////
                     // static views skip collection when their inputs (light version, viewProj, static geometry hashes) are unchanged.
                     // this must be evaluated even when the cascade is not being updated this frame.
                     //
                     // otherwise static shadow maps would freeze while the camera is not moving, since their RPL diff would never refresh.
-                    //--
+                    ////////////////////
                     HashCode inputHash = HashCode::GetHashCode(*light->GetRenderProxyVersionPtr())
                         .Combine(committedViewProjMatrix.GetHashCode());
 
@@ -787,7 +787,7 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                     continue;
                 }
 
-                //-- *Cached State Updates* --//
+                ///*Cached State Updates* --//
 
                 shadowView->cachedMatrices.view = shadowViewMatrix;
                 shadowView->cachedMatrices.viewProj = shadowViewProjMatrix;
@@ -796,7 +796,7 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                 shadowView->cachedFrustum = shadowViewFrustum;
                 shadowView->cachedBounds = shadowViewBounds;
 
-                //-- ********************** --//
+                ///********************** --//
 
                 shadowView->m_scenes.Resize(shadowViewScenes.Size());
                 std::copy(shadowViewScenes.Begin(), shadowViewScenes.End(), shadowView->m_scenes.Begin());

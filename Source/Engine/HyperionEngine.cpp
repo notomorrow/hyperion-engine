@@ -752,7 +752,7 @@ extern "C"
 
         delete g_shaderCompiler;
         g_shaderCompiler = nullptr;
-        //--
+        ////////////////////
     
         if (g_renderThreadInstance != nullptr && g_renderThreadInstance->IsRunning())
         {

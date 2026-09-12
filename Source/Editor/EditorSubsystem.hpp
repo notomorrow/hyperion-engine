@@ -553,12 +553,12 @@ public:
 
     const EditorGizmoSet& GetGizmos() const;
 
-    //-- Terrain
+    ///Terrain
 
     HYP_METHOD()
     Handle<EditorTerrainState> GetTerrainState();
 
-    //-- Mesh edits
+    ///Mesh edits
 
     HYP_METHOD()
     bool IsMeshEditModeEnabled() const;
@@ -602,7 +602,7 @@ public:
     HYP_METHOD()
     MeshEditFaceMode GetMeshEditFaceMode() const;
 
-    //-- action stack
+    ///action stack
 
     EditorActionStack* GetActiveActionStack() const;
 
@@ -614,7 +614,7 @@ public:
     HYP_METHOD()
     void SetSnapToGridEnabled(bool snapToGrid);
 
-    //-- Swatch overrides
+    ///Swatch overrides
 
 
     HYP_METHOD()
@@ -659,7 +659,7 @@ public:
     HYP_METHOD()
     void EntityRevertSwatchOverrides(Entity* entity) const;
 
-    //-- Phys
+    ///Phys
 
     HYP_METHOD()
     bool IsPhysicsDebugDrawEnabled() const;
@@ -679,7 +679,7 @@ public:
 
     void SyncBoxPhysicsShapeToLocalBounds(Entity* entity);
 
-    //-- 
+    ///
 
     HYP_METHOD()
     void SetSelectedBucket(uint32 bucketIndex);
@@ -760,7 +760,7 @@ private:
 
     void UpdateBakeStatus();
 
-    //-- Gizmos
+    ///Gizmos
 
     void InitializeGizmos();
     void ShutdownGizmos();
@@ -782,7 +782,7 @@ private:
         return m_gizmosHiddenByProximity;
     }
 
-    //-- Mesh edits
+    ///Mesh edits
 
     struct MeshEditDragData
     {
@@ -824,7 +824,7 @@ private:
 
     bool BackOutOfMeshEditState();
 
-    //--
+    ////////////////////
 
     void DebugDrawPhysicsShapes(class DebugDrawCommandList& debugDrawCommandList);
     /*! \brief If the focused entity's physics shape is referenced by any other entity, clone it and
@@ -833,7 +833,7 @@ private:
 
     bool IsPhysicsShapeShared(Entity* entity, const Handle<PhysicsShape>& shape) const;
 
-    //--
+    ////////////////////
 
     SubsystemUpdatePhase GetUpdatePhase_Internal() const override
     {
@@ -862,11 +862,11 @@ private:
         Optional<MeshEditDragData> dragData;
     } m_meshEditState;
 
-    //--
+    ////////////////////
 
     Handle<EditorTerrainState> m_terrainSculpting;
 
-    //--
+    ////////////////////
 
     Handle<Scene> m_editorScene;
 
@@ -906,7 +906,7 @@ private:
 
     DelegateHandlerSet m_delegateHandlers;
 
-    //--
+    ////////////////////
 
     bool m_snapToGridEnabled;
     bool m_swatchOverrideMode;

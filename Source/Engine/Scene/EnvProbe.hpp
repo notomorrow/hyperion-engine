@@ -218,7 +218,7 @@ public:
     HYP_METHOD(Property = "DiffuseStrength")
     void SetDiffuseStrength(float diffuseStrength);
 
-    //-- Data & textures
+    ///Data & textures
 
     HYP_FORCE_INLINE const Handle<Texture>& GetPrefilteredEnvMap() const
     {
@@ -252,7 +252,7 @@ public:
     HYP_METHOD(Property = "SHData", NoScriptBindings)
     void SetSphericalHarmonicsData(const SphericalHarmonicsData& shData);
 
-    //-- Per-swatch stuff
+    ///Per-swatch stuff
 
     static Name GetBakedTexturePropertyName()
     {
@@ -289,7 +289,7 @@ public:
 
     void SetHitMaskData(const Vec4f& hitMaskData);
 
-    //-- Raster capture
+    ///Raster capture
 
     HYP_FORCE_INLINE EnvProbeCaptureState* GetCaptureState() const
     {
@@ -315,7 +315,7 @@ public:
         return m_pendingCaptureReadbacks.Get(MemoryOrder::ACQUIRE) <= 0;
     }
 
-    //--
+    ////////////////////
 
     virtual void Invalidate(bool forceRerender = false);
     virtual void Update(float delta) override;
@@ -412,7 +412,7 @@ protected:
     HYP_FIELD(Property = "HitMaskData", Editor = false, Serialize)
     Vec4f m_hitMaskData;
 
-    //-- Capture / readback
+    ///Capture / readback
 
     /// Number of outstanding read backs
     AtomicVar<int32> m_pendingCaptureReadbacks;
@@ -424,7 +424,7 @@ protected:
     /// for reading/writing back data
     SharedMutex m_mutex;
 
-    //--
+    ////////////////////
 };
 
 HYP_CLASS()

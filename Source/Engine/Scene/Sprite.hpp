@@ -27,11 +27,11 @@ enum class SpriteType : uint32
 
     Text,
     
-    //-- Editor
+    ///Editor
     Editor_EnvProbe,
     Editor_LightmapVolume,
     Editor_Camera,
-    //--
+    ////////////////////
 
     Max
 };

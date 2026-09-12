@@ -99,7 +99,7 @@ inline bool GetSwatchOverrideValue(const Array<EntitySwatchOverrideSet>& sets, N
     return false;
 }
 
-//-- Reflection
+///Reflection
 
 const IMember* ResolveOverridableMember(const Class* cls, Name propertyName)
 {
@@ -180,7 +180,7 @@ bool SetEntityMemberValue(const IMember* member, Entity* entity, const BoxedValu
     }
 }
 
-//--
+////////////////////
 
 EntityManager* GetEntityManagerFor(const Entity& entity)
 {

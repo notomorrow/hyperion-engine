@@ -539,13 +539,13 @@ void EnvProbe::SetEnvProbeFlags(EnumFlags<EnvProbeFlags> envProbeFlags)
         }
         else
         {
-            //--
+            ////////////////////
             // ONLY INIT CAPTURE DATA IF ATTACHED TO A WORLD.
             // If not, defer it till OnAttachedToWorld().
-            //--
+            ////////////////////
             // If we don't do this, SetEnvProbeFlags() will be called before SetChildren(), meaning we'll create a camera then SetChildren() will overwrite the children,
             // we'll be left holding a dangling pointer for m_camera...
-            //--
+            ////////////////////
             if (GetWorld() != nullptr)
             {
                 InitCaptureData();

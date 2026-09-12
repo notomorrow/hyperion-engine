@@ -194,7 +194,7 @@ public:
     void UploadGpuData();
     void ReleaseGpuData();
 
-    //-- Dynamic Mesh stuff
+    ///Dynamic Mesh stuff
 
     /// Dynamically set vertices for the LOD \p lodIndex starting at \p firstVertex.
     /// Must be a Dynamic Mesh (needs DynamicMesh flag on creation)
@@ -204,7 +204,7 @@ public:
     /// Must be a Dynamic Mesh (needs DynamicMesh flag on creation)
     void UpdateDynamicBVH();
 
-    //-- \Dynamic Mesh stuff
+    ///\Dynamic Mesh stuff
 
     HYP_FORCE_INLINE const MeshDesc& GetMeshDesc() const
     {

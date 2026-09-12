@@ -318,7 +318,7 @@ void ReplicationApplySystem::UpdateInterpolatedEntities(float delta)
             return m_hasClockEstimate ? double(sample.serverTimeMs.ToMilliseconds()) : double(sample.receiveTimeMs.ToMilliseconds());
         };
 
-        //-- Sample cull
+        ///Sample cull
 
         size_t numToChomp = 0;
 
@@ -331,7 +331,7 @@ void ReplicationApplySystem::UpdateInterpolatedEntities(float delta)
         {
             samples.Erase(samples.Begin(), samples.Begin() + numToChomp);
         }
-        //-- 
+        ///
 
         Entity* entity = entityIt->second.Get();
 

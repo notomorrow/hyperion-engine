@@ -49,10 +49,10 @@
 
 #include <System/MessageBox.hpp>
 
-///--- For shader preload ---
+/////////////////////- For shader preload ---
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/ShaderManager.hpp>
-///--------------------------
+/////////////////////------------------------
 
 #include <Game.generated.inl>
 

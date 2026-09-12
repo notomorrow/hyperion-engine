@@ -933,7 +933,7 @@ public:
     static ScriptableDelegate<void, Node*> TransformUpdated;
 
 protected:
-    // -- Overrides --
+    ///Overrides
     virtual void Init() override;
 
     virtual void OnAttachedToNode(Node* node);
@@ -947,12 +947,12 @@ protected:
 
     virtual void SetScene_Internal(Scene* scene, bool moveToDetached);
 
-    //-- Serialization --
+    ///Serialization
 
     HYP_METHOD(Property = "Children", NoScriptBindings, Serialize)
     void SetChildren(const NodeList& children); // use setter so we can manage parent pointers
 
-    //-- Fields --
+    ///Fields
 
     HYP_FIELD(Property = "UUID", Serialize, Editor, EditorOrder = 1, EditEnabled = false)
     UUID m_uuid;
@@ -986,11 +986,9 @@ protected:
     HYP_FIELD(Property = "NodeTags", Serialize, Editor = false)
     NodeTagSet m_tags;
 
-    //-- BitFlags --
+    ///BitFlags
 
     bool m_transformLocked : 1;
-
-    //--
 };
 
 struct NodeUnlockTransformScope
