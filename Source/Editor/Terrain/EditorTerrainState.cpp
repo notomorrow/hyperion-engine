@@ -146,9 +146,10 @@ void EditorTerrainState::ActivateSculpt()
     {
         AssertOnThread(g_simThread);
 
-        // already active
+        // toggle off if already active
         if (IsSculptActive())
         {
+            SetEnabled(false);
             return;
         }
 
@@ -162,10 +163,11 @@ void EditorTerrainState::ActivatePaint()
     DispatchToSimThread([this]()
     {
         AssertOnThread(g_simThread);
-        
-        // already active
+
+        // toggle off if already active
         if (IsPaintActive())
         {
+            SetEnabled(false);
             return;
         }
 

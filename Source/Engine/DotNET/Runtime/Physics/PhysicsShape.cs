@@ -11,6 +11,7 @@ namespace Hyperion
         Plane,
         ConvexHull,
         Capsule,
+        HeightField,
 
         Max
     }
@@ -80,6 +81,14 @@ namespace Hyperion
                 return (float)value.GetValue()!;
             }
             set => GetProperty(new Name("Height")).Set(this, new BoxedValue(value));
+        }
+    }
+
+    [ClassBinding(Name = "HeightFieldPhysicsShape")]
+    public class HeightFieldPhysicsShape : PhysicsShape
+    {
+        public HeightFieldPhysicsShape()
+        {
         }
     }
 }

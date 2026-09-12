@@ -21,7 +21,7 @@ struct WeaponComponent
 {
     HYP_STRUCT_BODY(WeaponComponent);
 
-    HYP_FIELD(Property = "Weapon", Title="Weapon Definition", Serialize, Editor)
+    HYP_FIELD(Property = "Weapon", Title="Weapon Asset", Serialize, Editor)
     Handle<Weapon> weapon;
 };
 

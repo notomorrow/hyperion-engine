@@ -42,6 +42,7 @@
 #include <Jolt/Physics/Collision/Shape/PlaneShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
+#include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 #include <Jolt/Physics/EActivation.h>
@@ -331,6 +332,39 @@ static JPH::RefConst<JPH::Shape> CreatePhysicsShapeHandle(PhysicsShape* physicsS
 
         return result.Get();
     }
+    case PhysicsShapeType::HeightField:
+    {
+        HeightFieldPhysicsShape* shapeCasted = static_cast<HeightFieldPhysicsShape*>(physicsShape);
+
+        const Array<float>& heights = shapeCasted->GetHeights();
+        const uint32 numSamples = shapeCasted->GetNumSamples();
+
+        // Jolt requires sampleCount / blockSize >= 2 (default block size is 2)
+        if (numSamples < 4 || heights.Size() != size_t(numSamples) * size_t(numSamples))
+        {
+            HYP_LOG(Physics, Warning, "HeightField physics shape '{}' has no valid height data; falling back to a unit box",
+                physicsShape->GetName());
+
+            return new JPH::BoxShape(JPH::Vec3(0.5f, 0.5f, 0.5f));
+        }
+
+        JPH::HeightFieldShapeSettings settings(
+            heights.Data(),
+            JPH::Vec3::sZero(),
+            JPH::Vec3(scale.x, scale.y, scale.z),
+            numSamples);
+
+        JPH::ShapeSettings::ShapeResult result = settings.Create();
+
+        if (!result.IsValid())
+        {
+            HYP_LOG(Physics, Error, "Failed to create HeightField physics shape: {}", result.GetError().c_str());
+
+            return new JPH::BoxShape(JPH::Vec3(0.5f, 0.5f, 0.5f));
+        }
+
+        return result.Get();
+    }
     default:
         HYP_UNREACHABLE();
     }
@@ -586,7 +620,9 @@ void JoltPhysicsAdapter::OnRigidBodyAdded(const Handle<RigidBody>& rigidBody)
     JPH::EMotionType motionType = isKinematic ? JPH::EMotionType::Kinematic
         : (mass > MathUtil::epsilonF ? JPH::EMotionType::Dynamic : JPH::EMotionType::Static);
 
-    if (rigidBody->shape->GetType() == PhysicsShapeType::Plane)
+    // Plane and HeightField shapes are world geometry - always static, regardless of mass.
+    if (rigidBody->shape->GetType() == PhysicsShapeType::Plane
+        || rigidBody->shape->GetType() == PhysicsShapeType::HeightField)
     {
         motionType = JPH::EMotionType::Static;
     }

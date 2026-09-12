@@ -1143,8 +1143,9 @@
                                                                             Header="{Binding MoveToGrandparentHeader}"
                                                                             IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                             IsVisible="{Binding CanMoveToGrandparent}" />
+                                                                        <Separator />
                                                                         <MenuItem
-                                                                            Header="Move To Scene"
+                                                                            Header="Move to scene"
                                                                             IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                             IsVisible="{Binding HasMoveToSceneTargets}"
                                                                             ItemsSource="{Binding MoveToSceneTargets}">

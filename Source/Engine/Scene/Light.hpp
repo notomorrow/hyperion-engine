@@ -321,8 +321,6 @@ protected:
     uint32 m_numShadowMapCascades;
 
 private:
-    Pair<Vec3f, Vec3f> CalculateAreaLightRect() const;
-
     ShadowMapCaptureState* m_shadowMapCaptureState = nullptr;
 };
 

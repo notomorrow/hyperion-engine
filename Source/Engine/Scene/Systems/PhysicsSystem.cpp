@@ -13,6 +13,7 @@
 #include <Scene/World.hpp>
 
 #include <Scene/Components/MeshComponent.hpp>
+#include <Scene/Components/TerrainCellComponent.hpp>
 
 #include <Scene/Util/SceneHelpers.hpp>
 
@@ -93,8 +94,10 @@ void PhysicsSystem::OnEntityAdded(Entity* entity)
 
     // @NOTE: For bodies that are replicated (not simulated), we add them as colliders.
     // They don't fall or respond to forces, but they still push the dynamic bodies we DO
-    // simulate.
-    rigidBody->SetIsKinematic(!SceneHelpers::CanSimulateEntityPhysics(*entity));
+    // simulate. Terrain cells are world geometry and behave the same way.
+    rigidBody->SetIsKinematic(
+        !SceneHelpers::CanSimulateEntityPhysics(*entity)
+        || entity->HasComponent<TerrainCellComponent>());
 
     {
         PhysicsWorldBase* physicsWorld = GetWorld()->GetPhysicsWorld();

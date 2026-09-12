@@ -335,25 +335,6 @@ void Light::SetMaterial(Handle<Material> material)
     MarkDirty();
 }
 
-Pair<Vec3f, Vec3f> Light::CalculateAreaLightRect() const
-{
-    Vec3f tangent;
-    Vec3f bitangent;
-    MathUtil::ComputeOrthonormalBasis(m_normal, tangent, bitangent);
-
-    const float halfWidth = m_areaSize.x * 0.5f;
-    const float halfHeight = m_areaSize.y * 0.5f;
-
-    const Vec3f center = GetLocalTranslation();
-
-    const Vec3f p0 = center - tangent * halfWidth - bitangent * halfHeight;
-    const Vec3f p1 = center + tangent * halfWidth - bitangent * halfHeight;
-    const Vec3f p2 = center + tangent * halfWidth + bitangent * halfHeight;
-    const Vec3f p3 = center - tangent * halfWidth + bitangent * halfHeight;
-
-    return { p0, p2 };
-}
-
 void Light::SetShadowMapDimensions(Vec2u shadowMapDimensions)
 {
     shadowMapDimensions = MathUtil::Max(shadowMapDimensions, Vec2u::One());
@@ -494,12 +475,18 @@ BoundingBox Light::CalculateLightBounds() const
 
     if (m_type == LightType::AreaRect)
     {
-        const Pair<Vec3f, Vec3f> rect = CalculateAreaLightRect();
+        Vec3f tangent;
+        Vec3f bitangent;
+        MathUtil::ComputeOrthonormalBasis(m_normal, tangent, bitangent);
+
+        const float halfWidth = m_areaSize.x * 0.5f;
+        const float halfHeight = m_areaSize.y * 0.5f;
+
+        const Vec3f rectCorner = tangent * halfWidth + bitangent * halfHeight;
 
         return BoundingBox::Empty()
-            .Union(rect.first)
-            .Union(rect.second)
-            .Union(Vec3f::Zero() + m_normal * m_radius);
+            .Union(-(rectCorner + m_normal * m_radius))
+            .Union(rectCorner + m_normal * m_radius);
     }
 
     if (m_type == LightType::Point)

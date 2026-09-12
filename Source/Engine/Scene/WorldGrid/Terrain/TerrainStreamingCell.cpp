@@ -22,6 +22,9 @@
 #include <Scene/Components/VisibilityStateComponent.hpp>
 #include <Scene/Components/MeshComponent.hpp>
 #include <Scene/Components/TerrainCellComponent.hpp>
+#include <Scene/Components/RigidBodyComponent.hpp>
+
+#include <Physics/PhysicsShape.hpp>
 
 #include <Rendering/Mesh.hpp>
 #include <Rendering/Material.hpp>
@@ -43,6 +46,31 @@
 namespace Hyperion {
 
 ENGINE_API HYP_DECLARE_LOG_CHANNEL(WorldGrid);
+
+static void ExtractColliderHeights(const TerrainMeshBuilder::CellMeshData& cellMeshData, Array<float>& outHeights)
+{
+    outHeights.Resize(cellMeshData.vertices.Size());
+
+    for (uint32 i = 0; i < cellMeshData.vertices.Size(); i++)
+    {
+        outHeights[i] = cellMeshData.vertices[i].GetPosition().y;
+    }
+}
+
+static void BuildMeshDescAndDataView(const TerrainMeshBuilder::CellMeshData& cellMeshData, MeshDesc& outMeshDesc, MeshDataView& outMeshData)
+{
+    outMeshDesc.meshAttributes.inputLayout = { VT_Simple };
+    outMeshDesc.lods[0].numIndices = uint32(cellMeshData.indices.Size());
+    outMeshDesc.lods[0].numVertices = uint32(cellMeshData.vertices.Size());
+
+    VertexArrayView vertexArrayView {};
+    vertexArrayView.floatData = reinterpret_cast<const float*>(cellMeshData.vertices.Data());
+    vertexArrayView.vertexCount = cellMeshData.vertices.Size();
+    vertexArrayView.layoutDesc = outMeshDesc.meshAttributes.inputLayout;
+
+    outMeshData.vertices[0] = vertexArrayView;
+    outMeshData.indices[0] = cellMeshData.indices.ToByteView();
+}
 
 #pragma region TerrainStreamingCell
 
@@ -79,28 +107,15 @@ void TerrainStreamingCell::OnStreamStart()
     if (!m_cellData.IsValid())
     {
         m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), Span<const float>());
+    }
+    else
+    {
+        auto cellDataReadScope = m_cellData->GetReadScope();
 
-        return;
+        m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), m_cellData->GetSculptDeltaFloat());
     }
 
-    auto cellDataReadScope = m_cellData->GetReadScope();
-
-    m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), m_cellData->GetSculptDeltaFloat());
-}
-
-static void BuildMeshDescAndDataView(const TerrainMeshBuilder::CellMeshData& cellMeshData, MeshDesc& outMeshDesc, MeshDataView& outMeshData)
-{
-    outMeshDesc.meshAttributes.inputLayout = { VT_Simple };
-    outMeshDesc.lods[0].numIndices = uint32(cellMeshData.indices.Size());
-    outMeshDesc.lods[0].numVertices = uint32(cellMeshData.vertices.Size());
-
-    VertexArrayView vertexArrayView {};
-    vertexArrayView.floatData = reinterpret_cast<const float*>(cellMeshData.vertices.Data());
-    vertexArrayView.vertexCount = cellMeshData.vertices.Size();
-    vertexArrayView.layoutDesc = outMeshDesc.meshAttributes.inputLayout;
-
-    outMeshData.vertices[0] = vertexArrayView;
-    outMeshData.indices[0] = cellMeshData.indices.ToByteView();
+    ExtractColliderHeights(m_cellMeshData, m_colliderHeights);
 }
 
 Handle<Mesh> TerrainStreamingCell::BuildMeshFromCellMeshData() const
@@ -184,6 +199,15 @@ void TerrainStreamingCell::OnLoaded()
 
     entityManager->AddComponent<TerrainCellComponent>(m_entity, TerrainCellComponent {});
 
+    m_collisionShape = MakeHandle<HeightFieldPhysicsShape>(NAME_FMT("TerrainCellCollider_{}", m_cellInfo.coord));
+    InitObject(m_collisionShape);
+
+    UpdateCollider(false /* notifyPhysicsWorld */);
+
+    entityManager->AddComponent<RigidBodyComponent>(m_entity, RigidBodyComponent {
+        .shape = m_collisionShape
+    });
+
     m_node = m_scene->GetRoot()->AddChild();
     m_node->SetName(NAME_FMT("TerrainPatch_{}", m_cellInfo.coord));
     m_node->AddChild(m_entity);
@@ -221,6 +245,9 @@ void TerrainStreamingCell::OnRemoved()
 
     m_splatTexture.Reset();
     m_cellMaterial.Reset();
+
+    m_collisionShape.Reset();
+    m_colliderHeights.Clear();
 }
 
 void TerrainStreamingCell::UpdateSplatMaterial(const Handle<TerrainCellData>& cellData)
@@ -337,6 +364,8 @@ void TerrainStreamingCell::RebuildMeshFull(const Handle<TerrainCellData>& cellDa
         m_cellMeshData = meshBuilder.BuildCellVertexData(m_cellInfo, m_layer->GetNoiseCombinator(), m_cellData->GetSculptDeltaFloat());
     }
 
+    ExtractColliderHeights(m_cellMeshData, m_colliderHeights);
+
     MeshDesc meshDesc;
     MeshDataView meshData {};
     BuildMeshDescAndDataView(m_cellMeshData, meshDesc, meshData);
@@ -347,6 +376,8 @@ void TerrainStreamingCell::RebuildMeshFull(const Handle<TerrainCellData>& cellDa
     m_cellMeshData = TerrainMeshBuilder::CellMeshData();
 
     m_entity->SetLocalBounds(m_mesh->GetAABB());
+
+    UpdateCollider(true /* notifyPhysicsWorld */);
 
     const Handle<EntityManager>& entityManager = m_scene->GetEntityManager();
 
@@ -452,6 +483,17 @@ void TerrainStreamingCell::RebuildMesh(const Handle<TerrainCellData>& cellData, 
         }
     }
 
+    if (m_collisionShape.IsValid() && m_colliderHeights.Size() == size_t(cellSize) * size_t(cellSize))
+    {
+        for (int32 z = minVertexZ; z <= maxVertexZ; z++)
+        {
+            for (int32 x = minVertexX; x <= maxVertexX; x++)
+            {
+                m_colliderHeights[size_t(z) * size_t(cellSize) + size_t(x)] = heightAt(x, z);
+            }
+        }
+    }
+
     for (int32 z = updateMinZ; z <= updateMaxZ; z++)
     {
         for (int32 x = updateMinX; x <= updateMaxX; x++)
@@ -472,6 +514,8 @@ void TerrainStreamingCell::RebuildMesh(const Handle<TerrainCellData>& cellData, 
 
     m_entity->SetLocalBounds(m_mesh->GetAABB());
 
+    UpdateCollider(true /* notifyPhysicsWorld */);
+
     const Handle<EntityManager>& entityManager = m_scene->GetEntityManager();
 
     if (!entityManager.IsValid())
@@ -480,6 +524,32 @@ void TerrainStreamingCell::RebuildMesh(const Handle<TerrainCellData>& cellData, 
     }
 
     entityManager->AddTag<EntityTag::UpdateRenderProxy>(m_entity);
+}
+
+void TerrainStreamingCell::UpdateCollider(bool notifyPhysicsWorld)
+{
+    HYP_SCOPE;
+
+    if (!m_collisionShape.IsValid() || !m_layer.IsValid() || !m_colliderHeights.Any())
+    {
+        return;
+    }
+
+    m_collisionShape->SetHeights(m_colliderHeights, m_layer->GetLayerInfo().cellSize);
+
+    if (!notifyPhysicsWorld)
+    {
+        return;
+    }
+
+    const Handle<EntityManager>& entityManager = m_scene->GetEntityManager();
+
+    if (!entityManager.IsValid())
+    {
+        return;
+    }
+
+    entityManager->AddTag<EntityTag::UpdatePhysicsShape>(m_entity);
 }
 
 void TerrainStreamingCell::RebuildPickBVH()

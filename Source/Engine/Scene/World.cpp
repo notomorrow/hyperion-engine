@@ -34,6 +34,7 @@
 #include <Scene/Components/MeshComponent.hpp>
 #include <Scene/Components/TransformComponent.hpp>
 #include <Scene/Components/BoundingBoxComponent.hpp>
+#include <Scene/Components/TerrainCellComponent.hpp>
 
 #include <Scene/WorldGrid/WorldGrid.hpp>
 
@@ -1176,7 +1177,9 @@ void World::SyncPhysicsBodyKinematicStates()
                 continue;
             }
 
-            const bool shouldBeKinematic = !SceneHelpers::CanSimulateEntityPhysics(*entity) && !rigidBody->IsLocallyPredicted();
+            const bool shouldBeKinematic = (!SceneHelpers::CanSimulateEntityPhysics(*entity)
+                || entity->HasComponent<TerrainCellComponent>())
+                && !rigidBody->IsLocallyPredicted();
 
             if (rigidBody->IsKinematic() != shouldBeKinematic)
             {
