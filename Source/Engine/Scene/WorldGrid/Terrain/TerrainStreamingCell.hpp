@@ -23,6 +23,7 @@ class Entity;
 class Texture;
 class TerrainWorldGridLayer;
 class TerrainCellData;
+class HeightFieldPhysicsShape;
 
 HYP_CLASS()
 class TerrainStreamingCell : public StreamingCell
@@ -58,6 +59,7 @@ protected:
 
 private:
     void RebuildMeshFull(const Handle<TerrainCellData>& cellData);
+    void UpdateCollider(bool notifyPhysicsWorld);
 
     Handle<Scene> m_scene;
     Handle<Material> m_material;
@@ -67,6 +69,10 @@ private:
     Handle<Entity> m_entity;
 
     Handle<Mesh> m_mesh;
+
+    Handle<HeightFieldPhysicsShape> m_collisionShape;
+
+    Array<float> m_colliderHeights;
 
     Handle<Material> m_cellMaterial;
     Handle<Texture> m_splatTexture;

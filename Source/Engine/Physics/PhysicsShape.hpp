@@ -13,11 +13,15 @@
 
 #include <Core/Memory/SharedPtr.hpp>
 
+#include <Core/Containers/Array.hpp>
+
 #include <Core/Math/Transform.hpp>
 #include <Core/Math/BoundingBox.hpp>
 #include <Core/Math/BoundingSphere.hpp>
 #include <Core/Math/Vector3.hpp>
 #include <Core/Math/Vector4.hpp>
+
+#include <Core/Utilities/Span.hpp>
 
 #include <Asset/AssetObject.hpp>
 
@@ -33,6 +37,7 @@ enum class PhysicsShapeType : uint8
     Plane,
     ConvexHull,
     Capsule,
+    HeightField,
 
     Max
 };
@@ -311,6 +316,45 @@ protected:
 
     HYP_FIELD(Property = "Height", Serialize)
     float m_height;
+};
+
+HYP_CLASS()
+class HeightFieldPhysicsShape final : public PhysicsShape
+{
+    HYP_OBJECT_BODY(HeightFieldPhysicsShape);
+
+public:
+    HeightFieldPhysicsShape()
+        : PhysicsShape(Name::Invalid(), PhysicsShapeType::HeightField),
+          m_numSamples(0)
+    {
+    }
+
+    HeightFieldPhysicsShape(Name name)
+        : PhysicsShape(name, PhysicsShapeType::HeightField),
+          m_numSamples(0)
+    {
+    }
+
+    HeightFieldPhysicsShape(Name name, Span<const float> heights, uint32 numSamplesXZ);
+
+    ~HeightFieldPhysicsShape() override = default;
+
+    HYP_FORCE_INLINE const Array<float>& GetHeights() const
+    {
+        return m_heights;
+    }
+
+    HYP_FORCE_INLINE uint32 GetNumSamples() const
+    {
+        return m_numSamples;
+    }
+
+    void SetHeights(Span<const float> heights, uint32 numSamplesXZ);
+
+protected:
+    Array<float> m_heights;
+    uint32 m_numSamples;
 };
 
 } // namespace Hyperion
