@@ -19,8 +19,13 @@
 
 #include <Core/Threading/Threads.hpp>
 #include <Core/Threading/Thread.hpp>
+#include <Core/Threading/Scheduler.hpp>
+
+#include <Core/Name/Name.hpp>
 
 #include <Core/Debug/Debug.hpp>
+
+#include <string>
 
 namespace Hyperion {
 
@@ -130,30 +135,46 @@ static void BuildFilterBuffer(Span<const ANSIStringView> extensions, MemoryByteW
     writeNullTerminator();
 }
 
-thread_local bool t_isCOMInitialized = false;
-
-static void InitializeCOM()
+/// Need to use a dedicated thread, because otherwise we'll end up turning whatever thread runs CoInitialize()
+/// into a STA thread.
+/// This manifests as the editor app becoming unresponsive and getting stuck pumping events
+class FileDialogThread final : public Thread<Scheduler>
 {
-    if (!t_isCOMInitialized)
+public:
+    FileDialogThread(Proc<void()>&& proc)
+        : Thread(ThreadId(NAME("FileDialogThread"))),
+          m_proc(std::move(proc))
     {
-        HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    }
+
+    virtual ~FileDialogThread() override = default;
+
+private:
+    virtual void operator()() override
+    {
+        const HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
         Assert(SUCCEEDED(hr), "Failed to initialize COM library");
 
-        t_isCOMInitialized = true;
-
-        ThreadBase* thread = CurrentThreadObject();
-        Assert(thread != nullptr, "CurrentThreadObject returned null");
-
-        thread->AddOnExitCallback(
-            []()
+        HYP_DEFER({
+            if (SUCCEEDED(hr))
             {
-                if (t_isCOMInitialized)
-                {
-                    CoUninitialize();
-                    t_isCOMInitialized = false;
-                }
-            });
+                CoUninitialize();
+            }
+        });
+
+        m_proc();
     }
+
+    Proc<void()> m_proc;
+};
+
+template <class FunctionType>
+static void RunOnApartmentThread(FunctionType&& fn)
+{
+    FileDialogThread dialogThread { Proc<void()>(std::forward<FunctionType>(fn)) };
+
+    dialogThread.Start();
+    dialogThread.Join();
 }
 
 #pragma region Open File Dialog
@@ -178,89 +199,108 @@ void ShowOpenFileDialog(
     static constexpr uint32 MaxRetries = 10;
     static constexpr size_t MaxFileNameBufferSize = 1u << 16;
 
-    bool retry;
-    uint32 numRetries = 0;
+    bool succeeded = false;
+    DWORD err = 0;
 
-    do
-    {
-        retry = false;
-
-        OPENFILENAMEW ofn {};
-        ofn.lStructSize = sizeof(ofn);
-        ofn.hwndOwner = nullptr;
-        ofn.lpstrFile = reinterpret_cast<wchar_t*>(fileNameBufferData.Data());
-        ofn.nMaxFile = (DWORD)fileNameBufferData.Size();
-        ofn.lpstrFilter = reinterpret_cast<wchar_t*>(filterBufferWriter.GetBuffer().Data());
-        ofn.nFilterIndex = 1;
-        ofn.lpstrTitle = titleWide.Data();
-        ofn.lpstrInitialDir = baseDirWide.Data();
-        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
-        if (allowMultiple)
+    RunOnApartmentThread(
+        [&]()
         {
-            ofn.Flags |= OFN_ALLOWMULTISELECT | OFN_EXPLORER;
-        }
+            bool retry;
+            uint32 numRetries = 0;
 
-        if (allowDirectories)
-        {
-            ofn.Flags |= OFN_NOVALIDATE;
-        }
-
-        if (GetOpenFileNameW(&ofn))
-        {
-            Array<FilePath> results;
-
-            wchar_t* p = reinterpret_cast<wchar_t*>(fileNameBufferData.Data());
-
-            WideString dir = p;
-
-            p += dir.Size() + 1;
-
-            if (*p == 0)
+            do
             {
-                results.PushBack(FilePath(dir));
-            }
-            else
-            {
-                // Multi select
-                while (*p != L'\0')
+                retry = false;
+
+                OPENFILENAMEW ofn {};
+                ofn.lStructSize = sizeof(ofn);
+                ofn.hwndOwner = nullptr;
+                ofn.lpstrFile = reinterpret_cast<wchar_t*>(fileNameBufferData.Data());
+                ofn.nMaxFile = (DWORD)fileNameBufferData.Size();
+                ofn.lpstrFilter = reinterpret_cast<wchar_t*>(filterBufferWriter.GetBuffer().Data());
+                ofn.nFilterIndex = 1;
+                ofn.lpstrTitle = titleWide.Data();
+                ofn.lpstrInitialDir = baseDirWide.Data();
+                ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+                if (allowMultiple)
                 {
-                    WideString filename = p;
-                    p += filename.Size() + 1;
+                    ofn.Flags |= OFN_ALLOWMULTISELECT | OFN_EXPLORER;
+                }
 
-                    results.PushBack(FilePath(dir) / filename);
+                if (allowDirectories)
+                {
+                    ofn.Flags |= OFN_NOVALIDATE;
+                }
+
+                if (GetOpenFileNameW(&ofn))
+                {
+                    succeeded = true;
+
+                    return;
+                }
+
+                err = CommDlgExtendedError();
+
+                if (err != 0)
+                {
+                    if (err == FNERR_BUFFERTOOSMALL && fileNameBufferData.Size() * 2 <= MaxFileNameBufferSize)
+                    {
+                        fileNameBufferData.SetSize(fileNameBufferData.Size() * 2);
+                        retry = true;
+
+                        continue;
+                    }
+
+                    return;
                 }
             }
+            while (retry && numRetries < MaxRetries);
+        });
 
-            if (callback)
-            {
-                callback(std::move(results));
-            }
+    if (succeeded)
+    {
+        Array<FilePath> results;
 
-            return;
-        }
+        wchar_t* p = reinterpret_cast<wchar_t*>(fileNameBufferData.Data());
 
-        DWORD err = CommDlgExtendedError();
+        WideString dir = p;
 
-        if (err != 0)
+        p += dir.Size() + 1;
+
+        if (*p == 0)
         {
-            if (err == FNERR_BUFFERTOOSMALL && fileNameBufferData.Size() * 2 <= MaxFileNameBufferSize)
-            {
-                fileNameBufferData.SetSize(fileNameBufferData.Size() * 2);
-                retry = true;
-
-                continue;
-            }
-
-            if (callback)
-            {
-                callback(HYP_MAKE_ERROR(Error, "Failed to handle open file dialog (error code: {}, message: {})", err, CommDlgErrorToString(err)));
-            }
-
-            return;
+            results.PushBack(FilePath(dir));
         }
+        else
+        {
+            // Multi select
+            while (*p != L'\0')
+            {
+                WideString filename = p;
+                p += filename.Size() + 1;
+
+                results.PushBack(FilePath(dir) / filename);
+            }
+        }
+
+        if (callback)
+        {
+            callback(std::move(results));
+        }
+
+        return;
     }
-    while (retry && numRetries < MaxRetries);
+
+    if (err != 0)
+    {
+        if (callback)
+        {
+            callback(HYP_MAKE_ERROR(Error, "Failed to handle open file dialog (error code: {}, message: {})", err, CommDlgErrorToString(err)));
+        }
+
+        return;
+    }
 
     if (callback)
     {
@@ -307,7 +347,23 @@ void ShowSaveFileDialog(
         ofn.lpstrDefExt = defaultExtWide.Data();
     }
 
-    if (GetSaveFileNameW(&ofn))
+    bool succeeded = false;
+    DWORD err = 0;
+
+    RunOnApartmentThread(
+        [&]()
+        {
+            if (GetSaveFileNameW(&ofn))
+            {
+                succeeded = true;
+
+                return;
+            }
+
+            err = CommDlgExtendedError();
+        });
+
+    if (succeeded)
     {
         wchar_t* p = reinterpret_cast<wchar_t*>(fileNameBufferData.Data());
         FilePath result = FilePath(String(p));
@@ -319,8 +375,6 @@ void ShowSaveFileDialog(
 
         return;
     }
-
-    DWORD err = CommDlgExtendedError();
 
     if (err != 0)
     {
@@ -347,111 +401,114 @@ void ShowSelectFolderDialog(
     const FilePath& baseDir,
     Proc<void(TResult<FilePath>&& result)>&& callback)
 {
-    InitializeCOM();
-
     // parse filename
     Array<String> parts = baseDir.Split('\\', '/');
     parts = StringUtil::CanonicalizePath(parts);
 
     FilePath canonPath { String::Join(parts, "\\") };
 
-    IFileDialog* pFileDialog = NULL;
-
-    HRESULT hr = CoCreateInstance(
-        CLSID_FileOpenDialog,
-        NULL,
-        CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(&pFileDialog));
-
-    if (!SUCCEEDED(hr))
-    {
-        callback(ResultFromHResult(hr));
-        return;
-    }
-
-    HYP_DEFER({
-        if (pFileDialog)
-        {
-            pFileDialog->Release();
-        }
-    });
-
-    DWORD dwOptions;
-    hr = pFileDialog->GetOptions(&dwOptions);
-
-    if (SUCCEEDED(hr))
-    {
-        pFileDialog->SetOptions(dwOptions | FOS_PICKFOLDERS);
-    }
-    else
-    {
-        callback(ResultFromHResult(hr));
-        return;
-    }
-
-    if (canonPath.Any() && canonPath.IsDirectory())
-    {
-        WideString pathWide = canonPath.ToWide();
-
-        IShellItem* pFolderItem = nullptr;
-        hr = SHCreateItemFromParsingName(
-            pathWide.Data(),
-            NULL,
-            IID_PPV_ARGS(&pFolderItem));
-
-        if (!SUCCEEDED(hr))
-        {
-            callback(ResultFromHResult(hr));
-            return;
-        }
-        else
-        {
-            pFileDialog->SetFolder(pFolderItem);
-            pFolderItem->Release();
-        }
-    }
-
     WideString titleWide = String(title).ToWide();
 
-    pFileDialog->SetTitle(titleWide.Data());
+    HRESULT hr = S_OK;
+    std::wstring selectedPathWide;
 
-    hr = pFileDialog->Show(NULL);
-
-    if (!SUCCEEDED(hr))
-    {
-        callback(ResultFromHResult(hr));
-        return;
-    }
-
-    IShellItem* pItem;
-    hr = pFileDialog->GetResult(&pItem);
-
-    HYP_DEFER({
-        if (pItem)
+    RunOnApartmentThread(
+        [&]()
         {
-            pItem->Release();
-        }
-    });
+            IFileDialog* pFileDialog = NULL;
+
+            hr = CoCreateInstance(
+                CLSID_FileOpenDialog,
+                NULL,
+                CLSCTX_INPROC_SERVER,
+                IID_PPV_ARGS(&pFileDialog));
+
+            if (!SUCCEEDED(hr))
+            {
+                return;
+            }
+
+            HYP_DEFER({
+                if (pFileDialog)
+                {
+                    pFileDialog->Release();
+                }
+            });
+
+            DWORD dwOptions;
+            hr = pFileDialog->GetOptions(&dwOptions);
+
+            if (!SUCCEEDED(hr))
+            {
+                return;
+            }
+
+            pFileDialog->SetOptions(dwOptions | FOS_PICKFOLDERS);
+
+            if (canonPath.Any() && canonPath.IsDirectory())
+            {
+                WideString pathWide = canonPath.ToWide();
+
+                IShellItem* pFolderItem = nullptr;
+                hr = SHCreateItemFromParsingName(
+                    pathWide.Data(),
+                    NULL,
+                    IID_PPV_ARGS(&pFolderItem));
+
+                if (!SUCCEEDED(hr))
+                {
+                    return;
+                }
+
+                pFileDialog->SetFolder(pFolderItem);
+                pFolderItem->Release();
+            }
+
+            pFileDialog->SetTitle(titleWide.Data());
+
+            hr = pFileDialog->Show(NULL);
+
+            if (!SUCCEEDED(hr))
+            {
+                return;
+            }
+
+            IShellItem* pItem = nullptr;
+            hr = pFileDialog->GetResult(&pItem);
+
+            if (!SUCCEEDED(hr))
+            {
+                return;
+            }
+
+            HYP_DEFER({
+                if (pItem)
+                {
+                    pItem->Release();
+                }
+            });
+
+            PWSTR pszFilePath = nullptr;
+            hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+
+            if (!SUCCEEDED(hr))
+            {
+                return;
+            }
+
+            selectedPathWide = pszFilePath;
+
+            CoTaskMemFree(pszFilePath);
+        });
 
     if (!SUCCEEDED(hr))
     {
         callback(ResultFromHResult(hr));
+
         return;
     }
 
-    PWSTR pszFilePath;
-    hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-
-    if (!SUCCEEDED(hr))
-    {
-        callback(ResultFromHResult(hr));
-        return;
-    }
-
-    FilePath selectedPath = FilePath(WideString(pszFilePath).ToUtf8());
-    callback(TResult<FilePath>(std::move(selectedPath)));
-
-    CoTaskMemFree(pszFilePath);
+    callback(TResult<FilePath>(FilePath(WideString(selectedPathWide.c_str()).ToUtf8())));
 }
 
 #pragma endregion Select Folder Dialog
