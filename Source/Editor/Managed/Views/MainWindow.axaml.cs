@@ -1254,12 +1254,93 @@ namespace Hyperion.Editor
             _sceneDropDown?.Flyout?.Hide();
         }
 
-        // protected override void OnKeyDown(Avalonia.Input.KeyEventArgs e)
-        // {
-        //     base.OnKeyDown(e);
+        protected override void OnKeyDown(Avalonia.Input.KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
 
-        //     var vm = DataContext as MainWindowViewModel;
-        //     vm?.HandleKeyDown(e);
-        // }
+            if (e.Handled || DataContext is not MainWindowViewModel vm)
+            {
+                return;
+            }
+
+            // Let text editing controls keep their native editing shortcuts
+            // (undo, redo, clipboard, select all) instead of running scene commands.
+            for (Visual? visual = e.Source as Visual; visual != null; visual = visual.GetVisualParent())
+            {
+                if (visual is TextBox)
+                {
+                    return;
+                }
+            }
+
+            KeyModifiers modifiers = e.KeyModifiers;
+            bool ctrl = modifiers.HasFlag(KeyModifiers.Control) || modifiers.HasFlag(KeyModifiers.Meta);
+            bool shift = modifiers.HasFlag(KeyModifiers.Shift);
+            bool alt = modifiers.HasFlag(KeyModifiers.Alt);
+
+            if (alt)
+            {
+                return;
+            }
+
+            if (!ctrl)
+            {
+                if (e.Key == Key.Delete && vm.CanCopy)
+                {
+                    vm.Delete.Execute(null);
+                    e.Handled = true;
+                }
+
+                return;
+            }
+
+            switch (e.Key)
+            {
+                case Key.Z:
+                    if (shift ? vm.CanRedo : vm.CanUndo)
+                    {
+                        (shift ? vm.Redo : vm.Undo).Execute(null);
+                        e.Handled = true;
+                    }
+                    break;
+
+                case Key.Y:
+                    if (vm.CanRedo)
+                    {
+                        vm.Redo.Execute(null);
+                        e.Handled = true;
+                    }
+                    break;
+
+                case Key.C:
+                    if (vm.CanCopy)
+                    {
+                        vm.Copy.Execute(null);
+                        e.Handled = true;
+                    }
+                    break;
+
+                case Key.V:
+                    if (vm.CanPaste)
+                    {
+                        vm.Paste.Execute(null);
+                        e.Handled = true;
+                    }
+                    break;
+
+                case Key.A:
+                    vm.SelectAll.Execute(null);
+                    e.Handled = true;
+                    break;
+
+                case Key.S:
+                    if (!vm.IsSimulating)
+                    {
+                        (shift ? vm.SaveProjectAs : vm.SaveProject).Execute(null);
+                        e.Handled = true;
+                    }
+                    break;
+            }
+        }
     }
 }

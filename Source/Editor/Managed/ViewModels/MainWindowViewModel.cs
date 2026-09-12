@@ -55,6 +55,8 @@ namespace Hyperion.Editor.ViewModels
         public EditorCommand Undo => new EditorCommand("Undo");
         public EditorCommand Redo => new EditorCommand("Redo");
         public EditorCommand SelectAll => new EditorCommand("SelectAll");
+        public EditorCommand SelectAllInViewport => new EditorCommand("SelectAllInViewport");
+        public EditorCommand SelectNone => new EditorCommand("SelectNone");
 
         public EditorCommand BuildLightmaps => new EditorCommand("BuildLightmaps");
         public EditorCommand BuildReflectionProbes => new EditorCommand("BuildReflectionProbes");

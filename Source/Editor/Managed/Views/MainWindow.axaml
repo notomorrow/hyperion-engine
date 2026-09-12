@@ -318,8 +318,8 @@
                     <MenuItem Command="{Binding Delete}" Header="{Binding DeleteHeader}" />
                     <Separator />
                     <MenuItem Command="{Binding SelectAll}" Header="Select _All" />
-                    <MenuItem Header="Select All in Viewport" />
-                    <MenuItem Header="Select None" />
+                    <MenuItem Command="{Binding SelectAllInViewport}" Header="Select All in Viewport" />
+                    <MenuItem Command="{Binding SelectNone}" Header="Select None" />
                 </MenuItem>
                 <MenuItem Header="_Layout">
                     <MenuItem
@@ -435,8 +435,8 @@
                                         <Flyout Placement="Bottom">
                                             <StackPanel MinWidth="150">
                                                 <MenuItem Command="{Binding SelectAll}" Header="Select All" />
-                                                <MenuItem Header="Select All in Viewport" />
-                                                <MenuItem Header="Select None" />
+                                                <MenuItem Command="{Binding SelectAllInViewport}" Header="Select All in Viewport" />
+                                                <MenuItem Command="{Binding SelectNone}" Header="Select None" />
                                             </StackPanel>
                                         </Flyout>
                                     </DropDownButton.Flyout>

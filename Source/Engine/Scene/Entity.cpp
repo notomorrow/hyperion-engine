@@ -84,7 +84,22 @@ Entity::~Entity()
         HYP_LOG(Entity, Error, "Failed to remove Entity {} from EntityManager", GetName());
     }
 
-    m_entityManager = nullptr;
+    SetEntityManagerRaw_Internal(nullptr);
+}
+
+void Entity::SetEntityManagerRaw_Internal(EntityManager* entityManager)
+{
+    if (m_entityManager == entityManager)
+    {
+        return;
+    }
+
+    if (m_entityManager != nullptr)
+    {
+        m_entityManager->UntrackEntityFromAllSystems(this);
+    }
+
+    m_entityManager = entityManager;
 }
 
 void Entity::AddToLayer(LayerId layerId)
@@ -684,7 +699,7 @@ void Entity::SetScene_Internal(Scene* scene, bool moveToDetached)
             prevEntityManager->RemoveEntity(this);
         }
 
-        m_entityManager = nullptr;
+        SetEntityManagerRaw_Internal(nullptr);
     }
 
     Node::SetScene_Internal(newScene, moveToDetached);

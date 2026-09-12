@@ -4961,6 +4961,46 @@ void EditorSubsystem::InitViewport()
                 }
             }
 
+            ///Keyboard shortcuts
+            if (g_appContext.IsValid()
+                && g_appContext->GetMainWindow() != nullptr
+                && g_appContext->GetMainWindow()->GetInputManager()->IsCtrlDown()
+                && !IsSimulating()
+                && !IsMeshEditDragActive())
+            {
+                const bool isShiftDown = g_appContext->GetMainWindow()->GetInputManager()->IsShiftDown();
+
+                Name commandName;
+
+                switch (event.keyCode)
+                {
+                case KeyCode::KEY_Z:
+                    commandName = isShiftDown ? NAME("EditorCommandRedo") : NAME("EditorCommandUndo");
+                    break;
+                case KeyCode::KEY_Y:
+                    commandName = NAME("EditorCommandRedo");
+                    break;
+                case KeyCode::KEY_C:
+                    commandName = NAME("EditorCommandCopy");
+                    break;
+                case KeyCode::KEY_V:
+                    commandName = NAME("EditorCommandPaste");
+                    break;
+                case KeyCode::KEY_A:
+                    commandName = NAME("EditorCommandSelectAll");
+                    break;
+                default:
+                    break;
+                }
+
+                if (commandName.IsValid())
+                {
+                    ExecuteCommandByName(commandName, String::empty);
+
+                    return UIEventHandlerResult::STOP_BUBBLING;
+                }
+            }
+
             if (IsMeshEditDragActive())
             {
                 int lockedAxis = -1;

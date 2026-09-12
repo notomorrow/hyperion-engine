@@ -215,6 +215,7 @@ protected:
 
 private:
     void SetEntityManager(const Handle<EntityManager>& entityManager);
+    void SetEntityManagerRaw_Internal(EntityManager* entityManager);
 
     ///Serialization --
 

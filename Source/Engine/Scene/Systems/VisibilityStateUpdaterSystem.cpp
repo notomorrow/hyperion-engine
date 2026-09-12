@@ -34,7 +34,6 @@ void VisibilityStateUpdaterSystem::OnEntityRemoved(Entity* entity)
     SystemBase::OnEntityRemoved(entity);
 
     EntityManager* entityManager = entity->GetEntityManager();
-    Assert(entityManager != nullptr);
 
     if (!entityManager)
     {

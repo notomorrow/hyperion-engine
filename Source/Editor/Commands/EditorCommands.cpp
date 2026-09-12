@@ -2997,6 +2997,116 @@ DEFINE_EDITOR_COMMAND(SelectAll);
 
 #pragma endregion SelectAll
 
+#pragma region SelectAllInViewport
+
+class EditorCommandSelectAllInViewport final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSelectAllInViewport);
+
+public:
+    virtual ~EditorCommandSelectAllInViewport() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Select All in Viewport";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        const Handle<Scene> activeScene = subsystem->GetActiveScene();
+        if (!activeScene.IsValid())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSelectAllInViewport: no active scene");
+            return;
+        }
+
+        const Handle<Node>& root = activeScene->GetRoot();
+        if (!root.IsValid())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSelectAllInViewport: scene has no root node");
+            return;
+        }
+
+        EditorViewport* activeViewport = subsystem->GetActiveViewport();
+        if (activeViewport == nullptr || !activeViewport->GetCamera().IsValid())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandSelectAllInViewport: no active viewport");
+            return;
+        }
+
+        const Frustum& frustum = activeViewport->GetCamera()->GetFrustum();
+
+        Array<Handle<Node>> visibleNodes;
+
+        for (Node* descendant : root->GetDescendantsArray())
+        {
+            if (descendant == nullptr || descendant->IsRoot())
+            {
+                continue;
+            }
+
+            Handle<Node> nodeStrong = MakeStrongRef(descendant);
+
+            const BoundingBox worldBounds = nodeStrong->GetWorldBounds();
+
+            if (!worldBounds.IsValid() || !worldBounds.IsFinite())
+            {
+                continue;
+            }
+
+            if (frustum.ContainsAABB(worldBounds))
+            {
+                visibleNodes.PushBack(nodeStrong);
+            }
+        }
+
+        if (visibleNodes.Empty())
+        {
+            return;
+        }
+
+        subsystem->SetSelectedNodes(visibleNodes);
+        subsystem->SetFocusedNode(visibleNodes[0], true);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SelectAllInViewport);
+
+#pragma endregion SelectAllInViewport
+
+#pragma region SelectNone
+
+class EditorCommandSelectNone final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSelectNone);
+
+public:
+    virtual ~EditorCommandSelectNone() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Select None";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        if (subsystem->GetFocusedNode().IsValid())
+        {
+            subsystem->SetFocusedNode(Handle<Node>::Null(), true);
+        }
+
+        subsystem->ClearSelection();
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SelectNone);
+
+#pragma endregion SelectNone
+
 #pragma region NewScript
 
 class EditorCommandNewScript final : public EditorCommandBase
