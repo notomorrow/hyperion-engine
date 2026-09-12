@@ -51,13 +51,13 @@ public:
         return *m_noiseCombinator;
     }
 
-    HYP_METHOD()
+    HYP_METHOD(Property = "Seed")
     HYP_FORCE_INLINE uint32 GetSeed() const
     {
         return m_layerInfo.seed;
     }
 
-    HYP_METHOD()
+    HYP_METHOD(Property = "Seed")
     void SetSeed(uint32 seed);
 
     HYP_METHOD()

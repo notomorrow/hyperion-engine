@@ -18,9 +18,13 @@ namespace Hyperion.Editor.ViewModels
     /// </summary>
     public class WorldSettingsPanelViewModel : ViewModelBase
     {
+        private const int AutoRefreshIntervalMs = 1500;
+
         public ObservableCollection<WorldGridLayerViewModel> Layers { get; } = new ObservableCollection<WorldGridLayerViewModel>();
 
         public ObservableCollection<WorldGridLayerViewModel> FilteredLayers { get; } = new ObservableCollection<WorldGridLayerViewModel>();
+
+        public ObservableCollection<WorldGridLayerTypeViewModel> AvailableLayerTypes { get; } = new ObservableCollection<WorldGridLayerTypeViewModel>();
 
         private string? _searchText;
         public string? SearchText
@@ -59,24 +63,51 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _isRefreshing, value);
         }
 
-        public ICommand RefreshCommand { get; }
-        public ICommand AddTerrainCommand { get; }
+        public ICommand AddLayerTypeCommand { get; }
         public ICommand RemoveLayerCommand { get; }
+
+        private readonly DispatcherTimer _autoRefreshTimer;
 
         public WorldSettingsPanelViewModel()
         {
-            RefreshCommand = new RelayCommand(() => _ = RefreshAsync());
-            AddTerrainCommand = new RelayCommand(() => _ = AddTerrainAsync());
+            AddLayerTypeCommand = new RelayCommand<string>(typeName => _ = AddLayerAsync(typeName));
             RemoveLayerCommand = new RelayCommand<WorldGridLayerViewModel>(layer => _ = RemoveLayerAsync(layer));
+
+            // Keep the layer list in sync with the engine without a manual refresh button.
+            // The tick only rebuilds the list when the engine-side layer set actually changed,
+            // so in-progress property edits and expander state are not disturbed.
+            _autoRefreshTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(AutoRefreshIntervalMs) };
+            _autoRefreshTimer.Tick += async (_, _) => await AutoRefreshTickAsync();
+            _autoRefreshTimer.Start();
 
             _ = RefreshAsync();
         }
 
-        public async Task RefreshAsync()
+        /// <summary>
+        /// Stops the auto-refresh timer. Called when the window closes so the view model
+        /// (and its engine object references) can be collected.
+        /// </summary>
+        public void StopAutoRefresh()
+        {
+            _autoRefreshTimer.Stop();
+        }
+
+        private async Task AutoRefreshTickAsync()
+        {
+            if (IsRefreshing)
+            {
+                return;
+            }
+
+            await RefreshAsync(rebuildOnlyOnChange: true).ConfigureAwait(true);
+        }
+
+        public async Task RefreshAsync(bool rebuildOnlyOnChange = false)
         {
             IsRefreshing = true;
 
             var snapshots = new List<LayerSnapshot>();
+            var layerTypes = new List<string>();
             bool hasWorldGrid = false;
 
             await EngineManager.PostToSimThread(() =>
@@ -107,7 +138,7 @@ namespace Hyperion.Editor.ViewModels
                     }
 
                     Name layerName = layer.GetName();
-                    string typeName = layer.Class.Name.ToString();
+                    string typeName = layer.GetLayerClassName().ToString();
                     ObjIdBase id = layer.Id;
 
                     snapshots.Add(new LayerSnapshot(
@@ -118,35 +149,120 @@ namespace Hyperion.Editor.ViewModels
                         layerName.ToString(),
                         typeName));
                 }
+
+                if (EngineManager.EditorGame?.EditorSubsystem is { } editorSubsystem)
+                {
+                    Array classNames = editorSubsystem.InvokeNativeMethod<Array>(new Name("GetAvailableWorldGridLayerClassNames"));
+
+                    if (classNames != null)
+                    {
+                        foreach (Name className in classNames)
+                        {
+                            layerTypes.Add(className.ToString());
+                        }
+                    }
+                }
             });
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 HasWorldGrid = hasWorldGrid;
 
-                Layers.Clear();
+                layerTypes.Sort(StringComparer.OrdinalIgnoreCase);
 
-                foreach (LayerSnapshot snapshot in snapshots)
+                IEnumerable<string> layerTypeNames = AvailableLayerTypes.Select(t => t.ClassName);
+
+                if (!layerTypeNames.SequenceEqual(layerTypes, StringComparer.OrdinalIgnoreCase))
                 {
-                    Layers.Add(new WorldGridLayerViewModel(
-                        this,
-                        snapshot.WorldGrid,
-                        snapshot.Layer,
-                        snapshot.LayerTypeId,
-                        snapshot.LayerId,
-                        snapshot.Name,
-                        snapshot.TypeName));
+                    AvailableLayerTypes.Clear();
+
+                    foreach (string typeName in layerTypes)
+                    {
+                        AvailableLayerTypes.Add(new WorldGridLayerTypeViewModel(typeName));
+                    }
                 }
 
-                ApplyFilter();
+                if (rebuildOnlyOnChange && !LayerListDiffers(snapshots))
+                {
+                    IsRefreshing = false;
+                    return;
+                }
+
+                RebuildLayers(snapshots);
             });
 
             IsRefreshing = false;
         }
 
-        private async Task AddTerrainAsync()
+        /// <summary>
+        /// True when the engine-side layer list no longer matches what is currently shown
+        /// (a layer was added/removed externally, or a layer was renamed).
+        /// </summary>
+        private bool LayerListDiffers(List<LayerSnapshot> snapshots)
         {
-            EngineManager.EditorGame?.EditorSubsystem?.ExecuteCommandByName(new Name("EditorCommandAddTerrainLayer"));
+            if (Layers.Count != snapshots.Count)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < snapshots.Count; i++)
+            {
+                WorldGridLayerViewModel current = Layers[i];
+                LayerSnapshot snapshot = snapshots[i];
+
+                if (current.LayerId != snapshot.LayerId
+                    || current.LayerTypeId != snapshot.LayerTypeId
+                    || !string.Equals(current.DisplayName, snapshot.Name, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void RebuildLayers(List<LayerSnapshot> snapshots)
+        {
+            // Preserve expansion state across rebuilds, keyed by layer id.
+            var expandedById = new Dictionary<(uint TypeId, uint Id), bool>();
+
+            foreach (WorldGridLayerViewModel layer in Layers)
+            {
+                expandedById[(layer.LayerTypeId, layer.LayerId)] = layer.IsExpanded;
+            }
+
+            Layers.Clear();
+
+            foreach (LayerSnapshot snapshot in snapshots)
+            {
+                var viewModel = new WorldGridLayerViewModel(
+                    this,
+                    snapshot.WorldGrid,
+                    snapshot.Layer,
+                    snapshot.LayerTypeId,
+                    snapshot.LayerId,
+                    snapshot.Name,
+                    snapshot.TypeName);
+
+                if (expandedById.TryGetValue((snapshot.LayerTypeId, snapshot.LayerId), out bool isExpanded))
+                {
+                    viewModel.IsExpanded = isExpanded;
+                }
+
+                Layers.Add(viewModel);
+            }
+
+            ApplyFilter();
+        }
+
+        private async Task AddLayerAsync(string? typeName)
+        {
+            if (string.IsNullOrEmpty(typeName))
+            {
+                return;
+            }
+
+            EngineManager.EditorGame?.EditorSubsystem?.ExecuteCommandByName(new Name("EditorCommandAddWorldGridLayer"), typeName);
 
             // The command is enqueued on the sim thread; this refresh is posted after it,
             // so it will observe the newly added layer.
@@ -162,7 +278,7 @@ namespace Hyperion.Editor.ViewModels
 
             WorldGrid worldGrid = layer.WorldGrid;
             WorldGridLayer worldGridLayer = layer.Layer;
-            string label = !string.IsNullOrWhiteSpace(layer.DisplayName) ? layer.DisplayName.Trim() : layer.TypeName;
+            string label = string.IsNullOrWhiteSpace(layer.DisplayName) ? layer.TypeName : layer.DisplayName.Trim();
 
             await EngineManager.PostToSimThread(() =>
             {
@@ -232,6 +348,31 @@ namespace Hyperion.Editor.ViewModels
                 Name = name;
                 TypeName = typeName;
             }
+        }
+    }
+
+    /// <summary>
+    /// A concrete WorldGridLayer-derived class that can be added to the world grid.
+    /// </summary>
+    public class WorldGridLayerTypeViewModel : ViewModelBase
+    {
+        public string ClassName { get; }
+
+        public string DisplayName { get; }
+
+        public string IconKind { get; }
+
+        public WorldGridLayerTypeViewModel(string className)
+        {
+            ClassName = className ?? throw new ArgumentNullException(nameof(className));
+
+            const string suffix = "WorldGridLayer";
+
+            DisplayName = ClassName.EndsWith(suffix, StringComparison.Ordinal)
+                ? ClassName[..^suffix.Length]
+                : ClassName;
+
+            IconKind = DisplayName.Contains("Terrain", StringComparison.OrdinalIgnoreCase) ? "Landscape" : "Layers";
         }
     }
 }

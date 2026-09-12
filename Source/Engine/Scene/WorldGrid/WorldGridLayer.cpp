@@ -24,6 +24,12 @@ ENGINE_API HYP_DECLARE_LOG_CHANNEL(Streaming);
 
 #pragma region WorldGridLayer
 
+
+Name WorldGridLayer::GetLayerClassName() const
+{
+    return InstanceClass()->GetName();
+}
+
 Handle<StreamingCell> WorldGridLayer::CreateStreamingCell(const StreamingCellInfo& cellInfo)
 {
     HYP_SCOPE;

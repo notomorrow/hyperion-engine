@@ -333,8 +333,10 @@
                     <Separator />
                     <MenuItem Command="{Binding BuildLightmaps}" Header="Lightmaps" />
                     <Separator />
-                    <MenuItem Command="{Binding BuildBentNormals}" Header="Bent Normals" />
-                    <Separator />
+                  
+                    <!-- Same as elsewhere. We don't actually USE BN in the engine yet. Commenting out for now to prevent any confusion. -->
+                    <!-- <MenuItem Command="{Binding BuildBentNormals}" Header="Bent Normals" />
+                    <Separator /> -->
                     <MenuItem Command="{Binding RebuildMeshBVHs}" Header="Rebuild Mesh BVHs" />
                     <Separator />
                     <MenuItem Command="{Binding CookGameContent}" Header="Cook Game Content" />
@@ -605,8 +607,10 @@
                                             <MenuItem Command="{Binding BuildIrradianceProbes}" Header="Irradiance Probes" />
                                             <Separator />
                                             <MenuItem Command="{Binding BuildLightmaps}" Header="Lightmaps" />
-                                            <Separator />
-                                            <MenuItem Command="{Binding BuildBentNormals}" Header="Bent Normals" />
+                                          
+                                            <!-- Commenting out for now, as actual usage of BN in the engine is not yet surfaced. -->
+                                            <!-- <Separator />
+                                            <MenuItem Command="{Binding BuildBentNormals}" Header="Bent Normals" /> -->
                                         </StackPanel>
                                     </Flyout>
                                 </DropDownButton.Flyout>
@@ -629,7 +633,7 @@
                               Padding="0,8"
                               ToolTip.Tip="Add to the active scene">
 
-                            <StackPanel Orientation="Horizontal">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
                               <controls:Codicon
                                   VerticalAlignment="Center"
                                   Kind="Add"

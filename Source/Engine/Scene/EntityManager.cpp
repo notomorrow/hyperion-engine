@@ -530,12 +530,6 @@ void EntityManager::SetWorld(World* world)
             }
         }
 
-        // notify systems of entity added for the new world
-        for (SystemBase* system : systems)
-        {
-            NotifySystemOfExistingEntities(system);
-        }
-
         for (auto& subtypeData : m_entities.GetSubtypeData())
         {
             for (EntityData& entityData : subtypeData.data)
@@ -547,6 +541,12 @@ void EntityManager::SetWorld(World* world)
 
                 entity->OnAddedToWorld(m_world);
             }
+        }
+
+        // notify systems of entity added for the new world
+        for (SystemBase* system : systems)
+        {
+            NotifySystemOfExistingEntities(system);
         }
     }
 }

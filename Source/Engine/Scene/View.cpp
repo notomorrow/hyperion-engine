@@ -409,6 +409,15 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                 continue;
             }
 
+            if (light->GetLightType() == LightType::Spot
+                || light->GetLightType() == LightType::AreaRect)
+            {
+                // @TODO
+                // https://github.com/HyperionGameTech/HyperionEngine/issues/306
+                // We don't support shadow maps for these light types, yet.
+                continue;
+            }
+
             bool isLightInFrustum = false;
 
             if (flags & ViewFlags::NO_FRUSTUM_CULLING)
@@ -780,6 +789,10 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                     shadowView->collectionState.skipNext = false;
                 }
 
+                ///mirror the parent view's scene list to prevent holding onto stale Scenes
+                shadowView->m_scenes.Resize(shadowViewScenes.Size());
+                std::copy(shadowViewScenes.Begin(), shadowViewScenes.End(), shadowView->m_scenes.Begin());
+
                 if (!updateCascade)
                 {
                     outShadowViews.PushBack(shadowView);
@@ -787,7 +800,7 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                     continue;
                 }
 
-                ///*Cached State Updates* --//
+                ///Cached State Updates
 
                 shadowView->cachedMatrices.view = shadowViewMatrix;
                 shadowView->cachedMatrices.viewProj = shadowViewProjMatrix;
@@ -796,10 +809,7 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                 shadowView->cachedFrustum = shadowViewFrustum;
                 shadowView->cachedBounds = shadowViewBounds;
 
-                ///********************** --//
-
-                shadowView->m_scenes.Resize(shadowViewScenes.Size());
-                std::copy(shadowViewScenes.Begin(), shadowViewScenes.End(), shadowView->m_scenes.Begin());
+                ////////////////////////
 
                 outShadowViews.PushBack(shadowView);
             }

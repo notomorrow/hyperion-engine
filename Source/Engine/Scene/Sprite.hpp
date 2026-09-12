@@ -56,7 +56,7 @@ public:
     static Handle<Sprite> CreateLightmapVolumeSprite(Scene* scene, LightmapVolume* lightmapVolume);
     static Handle<Sprite> CreateCameraSprite(Scene* scene, Camera* camera);
 
-    HYP_FIELD(Property = "SpriteType", Serialize, Editor)
+    HYP_FIELD(Property = "SpriteType", Serialize = false, EditEnabled = false)
     SpriteType spriteType = SpriteType::None;
     
     HYP_FIELD(Property = "Size", Serialize, Editor)

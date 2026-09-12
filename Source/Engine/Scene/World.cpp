@@ -1517,9 +1517,10 @@ bool World::RemoveScene(Scene* scene, bool removeFromStreamingLayer)
         {
             if (removeFromStreamingLayer && (m_worldFlags & WorldFlags::HasSceneStreamingLayer))
             {
-                Handle<WorldGridLayer> scenesStreamingLayer = GetOrCreateStreamingLayer(s_nameStreamingLayerScenes);
-                AssertDebug(scenesStreamingLayer != nullptr);
-                scenesStreamingLayer->RemoveStreamingObject(scene);
+                if (Handle<WorldGridLayer> scenesStreamingLayer = GetStreamingLayer(s_nameStreamingLayerScenes); scenesStreamingLayer)
+                {
+                    scenesStreamingLayer->RemoveStreamingObject(scene);
+                }
             }
 
             OnSceneRemoved.Fire(this, this, scene);
@@ -1690,10 +1691,10 @@ void World::DeserializeNonStreamingScenes(const Array<Handle<Scene>>& scenes)
     {
         if (m_worldFlags & WorldFlags::HasSceneStreamingLayer)
         {
-            // Remove scene from streaming layer if its currently enabled
-            Handle<WorldGridLayer> scenesStreamingLayer = GetOrCreateStreamingLayer(s_nameStreamingLayerScenes);
-            AssertDebug(scenesStreamingLayer != nullptr);
-            scenesStreamingLayer->RemoveStreamingObject(scene);
+            if (Handle<WorldGridLayer> scenesStreamingLayer = GetStreamingLayer(s_nameStreamingLayerScenes); scenesStreamingLayer)
+            {
+                scenesStreamingLayer->RemoveStreamingObject(scene);
+            }
         }
 
         scene->SetWorld(nullptr);
@@ -1856,6 +1857,28 @@ Handle<WorldGridLayer> World::GetOrCreateStreamingLayer(Name streamingLayerName)
     m_worldGrid->AddLayer(layer);
 
     return layer;
+}
+
+Handle<WorldGridLayer> World::GetStreamingLayer(Name streamingLayerName) const
+{
+    AssertDebug(streamingLayerName.IsValid());
+    if (!streamingLayerName.IsValid() || !m_worldGrid)
+    {
+        return Handle<WorldGridLayer>::Null();
+    }
+
+    auto it = m_worldGrid->GetLayers().FindIf(
+        [streamingLayerName](const Handle<WorldGridLayer>& layer)
+        {
+            return layer->GetName() == streamingLayerName;
+        });
+
+    if (it != m_worldGrid->GetLayers().End())
+    {
+        return *it;
+    }
+
+    return Handle<WorldGridLayer>::Null();
 }
 
 void World::DeserializeStreamingLayers(const Array<WGLayerDesc, DynamicAllocator>& streamingLayers)

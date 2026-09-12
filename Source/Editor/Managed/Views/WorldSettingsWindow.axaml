@@ -30,12 +30,6 @@
                     Grid.Column="1"
                     Orientation="Horizontal"
                     Spacing="8">
-                    <Button Command="{Binding RefreshCommand}" ToolTip.Tip="Reload layers from the engine">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <controls:Codicon Kind="Refresh" Size="14" />
-                            <TextBlock Text="Refresh" />
-                        </StackPanel>
-                    </Button>
                     <Button
                         Classes="Primary"
                         Click="OnCloseClick"
@@ -56,34 +50,33 @@
             Background="{DynamicResource Brush.Panel}"
             BorderBrush="{DynamicResource Brush.Border}"
             BorderThickness="0,0,0,1">
-            <TextBox
-                Padding="8,6"
-                Watermark="Search world settings"
-                Text="{Binding SearchText, Mode=TwoWay}">
-                <TextBox.InnerLeftContent>
-                    <controls:Codicon
-                        Margin="6,0,0,0"
-                        VerticalAlignment="Center"
-                        Foreground="{DynamicResource Brush.TextMuted}"
-                        Kind="Search"
-                        Size="14" />
-                </TextBox.InnerLeftContent>
-            </TextBox>
+                <TextBox
+                    Padding="8,6"
+                    Watermark="Search world settings"
+                    Text="{Binding SearchText, Mode=TwoWay}">
+                    <TextBox.InnerLeftContent>
+                        <controls:Codicon
+                            Margin="6,0,7,0"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource Brush.TextMuted}"
+                            Kind="Search"
+                            Size="14" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
         </Border>
 
         <!--  Settings content  -->
         <ScrollViewer Padding="0">
             <StackPanel Margin="16,14" Spacing="14">
                 <StackPanel Spacing="4">
-                    <TextBlock Classes="section-label" Text="WORLD GRID" />
+                    <TextBlock Classes="section-label" Text="World Grid Layers" />
                     <TextBlock
                         Classes="muted"
                         FontSize="11"
-                        Text="Layers streamed in around the camera as the world is explored. Terrain is managed here as a WorldGrid layer."
+                        Text="Manage streaming layers for the World."
                         TextWrapping="Wrap" />
                 </StackPanel>
 
-                <!--  No WorldGrid (streaming disabled)  -->
                 <Border
                     Padding="12,10"
                     Background="{DynamicResource Brush.PanelRaised}"
@@ -94,7 +87,7 @@
                     <TextBlock
                         Classes="muted"
                         FontSize="11.5"
-                        Text="The active world has no WorldGrid (world streaming is disabled), so there are no layers to configure."
+                        Text="World Grid is disabled on this world."
                         TextWrapping="Wrap" />
                 </Border>
 
@@ -166,7 +159,7 @@
                                         </Button>
                                     </Grid>
 
-                                    <!--  Layer settings (built from the layer's reflection metadata)  -->
+                                    <!--  Layer settings -->
                                     <StackPanel
                                         Margin="14,0,12,10"
                                         IsVisible="{Binding IsExpanded}"
@@ -180,14 +173,32 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Command="{Binding AddTerrainCommand}" ToolTip.Tip="Add a new terrain layer to the world grid">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <controls:Codicon Kind="Add" Size="14" />
-                            <TextBlock Text="Add Terrain Layer" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                <DropDownButton
+                    Classes="gizmo"
+                    HorizontalAlignment="Left"
+                    IsEnabled="{Binding HasWorldGrid}"
+                    Click="OnAddLayerDropDownClick"
+                    ToolTip.Tip="Add a new layer to the world grid">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <controls:Codicon Kind="Add" Size="14" />
+                        <TextBlock Text="Add Layer" />
+                        <controls:Codicon Kind="ChevronDown" Size="10" />
+                    </StackPanel>
+                    <DropDownButton.Flyout>
+                      <Flyout Placement="Bottom">
+                            <ItemsControl ItemsSource="{Binding AvailableLayerTypes}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:WorldGridLayerTypeViewModel">
+                                        <MenuItem
+                                            Command="{Binding $parent[ItemsControl].DataContext.AddLayerTypeCommand}"
+                                            CommandParameter="{Binding ClassName}"
+                                            Header="{Binding DisplayName}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Flyout>
+                    </DropDownButton.Flyout>
+                </DropDownButton>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>

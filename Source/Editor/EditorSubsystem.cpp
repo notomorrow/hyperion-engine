@@ -5485,6 +5485,28 @@ String EditorSubsystem::GetCodeEditor() const
     return String(g_cvCodeEditor.Get());
 }
 
+Array<Name> EditorSubsystem::GetAvailableWorldGridLayerClassNames() const
+{
+    Array<Name> result;
+
+    auto functor =
+        [&result](const Class* cls)
+        {
+            if (cls == nullptr || cls->IsAbstract() || !cls->IsDerivedFrom(WorldGridLayer::StaticClass()))
+            {
+                return IterationResult::CONTINUE;
+            }
+
+            result.PushBack(cls->GetName());
+
+            return IterationResult::CONTINUE;
+        };
+
+    ClassRegistry::GetInstance().ForEachClass(functor);
+
+    return result;
+}
+
 Handle<Node> EditorSubsystem::GetFocusedNode() const
 {
     AssertOnThread(g_simThread);

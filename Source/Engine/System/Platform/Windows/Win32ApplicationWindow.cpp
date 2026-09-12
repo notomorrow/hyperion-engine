@@ -386,10 +386,25 @@ static LRESULT CALLBACK EngineWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 
 LRESULT CALLBACK Win32ApplicationWindow::ParentSubclassProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
+    /// [AI]
+    /// True while a deferred WM_ACTIVATE is being replayed down the subclass chain.
+    /// All messages for a given hwnd are dispatched on its owning thread, so a plain
+    /// static is sufficient. Without this guard, a replayed WM_ACTIVATE would hit the
+    /// case WM_ACTIVATE below in any other ParentSubclassProc instance that is
+    /// subclassed on the same window (leaked or additional viewports), which would
+    /// post another DeferredActivateMessage and return 0 - starving Avalonia of the
+    /// message and looping forever, flooding the input event queue.
+    static bool s_forwardingDeferredActivate = false;
+
     switch (msg)
     {
     case WM_ACTIVATE:
     {
+        if (s_forwardingDeferredActivate)
+        {
+            break;
+        }
+
         auto* self = reinterpret_cast<Win32ApplicationWindow*>(dwRefData);
 
         if (AliveWindows::GetInstance().Contains(self) && self->GetInputManager())
@@ -414,7 +429,15 @@ LRESULT CALLBACK Win32ApplicationWindow::ParentSubclassProc(HWND hWnd, UINT msg,
         return 0;
     }
     case DeferredActivateMessage:
-        return DefSubclassProc(hWnd, WM_ACTIVATE, wParam, lParam);
+    {
+        s_forwardingDeferredActivate = true;
+
+        LRESULT result = DefSubclassProc(hWnd, WM_ACTIVATE, wParam, lParam);
+
+        s_forwardingDeferredActivate = false;
+
+        return result;
+    }
     case WM_DESTROY:
     {
         RemoveWindowSubclass(hWnd, &Win32ApplicationWindow::ParentSubclassProc, uIdSubclass);

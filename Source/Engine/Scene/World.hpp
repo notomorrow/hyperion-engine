@@ -377,6 +377,7 @@ private:
     bool AddSystemToExecutionGroup(SystemBase* system);
 
     Handle<WorldGridLayer> GetOrCreateStreamingLayer(Name streamingLayerName);
+    Handle<WorldGridLayer> GetStreamingLayer(Name streamingLayerName) const;
 
     ///Serialization Only Properties --
 

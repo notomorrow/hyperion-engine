@@ -3974,27 +3974,62 @@ DEFINE_EDITOR_COMMAND(AddCube);
 
 #pragma endregion AddCube
 
-#pragma region AddTerrainLayer
+#pragma region AddWorldGridLayer
 
-class EditorCommandAddTerrainLayer final : public EditorCommandBase
+class EditorCommandAddWorldGridLayer final : public EditorCommandBase
 {
-    HYP_OBJECT_BODY(EditorCommandAddTerrainLayer);
+    HYP_OBJECT_BODY(EditorCommandAddWorldGridLayer);
 
 public:
-    virtual ~EditorCommandAddTerrainLayer() override = default;
+    virtual ~EditorCommandAddWorldGridLayer() override = default;
 
     virtual String GetText() const override
     {
-        return "Add Terrain";
+        return "Add World Grid Layer";
+    }
+
+    static Name CreateLayerName(const Class* cls)
+    {
+        ANSIString name = cls->GetName().LookupString();
+
+        const ANSIStringView suffix = "WorldGridLayer";
+
+        if (name.EndsWith(suffix))
+        {
+            name = name.Substr(0, name.Size() - suffix.Size());
+        }
+
+        if (name.Empty())
+        {
+            name = String(cls->GetName().LookupString());
+        }
+
+        return Name(name);
     }
 
     virtual void Execute(EditorSubsystem* subsystem) override
     {
+        if (NumArguments() < 1)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandAddWorldGridLayer: missing layer class name argument!");
+
+            return;
+        }
+
+        const Class* layerClass = ClassRegistry::GetInstance().GetClass(Name(ANSIString(GetArgument(0))));
+
+        if (!layerClass || !layerClass->IsDerivedFrom(WorldGridLayer::StaticClass()) || layerClass->IsAbstract())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandAddWorldGridLayer: '{}' is not a valid WorldGridLayer class!", GetArgument(0));
+
+            return;
+        }
+
         Handle<EditorProject> currentProject = subsystem->GetCurrentProject();
 
         if (!currentProject.IsValid())
         {
-            HYP_LOG(Editor, Error, "No project loaded; cannot add terrain!");
+            HYP_LOG(Editor, Error, "No project loaded; cannot add world grid layer!");
 
             return;
         }
@@ -4003,19 +4038,34 @@ public:
 
         if (!activeScene.IsValid() || !activeScene->GetWorld())
         {
-            HYP_LOG(Editor, Error, "No active scene/world; cannot add terrain!");
+            HYP_LOG(Editor, Error, "No active scene/world; cannot add world grid layer!");
 
             return;
         }
 
         World* world = activeScene->GetWorld();
 
-        if (!world->GetWorldGrid().IsValid())
+        Handle<WorldGrid> worldGrid = world->GetWorldGrid();
+
+        if (!worldGrid.IsValid())
         {
-            HYP_LOG(Editor, Error, "Active world has no WorldGrid (streaming disabled); cannot add terrain!");
+            HYP_LOG(Editor, Error, "Active world has no WorldGrid (streaming disabled); cannot add world grid layer!");
 
             return;
         }
+
+        BoxedValue instanceData;
+        if (!layerClass->CreateInstance(instanceData, /* allowAbstract */ false))
+        {
+            HYP_LOG(Editor, Error, "Failed to create instance of world grid layer class '{}'!", GetArgument(0));
+
+            return;
+        }
+
+        AssertDebug(instanceData.Is<Handle<WorldGridLayer>>());
+
+        Handle<WorldGridLayer>& layer = instanceData.Get<Handle<WorldGridLayer>>();
+        AssertDebug(layer != nullptr);
 
         std::random_device randomDevice;
 
@@ -4024,12 +4074,11 @@ public:
         layerInfo.maxDistance = 3.0f;
         layerInfo.seed = randomDevice();
 
-        Handle<TerrainWorldGridLayer> layer = MakeHandle<TerrainWorldGridLayer>(NAME("Terrain"), layerInfo);
-
-        Handle<WorldGrid> worldGrid = world->GetWorldGrid();
+        layer->SetLayerInfo(layerInfo);
+        layer->SetName(CreateLayerName(layerClass));
 
         Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
-            GetText(),
+            HYP_FORMAT("Add {} Layer", GetArgument(0)),
             Proc<EditorActionFunctions()>(
                 [layer, worldGrid]() -> EditorActionFunctions
                 {
@@ -4053,9 +4102,9 @@ public:
     }
 };
 
-DEFINE_EDITOR_COMMAND(AddTerrainLayer);
+DEFINE_EDITOR_COMMAND(AddWorldGridLayer);
 
-#pragma endregion AddTerrainLayer
+#pragma endregion AddWorldGridLayer
 
 #pragma region ToggleTerrainSculptMode
 

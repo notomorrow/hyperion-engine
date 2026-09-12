@@ -52,6 +52,7 @@ class EditorViewport;
 class LightmapVolume;
 class VolumeBase;
 class TerrainWorldGridLayer;
+class WorldGridLayer;
 class EditorTerrainState;
 class AppContextBase;
 struct Ray;
@@ -538,6 +539,10 @@ public:
 
     HYP_METHOD()
     String GetCodeEditor() const;
+
+    /*! \brief Names of all concrete WorldGridLayer-derived classes registered with the engine. */
+    HYP_METHOD()
+    Array<Name> GetAvailableWorldGridLayerClassNames() const;
 
     HYP_METHOD()
     EditorManipulationMode GetSelectedManipulationMode() const;

@@ -173,7 +173,7 @@ namespace Hyperion.Editor.ViewModels
         public EditorCommand AddCylinder => new EditorCommand("AddCylinder");
 
         // Terrain
-        public EditorCommand AddTerrainLayer => new EditorCommand("AddTerrainLayer");
+        public EditorCommand AddTerrainLayer => new EditorCommand("AddWorldGridLayer", () => "TerrainWorldGridLayer");
         public ICommand ToggleTerrainSculptMode { get; private set; }
         public ICommand ToggleTerrainPaintMode { get; private set; }
 
@@ -1585,20 +1585,22 @@ namespace Hyperion.Editor.ViewModels
             Action action = () =>
             {
                 // we only want scenes that have the FOREGROUND flag.
-                if (_activeScene != null && _activeScene.Scene.SceneFlags.HasFlag(SceneFlags.Foreground))
+                if (scene == null || (scene.SceneFlags & (SceneFlags.Foreground | SceneFlags.UI | SceneFlags.Detached)) != SceneFlags.Foreground)
                 {
-                    foreach (SceneViewModel svm in Scenes)
-                    {
-                        if (svm.Scene.Id == scene.Id)
-                        {
-                            return; // already exists
-                        }
-                    }
-
-                    Scenes.Add(new SceneViewModel(scene, isActive: _activeScene.Scene?.Id == scene.Id));
-
-                    OnPropertyChanged(nameof(Scenes));
+                    return;
                 }
+
+                foreach (SceneViewModel svm in Scenes)
+                {
+                    if (svm.Scene.Id == scene.Id)
+                    {
+                        return; // already exists
+                    }
+                }
+
+                Scenes.Add(new SceneViewModel(scene, isActive: _activeScene?.Scene?.Id == scene.Id));
+
+                OnPropertyChanged(nameof(Scenes));
             };
 
             if (Dispatcher.UIThread.CheckAccess())

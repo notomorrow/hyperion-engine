@@ -32,19 +32,19 @@ struct WorldGridLayerInfo
 {
     HYP_STRUCT_BODY(WorldGridLayerInfo);
 
-    HYP_FIELD()
+    HYP_FIELD(Property = "Offset")
     Vec3f offset { 0.0f, 0.0f, 0.0f };
 
-    HYP_FIELD()
+    HYP_FIELD(Property = "Scale")
     Vec3f scale { 1.0f, 1.0f, 1.0f };
 
-    HYP_FIELD()
+    HYP_FIELD(Property = "CellSize")
     uint32 cellSize = 32;
 
-    HYP_FIELD()
+    HYP_FIELD(Property = "MaxDistance")
     float maxDistance = 1.0f;
 
-    HYP_FIELD()
+    HYP_FIELD(Property = "Seed")
     uint32 seed = 0;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
@@ -95,6 +95,9 @@ public:
     {
         m_name = name;
     }
+
+    HYP_METHOD()
+    Name GetLayerClassName() const;
 
     HYP_METHOD(Property = "LayerInfo")
     HYP_FORCE_INLINE const WorldGridLayerInfo& GetLayerInfo() const

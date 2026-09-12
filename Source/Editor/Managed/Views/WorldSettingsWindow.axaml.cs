@@ -11,11 +11,9 @@ namespace Hyperion.Editor.Views
         {
             InitializeComponent();
 
-            // Mirror MainWindow's inspector behavior: property editors commit on focus loss
-            // or Enter (the property view models then push undoable EditorActions).
-            AddHandler(InputElement.GotFocusEvent, OnPropertyEditorGotFocus, RoutingStrategies.Bubble);
-            AddHandler(InputElement.LostFocusEvent, OnPropertyEditorLostFocus, RoutingStrategies.Bubble);
-            AddHandler(InputElement.KeyDownEvent, OnPropertyEditorKeyDown, RoutingStrategies.Bubble);
+            AddHandler(GotFocusEvent, OnPropertyEditorGotFocus, RoutingStrategies.Bubble);
+            AddHandler(LostFocusEvent, OnPropertyEditorLostFocus, RoutingStrategies.Bubble);
+            AddHandler(KeyDownEvent, OnPropertyEditorKeyDown, RoutingStrategies.Bubble);
         }
 
         private void OnPropertyEditorGotFocus(object? sender, FocusChangedEventArgs e)
@@ -51,6 +49,21 @@ namespace Hyperion.Editor.Views
         private void OnCloseClick(object? sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void OnAddLayerDropDownClick(object? sender, RoutedEventArgs e)
+        {
+            if (sender is Control { ContextMenu: ContextMenu menu })
+            {
+                menu.Open();
+            }
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            (DataContext as WorldSettingsPanelViewModel)?.StopAutoRefresh();
+
+            base.OnClosed(e);
         }
     }
 }

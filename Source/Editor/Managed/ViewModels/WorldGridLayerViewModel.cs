@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Hyperion;
 
 namespace Hyperion.Editor.ViewModels
@@ -65,7 +67,7 @@ namespace Hyperion.Editor.ViewModels
             Name layerInfoPropertyName = new Name("LayerInfo");
             Name namePropertyName = new Name("Name");
 
-            foreach (Property property in Layer.Class.Properties)
+            foreach (Property property in CollectPropertiesInherited(Layer.Class))
             {
                 InspectorPropertyViewModelBase viewModel;
 
@@ -90,6 +92,36 @@ namespace Hyperion.Editor.ViewModels
 
                 Properties.Add(viewModel);
             }
+        }
+
+        /// <summary>
+        /// Reflection properties are registered per-class, so derived classes don't
+        /// include properties declared on their base classes (e.g. WorldGridLayer's
+        /// "Name" / "LayerInfo"). Walk the inheritance chain base-most first and
+        /// dedupe by name so derived declarations win.
+        /// </summary>
+        private static List<Property> CollectPropertiesInherited(Class cls)
+        {
+            var chain = new List<Class>();
+
+            for (Class? current = cls; current.HasValue; current = current.Value.GetParent())
+            {
+                chain.Add(current.Value);
+            }
+
+            chain.Reverse();
+
+            var propertiesByName = new Dictionary<string, Property>();
+
+            foreach (Class current in chain)
+            {
+                foreach (Property property in current.Properties)
+                {
+                    propertiesByName[property.Name.ToString()] = property;
+                }
+            }
+
+            return propertiesByName.Values.ToList();
         }
 
         private void CycleLayerInWorldGrid()

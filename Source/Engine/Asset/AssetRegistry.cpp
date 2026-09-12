@@ -177,13 +177,7 @@ ENGINE_API void SetEditorAssetRegistry(const Handle<AssetRegistry>& registry)
 
 #endif // HYP_EDITOR
 
-static const ThreadId& s_assetRegistryThread = g_simThread;
-
 static constexpr const char* BlobStorageName = "Storage";
-
-// If true, all mutation operations will be forced to run on the sim thread,
-// otherwise a mutex will be used to allow multi-threaded access.
-static constexpr bool UseSingleThread = false;
 
 StringHash AssetDesc_KeyByFunction(const AssetDesc& assetDesc)
 {
@@ -550,7 +544,7 @@ AssetRegistry::AssetRegistry(AssetRegistryId registryId, const FilePath& rootPat
       m_rootPath(rootPath),
       m_isInitialized(false),
       m_isSyncingCache(false),
-      m_scheduler(new Scheduler(s_assetRegistryThread))
+      m_scheduler(new Scheduler(g_simThread))
 {
     m_assetBucketData = (AssetBucketData*)g_assetPool->Allocate(sizeof(AssetBucketData) * MaxAssetBuckets);
     Assert(m_assetBucketData != nullptr);
@@ -1783,7 +1777,6 @@ void AssetRegistry::RemoveCached(const AssetBucket& bucket)
 void AssetRegistry::Update()
 {
     HYP_SCOPE;
-    AssertOnThread(s_assetRegistryThread);
 
     if (m_scheduler->NumEnqueued() > 0)
     {
@@ -1796,57 +1789,6 @@ void AssetRegistry::Update()
 
             scheduledTask.Execute();
         }
-    }
-}
-
-template <class Func, class FutureType>
-void AssetRegistry::PostTask(Func&& fn, Task<FutureType>* pOutFuture)
-{
-    if (!UseSingleThread || IsOnThread(s_assetRegistryThread))
-    {
-        if (pOutFuture)
-        {
-            *pOutFuture = Task<FutureType>();
-
-            if constexpr (std::is_void_v<FutureType>)
-            {
-                fn();
-                pOutFuture->Fulfill();
-            }
-            else
-            {
-                pOutFuture->Fulfill(fn());
-            }
-        }
-        else
-        {
-            fn();
-        }
-
-        return;
-    }
-
-    if (pOutFuture)
-    {
-        *pOutFuture = Task<FutureType>();
-
-        m_scheduler->Enqueue([promise = pOutFuture->Promise(), fn = std::forward<Func>(fn)]() mutable
-                             {
-                                 if constexpr (std::is_void_v<FutureType>)
-                                 {
-                                     fn();
-                                     promise->Fulfill();
-                                 }
-                                 else
-                                 {
-                                     promise->Fulfill(fn());
-                                 }
-                             },
-                             TaskEnqueueFlags::FIRE_AND_FORGET);
-    }
-    else
-    {
-        m_scheduler->Enqueue(std::forward<Func>(fn), TaskEnqueueFlags::FIRE_AND_FORGET);
     }
 }
 

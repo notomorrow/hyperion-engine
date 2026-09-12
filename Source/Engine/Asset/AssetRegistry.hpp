@@ -166,9 +166,6 @@ public:
     static void WalkAssetDeep(const BoxedValue& target, const ProcRef<void(const Handle<AssetObject>&)>& onAssetFound);
 
 private:
-    template <class Func, class FutureType = void>
-    void PostTask(Func&& fn, Task<FutureType>* outFuture = nullptr);
-
     AssetRegistryId m_registryId;
     FilePath m_rootPath;
 
