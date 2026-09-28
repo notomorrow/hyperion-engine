@@ -691,9 +691,11 @@ extern "C"
         g_appContext = MakeHandle<IOSAppContext>("Hyperion", CoreApi::GetCommandLineArguments());
 #elif HYP_WEB
         g_appContext = MakeHandle<WebAppContext>("Hyperion", CoreApi::GetCommandLineArguments());
-#else  // !HYP_WINDOWS && !HYP_MACOS && !HYP_ANDROID && !HYP_IOS
+#elif HYP_LINUX
+        g_appContext = MakeHandle<X11AppContext>("Hyperion", CoreApi::GetCommandLineArguments());
+#else
         HYP_FAIL("AppContext not implemented for this platform");
-#endif // HYP_WINDOWS || HYP_MACOS || HYP_ANDROID || HYP_IOS
+#endif
         
         if (EngineGlobals::IsServer())
         {

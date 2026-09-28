@@ -33,6 +33,7 @@
 
 namespace Hyperion {
 
+/// @TODO: This is redundant - blobs are now not fixed size - we can remove MaxImageBytes (or cap at something else)
 static constexpr size_t MaxImageBytes = 256 * 1024 * 1024; // 256 MiB - cannot be larger than a block in our blob storage system
 
 extern VulkanRenderInterface RI;
