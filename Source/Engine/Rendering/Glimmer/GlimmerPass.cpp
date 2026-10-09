@@ -152,7 +152,12 @@ const GlimmerTechnique* GlimmerPass::GetApplyTechnique(World* world) const
 
     GlimmerScenePassData* scene = isEnabled ? GetSceneForWorld(world) : nullptr;
 
-    return scene ? scene->technique.Get() : nullptr;
+    if (!scene || scene->isWarmingUp)
+    {
+        return nullptr;
+    }
+
+    return scene->technique.Get();
 }
 
 void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
@@ -176,6 +181,31 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     if (scene->lastUpdatedFrame == frameCounter)
     {
         return;
+    }
+
+    if (RI.GetNumPipelinesCompilingInBackground() != 0)
+    {
+        scene->isWarmingUp = true;
+    }
+    else if (scene->isWarmingUp)
+    {
+        scene->technique.Reset();
+
+        if (scene->tlas && scene->blasCache)
+        {
+            scene->tlas->Release(*scene->blasCache);
+        }
+
+        scene->tlas = MakeUnique<GlimmerTLAS>();
+        scene->surfaceCache = MakeUnique<GlimmerSurfaceCache>();
+        scene->spanCache = MakeUnique<GlimmerSpanCache>();
+        scene->technique = MakeUnique<GlimmerTechnique>();
+        scene->isWarmingUp = false;
+    }
+    else
+    {
+        // nothing started compiling since the last update, so the uploads it was given reached the GPU
+        scene->groundUploads.Clear();
     }
 
     scene->lastUpdatedFrame = frameCounter;
@@ -211,13 +241,30 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     scene->blasCache->UpdateOncePerFrame(frame);
 
     GlimmerChannelState channelState;
+    
     Array<GlimmerGroundUpload, GlimmerAllocator> groundUploads;
 
     const SharedPtr<GlimmerChannel> channel = GlimmerChannel::Get(renderSetup.world);
 
     if (channel)
     {
-        channel->Consume(channelState, groundUploads);
+        channel->Consume(channelState, newGroundUploads);
+    }
+
+    Array<GlimmerGroundUpload>& groundUploads = scene->groundUploads;
+
+    if (channelState.groundGeneration != scene->groundUploadGeneration)
+    {
+        groundUploads.Clear();
+
+        scene->groundUploadGeneration = channelState.groundGeneration;
+    }
+
+    const size_t firstGroundUpload = scene->isWarmingUp ? groundUploads.Size() : 0;
+
+    for (GlimmerGroundUpload& upload : newGroundUploads)
+    {
+        groundUploads.PushBack(std::move(upload));
     }
 
     const Vec3f viewerPosition = channelState.hasViewer ? channelState.viewerPosition : region.GetCenter();
@@ -261,7 +308,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
         s_statGlimmerTerrainPatches = uint32(terrainPatches.Size());
 
-        scene->surfaceCache->Update(frame, channelState, groundUploads.ToSpan(), terrainPatches.ToSpan());
+        scene->surfaceCache->Update(frame, channelState, groundUploads.ToSpan().Slice(firstGroundUpload, groundUploads.Size() - firstGroundUpload), terrainPatches.ToSpan());
         scene->spanCache->Update(frame, channelState, *scene->tlas, *scene->blasCache, *scene->surfaceCache);
 
         context.channelState = &channelState;
