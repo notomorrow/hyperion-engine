@@ -51,8 +51,19 @@ DECLARE_BUFFER_DYNAMIC(GlimmerProbeTrace, CBuffer) cbuffer CBuffer
 
 #define skyProbe constants.skyProbe
 
+#ifdef BACKEND_WEBGPU
+// WebGPU allows 16 storage buffers in a stage and the trace pass reads 18,
+// so the two it only reads the first element of are bound as uniform buffers there
+
+// @FIXME: Better fix! Or just use cbuffers everywhere?
+DECLARE_BUFFER(GlimmerProbeTrace, WorldsBuffer) cbuffer WorldsBuffer
+{
+    WorldShaderData world_shader_data;
+};
+#else
 DECLARE_SRV(GlimmerProbeTrace, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
 #define world_shader_data _worlds_buffer[0]
+#endif
 
 DECLARE_SRV(GlimmerProbeTrace, MaterialsBuffer) StructuredBuffer<Material> materials;
 
@@ -73,7 +84,17 @@ DECLARE_SRV(GlimmerProbeTrace, GlimmerProbeLightBuffer) StructuredBuffer<float4>
 DECLARE_SRV(GlimmerProbeTrace, GlimmerProbeStatesBuffer) StructuredBuffer<uint4> glimmerProbeStates;
 DECLARE_SRV(GlimmerProbeTrace, GlimmerProbeVisibilityBuffer) StructuredBuffer<uint> glimmerProbeVisibility;
 DECLARE_SRV(GlimmerProbeTrace, GlimmerProbeSlotsBuffer) StructuredBuffer<int4> glimmerProbeSlots;
+DECLARE_SRV(GlimmerProbeTrace, GlimmerProbeUpdateListBuffer) StructuredBuffer<uint> glimmerProbeUpdateList;
+
+#ifdef BACKEND_WEBGPU
+DECLARE_BUFFER(GlimmerProbeTrace, GlimmerProbeCountersBuffer) cbuffer GlimmerProbeCountersBuffer
+{
+    uint glimmerProbeUpdateCount;
+};
+#else
 DECLARE_SRV(GlimmerProbeTrace, GlimmerProbeCountersBuffer) StructuredBuffer<uint> glimmerProbeCounters;
+#define glimmerProbeUpdateCount glimmerProbeCounters[0]
+#endif
 
 DECLARE_SRV(GlimmerProbeTrace, EnvProbesColorTexture) TextureCubeArray envProbesColorTexture;
 
@@ -263,7 +284,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 #else
     const uint listIndex = groupId.x * PROBES_PER_GROUP + groupIndex / RAYS_PER_PROBE;
 
-    if (listIndex >= min(glimmerProbeCounters[0], constants.dispatch.x))
+    if (listIndex >= min(glimmerProbeUpdateCount, constants.dispatch.x))
     {
         return;
     }
