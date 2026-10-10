@@ -51,6 +51,13 @@ static constexpr int32 WindowSnapVoxels = 4;
 static constexpr size_t MaxPendingBoxes = 16;
 
 static constexpr int32 SolidChangeMarginVoxels = 4;
+static constexpr size_t MaxSolidChangeBoxes = 8;
+
+static constexpr int32 RefreshSliceVoxels = int32(GlimmerSHGridXZ * GlimmerSHGridY) / 2;
+
+static constexpr float RadianceHysteresis = 0.5f;
+
+static constexpr uint32 MaxRelightWaitFrames = 64;
 static constexpr uint32 MaxOccupancyWaitFrames = 8;
 
 struct GlimmerSHUpdateConstants
@@ -61,7 +68,7 @@ struct GlimmerSHUpdateConstants
     GlimmerSHOccupancyShaderData occupancy;
     Vec4i boxMin;      // xyz = absolute voxel of the dispatch's first voxel, w = cascade
     Vec4f rayRotation; // quaternion applied to this update's ray directions
-    Vec4f params;      // x = foliage extinction, y = max ray distance, z = albedo where the ground's isn't known
+    Vec4f params;      // x = foliage extinction, y = max ray distance, z = albedo where the ground's isn't known, w = how much of the radiance's history is kept
     GlimmerRelightShaderData relight;
     GlimmerProbeVolumeShaderData probes; // zeroed while the probes can't be sampled
     GlimmerSkyShaderData sky;
@@ -82,6 +89,25 @@ GlimmerSHVolume::Box GlimmerSHVolume::Box::Intersect(const Box& a, const Box& b)
     return result;
 }
 
+GlimmerSHVolume::Box GlimmerSHVolume::Box::Union(const Box& a, const Box& b)
+{
+    if (a.IsEmpty())
+    {
+        return b;
+    }
+
+    if (b.IsEmpty())
+    {
+        return a;
+    }
+
+    Box result;
+    result.min = Vec3i(MathUtil::Min(a.min.x, b.min.x), MathUtil::Min(a.min.y, b.min.y), MathUtil::Min(a.min.z, b.min.z));
+    result.max = Vec3i(MathUtil::Max(a.max.x, b.max.x), MathUtil::Max(a.max.y, b.max.y), MathUtil::Max(a.max.z, b.max.z));
+
+    return result;
+}
+
 #pragma region GlimmerSHVolume
 
 GlimmerSHVolume::GlimmerSHVolume()
@@ -90,6 +116,13 @@ GlimmerSHVolume::GlimmerSHVolume()
       m_updateIndex(0),
       m_seenTLASGeneration(~0u),
       m_occupancyWaitFrames(0),
+      m_refreshBudget(0),
+      m_burstPassesLeft(0),
+      m_burstSlices {},
+      m_burstDoneCascades(0),
+      m_relightWaitFrames(0),
+      m_burstSkipsHistory(false),
+      m_isWakePending(false),
       m_shaderData {}
 {
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
@@ -142,7 +175,7 @@ void GlimmerSHVolume::MoveWindow(uint32 cascadeIndex, const Vec3i& origin)
 {
     Cascade& cascade = m_cascades[cascadeIndex];
 
-    if (cascade.hasOrigin && cascade.origin == origin)
+    if (cascade.origin.HasValue() && *cascade.origin == origin)
     {
         return;
     }
@@ -150,10 +183,10 @@ void GlimmerSHVolume::MoveWindow(uint32 cascadeIndex, const Vec3i& origin)
     const Box newWindow = GetWindow(origin);
     const Vec3i size = newWindow.Extent();
 
-    const bool isJump = !cascade.hasOrigin
-        || MathUtil::Abs(origin.x - cascade.origin.x) >= size.x
-        || MathUtil::Abs(origin.y - cascade.origin.y) >= size.y
-        || MathUtil::Abs(origin.z - cascade.origin.z) >= size.z;
+    const bool isJump = !cascade.origin.HasValue()
+        || MathUtil::Abs(origin.x - cascade.origin->x) >= size.x
+        || MathUtil::Abs(origin.y - cascade.origin->y) >= size.y
+        || MathUtil::Abs(origin.z - cascade.origin->z) >= size.z;
 
     if (isJump)
     {
@@ -162,7 +195,7 @@ void GlimmerSHVolume::MoveWindow(uint32 cascadeIndex, const Vec3i& origin)
     }
     else
     {
-        const Box oldWindow = GetWindow(cascade.origin);
+        const Box oldWindow = GetWindow(*cascade.origin);
 
         for (Box& pendingBox : cascade.pending)
         {
@@ -178,7 +211,7 @@ void GlimmerSHVolume::MoveWindow(uint32 cascadeIndex, const Vec3i& origin)
         {
             Box slab = remaining;
 
-            if (origin[axis] > cascade.origin[axis])
+            if (origin[axis] > (*cascade.origin)[axis])
             {
                 slab.min[axis] = MathUtil::Max(kept.max[axis], newWindow.min[axis]);
             }
@@ -198,7 +231,6 @@ void GlimmerSHVolume::MoveWindow(uint32 cascadeIndex, const Vec3i& origin)
     }
 
     cascade.origin = origin;
-    cascade.hasOrigin = true;
 
     m_shaderData.cascades[cascadeIndex].origin = Vec4i(origin.x, origin.y, origin.z, 1);
 }
@@ -207,12 +239,12 @@ void GlimmerSHVolume::AddPending(uint32 cascadeIndex, const Box& box)
 {
     Cascade& cascade = m_cascades[cascadeIndex];
 
-    if (!cascade.hasOrigin)
+    if (!cascade.origin.HasValue())
     {
         return;
     }
 
-    const Box window = GetWindow(cascade.origin);
+    const Box window = GetWindow(*cascade.origin);
     const Box clipped = Box::Intersect(box, window);
 
     if (clipped.IsEmpty())
@@ -222,8 +254,23 @@ void GlimmerSHVolume::AddPending(uint32 cascadeIndex, const Box& box)
 
     if (cascade.pending.Size() >= MaxPendingBoxes)
     {
-        cascade.pending.Clear();
-        cascade.pending.PushBack(window);
+        // joins the pending box it adds the fewest voxels to
+        size_t bestIndex = 0;
+        int64 bestGrowth = INT64_MAX;
+
+        for (size_t pendingIndex = 0; pendingIndex < cascade.pending.Size(); pendingIndex++)
+        {
+            const Box& pendingBox = cascade.pending[pendingIndex];
+            const int64 growth = Box::Union(pendingBox, clipped).Volume() - pendingBox.Volume();
+
+            if (growth < bestGrowth)
+            {
+                bestGrowth = growth;
+                bestIndex = pendingIndex;
+            }
+        }
+
+        cascade.pending[bestIndex] = Box::Union(cascade.pending[bestIndex], clipped);
 
         return;
     }
@@ -249,7 +296,7 @@ void GlimmerSHVolume::AddPendingWorld(const Vec3f& worldMin, const Vec3f& worldM
     }
 }
 
-void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& box, const GlimmerSHVolumeUpdateInputs& inputs, bool& inOutHasBarriers)
+void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& box, float radianceHysteresis, const GlimmerSHVolumeUpdateInputs& inputs, bool& inOutHasBarriers)
 {
     CommandRecorder& cr = frame->cr;
 
@@ -275,7 +322,7 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
         GetGlimmerFoliageExtinction(),
         GlimmerMaxRayDistance,
         MathUtil::Clamp(g_cvGlimmerGroundAlbedo.Get(), 0.0f, 1.0f),
-        0.0f);
+        radianceHysteresis);
 
     if (inputs.relight && inputs.relightImageView.IsValid())
     {
@@ -360,9 +407,82 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
     s_statGlimmerSHVoxelsTraced += uint32(extent.x * extent.y * extent.z);
 }
 
+bool GlimmerSHVolume::DispatchRefreshSlice(
+    Frame* frame,
+    uint32 cascadeIndex,
+    int32& inOutSlice,
+    float radianceHysteresis,
+    bool& outFinishedCascade,
+    const GlimmerSHVolumeUpdateInputs& inputs,
+    bool& inOutHasBarriers)
+{
+    outFinishedCascade = false;
+
+    Cascade& cascade = m_cascades[cascadeIndex];
+
+    if (!cascade.origin.HasValue() || cascade.pending.Any())
+    {
+        return false;
+    }
+
+    const Box window = GetWindow(*cascade.origin);
+
+    const int32 firstSlice = window.min.z * 2;
+    const int32 endSlice = window.max.z * 2;
+
+    // slices that scrolled out are skipped; the ones that scrolled in were traced as they did
+    const int32 sliceIndex = MathUtil::Max(inOutSlice, firstSlice);
+
+    // the rest of the pass scrolled out
+    if (sliceIndex >= endSlice)
+    {
+        inOutSlice = firstSlice;
+        outFinishedCascade = true;
+
+        return false;
+    }
+
+    Box slice = window;
+    slice.min.z = sliceIndex >> 1;
+    slice.max.z = slice.min.z + 1;
+
+    if ((sliceIndex & 1) == 0)
+    {
+        slice.max.y = slice.min.y + int32(GlimmerSHGridY / 2);
+    }
+    else
+    {
+        slice.min.y += int32(GlimmerSHGridY / 2);
+    }
+
+    DispatchBox(frame, cascadeIndex, slice, radianceHysteresis, inputs, inOutHasBarriers);
+
+    inOutSlice = sliceIndex + 1;
+
+    if (inOutSlice >= endSlice)
+    {
+        inOutSlice = firstSlice;
+        outFinishedCascade = true;
+    }
+
+    return true;
+}
+
+void GlimmerSHVolume::StartBurstPass()
+{
+    m_burstDoneCascades = 0;
+
+    for (int32& burstSlice : m_burstSlices)
+    {
+        burstSlice = INT32_MIN;
+    }
+}
+
 void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& inputs)
 {
     HYP_SCOPE;
+
+    m_isWakePending |= bool(inputs.lightingChanges);
 
     if (!inputs.surfaceCache || !inputs.spanCache || !inputs.spanCache->GetSpansBuffer().IsValid() || !inputs.occupancy || !inputs.occupancyMaskBuffer.IsValid())
     {
@@ -390,22 +510,39 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
 
     if (inputs.tlas && inputs.tlas->IsReady() && inputs.tlas->GetGeneration() != m_seenTLASGeneration)
     {
-        const bool isEverywhere = m_seenTLASGeneration == ~0u
-            || inputs.tlas->GetGeneration() != m_seenTLASGeneration + 1
-            || inputs.tlas->IsSpanFullyDirty();
+        GlimmerSceneChanges changes;
+
+        const bool isEverywhere = m_seenTLASGeneration == ~0u || !inputs.tlas->GetChangesSince(m_seenTLASGeneration, changes);
 
         if (isEverywhere)
         {
             for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
             {
-                AddPending(cascadeIndex, GetWindow(m_cascades[cascadeIndex].origin));
+                AddPending(cascadeIndex, GetWindow(*m_cascades[cascadeIndex].origin));
             }
         }
         else
         {
-            for (const BoundingBox& bounds : inputs.tlas->GetSpanDirtyBounds())
+            if (g_cvGlimmerSkipLodOnlyChanges.Get())
             {
-                AddPendingWorld(bounds.min, bounds.max, SolidChangeMarginVoxels);
+                GlimmerSceneChanges worldChanges;
+
+                for (const GlimmerSceneChange& change : changes)
+                {
+                    if (!change.isLodOnly)
+                    {
+                        worldChanges.Add(change);
+                    }
+                }
+
+                changes = std::move(worldChanges);
+            }
+
+            changes.Quantize(MaxSolidChangeBoxes);
+
+            for (const GlimmerSceneChange& change : changes)
+            {
+                AddPendingWorld(change.bounds.min, change.bounds.max, SolidChangeMarginVoxels);
             }
         }
 
@@ -468,14 +605,134 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
             Box chunk = box;
             chunk.max.z = chunk.min.z + slices;
 
-            DispatchBox(frame, cascadeIndex, chunk, inputs, hasBarriers);
+            DispatchBox(frame, cascadeIndex, chunk, RadianceHysteresis, inputs, hasBarriers);
 
             budget -= extent.x * extent.y * slices;
             box.min.z += slices;
         }
     }
 
-    const int32 sliceVoxels = int32(GlimmerSHGridXZ * GlimmerSHGridY) / 2;
+    if (g_cvGlimmerRunOnChange.Get())
+    {
+        if (m_isWakePending)
+        {
+            m_isWakePending = false;
+
+            if (m_burstPassesLeft == 0)
+            {
+                m_burstPassesLeft = int32(GlimmerLightingBurstPasses);
+                m_burstSkipsHistory = true;
+
+                StartBurstPass();
+            }
+            else
+            {
+                // the pass under way has traced some voxels under the lighting of before, so it doesn't count
+                m_burstPassesLeft = int32(GlimmerLightingBurstPasses + 1);
+            }
+        }
+
+        const bool isBursting = m_burstPassesLeft > 0;
+        const int32 rate = MathUtil::Max(isBursting ? g_cvGlimmerSHRefreshVoxelsBurst.Get() : g_cvGlimmerSHRefreshVoxels.Get(), 0);
+
+        m_refreshBudget = MathUtil::Min(m_refreshBudget + rate, MathUtil::Max(rate, RefreshSliceVoxels) * 2);
+
+        // ground hits take the sun's visibility from the relight, which has to catch up with the change first
+        const bool isWaitingForRelight = isBursting && !inputs.isRelightSettled && m_relightWaitFrames < MaxRelightWaitFrames;
+
+        if (isWaitingForRelight)
+        {
+            m_relightWaitFrames++;
+        }
+
+        while (m_burstPassesLeft > 0 && !isWaitingForRelight && m_refreshBudget >= RefreshSliceVoxels)
+        {
+            const float radianceHysteresis = m_burstSkipsHistory ? 0.0f : RadianceHysteresis;
+
+            bool hasDispatched = false;
+
+            // finest first; a cascade still tracing what changed or scrolled in gives its turn to the next
+            for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades && !hasDispatched; cascadeIndex++)
+            {
+                if (m_burstDoneCascades & (1u << cascadeIndex))
+                {
+                    continue;
+                }
+
+                bool hasFinishedCascade = false;
+
+                hasDispatched = DispatchRefreshSlice(frame, cascadeIndex, m_burstSlices[cascadeIndex], radianceHysteresis, hasFinishedCascade, inputs, hasBarriers);
+
+                if (hasDispatched)
+                {
+                    m_refreshBudget -= RefreshSliceVoxels;
+                }
+
+                if (hasFinishedCascade)
+                {
+                    m_burstDoneCascades |= 1u << cascadeIndex;
+                }
+            }
+
+            if (m_burstDoneCascades != (1u << GlimmerSHCascades) - 1u)
+            {
+                if (!hasDispatched)
+                {
+                    break;
+                }
+
+                continue;
+            }
+
+            m_burstSkipsHistory = false;
+
+            if (--m_burstPassesLeft > 0)
+            {
+                StartBurstPass();
+            }
+            else
+            {
+                m_relightWaitFrames = 0;
+            }
+        }
+
+        for (uint32 attempt = 0;
+            m_burstPassesLeft == 0
+                && attempt < 2 * GlimmerSHCascades
+                && m_refreshBudget >= RefreshSliceVoxels;
+            attempt++)
+        {
+            uint32 ruler = ++m_refreshStep;
+            uint32 cascadeIndex = 0;
+
+            while ((ruler & 1u) == 0u && cascadeIndex + 1 < GlimmerSHCascades)
+            {
+                ruler >>= 1;
+                cascadeIndex++;
+            }
+
+            bool hasFinishedCascade = false;
+
+            if (!DispatchRefreshSlice(frame, cascadeIndex, m_refreshSlices[cascadeIndex], RadianceHysteresis, hasFinishedCascade, inputs, hasBarriers))
+            {
+                continue;
+            }
+
+            m_refreshBudget -= RefreshSliceVoxels;
+
+            attempt = 0;
+        }
+
+        budget = 0;
+    }
+    else
+    {
+        m_burstPassesLeft = 0;
+        m_relightWaitFrames = 0;
+        m_isWakePending = false;
+    }
+
+    const int32 sliceVoxels = RefreshSliceVoxels;
 
     budget = MathUtil::Min(budget, RefreshVoxelsPerFrame);
 
@@ -490,33 +747,14 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
             cascadeIndex++;
         }
 
-        Cascade& cascade = m_cascades[cascadeIndex];
+        bool hasFinishedCascade = false;
 
-        if (!cascade.hasOrigin || cascade.pending.Any())
+        if (!DispatchRefreshSlice(frame, cascadeIndex, m_refreshSlices[cascadeIndex], RadianceHysteresis, hasFinishedCascade, inputs, hasBarriers))
         {
             continue;
         }
 
-        int32& refreshSlice = m_refreshSlices[cascadeIndex];
-
-        Box slice = GetWindow(cascade.origin);
-        slice.min.z += refreshSlice / 2;
-        slice.max.z = slice.min.z + 1;
-
-        if (refreshSlice % 2 == 0)
-        {
-            slice.max.y = slice.min.y + int32(GlimmerSHGridY / 2);
-        }
-        else
-        {
-            slice.min.y += int32(GlimmerSHGridY / 2);
-        }
-
-        DispatchBox(frame, cascadeIndex, slice, inputs, hasBarriers);
-
         budget -= sliceVoxels;
-
-        refreshSlice = (refreshSlice + 1) % int32(GlimmerSHGridXZ * 2);
 
         attempt = 0;
     }

@@ -7,8 +7,18 @@
 struct GlimmerProbeBlendConstants
 {
     GlimmerProbeVolume volume;
-    uint4 dispatch; // x = probes traced per frame at most, y = moves a probe gets to get out of a solid, z = estimates the history averages at least while its light holds, w = ...while it changes
-    float4 params;  // x = seconds the history spans while the light holds, y = while it changes, z = how far past a back face a probe moves (m)
+
+    /// x = probes traced per frame at most
+    /// y = moves a probe gets to get out of a solid
+    /// z = estimates the history averages at least while its light holds
+    /// w = same but while it changes
+    uint4 dispatch;
+
+    /// x = seconds the history spans while the light holds
+    /// y = same but while it changes
+    /// z = how far past a back face a probe moves (m)
+    /// w = longest sleep interval
+    float4 params;  
 };
 
 DECLARE_BUFFER_DYNAMIC(GlimmerProbeBlend, CBuffer) cbuffer CBuffer
@@ -24,7 +34,13 @@ DECLARE_SRV(GlimmerProbeBlend, GlimmerProbeSlotsBuffer) StructuredBuffer<int4> g
 DECLARE_UAV(GlimmerProbeBlend, OutSH) RWStructuredBuffer<float4> OutSH;
 DECLARE_UAV(GlimmerProbeBlend, OutStates) RWStructuredBuffer<uint4> OutStates;
 DECLARE_UAV(GlimmerProbeBlend, OutVisibility) RWStructuredBuffer<uint> OutVisibility;   // GLIMMER_PROBE_VISIBILITY_TEXELS per probe (GlimmerPackHalf2)
-DECLARE_UAV(GlimmerProbeBlend, OutTrend) RWStructuredBuffer<float4> OutTrend;           // x = variance of an estimate's luminance, y = recent mean of how far estimates fall off the history (in standard deviations), z = recent mean of that distance squared (unscaled), w = estimates the history averages
+DECLARE_UAV(GlimmerProbeBlend, OutBlockWake) RWStructuredBuffer<uint> OutBlockWake;
+
+/// x = variance of an estimate's luminance
+/// y = recent mean of how far estimates fall off the history (in standard deviations)
+/// z = recent mean of that distance squared (unscaled)
+/// w = estimates the history averages
+DECLARE_UAV(GlimmerProbeBlend, OutTrend) RWStructuredBuffer<float4> OutTrend;
 
 #define GLIMMER_PROBES_NO_SAMPLING
 #include "GlimmerProbes.hlsli"
@@ -32,7 +48,10 @@ DECLARE_UAV(GlimmerProbeBlend, OutTrend) RWStructuredBuffer<float4> OutTrend;   
 
 #define GROUP_SIZE GLIMMER_PROBE_VISIBILITY_TEXELS
 
-groupshared float4 gsRays[GLIMMER_PROBE_MAX_RAYS];       // rgb = radiance, w = hit distance (negative on back faces, 0 starting inside)
+/// rgb = radiance
+/// w = hit distance (negative on back faces, 0 starting inside)
+groupshared float4 gsRays[GLIMMER_PROBE_MAX_RAYS];
+
 groupshared float3 gsDirections[GLIMMER_PROBE_MAX_RAYS];
 groupshared uint gsWriteVisibility;
 groupshared float gsVisibilityBlend;
@@ -203,6 +222,8 @@ void GlimmerBlendProbe(uint probeIndex, uint4 state, uint numRays, float invSpac
 
     float4 trend = OutTrend[probeIndex];
 
+    bool idle = false;
+
     if (updates > 0u)
     {
         const float4 previousR = OutSH[probeIndex * 3u + 0u];
@@ -226,6 +247,13 @@ void GlimmerBlendProbe(uint probeIndex, uint4 state, uint numRays, float invSpac
         if (bias > 0.0)
         {
             history = min(history, max(1.0 / bias, minHistory));
+        }
+
+        idle = bias <= 0.0 && history + 1.0 >= maxHistory;
+
+        if (bias > GLIMMER_PROBE_DRIFT_NOISE * GLIMMER_PROBE_WAKE_BLOCK_BIAS)
+        {
+            OutBlockWake[probeIndex / GLIMMER_PROBES_PER_BLOCK] = constants.volume.info.z;
         }
 
         if (history >= GLIMMER_PROBE_FIREFLY_MIN_HISTORY && difference > GLIMMER_PROBE_FIREFLY_SIGMAS * sigma)
@@ -263,9 +291,13 @@ void GlimmerBlendProbe(uint probeIndex, uint4 state, uint numRays, float invSpac
     OutSH[probeIndex * 3u + 1u] = shG;
     OutSH[probeIndex * 3u + 2u] = shB;
 
+    const uint sleepInterval = idle && relocations == 0u
+        ? min(GlimmerProbeSleepInterval(state) + 1u, uint(constants.params.w))
+        : 0u;
+
     OutTrend[probeIndex] = trend;
     OutStates[probeIndex] = uint4(
-        GlimmerPackProbeFlags(probeState, relocations, updates + 1u, numBackfaces, numStartsInside),
+        GlimmerWithSleepInterval(GlimmerPackProbeFlags(probeState, relocations, updates + 1u, numBackfaces, numStartsInside), sleepInterval),
         GlimmerPackProbeOffset(offset),
         asuint(time),
         GlimmerPackGoodOffset(offset));
