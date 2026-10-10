@@ -8,6 +8,8 @@
 
 #include <Rendering/RenderTypes.hpp>
 
+#include <Rendering/Glimmer/GlimmerHelpers.hpp>
+
 #include <Core/Containers/Array.hpp>
 #include <Core/Containers/FixedArray.hpp>
 
@@ -15,6 +17,8 @@
 
 #include <Core/Math/Vector3.hpp>
 #include <Core/Math/Vector4.hpp>
+
+#include <Core/Utilities/Optional.hpp>
 
 namespace Hyperion {
 
@@ -56,16 +60,18 @@ struct GlimmerSHVolumeUpdateInputs
     const GlimmerSHOccupancyShaderData* occupancy = nullptr;
     GpuImageViewRef occupancyImageView;
     GpuBufferRef occupancyMaskBuffer;
-    bool isOccupancySettled = true; // voxels traced before then would keep stale solids until their refresh
+    bool isOccupancySettled = true;
 
     const GlimmerRelightShaderData* relight = nullptr;
     GpuImageViewRef relightImageView;
+    bool isRelightSettled = true;
 
-    // the hits are lit as the probe trace lights its own: the near field (last frame's) where it covers them, the sky and the sun
-    // through the clouds; any may be nullptr
     const GlimmerSWRTProbeVolume* probeVolume = nullptr;
+
     EnvProbe* skyProbe = nullptr;
     const CloudPass* cloudPass = nullptr;
+
+    EnumFlags<GlimmerLightingChangeFlags> lightingChanges = GlimmerLightingChangeFlags::None;
 };
 
 class GlimmerSHVolume final
@@ -83,6 +89,11 @@ public:
     HYP_FORCE_INLINE bool IsReady() const
     {
         return m_shaderData.info.w != 0;
+    }
+
+    HYP_FORCE_INLINE bool IsBursting() const
+    {
+        return m_burstPassesLeft > 0;
     }
 
     HYP_FORCE_INLINE const GlimmerSHVolumeShaderData& GetShaderData() const
@@ -110,13 +121,18 @@ private:
             return max - min;
         }
 
+        HYP_FORCE_INLINE int64 Volume() const
+        {
+            return IsEmpty() ? 0 : int64(max.x - min.x) * int64(max.y - min.y) * int64(max.z - min.z);
+        }
+
         static Box Intersect(const Box& a, const Box& b);
+        static Box Union(const Box& a, const Box& b);
     };
 
     struct Cascade
     {
-        bool hasOrigin = false;
-        Vec3i origin;
+        Optional<Vec3i> origin;
         Array<Box> pending;
     };
 
@@ -126,19 +142,39 @@ private:
     void MoveWindow(uint32 cascadeIndex, const Vec3i& origin);
     void AddPending(uint32 cascadeIndex, const Box& box);
     void AddPendingWorld(const Vec3f& worldMin, const Vec3f& worldMax, int32 marginVoxels);
-    void DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& box, const GlimmerSHVolumeUpdateInputs& inputs, bool& inOutHasBarriers);
+    void DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& box, float radianceHysteresis, const GlimmerSHVolumeUpdateInputs& inputs, bool& inOutHasBarriers);
 
-    Handle<Texture> m_dataTexture;     // sky visibility L1
+    /// returns false when nothing was dispatched: the cascade can't be refreshed yet, or what was left of its pass scrolled out
+    bool DispatchRefreshSlice(
+        Frame* frame,
+        uint32 cascadeIndex,
+        int32& inOutSlice,
+        float radianceHysteresis,
+        bool& outFinishedCascade,
+        const GlimmerSHVolumeUpdateInputs& inputs,
+        bool& inOutHasBarriers);
+
+    void StartBurstPass();
+
+    Handle<Texture> m_dataTexture;      // sky visibility L1
     Handle<Texture> m_stateTexture;
-    Handle<Texture> m_radianceTexture; // L1 of incoming radiance; R, G and B stacked along y
+    Handle<Texture> m_radianceTexture;  // L1 of incoming radiance; R, G and B stacked along y
 
     FixedArray<Cascade, GlimmerSHCascades> m_cascades;
 
     uint32 m_refreshStep;
-    FixedArray<int32, GlimmerSHCascades> m_refreshSlices;
+    FixedArray<int32, GlimmerSHCascades> m_refreshSlices; // absolute, 2 per voxel along z
     uint32 m_updateIndex;
     uint32 m_seenTLASGeneration;
     uint32 m_occupancyWaitFrames;
+
+    int32 m_refreshBudget;                              /// voxels the refresh may still trace, carried between frames so a rate below a slice still gets its turn
+    int32 m_burstPassesLeft;                            /// passes over every cascade a burst still has to make, the one under way included
+    FixedArray<int32, GlimmerSHCascades> m_burstSlices;
+    uint32 m_burstDoneCascades;                         /// bit per cascade the pass under way is through with
+    uint32 m_relightWaitFrames;
+    bool m_burstSkipsHistory;                           /// the pass under way replaces the radiance rather than blending into what the old lighting left
+    bool m_isWakePending;                               /// the lighting changed while the volume couldn't update
 
     GlimmerSHVolumeShaderData m_shaderData;
 };

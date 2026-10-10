@@ -46,7 +46,11 @@ public:
 
     ~GlimmerRelight();
 
-    void Schedule(const GlimmerChannelState& state, const GlimmerSurfaceCache& surfaceCache, const GlimmerSpanCache& spanCache);
+    void Schedule(
+        const GlimmerChannelState& state,
+        const GlimmerSurfaceCache& surfaceCache,
+        const GlimmerSpanCache& spanCache,
+        EnumFlags<GlimmerLightingChangeFlags> lightingChanges);
 
     HYP_FORCE_INLINE const Array<GlimmerRelightDispatch>& GetDispatches() const
     {
@@ -54,6 +58,9 @@ public:
     }
 
     void OnDispatched();
+
+    bool IsBursting() const;
+    bool IsBurstRelightingSun() const;
 
     void Invalidate();
 
@@ -75,7 +82,7 @@ private:
         bool isLit = false;
         bool isFilling = false;
         Array<Rect> pending;
-        int32 refreshRow = 0;
+        int32 refreshRow = 0; // absolute texel row the refresh is at
     };
 
     void AddPending(Level& level, const Rect& rect);
@@ -85,6 +92,10 @@ private:
     FixedArray<Level, GlimmerGroundLevels> m_levels;
     uint32 m_groundGeneration;
     uint32 m_refreshLevel;
+    int32 m_refreshBudget;
+    int32 m_scheduledRefreshTexels; // refresh texels of the last schedule, counted against the bursts as they're dispatched
+    int32 m_burstTexelsLeft;
+    int32 m_sunTexelsLeft;          // what's left of the pass that brings the sun's visibility up to a change of the sun
 
     Array<GlimmerRelightDispatch> m_dispatches;
 

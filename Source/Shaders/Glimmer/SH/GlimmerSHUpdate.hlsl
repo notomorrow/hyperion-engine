@@ -26,7 +26,7 @@ struct GlimmerSHUpdateConstants
     GlimmerSHOccupancyParams occupancy;
     int4 boxMin;        // xyz = absolute voxel of the dispatch's first voxel, w = cascade
     float4 rayRotation; // quaternion applied to this update's ray directions
-    float4 params;      // x = foliage extinction, y = max ray distance, z = albedo where the ground's isn't known
+    float4 params;      // x = foliage extinction, y = max ray distance, z = albedo where the ground's isn't known, w = how much of the radiance's history is kept
     GlimmerRelightParams relight;
     GlimmerProbeVolume probes; // the near field, for what lights the hits; zeroed while it can't be sampled
     GlimmerSkyParams sky;
@@ -506,9 +506,9 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     if (hasHistory)
     {
         visibility = lerp(visibility, previousVisibility, GLIMMER_SH_HYSTERESIS);
-        radianceR = lerp(radianceR, previousR, GLIMMER_SH_HYSTERESIS);
-        radianceG = lerp(radianceG, previousG, GLIMMER_SH_HYSTERESIS);
-        radianceB = lerp(radianceB, previousB, GLIMMER_SH_HYSTERESIS);
+        radianceR = lerp(radianceR, previousR, constants.params.w);
+        radianceG = lerp(radianceG, previousG, constants.params.w);
+        radianceB = lerp(radianceB, previousB, constants.params.w);
     }
 
     GlimmerSHVoxel data = (GlimmerSHVoxel)0;

@@ -57,6 +57,118 @@ static constexpr double RebuildDebounceMs = 250.0;
 static constexpr float ViewerMoveRegatherDistance = 4.0f;
 static constexpr float ViewerMoveLodRegatherDistance = 16.0f;
 
+static constexpr size_t MaxChangesPerGeneration = 64;
+static constexpr size_t ChangeJournalGenerations = 8;
+
+static constexpr uint32 QuantizeMaxResolution = 8;
+
+#pragma region GlimmerSceneChanges
+
+void GlimmerSceneChanges::Quantize(size_t maxChanges)
+{
+    if (changes.Size() <= maxChanges || maxChanges == 0)
+    {
+        return;
+    }
+
+    BoundingBox extent;
+
+    size_t numLodOnly = 0;
+
+    for (const GlimmerSceneChange& change : changes)
+    {
+        extent = extent.Union(change.bounds);
+
+        numLodOnly += change.isLodOnly ? 1 : 0;
+    }
+
+    const Vec3f extentSize = MathUtil::Max(extent.max - extent.min, Vec3f(1e-3f));
+
+    const size_t numOther = changes.Size() - numLodOnly;
+
+    size_t lodOnlyBoxes = numLodOnly != 0 ? MathUtil::Max(maxChanges / 4, size_t(1)) : 0;
+    size_t otherBoxes = numOther != 0 ? MathUtil::Max(maxChanges - lodOnlyBoxes, size_t(1)) : 0;
+
+    if (numOther == 0)
+    {
+        lodOnlyBoxes = maxChanges;
+    }
+
+    Array<GlimmerSceneChange> merged;
+    merged.Reserve(maxChanges);
+
+    Array<BoundingBox> cells;
+    Array<uint8> cellsUsed;
+
+    const auto mergeGroup = [&](bool isLodOnly, size_t numBoxes)
+    {
+        if (numBoxes == 0)
+        {
+            return;
+        }
+
+        for (uint32 resolution = QuantizeMaxResolution; resolution; --resolution)
+        {
+            cells.Clear();
+            cells.Resize(size_t(resolution * resolution));
+
+            cellsUsed.Clear();
+            cellsUsed.ResizeZeroed(size_t(resolution * resolution));
+
+            size_t numUsed = 0;
+
+            for (const GlimmerSceneChange& change : changes)
+            {
+                if (change.isLodOnly != isLodOnly)
+                {
+                    continue;
+                }
+
+                const Vec3f normalized = (change.bounds.GetCenter() - extent.min) / extentSize;
+
+                const int32 cellX = MathUtil::Clamp(int32(normalized.x * float(resolution)), 0, int32(resolution) - 1);
+                const int32 cellZ = MathUtil::Clamp(int32(normalized.z * float(resolution)), 0, int32(resolution) - 1);
+                
+                const size_t cellIndex = size_t(cellZ * resolution + cellX);
+
+                if (!cellsUsed[cellIndex])
+                {
+                    cellsUsed[cellIndex] = 1;
+                    cells[cellIndex] = change.bounds;
+
+                    numUsed++;
+                }
+                else
+                {
+                    cells[cellIndex] = cells[cellIndex].Union(change.bounds);
+                }
+            }
+
+            if (numUsed > numBoxes)
+            {
+                continue;
+            }
+
+            for (size_t cellIndex = 0; cellIndex < cells.Size(); cellIndex++)
+            {
+                if (cellsUsed[cellIndex])
+                {
+                    merged.PushBack(GlimmerSceneChange { cells[cellIndex], isLodOnly });
+                }
+            }
+
+            return;
+        }
+    };
+
+    mergeGroup(false, otherBoxes);
+    mergeGroup(true, lodOnlyBoxes);
+
+    changes = std::move(merged);
+}
+
+#pragma endregion GlimmerSceneChanges
+
 #pragma region GlimmerTLAS
 
 GlimmerTLAS::GlimmerTLAS()
@@ -103,6 +215,41 @@ void GlimmerTLAS::Release(GlimmerBLASCache& blasCache)
     m_pendingBlasKeys.Clear();
 }
 
+bool GlimmerTLAS::GetChangesSince(
+    uint32 seenGeneration,
+    GlimmerSceneChanges& outChanges) const
+{
+    const uint32 generation = GetGeneration();
+
+    if (seenGeneration == generation)
+    {
+        return true;
+    }
+
+    if (m_changeJournal.Empty() || seenGeneration > generation || m_changeJournal.Front().generation > seenGeneration + 1)
+    {
+        return false;
+    }
+
+    for (const ChangeSet& changeSet : m_changeJournal)
+    {
+        if (changeSet.generation <= seenGeneration)
+        {
+            continue;
+        }
+
+        if (changeSet.isEverywhere)
+        {
+            return false;
+        }
+
+        ////////////////////////// turn and face the strange... //////////////////////////
+        outChanges.changes.Concat(changeSet.changes.changes.ToSpan());
+    }
+
+    return true;
+}
+
 void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const BoundingBox& tracedRegion, const Vec3f& viewerPosition, GlimmerBLASCache& blasCache, BuildInput& outInput, uint32& outNumWaitingForBLAS)
 {
     HYP_SCOPE;
@@ -118,7 +265,7 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
     m_usesLightmaps = g_cvLightmapVolumes.Get();
 
     // the rect offset is 0 for a mesh that isn't lit by a lightmap
-    const auto addInstance = [&](const RenderProxyMesh& proxy, const Mat4f& objectToWorld, uint32 flags, uint32 materialIndex, uint32 instanceIndex, uint32 lightmapRectOffset, uint32 lightmapRectSize)
+    const auto addInstance = [&](const RenderProxyMesh& proxy, const Mat4f& objectToWorld, uint32 flags, uint32 materialIndex, uint32 instanceId, uint32 lightmapRectOffset, uint32 lightmapRectSize)
     {
         const bool isFoliage = (flags & GIF_FOLIAGE) != 0;
 
@@ -158,7 +305,7 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
 
         uint8 lodIndex = meshDesc.GetCoarsestLodWithinError(worldScale, maxError);
 
-        const uint64 instanceKey = (uint64(proxy.entity ? proxy.entity->Id().Value() : 0u) << 32) | instanceIndex;
+        const uint64 instanceKey = (uint64(proxy.entity ? proxy.entity->Id().Value() : 0u) << 32) | instanceId;
 
         uint8 previousLod = lodIndex;
 
@@ -242,7 +389,9 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
             isReferenced = true;
         }
 
-        if (wantsTraced && worldBounds.Overlaps(tracedRegion))
+        const bool isTraced = wantsTraced && worldBounds.Overlaps(tracedRegion);
+
+        if (isTraced)
         {
             const Mat4f worldToGrid = gridToWorld.Inverse();
 
@@ -259,10 +408,32 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
             isReferenced = true;
         }
 
-        if (isReferenced && blasKeysSeen.Insert(blasRef.key).second)
+        if (!isReferenced)
+        {
+            return;
+        }
+
+        if (blasKeysSeen.Insert(blasRef.key).second)
         {
             outInput.blasKeys.PushBack(blasRef.key);
         }
+
+        struct
+        {
+            uint64 mesh;
+            uint32 materialIndex;
+            uint32 flags;
+            uint32 lightmapRectOffset;
+            uint32 lightmapRectSize;
+            uint32 isTraced;
+            uint32 _pad0;
+        } content = { uint64(uintptr_t(proxy.mesh)), materialIndex, instanceFlags, lightmapRectOffset, lightmapRectSize, isTraced ? 1u : 0u, 0u };
+
+        InstanceRecord& record = outInput.instanceRecords.EmplaceBack();
+        record.identity = instanceKey;
+        record.worldHash = FNV1::DoHashWords(objectToWorld.values, sizeof(objectToWorld.values), FNV1::DoHashWords(&content, sizeof(content), 0));
+        record.geometryKey = blasRef.key;
+        record.bounds = worldBounds;
     };
 
     for (Entity* entity : rpl.GetMeshEntities())
@@ -353,7 +524,10 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
             Mat4f instanceTransform;
             Memory::Copy(instanceTransform.values, instanceTransforms + size_t(instanceIndex) * sizeof(Mat4f), sizeof(Mat4f));
 
-            addInstance(*proxy, modelMatrix * instanceTransform, flags, materialIndex, instanceIndex, lightmapRectOffset, lightmapRectSize);
+            // instances are told apart by where they stand, as painting or streaming foliage reorders them
+            const uint32 instanceId = uint32(FNV1::DoHashWords(instanceTransform.values, sizeof(instanceTransform.values), 0));
+
+            addInstance(*proxy, modelMatrix * instanceTransform, flags, materialIndex, instanceId, lightmapRectOffset, lightmapRectSize);
         }
     }
 
@@ -447,6 +621,50 @@ GlimmerTLAS::BuildResult GlimmerTLAS::Build(BuildInput&& input)
             if (quadrant.IsValid())
             {
                 result.spanDirtyBounds.PushBack(quadrant);
+            }
+        }
+    }
+
+    result.instanceRecords = std::move(input.instanceRecords);
+
+    std::sort(result.instanceRecords.Begin(), result.instanceRecords.End());
+
+    if (input.hasPrevious)
+    {
+        const Array<InstanceRecord>& previousRecords = input.previousInstanceRecords;
+        const Array<InstanceRecord>& currentRecords = result.instanceRecords;
+
+        size_t previousIndex = 0;
+        size_t currentIndex = 0;
+
+        while (previousIndex < previousRecords.Size() || currentIndex < currentRecords.Size())
+        {
+            if (currentIndex == currentRecords.Size() || (previousIndex < previousRecords.Size() && previousRecords[previousIndex].identity < currentRecords[currentIndex].identity))
+            {
+                result.changes.Add(GlimmerSceneChange { previousRecords[previousIndex++].bounds, false });
+
+                continue;
+            }
+
+            if (previousIndex == previousRecords.Size() || currentRecords[currentIndex].identity < previousRecords[previousIndex].identity)
+            {
+                result.changes.Add(GlimmerSceneChange { currentRecords[currentIndex++].bounds, false });
+
+                continue;
+            }
+
+            const InstanceRecord& previous = previousRecords[previousIndex++];
+            const InstanceRecord& current = currentRecords[currentIndex++];
+
+            if (previous.worldHash != current.worldHash)
+            {
+                result.changes.Add(GlimmerSceneChange { previous.bounds, false });
+                result.changes.Add(GlimmerSceneChange { current.bounds, false });
+            }
+            else if (previous.geometryKey != current.geometryKey)
+            {
+                result.changes.Add(GlimmerSceneChange { previous.bounds.Union(current.bounds), true });
+                result.numLodOnlyChanges++;
             }
         }
     }
@@ -644,6 +862,33 @@ bool GlimmerTLAS::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& 
             m_stats.numSpanChunks = uint32(result.spanChunks.Size());
             m_stats.numBuilds++;
 
+            m_stats.numChanges = uint32(result.changes.Size());
+            m_stats.numLodOnlyChanges = result.numLodOnlyChanges;
+
+            ChangeSet changeSet;
+            changeSet.generation = m_stats.numBuilds;
+            changeSet.isEverywhere = result.spanFullyDirty;
+
+            if (changeSet.isEverywhere)
+            {
+                m_stats.numEverywhereBuilds++;
+            }
+            else
+            {
+                result.changes.Quantize(MaxChangesPerGeneration);
+
+                changeSet.changes = std::move(result.changes);
+            }
+
+            if (m_changeJournal.Size() >= ChangeJournalGenerations)
+            {
+                m_changeJournal.PopFront();
+            }
+
+            m_changeJournal.PushBack(std::move(changeSet));
+
+            m_instanceRecords = std::move(result.instanceRecords);
+
             swapped = true;
         }
     }
@@ -666,6 +911,7 @@ bool GlimmerTLAS::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& 
     input.region = region;
     input.regionCenter = region.GetCenter();
     input.previousSpanKeys = m_spanKeys;
+    input.previousInstanceRecords = m_instanceRecords;
     input.hasPrevious = IsReady() || !m_spanKeys.Empty();
 
     blasCache.AddReferences(input.blasKeys.ToSpan());

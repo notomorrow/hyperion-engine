@@ -18,8 +18,6 @@
 #include <Scene/LightmapVolume.hpp>
 #include <Scene/Systems/SwatchOverrideSystem.hpp>
 
-#include <Core/Utilities/GlobalContext.hpp>
-
 #include <Scene/ComponentInterface.hpp>
 #include <Scene/Components/MeshComponent.hpp>
 #include <Scene/Components/ScriptComponent.hpp>
@@ -49,6 +47,8 @@
 #include <Core/Reflection/Class.hpp>
 #include <Core/Reflection/Property.hpp>
 #include <Core/Reflection/Field.hpp>
+
+#include <Core/Utilities/GlobalContext.hpp>
 
 #include <Entity.generated.inl>
 
