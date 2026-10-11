@@ -47,6 +47,7 @@ DECLARE_BUFFER_DYNAMIC(GlimmerSHUpdate, CBuffer) cbuffer CBuffer
 };
 
 DECLARE_UAV(GlimmerSHUpdate, OutRadiance) RWTexture3D<float4> OutRadiance;
+DECLARE_UAV(GlimmerSHUpdate, OutLight) RWStructuredBuffer<uint2> OutLight;
 
 void GlimmerSHWriteComposed(uint3 texel, float4 entries[GLIMMER_LIGHT_ENTRIES])
 {
@@ -62,7 +63,7 @@ void GlimmerSHWriteLight(uint3 texel, float4 entries[GLIMMER_LIGHT_ENTRIES])
 {
     for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
     {
-        OutRadiance[GlimmerSHLightTexel(texel, entry)] = entries[entry];
+        OutLight[GlimmerSHLightIndex(texel, entry)] = GlimmerPackLightEntry(entries[entry]);
     }
 
     GlimmerSHWriteComposed(texel, entries);
@@ -79,7 +80,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
     for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
     {
-        light[entry] = OutRadiance[GlimmerSHLightTexel(texel, entry)];
+        light[entry] = GlimmerUnpackLightEntry(OutLight[GlimmerSHLightIndex(texel, entry)]);
     }
 
     GlimmerSHWriteComposed(texel, light);
@@ -127,6 +128,7 @@ DECLARE_SRV(GlimmerSHUpdate, GlimmerSHOccupancyMaskBuffer) StructuredBuffer<uint
 #define GLIMMER_SH_LOAD_DATA(texel) OutData[texel]
 #define GLIMMER_SH_LOAD_STATE(texel) OutState[texel]
 #define GLIMMER_SH_LOAD_RADIANCE(texel) OutRadiance[texel]
+#define GLIMMER_SH_LOAD_LIGHT(index) GlimmerUnpackLightEntry(OutLight[index])
 
 #define GLIMMER_SH_SPLIT
 #define GLIMMER_APPLY_WITH_SAMPLING
@@ -562,7 +564,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
         for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
         {
-            light[entry] = lerp(light[entry], OutRadiance[GlimmerSHLightTexel(texel, entry)], constants.params.w);
+            light[entry] = lerp(light[entry], GlimmerUnpackLightEntry(OutLight[GlimmerSHLightIndex(texel, entry)]), constants.params.w);
         }
     }
 

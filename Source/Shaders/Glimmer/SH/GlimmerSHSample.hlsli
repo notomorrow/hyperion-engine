@@ -1,8 +1,6 @@
 #ifndef GLIMMER_SH_SAMPLE_HLSLI
 #define GLIMMER_SH_SAMPLE_HLSLI
 
-// define GLIMMER_SH_LOAD_DATA(texel), GLIMMER_SH_LOAD_STATE(texel) and GLIMMER_SH_LOAD_RADIANCE(texel) before including
-
 #include "GlimmerSHCommon.hlsli"
 
 #define GLIMMER_SH_VISIBILITY_NORMAL_BIAS 0.3
@@ -219,6 +217,9 @@ float GlimmerSHSampleVolume(GlimmerSHVolume volume, float3 P, float3 N, out floa
 
 #ifdef GLIMMER_SH_SPLIT
 
+#define GLIMMER_SH_LIGHT_TAP_CUTOFF 0.02
+#define GLIMMER_SH_LIGHT_MIN_REMAINING 0.02
+
 float GlimmerSHSampleCascadeLight(GlimmerSHVolume volume, uint cascadeIndex, float3 P, float3 N, out GlimmerLight outLight)
 {
     outLight = GlimmerNoLight();
@@ -229,6 +230,16 @@ float GlimmerSHSampleCascadeLight(GlimmerSHVolume volume, uint cascadeIndex, flo
     if (cascadeWeight <= 0.0)
     {
         return 0.0;
+    }
+
+    float weights[8];
+    float weightSum = 0.0;
+
+    [unroll]
+    for (uint keptTap = 0; keptTap < 8; keptTap++)
+    {
+        weights[keptTap] = taps.weights[keptTap] * smoothstep(GLIMMER_SH_LIGHT_TAP_CUTOFF, 2.0 * GLIMMER_SH_LIGHT_TAP_CUTOFF, taps.weights[keptTap] / taps.weightSum);
+        weightSum += weights[keptTap];
     }
 
     float4 entries[GLIMMER_LIGHT_ENTRIES];
@@ -242,13 +253,13 @@ float GlimmerSHSampleCascadeLight(GlimmerSHVolume volume, uint cascadeIndex, flo
     for (uint tap = 0; tap < 8; tap++)
     {
         [branch]
-        if (taps.weights[tap] > 0.0)
+        if (weights[tap] > 0.0)
         {
-            const float weight = taps.weights[tap] / taps.weightSum;
+            const float weight = weights[tap] / weightSum;
 
             for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
             {
-                entries[entry] += GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(taps.texels[tap], entry)) * weight;
+                entries[entry] += GLIMMER_SH_LOAD_LIGHT(GlimmerSHLightIndex(taps.texels[tap], entry)) * weight;
             }
         }
     }
@@ -271,7 +282,7 @@ float GlimmerSHSampleVolumeLight(GlimmerSHVolume volume, float3 P, float3 N, out
     float remaining = 1.0;
 
     [loop]
-    for (uint cascadeIndex = 0; cascadeIndex < GLIMMER_SH_CASCADES && remaining > 1e-3; cascadeIndex++)
+    for (uint cascadeIndex = 0; cascadeIndex < GLIMMER_SH_CASCADES && remaining > GLIMMER_SH_LIGHT_MIN_REMAINING; cascadeIndex++)
     {
         GlimmerLight cascadeLight;
         const float cascadeWeight = GlimmerSHSampleCascadeLight(volume, cascadeIndex, P + N * 0.05, N, cascadeLight);
@@ -332,7 +343,7 @@ bool GlimmerSHSampleNearestLight(GlimmerSHVolume volume, float3 P, float3 N, out
 
         for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
         {
-            entries[entry] = GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(texel, entry));
+            entries[entry] = GLIMMER_SH_LOAD_LIGHT(GlimmerSHLightIndex(texel, entry));
         }
 
         outLight = GlimmerEvaluateStoredLight(entries, N);

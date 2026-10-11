@@ -5,8 +5,8 @@
 #include "../GlimmerConstants.hlsli"
 #include "../GlimmerLight.hlsli"
 
-#define GLIMMER_SH_RADIANCE_SECTIONS (3 + GLIMMER_LIGHT_ENTRIES)
-#define GLIMMER_SH_RADIANCE_COLUMNS 8
+#define GLIMMER_SH_RADIANCE_SECTIONS 3
+#define GLIMMER_SH_RADIANCE_COLUMNS 3
 #define GLIMMER_SH_RADIANCE_ROW_STRIDE (GLIMMER_SH_CASCADES * GLIMMER_SH_GRID_Y)
 
 struct GlimmerSHCascade
@@ -39,9 +39,9 @@ uint3 GlimmerSHRadianceTexel(uint3 texel, uint channel)
     return GlimmerSHRadianceSection(texel, channel);
 }
 
-uint3 GlimmerSHLightTexel(uint3 texel, uint entry)
+uint GlimmerSHLightIndex(uint3 texel, uint entry)
 {
-    return GlimmerSHRadianceSection(texel, 3u + entry);
+    return ((texel.z * GLIMMER_SH_RADIANCE_ROW_STRIDE + texel.y) * GLIMMER_SH_GRID_XZ + texel.x) * GLIMMER_LIGHT_ENTRIES + entry;
 }
 
 struct GlimmerSHRadiance

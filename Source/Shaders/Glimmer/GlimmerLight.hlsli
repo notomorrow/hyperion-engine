@@ -112,6 +112,18 @@ float3 GlimmerUnpackLightPart(uint2 packed)
     return f16tof32(uint3(packed.x & 0xFFFFu, packed.x >> 16, packed.y & 0xFFFFu));
 }
 
+uint2 GlimmerPackLightEntry(float4 value)
+{
+    const uint4 halves = f32tof16(clamp(value, -65000.0, 65000.0));
+
+    return uint2(halves.x | (halves.y << 16), halves.z | (halves.w << 16));
+}
+
+float4 GlimmerUnpackLightEntry(uint2 packed)
+{
+    return f16tof32(uint4(packed.x & 0xFFFFu, packed.x >> 16, packed.y & 0xFFFFu, packed.y >> 16));
+}
+
 float GlimmerEvaluateLinearL1(float4 sh, float3 N)
 {
     return sh.x + 0.5 * dot(sh.yzw, N);

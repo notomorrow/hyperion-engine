@@ -99,6 +99,11 @@ public:
     const GpuImageViewRef& GetStateImageView() const;
     const GpuImageViewRef& GetRadianceImageView() const;
 
+    HYP_FORCE_INLINE const GpuBufferRef& GetLightBuffer() const
+    {
+        return m_lightBuffer;
+    }
+
 private:
     struct Box
     {
@@ -152,7 +157,8 @@ private:
 
     Handle<Texture> m_dataTexture;      // sky visibility L1
     Handle<Texture> m_stateTexture;
-    Handle<Texture> m_radianceTexture;  // L1 of incoming radiance; R, G and B stacked along y
+    Handle<Texture> m_radianceTexture;  // L1 of incoming radiance; R, G and B side by side along x
+    GpuBufferRef m_lightBuffer;
 
     FixedArray<Cascade, GlimmerSHCascades> m_cascades;
 

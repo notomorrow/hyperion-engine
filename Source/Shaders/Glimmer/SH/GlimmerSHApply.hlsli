@@ -18,6 +18,7 @@ DECLARE_SRV(DeferredPass, GlimmerSHRadianceTexture) Texture3D<float4> glimmerSHR
 #define GLIMMER_SH_LOAD_DATA(texel) glimmerSHData.Load(int4(texel, 0))
 #define GLIMMER_SH_LOAD_STATE(texel) glimmerSHState.Load(int4(texel, 0))
 #define GLIMMER_SH_LOAD_RADIANCE(texel) glimmerSHRadiance.Load(int4(texel, 0))
+#define GLIMMER_SH_LOAD_LIGHT(index) GlimmerUnpackLightEntry(glimmerSHLight[index])
 #endif
 
 #include "GlimmerSHSample.hlsli"

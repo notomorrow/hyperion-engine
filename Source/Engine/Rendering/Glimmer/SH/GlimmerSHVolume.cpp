@@ -17,6 +17,8 @@
 #include <Rendering/Glimmer/SWRT/GlimmerSWRTProbeVolume.hpp>
 #include <Rendering/Glimmer/SWRT/GlimmerSWRTCVars.hpp>
 
+#include <Rendering/Util/DeletionQueue.hpp>
+
 #include <Rendering/Clouds/CloudPass.hpp>
 #include <Rendering/RenderProxy.hpp>
 
@@ -61,8 +63,8 @@ static constexpr int32 RefreshSliceVoxels = int32(GlimmerSHGridXZ * GlimmerSHGri
 
 static constexpr float RadianceHysteresis = 0.5f;
 
-static constexpr uint32 RadianceSections = 3 + GlimmerLightEntries;
-static constexpr uint32 RadianceColumns = 8;
+static constexpr uint32 RadianceSections = 3;
+static constexpr uint32 RadianceColumns = 3;
 static constexpr uint32 RadianceRows = (RadianceSections + RadianceColumns - 1) / RadianceColumns;
 
 static constexpr uint32 MaxOccupancyWaitFrames = 8;
@@ -144,6 +146,8 @@ GlimmerSHVolume::~GlimmerSHVolume()
     m_dataTexture = Handle<Texture>();
     m_stateTexture = Handle<Texture>();
     m_radianceTexture = Handle<Texture>();
+
+    EnqueueDeletion(std::move(m_lightBuffer));
 }
 
 void GlimmerSHVolume::CreateResources()
@@ -153,6 +157,9 @@ void GlimmerSHVolume::CreateResources()
     m_dataTexture = CreateGlimmerStorageTexture(TextureType::Texture3D, TextureFormat::RGBA16F, extent, 1, NAME("GlimmerSHData"));
     m_stateTexture = CreateGlimmerStorageTexture(TextureType::Texture3D, TextureFormat::RGBA32, extent, 1, NAME("GlimmerSHState"));
     m_radianceTexture = CreateGlimmerStorageTexture(TextureType::Texture3D, TextureFormat::RGBA16F, Vec3u(extent.x * RadianceColumns, extent.y * RadianceRows, extent.z), 1, NAME("GlimmerSHRadiance"));
+
+    m_lightBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, size_t(extent.x) * extent.y * extent.z * GlimmerLightEntries * sizeof(Vec2u), alignof(Vec4f));
+    Check(m_lightBuffer->Create());
 }
 
 const GpuImageViewRef& GlimmerSHVolume::GetDataImageView() const
@@ -311,6 +318,7 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
         cr << InsertBarrier(m_dataTexture->GetGpuImage(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
         cr << InsertBarrier(m_stateTexture->GetGpuImage(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
         cr << InsertBarrier(m_radianceTexture->GetGpuImage(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+        cr << InsertBarrier(m_lightBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
         ShaderPropertySet shaderProperties;
         shaderProperties.Add(s_propSHModeUpdate);
@@ -381,6 +389,7 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
     cr << SetShaderUniform(uniformIndex++, "OutData"_sh, RI.textureViewCache->GetOrCreate(m_dataTexture));
     cr << SetShaderUniform(uniformIndex++, "OutState"_sh, RI.textureViewCache->GetOrCreate(m_stateTexture));
     cr << SetShaderUniform(uniformIndex++, "OutRadiance"_sh, RI.textureViewCache->GetOrCreate(m_radianceTexture));
+    cr << SetShaderUniform(uniformIndex++, "OutLight"_sh, m_lightBuffer.Get(), ShaderDataOffset(0, sizeof(Vec2u)));
     cr << SetShaderUniform(uniformIndex++, "SamplerLinearMipmap"_sh, RI.placeholderData->GetSamplerLinearMipmap());
     cr << SetShaderUniform(uniformIndex++, "EnvProbesColorTexture"_sh, RI.textureViewCache->GetOrCreate(RI.envProbesColorTexture));
     cr << SetShaderUniform(uniformIndex++, "CloudWeatherMapTexture"_sh, inputs.cloudPass != nullptr ? inputs.cloudPass->GetWeatherMapView() : RI.placeholderData->GetImageView2D1x1R8Array());
@@ -501,6 +510,7 @@ void GlimmerSHVolume::Compose(Frame* frame, const GlimmerLightShaderData& light)
     RI.cbufferAllocator->Commit(cbuffer, cbufferOffset, cbufferSize);
 
     cr << InsertBarrier(m_radianceTexture->GetGpuImage(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+    cr << InsertBarrier(m_lightBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
     ShaderPropertySet shaderProperties;
     shaderProperties.Add(s_propSHModeCompose);
@@ -509,11 +519,13 @@ void GlimmerSHVolume::Compose(Frame* frame, const GlimmerLightShaderData& light)
 
     cr << SetShaderUniform(0, "CBuffer"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
     cr << SetShaderUniform(1, "OutRadiance"_sh, RI.textureViewCache->GetOrCreate(m_radianceTexture));
+    cr << SetShaderUniform(2, "OutLight"_sh, m_lightBuffer.Get(), ShaderDataOffset(0, sizeof(Vec2u)));
 
     // 2 rows of voxels a group
     cr << DispatchCompute(Vec3u { 1, GlimmerSHGridY * GlimmerSHCascades / 2, GlimmerSHGridXZ });
 
     cr << InsertBarrier(m_radianceTexture->GetGpuImage(), ResourceState::ShaderResource);
+    cr << InsertBarrier(m_lightBuffer.Get(), ResourceState::ShaderResource);
 
     m_composedLight = light;
     m_hasComposedLight = true;
@@ -723,6 +735,7 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
         cr << InsertBarrier(m_dataTexture->GetGpuImage(), ResourceState::ShaderResource);
         cr << InsertBarrier(m_stateTexture->GetGpuImage(), ResourceState::ShaderResource);
         cr << InsertBarrier(m_radianceTexture->GetGpuImage(), ResourceState::ShaderResource);
+        cr << InsertBarrier(m_lightBuffer.Get(), ResourceState::ShaderResource);
 
         m_shaderData.info.w = 1;
     }
