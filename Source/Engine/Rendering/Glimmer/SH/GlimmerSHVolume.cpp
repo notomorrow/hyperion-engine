@@ -143,9 +143,9 @@ GlimmerSHVolume::GlimmerSHVolume()
 
 GlimmerSHVolume::~GlimmerSHVolume()
 {
-    m_dataTexture = Handle<Texture>();
-    m_stateTexture = Handle<Texture>();
-    m_radianceTexture = Handle<Texture>();
+    m_dataTexture.Reset();
+    m_stateTexture.Reset();
+    m_radianceTexture.Reset();
 
     EnqueueDeletion(std::move(m_lightBuffer));
 }

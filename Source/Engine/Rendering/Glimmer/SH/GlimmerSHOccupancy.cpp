@@ -90,7 +90,7 @@ GlimmerSHOccupancy::GlimmerSHOccupancy()
 
 GlimmerSHOccupancy::~GlimmerSHOccupancy()
 {
-    m_texture = Handle<Texture>();
+    m_texture.Reset();
 
     EnqueueDeletion(std::move(m_maskBuffer));
     EnqueueDeletion(std::move(m_albedoSumsBuffer));

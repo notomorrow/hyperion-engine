@@ -91,14 +91,8 @@ GlimmerScenePassData::~GlimmerScenePassData()
 
 #pragma region GlimmerViewPassData
 
-GlimmerViewPassData::GlimmerViewPassData()
-{
-}
-
-GlimmerViewPassData::~GlimmerViewPassData()
-{
-    debugTexture = Handle<Texture>();
-}
+GlimmerViewPassData::GlimmerViewPassData() = default;
+GlimmerViewPassData::~GlimmerViewPassData() = default;
 
 #pragma endregion GlimmerViewPassData
 

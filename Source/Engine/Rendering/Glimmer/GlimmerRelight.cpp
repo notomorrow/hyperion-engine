@@ -41,10 +41,7 @@ GlimmerRelight::GlimmerRelight()
 {
 }
 
-GlimmerRelight::~GlimmerRelight()
-{
-    m_texture = Handle<Texture>();
-}
+GlimmerRelight::~GlimmerRelight() = default;
 
 const GpuImageViewRef& GlimmerRelight::GetImageView()
 {

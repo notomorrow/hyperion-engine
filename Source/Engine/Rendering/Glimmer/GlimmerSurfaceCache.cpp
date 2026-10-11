@@ -91,8 +91,8 @@ GlimmerSurfaceCache::GlimmerSurfaceCache()
 
 GlimmerSurfaceCache::~GlimmerSurfaceCache()
 {
-    m_ground = Handle<Texture>();
-    m_groundAlbedo = Handle<Texture>();
+    m_ground.Reset();
+    m_groundAlbedo.Reset();
 
     EnqueueDeletion(std::move(m_terrainPatchesBuffer));
     EnqueueDeletion(std::move(m_groundCoverAlbedoBuffer));
