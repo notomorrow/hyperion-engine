@@ -41,11 +41,39 @@ static constexpr uint32 GlimmerMaxLightmapPages = 4;
 
 static constexpr uint32 GlimmerLightingBurstPasses = 3;
 
+// NOTE must match GLIMMER_SUN_KEYS and GLIMMER_SKY_TERMS in GlimmerLight.hlsli
+static constexpr uint32 GlimmerSunKeys = 2;
+static constexpr uint32 GlimmerSkyTerms = 9;
+
+static constexpr uint32 GlimmerLightSky = GlimmerSunKeys;
+static constexpr uint32 GlimmerLightRest = GlimmerSunKeys + GlimmerSkyTerms;
+static constexpr uint32 GlimmerLightParts = GlimmerLightRest + 1;
+
+// what the caches hold of the light is split by where it started, and put back together with these
+struct GlimmerLightShaderData
+{
+    Vec4f weights[GlimmerLightParts];    // rgb = what the part is scaled by
+    Vec4f sunDirections[GlimmerSunKeys]; // xyz = toward the key's sun
+
+    HYP_FORCE_INLINE bool HasSameWeights(const GlimmerLightShaderData& other) const
+    {
+        for (uint32 part = 0; part < GlimmerLightParts; part++)
+        {
+            if (weights[part] != other.weights[part])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+};
+
 enum class GlimmerLightingChangeFlags : uint32
 {
     None = 0x0,
-    Sun = 0x1, //!< its direction, colour or intensity
-    Sky = 0x2  //!< its brightness
+    SunDirection = 0x1,
+    SkyShape = 0x2 //!< where the sky is bright, not how bright
 };
 
 HYP_MAKE_ENUM_FLAGS(GlimmerLightingChangeFlags);
@@ -106,6 +134,18 @@ void FillGlimmerGroundCover(TerrainWorldGridLayer* terrain, GlimmerChannelState&
 
 // the sky as both the probe and SH voxel traces see it
 void GetGlimmerSkyShaderData(EnvProbe* skyProbe, GlimmerSkyShaderData& outSky, EnvProbeShaderData& outSkyProbe);
+
+// the sun directions the caches hold the light of, and how much of each the sun is at now
+struct GlimmerSunKeyState
+{
+    Vec3f directions[GlimmerSunKeys];
+    float weights[GlimmerSunKeys];
+};
+
+void GetGlimmerLightShaderData(EnvProbe* skyProbe, const GlimmerSunKeyState& sunKeys, GlimmerLightShaderData& outLight);
+
+// the L1 of the sky relative to its mean
+void GetGlimmerSkyShape(EnvProbe* skyProbe, Vec3f outShape[3]);
 
 float GetGlimmerFoliageExtinction();
 

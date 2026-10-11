@@ -4,6 +4,7 @@ PERMUTE(MODE, CLASSIFY, ALLOC, LIST)
 
 #include "GlimmerSWRTCommon.hlsli"
 #include "GlimmerProbeTypes.hlsli"
+#include "../GlimmerLight.hlsli"
 
 #define GLIMMER_SH_OCCUPANCY_NO_TRACE
 #include "../SH/GlimmerSHOccupancy.hlsli"
@@ -53,6 +54,7 @@ DECLARE_UAV(GlimmerSWRTProbeAlloc, OutSlots) RWStructuredBuffer<int4> OutSlots; 
 DECLARE_UAV(GlimmerSWRTProbeAlloc, OutSlotAges) RWStructuredBuffer<uint> OutSlotAges;   // frames since the block was last wanted
 DECLARE_UAV(GlimmerSWRTProbeAlloc, OutStates) RWStructuredBuffer<uint4> OutStates;
 DECLARE_UAV(GlimmerSWRTProbeAlloc, OutSH) RWStructuredBuffer<float4> OutSH;
+DECLARE_UAV(GlimmerSWRTProbeAlloc, OutLight) RWStructuredBuffer<float4> OutLight;
 DECLARE_UAV(GlimmerSWRTProbeAlloc, OutVisibility) RWStructuredBuffer<uint> OutVisibility;
 DECLARE_UAV(GlimmerSWRTProbeAlloc, OutTrend) RWStructuredBuffer<float4> OutTrend;
 
@@ -99,6 +101,11 @@ void GlimmerResetProbe(uint probeIndex)
     for (uint channel = 0; channel < 3; channel++)
     {
         OutSH[probeIndex * 3u + channel] = (float4)0.0;
+    }
+
+    for (uint entry = 0; entry < GLIMMER_LIGHT_PARTS * 3; entry++)
+    {
+        OutLight[probeIndex * (GLIMMER_LIGHT_PARTS * 3u) + entry] = (float4)0.0;
     }
 
     // open in every direction until traced

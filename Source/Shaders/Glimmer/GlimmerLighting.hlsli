@@ -1,14 +1,37 @@
 #ifndef GLIMMER_LIGHTING_HLSLI
 #define GLIMMER_LIGHTING_HLSLI
 
-#define GLIMMER_MAX_ALBEDO 0.9
+#include "GlimmerLight.hlsli"
 
-#define GLIMMER_SKY_MIP 3.0
+#define GLIMMER_MAX_ALBEDO 0.9
 
 float GlimmerLuminance(float3 color)
 {
     return dot(color, float3(0.2126, 0.7152, 0.0722));
 }
+
+#if GLIMMER_SKY_TERMS > 1
+
+// the sky along a direction, as the sky's part of the light: what each of its SH terms adds along it
+GlimmerLight GlimmerSkyLight(float3 direction, float scale)
+{
+    GlimmerLight light = GlimmerNoLight();
+
+    float basis[GLIMMER_SKY_TERMS];
+    GlimmerSkyBasis(direction, basis);
+
+    [unroll]
+    for (uint term = 0; term < GLIMMER_SKY_TERMS; term++)
+    {
+        light.parts[GLIMMER_LIGHT_SKY + term] = (float3)(basis[term] * scale);
+    }
+
+    return light;
+}
+
+#else
+
+#define GLIMMER_SKY_MIP 3.0
 
 float3 GlimmerSkyRadiance(float3 direction)
 {
@@ -27,6 +50,20 @@ float3 GlimmerSkyRadiance(float3 direction)
     return luminance > sky.params.y ? radiance * (sky.params.y / luminance) : radiance;
 }
 
+// the sky along a direction, as the sky's part of the light: in units of the sky's brightness
+GlimmerLight GlimmerSkyLight(float3 direction, float scale)
+{
+    GlimmerLight light = GlimmerNoLight();
+
+    const float3 skyWeight = GLIMMER_LIGHTING_LIGHT.weights[GLIMMER_LIGHT_SKY].rgb;
+
+    light.parts[GLIMMER_LIGHT_SKY] = select(skyWeight > 0.0, GlimmerSkyRadiance(direction) / max(skyWeight, 1e-6), (float3)0.0) * scale;
+
+    return light;
+}
+
+#endif
+
 float3 GlimmerSkyIrradiance(float3 N)
 {
     if (skyProbe.textureIndices == ~0u)
@@ -40,14 +77,9 @@ float3 GlimmerSkyIrradiance(float3 N)
     return max(EnvProbeSH(skyProbe, shBands), (float3)0.0) * skyProbe.world_position.w * world_shader_data.sky_light_params.x;
 }
 
-float GlimmerSkyReference()
+float3 GlimmerSunDirection(uint key)
 {
-    return max(GLIMMER_LIGHTING_SKY.params.z * world_shader_data.sky_light_params.x, 1e-4);
-}
-
-float3 GlimmerSunIrradiance()
-{
-    return world_shader_data.sun_color.rgb * world_shader_data.sun_atmosphere_tint.rgb * world_shader_data.sun_direction_intensity.w;
+    return GLIMMER_LIGHTING_LIGHT.sunDirections[key].xyz;
 }
 
 float GlimmerCloudShadow(float3 P, float3 L)
@@ -55,102 +87,127 @@ float GlimmerCloudShadow(float3 P, float3 L)
     return GetCloudShadow(cloudWeatherMapTexture, cloudShadowMapTexture, glimmerMaterialSampler, cloudVolume, cloudWeatherMap, cloudShadowMap, P, L);
 }
 
-bool GlimmerFacesSun(float3 N)
+bool GlimmerFacesSun(float3 N, float3 L)
 {
-    const float3 L = normalize(world_shader_data.sun_direction_intensity.xyz);
-
     return dot(N, L) > 0.0 && L.y > -0.1;
 }
 
-float3 GlimmerIndirect(float3 P, float3 N)
+GlimmerLight GlimmerIndirect(float3 P, float3 N)
 {
-    const float4 nearField = SampleGlimmerProbes(GLIMMER_LIGHTING_PROBES, P + N * 0.1, N);
+    GlimmerLight nearField;
+    const float nearCoverage = SampleGlimmerProbesLight(GLIMMER_LIGHTING_PROBES, P + N * 0.1, N, nearField);
 
-    float4 farField = (float4)0.0;
+    GlimmerLight farField = GlimmerNoLight();
+    float farCoverage = 0.0;
 
     [branch]
-    if (nearField.a < 0.999)
+    if (nearCoverage < 0.999)
     {
-        farField = EvaluateGlimmerSH(GLIMMER_LIGHTING_SH, P + N * 0.05, N);
+        farCoverage = GlimmerSHSampleVolumeLight(GLIMMER_LIGHTING_SH, P + N * 0.05, N, farField);
     }
 
-    const float4 previous = GlimmerBlendFarField(nearField, farField);
+    const float farWeight = farCoverage * (1.0 - nearCoverage);
+    const float weight = nearCoverage + farWeight;
 
-    return previous.rgb * previous.a + GlimmerSkyRadiance(N) * 0.5 * (1.0 - previous.a);
+    GlimmerLight light = GlimmerSkyLight(N, 0.5 * (1.0 - weight));
+
+    GlimmerAddLight(light, nearField, (float3)nearCoverage);
+    GlimmerAddLight(light, farField, (float3)farWeight);
+
+    return light;
 }
 
-float3 GlimmerShade(float3 P, float3 N, float3 albedo, float sunVisibility, float3 indirect)
+// GlimmerIndirect from the nearest probe or voxel alone
+GlimmerLight GlimmerIndirectNearest(float3 P, float3 N)
+{
+    GlimmerLight light;
+
+    if (SampleGlimmerNearestProbeLight(GLIMMER_LIGHTING_PROBES, P, N, light))
+    {
+        return light;
+    }
+
+    if (GlimmerSHSampleNearestLight(GLIMMER_LIGHTING_SH, P, N, light))
+    {
+        return light;
+    }
+
+    return GlimmerSkyLight(N, 0.5);
+}
+
+GlimmerLight GlimmerShade(float3 P, float3 N, float3 albedo, GlimmerSunVisibility sunVisibility, GlimmerLight indirect)
 {
     albedo = min(albedo, (float3)GLIMMER_MAX_ALBEDO);
 
-    const float3 L = normalize(world_shader_data.sun_direction_intensity.xyz);
+    GlimmerLight light = indirect;
 
-    float3 direct = (float3)0.0;
-
-    if (GlimmerFacesSun(N) && sunVisibility > 0.0)
+    [unroll]
+    for (uint key = 0; key < GLIMMER_SUN_KEYS; key++)
     {
-        direct = GlimmerSunIrradiance() * dot(N, L) * HYP_FMATH_ONE_OVER_PI * sunVisibility * GlimmerCloudShadow(P, L);
+        const float3 L = GlimmerSunDirection(key);
+
+        if (GlimmerFacesSun(N, L) && sunVisibility.keys[key] > 0.0)
+        {
+            light.parts[key] += dot(N, L) * HYP_FMATH_ONE_OVER_PI * sunVisibility.keys[key] * GlimmerCloudShadow(P, L);
+        }
     }
 
-    return albedo * (direct + indirect);
+    return GlimmerScaleLight(light, albedo);
 }
 
-float3 GlimmerShadeSurface(float3 P, float3 N, float3 albedo, float sunVisibility)
+GlimmerLight GlimmerShadeSurface(float3 P, float3 N, float3 albedo, GlimmerSunVisibility sunVisibility)
 {
     return GlimmerShade(P, N, albedo, sunVisibility, GlimmerIndirect(P, N));
 }
 
-float3 GlimmerShadeRelit(float3 P, float3 albedo, float3 N, float4 relight)
-{
-    return GlimmerShade(P, N, albedo, relight.a, relight.rgb * GlimmerSkyReference());
-}
-
 #ifdef GLIMMER_RELIGHT_SAMPLING_HLSLI
 
-bool GlimmerShadeRelitHit(float3 P, float3 albedo, float3 N, bool isGroundHit, uint level, out float3 outRadiance)
+bool GlimmerShadeRelitHit(float3 P, float3 albedo, float3 N, bool isGroundHit, uint level, out GlimmerLight outLight)
 {
-    outRadiance = (float3)0.0;
+    outLight = GlimmerNoLight();
 
-    float4 relight;
+    GlimmerRelitSurface relit;
 
     if (!GlimmerRelightCovers(isGroundHit, N)
-        || !GlimmerSampleRelight(GLIMMER_LIGHTING_RELIGHT, GLIMMER_LIGHTING_GROUND, level, P.xz, isGroundHit ? GLIMMER_RELIGHT_GROUND : GLIMMER_RELIGHT_SPAN_TOP, relight))
+        || !GlimmerSampleRelight(GLIMMER_LIGHTING_RELIGHT, GLIMMER_LIGHTING_GROUND, level, P.xz, isGroundHit ? GLIMMER_RELIGHT_GROUND : GLIMMER_RELIGHT_SPAN_TOP, relit))
     {
         return false;
     }
 
-    outRadiance = GlimmerShadeRelit(P, albedo, N, relight);
+    outLight = GlimmerShade(P, N, albedo, relit.sunVisibility, relit.indirect);
 
     return true;
 }
 
 #endif
 
-static float3 g_canopySurroundings = (float3)0.0;
+static GlimmerLight g_canopySurroundings;
 static bool g_hasCanopySurroundings = false;
 
-float3 GlimmerCanopyRadiance(float3 P, float3 albedo, float depthBelowTop, float extinction)
+GlimmerLight GlimmerCanopyRadiance(float3 P, float3 albedo, float depthBelowTop, float extinction)
 {
-    const float3 L = normalize(world_shader_data.sun_direction_intensity.xyz);
-
-    float3 radiance = (float3)0.0;
-
-    if (L.y > 0.0)
-    {
-        const float sunTransmittance = exp(-extinction * depthBelowTop / max(L.y, 0.15)) * GlimmerCloudShadow(P, L);
-
-        radiance += GlimmerSunIrradiance() * sunTransmittance * (0.5 * HYP_FMATH_ONE_OVER_PI);
-    }
-
     if (!g_hasCanopySurroundings)
     {
-        g_canopySurroundings = GlimmerIndirect(P, float3(0.0, 1.0, 0.0));
+        g_canopySurroundings = GlimmerIndirectNearest(P, float3(0.0, 1.0, 0.0));
         g_hasCanopySurroundings = true;
     }
 
-    radiance += g_canopySurroundings;
+    GlimmerLight light = g_canopySurroundings;
 
-    return min(albedo, (float3)GLIMMER_MAX_ALBEDO) * radiance;
+    [unroll]
+    for (uint key = 0; key < GLIMMER_SUN_KEYS; key++)
+    {
+        const float3 L = GlimmerSunDirection(key);
+
+        if (L.y > 0.0)
+        {
+            const float sunTransmittance = exp(-extinction * depthBelowTop / max(L.y, 0.15)) * GlimmerCloudShadow(P, L);
+
+            light.parts[key] += sunTransmittance * (0.5 * HYP_FMATH_ONE_OVER_PI);
+        }
+    }
+
+    return GlimmerScaleLight(light, min(albedo, (float3)GLIMMER_MAX_ALBEDO));
 }
 
 #endif

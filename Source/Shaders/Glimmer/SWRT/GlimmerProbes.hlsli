@@ -50,10 +50,24 @@ float GlimmerProbeVisibility(uint probeIndex, float3 probeToPoint, float distanc
     return max(chebyshev * chebyshev * chebyshev, 0.0);
 }
 
-float GlimmerSampleProbeLevel(GlimmerProbeVolume volume, uint levelIndex, float3 P, float3 N, float3 R, out float3 outIrradiance, out float3 outIrradianceR)
+struct GlimmerProbeTaps
 {
-    outIrradiance = (float3)0.0;
-    outIrradianceR = (float3)0.0;
+    uint indices[8];
+    float weights[8];
+    float weightSum;
+};
+
+// the probes around P and what each counts for; returns how much the level covers P
+float GlimmerGatherProbeTaps(GlimmerProbeVolume volume, uint levelIndex, float3 P, float3 N, out GlimmerProbeTaps outTaps)
+{
+    [unroll]
+    for (uint tap = 0; tap < 8; tap++)
+    {
+        outTaps.indices[tap] = 0u;
+        outTaps.weights[tap] = 0.0;
+    }
+
+    outTaps.weightSum = 0.0;
 
     const GlimmerProbeLevel level = volume.levels[levelIndex];
 
@@ -78,11 +92,6 @@ float GlimmerSampleProbeLevel(GlimmerProbeVolume volume, uint levelIndex, float3
     }
 
     const float3 visibilityPoint = P + N * (0.2 * spacing);
-
-    float4 sumR = (float4)0.0;
-    float4 sumG = (float4)0.0;
-    float4 sumB = (float4)0.0;
-    float weightSum = 0.0;
 
     float presentCoverage = 0.0;
     float bestVisibility = 0.0;
@@ -142,23 +151,194 @@ float GlimmerSampleProbeLevel(GlimmerProbeVolume volume, uint levelIndex, float3
         presentCoverage += trilinearWeight;
         bestVisibility = max(bestVisibility, visibility);
 
-        sumR += glimmerProbeSH[probeIndex * 3u + 0u] * weight;
-        sumG += glimmerProbeSH[probeIndex * 3u + 1u] * weight;
-        sumB += glimmerProbeSH[probeIndex * 3u + 2u] * weight;
-        weightSum += weight;
+        outTaps.indices[corner] = probeIndex;
+        outTaps.weights[corner] = weight;
+        outTaps.weightSum += weight;
     }
 
-    if (weightSum <= 1e-5)
+    if (outTaps.weightSum <= 1e-5)
     {
         return 0.0;
     }
 
-    outIrradiance = GlimmerEvaluateL1(sumR / weightSum, sumG / weightSum, sumB / weightSum, N);
-    outIrradianceR = GlimmerEvaluateL1(sumR / weightSum, sumG / weightSum, sumB / weightSum, R);
-
     const float coverage = presentCoverage / max(1.0 - excludedTrilinear, 1e-3);
 
     return smoothstep(0.3, 0.7, coverage) * smoothstep(0.02, 0.2, bestVisibility) * windowFade;
+}
+
+#ifdef GLIMMER_PROBES_SPLIT
+
+float GlimmerSampleProbeLevelLight(GlimmerProbeVolume volume, uint levelIndex, float3 P, float3 N, out GlimmerLight outLight)
+{
+    outLight = GlimmerNoLight();
+
+    GlimmerProbeTaps taps;
+    const float levelWeight = GlimmerGatherProbeTaps(volume, levelIndex, P, N, taps);
+
+    if (levelWeight <= 0.0)
+    {
+        return 0.0;
+    }
+
+    float4 sums[GLIMMER_LIGHT_PARTS * 3];
+
+    for (uint sumIndex = 0; sumIndex < GLIMMER_LIGHT_PARTS * 3; sumIndex++)
+    {
+        sums[sumIndex] = (float4)0.0;
+    }
+
+    [unroll]
+    for (uint tap = 0; tap < 8; tap++)
+    {
+        [branch]
+        if (taps.weights[tap] > 0.0)
+        {
+            const uint base = taps.indices[tap] * (GLIMMER_LIGHT_PARTS * 3u);
+
+            for (uint entry = 0; entry < GLIMMER_LIGHT_PARTS * 3; entry++)
+            {
+                sums[entry] += glimmerProbeLight[base + entry] * taps.weights[tap];
+            }
+        }
+    }
+
+    const float invWeightSum = 1.0 / taps.weightSum;
+
+    [unroll]
+    for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
+    {
+        outLight.parts[part] = GlimmerEvaluateLightPart(part, sums[part * 3u] * invWeightSum, sums[part * 3u + 1u] * invWeightSum, sums[part * 3u + 2u] * invWeightSum, N);
+    }
+
+    return levelWeight;
+}
+
+// returns the coverage; the light is what the covered part receives
+float SampleGlimmerProbesLight(GlimmerProbeVolume volume, float3 P, float3 N, out GlimmerLight outLight)
+{
+    outLight = GlimmerNoLight();
+
+    if (volume.info.w == 0u)
+    {
+        return 0.0;
+    }
+
+    GlimmerLight light = GlimmerNoLight();
+    float remaining = 1.0;
+
+    [loop]
+    for (uint levelIndex = 0; levelIndex < volume.info.x && remaining > 1e-3; levelIndex++)
+    {
+        GlimmerLight levelLight;
+        const float levelWeight = GlimmerSampleProbeLevelLight(volume, levelIndex, P, N, levelLight);
+
+        if (levelWeight <= 0.0)
+        {
+            continue;
+        }
+
+        GlimmerAddLight(light, levelLight, (float3)(levelWeight * remaining));
+        remaining *= 1.0 - levelWeight;
+    }
+
+    const float coverage = 1.0 - remaining;
+
+    if (coverage <= 1e-4)
+    {
+        return 0.0;
+    }
+
+    outLight = GlimmerScaleLight(light, (float3)(1.0 / coverage));
+
+    return coverage;
+}
+
+// what the probe nearest P receives, taken for P: for where a rough answer will do
+bool SampleGlimmerNearestProbeLight(GlimmerProbeVolume volume, float3 P, float3 N, out GlimmerLight outLight)
+{
+    outLight = GlimmerNoLight();
+
+    if (volume.info.w == 0u)
+    {
+        return false;
+    }
+
+    [loop]
+    for (uint levelIndex = 0; levelIndex < volume.info.x; levelIndex++)
+    {
+        const GlimmerProbeLevel level = volume.levels[levelIndex];
+
+        const int3 probeCoord = int3(floor(P * level.params.y));
+        const int3 block = probeCoord >> 2;
+
+        if (!GlimmerIsBlockInWindow(level, block))
+        {
+            continue;
+        }
+
+        const uint slot = glimmerProbeBlockTable[GlimmerProbeBlockTableIndex(levelIndex, block)];
+
+        if (slot == GLIMMER_PROBE_NO_SLOT)
+        {
+            continue;
+        }
+
+        const uint probeIndex = GlimmerProbeIndex(slot, probeCoord & (GLIMMER_PROBE_BLOCK - 1));
+        const uint4 state = glimmerProbeStates[probeIndex];
+
+        if (GlimmerProbeStateOf(state) != GLIMMER_PROBE_STATE_ACTIVE || GlimmerProbeUpdates(state) == 0u)
+        {
+            continue;
+        }
+
+        const uint base = probeIndex * (GLIMMER_LIGHT_PARTS * 3u);
+
+        for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
+        {
+            outLight.parts[part] = GlimmerEvaluateLightPart(part, glimmerProbeLight[base + part * 3u], glimmerProbeLight[base + part * 3u + 1u], glimmerProbeLight[base + part * 3u + 2u], N);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+#else
+
+float GlimmerSampleProbeLevel(GlimmerProbeVolume volume, uint levelIndex, float3 P, float3 N, float3 R, out float3 outIrradiance, out float3 outIrradianceR)
+{
+    outIrradiance = (float3)0.0;
+    outIrradianceR = (float3)0.0;
+
+    GlimmerProbeTaps taps;
+    const float levelWeight = GlimmerGatherProbeTaps(volume, levelIndex, P, N, taps);
+
+    if (levelWeight <= 0.0)
+    {
+        return 0.0;
+    }
+
+    float4 sumR = (float4)0.0;
+    float4 sumG = (float4)0.0;
+    float4 sumB = (float4)0.0;
+
+    [unroll]
+    for (uint tap = 0; tap < 8; tap++)
+    {
+        [branch]
+        if (taps.weights[tap] > 0.0)
+        {
+            sumR += glimmerProbeSH[taps.indices[tap] * 3u + 0u] * taps.weights[tap];
+            sumG += glimmerProbeSH[taps.indices[tap] * 3u + 1u] * taps.weights[tap];
+            sumB += glimmerProbeSH[taps.indices[tap] * 3u + 2u] * taps.weights[tap];
+        }
+    }
+
+    outIrradiance = GlimmerEvaluateL1(sumR / taps.weightSum, sumG / taps.weightSum, sumB / taps.weightSum, N);
+    outIrradianceR = GlimmerEvaluateL1(sumR / taps.weightSum, sumG / taps.weightSum, sumB / taps.weightSum, R);
+
+    return levelWeight;
 }
 
 float GlimmerSampleProbeLevel(GlimmerProbeVolume volume, uint levelIndex, float3 P, float3 N, out float3 outIrradiance)
@@ -216,6 +396,8 @@ float4 SampleGlimmerProbes(GlimmerProbeVolume volume, float3 P, float3 N)
 
     return SampleGlimmerProbes(volume, P, N, N, irradianceR);
 }
+
+#endif // GLIMMER_PROBES_SPLIT
 
 #endif // GLIMMER_PROBES_NO_SAMPLING
 

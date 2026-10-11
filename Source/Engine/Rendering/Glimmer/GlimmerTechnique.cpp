@@ -45,6 +45,8 @@
 
 #include <Core/Math/MathUtil.hpp>
 
+#include <Core/Utilities/Time.hpp>
+
 #include <Core/Threading/Threads.hpp>
 
 #include <Core/Profiling/ProfileScope.hpp>
@@ -63,10 +65,14 @@ static EngineStatCounter<uint32> s_statGlimmerLightingChanges("Rendering/Glimmer
 
 static constexpr float RegionRecenterFraction = 0.25f;
 
-// how far the sun brightness  must move before the caches are woken for it
-static constexpr float LightingChangeFraction = 0.03f;
-// clouds move the sky's brightness all the time, and the probes follow a slow change by themselves
-static constexpr float SkyChangeFraction = 0.1f;
+// how far the sky's L1 has to move, relative to its mean, before the caches are woken for it
+static constexpr float SkyShapeChange = 0.1f;
+
+// how long the sun has to hold still before the key ahead is put on it, how long that key gets to be lit,
+// and how long the light then takes to move onto it
+static constexpr double SunRestSeconds = 3.0;
+static constexpr double SunKeySettleSeconds = 6.0;
+static constexpr float SunKeyRampSeconds = 1.5f;
 
 struct GlimmerSWRTDebugConstants
 {
@@ -160,10 +166,181 @@ GlimmerTechnique::GlimmerTechnique()
       m_shVolume(MakeUnique<GlimmerSHVolume>()),
       m_relight(MakeUnique<GlimmerRelight>()),
       m_maskGeneration(~0u),
-      m_litSkyLight(0.0f),
-      m_litSkyLuminance(0.0f),
+      m_sunKeys {},
+      m_sunKeyFrom(0),
+      m_sunKeyWeight(0.0f),
+      m_hasSunKeys(false),
+      m_hasSunPath(false),
+      m_isSunKeySettling(false),
+      m_lastSunMoveSeconds(0.0),
+      m_sunKeySettleSeconds(0.0),
+      m_sunKeyUpdateSeconds(0.0),
       m_hasLitSignature(false)
 {
+}
+
+static float AngleBetween(const Vec3f& a, const Vec3f& b)
+{
+    return MathUtil::Arccos(MathUtil::Clamp(a.Dot(b), -1.0f, 1.0f));
+}
+
+// axis has to be at a right angle to the direction
+static Vec3f TurnAbout(const Vec3f& direction, const Vec3f& axis, float angle)
+{
+    return (direction * MathUtil::Cos(angle) + axis.Cross(direction) * MathUtil::Sin(angle)).Normalized();
+}
+
+bool GlimmerTechnique::UpdateSunKeys(const Vec3f& sunDirection)
+{
+    const double nowSeconds = double(Time::Now().ToMilliseconds()) * 0.001;
+    const float deltaSeconds = float(MathUtil::Clamp(nowSeconds - m_sunKeyUpdateSeconds, 0.0, 1.0));
+
+    m_sunKeyUpdateSeconds = nowSeconds;
+
+    const float tolerance = MathUtil::DegToRad(MathUtil::Clamp(g_cvGlimmerSunAngleThreshold.Get(), 0.01f, 45.0f));
+    const float spacing = MathUtil::Max(MathUtil::DegToRad(MathUtil::Clamp(g_cvGlimmerSunKeySpacing.Get(), 0.1f, 45.0f)), tolerance * 2.0f);
+
+    bool hasRetargeted = false;
+
+    const auto putKeysOnSun = [&]()
+    {
+        for (Vec3f& direction : m_sunKeys.directions)
+        {
+            direction = sunDirection;
+        }
+
+        m_sunKeyWeight = 0.0f;
+        m_hasSunKeys = true;
+        m_hasSunPath = false;
+        m_isSunKeySettling = false;
+
+        hasRetargeted = true;
+    };
+
+    if (!m_hasSunKeys)
+    {
+        m_lastSunDirection = sunDirection;
+        m_lastSunMoveSeconds = nowSeconds;
+
+        putKeysOnSun();
+    }
+    else if (GlimmerSunKeys == 1)
+    {
+        if (AngleBetween(m_sunKeys.directions[0], sunDirection) > tolerance)
+        {
+            putKeysOnSun();
+        }
+    }
+    else
+    {
+        if (AngleBetween(sunDirection, m_lastSunDirection) > 1e-5f)
+        {
+            m_lastSunDirection = sunDirection;
+            m_lastSunMoveSeconds = nowSeconds;
+        }
+
+        uint32 toKey = (m_sunKeyFrom + 1) % GlimmerSunKeys;
+
+        if (m_isSunKeySettling)
+        {
+            if (AngleBetween(m_sunKeys.directions[toKey], sunDirection) > tolerance)
+            {
+                putKeysOnSun();
+            }
+            else if (nowSeconds - m_sunKeySettleSeconds > SunKeySettleSeconds)
+            {
+                m_sunKeyWeight = MathUtil::Min(m_sunKeyWeight + deltaSeconds / SunKeyRampSeconds, 1.0f);
+
+                if (m_sunKeyWeight >= 1.0f)
+                {
+                    m_sunKeys.directions[m_sunKeyFrom] = m_sunKeys.directions[toKey];
+                    m_sunKeyFrom = toKey;
+                    m_sunKeyWeight = 0.0f;
+                    m_hasSunPath = false;
+                    m_isSunKeySettling = false;
+                }
+            }
+        }
+        else if (!m_hasSunPath)
+        {
+            const Vec3f fromDirection = m_sunKeys.directions[m_sunKeyFrom];
+            const float moved = AngleBetween(fromDirection, sunDirection);
+
+            if (moved > spacing)
+            {
+                putKeysOnSun();
+            }
+            else if (moved > tolerance)
+            {
+                // the sun has set off: the other key goes ahead of it
+                m_sunKeys.directions[toKey] = TurnAbout(fromDirection, fromDirection.Cross(sunDirection).Normalized(), spacing);
+                m_hasSunPath = true;
+
+                hasRetargeted = true;
+            }
+        }
+
+        if (m_hasSunPath && !m_isSunKeySettling)
+        {
+            const Vec3f fromDirection = m_sunKeys.directions[m_sunKeyFrom];
+            const Vec3f toDirection = m_sunKeys.directions[toKey];
+
+            const Vec3f axis = fromDirection.Cross(toDirection).Normalized();
+            const Vec3f onPath = (sunDirection - axis * sunDirection.Dot(axis)).Normalized();
+
+            float span = AngleBetween(fromDirection, toDirection);
+            float along = AngleBetween(fromDirection, onPath) * (fromDirection.Cross(onPath).Dot(axis) < 0.0f ? -1.0f : 1.0f);
+
+            const float offPath = MathUtil::Abs(MathUtil::Arcsin(MathUtil::Clamp(sunDirection.Dot(axis), -1.0f, 1.0f)));
+
+            if (offPath > tolerance || along < -tolerance || along > span + spacing)
+            {
+                putKeysOnSun();
+            }
+            else
+            {
+                if (along >= span)
+                {
+                    // the sun passed the key ahead: the one behind goes ahead of that one
+                    m_sunKeys.directions[m_sunKeyFrom] = TurnAbout(toDirection, axis, spacing);
+                    m_sunKeyFrom = toKey;
+                    toKey = (m_sunKeyFrom + 1) % GlimmerSunKeys;
+
+                    along -= span;
+                    span = spacing;
+
+                    hasRetargeted = true;
+                }
+
+                const float t = MathUtil::Clamp(along / MathUtil::Max(span, 1e-6f), 0.0f, 1.0f);
+
+                // eased, as the key ahead is still being lit when the sun sets off for it
+                m_sunKeyWeight = t * t * (3.0f - 2.0f * t);
+
+                if (nowSeconds - m_lastSunMoveSeconds > SunRestSeconds
+                    && m_sunKeyWeight > 1e-3f
+                    && AngleBetween(m_sunKeys.directions[toKey], sunDirection) > 1e-4f)
+                {
+                    // the sun stopped between its keys: the key ahead is put on it, and the light follows once that key is lit
+                    m_sunKeys.directions[toKey] = sunDirection;
+                    m_isSunKeySettling = true;
+                    m_sunKeySettleSeconds = nowSeconds;
+
+                    hasRetargeted = true;
+                }
+            }
+        }
+    }
+
+    for (float& weight : m_sunKeys.weights)
+    {
+        weight = 0.0f;
+    }
+
+    m_sunKeys.weights[m_sunKeyFrom] = 1.0f - m_sunKeyWeight;
+    m_sunKeys.weights[(m_sunKeyFrom + 1) % GlimmerSunKeys] += m_sunKeyWeight;
+
+    return hasRetargeted;
 }
 
 EnumFlags<GlimmerLightingChangeFlags> GlimmerTechnique::UpdateLightingSignature(EnvProbe* skyProbe)
@@ -175,39 +352,32 @@ EnumFlags<GlimmerLightingChangeFlags> GlimmerTechnique::UpdateLightingSignature(
         return GlimmerLightingChangeFlags::None;
     }
 
-    GlimmerSkyShaderData skyData;
-    EnvProbeShaderData skyProbeData;
-    GetGlimmerSkyShaderData(skyProbe, skyData, skyProbeData);
-
     const Vec3f toSun = worldData->sunDirectionIntensity.GetXYZ();
     const Vec3f sunDirection = toSun.LengthSquared() > 1e-8f ? toSun.Normalized() : Vec3f(0.0f, 1.0f, 0.0f);
-    const Vec3f sunRadiance = worldData->sunColor.GetXYZ() * worldData->sunAtmosphereTint.GetXYZ() * worldData->sunDirectionIntensity.w;
-    const float skyLight = worldData->skyLightParams.x;
-    const float skyLuminance = skyData.params.z;
 
-    const auto hasMoved = [](float previous, float current, float fraction = LightingChangeFraction)
-    {
-        return MathUtil::Abs(current - previous) > fraction * MathUtil::Max(MathUtil::Abs(previous), MathUtil::Abs(current)) + 1e-6f;
-    };
-
-    const float cosThreshold = MathUtil::Cos(MathUtil::DegToRad(MathUtil::Clamp(g_cvGlimmerSunAngleThreshold.Get(), 0.01f, 45.0f)));
+    Vec3f skyShape[3];
+    GetGlimmerSkyShape(skyProbe, skyShape);
 
     EnumFlags<GlimmerLightingChangeFlags> changes = GlimmerLightingChangeFlags::None;
 
-    if (!m_hasLitSignature
-        || sunDirection.Dot(m_litSunDirection) < cosThreshold
-        || hasMoved(m_litSunRadiance.x, sunRadiance.x)
-        || hasMoved(m_litSunRadiance.y, sunRadiance.y)
-        || hasMoved(m_litSunRadiance.z, sunRadiance.z))
+    if (UpdateSunKeys(sunDirection))
     {
-        changes |= GlimmerLightingChangeFlags::Sun;
+        changes |= GlimmerLightingChangeFlags::SunDirection;
     }
 
-    if (!m_hasLitSignature
-        || hasMoved(m_litSkyLight, skyLight)
-        || hasMoved(m_litSkyLuminance, skyLuminance, SkyChangeFraction))
+    float skyShapeChange = 0.0f;
+
+    for (uint32 term = 0; term < 3; term++)
     {
-        changes |= GlimmerLightingChangeFlags::Sky;
+        const Vec3f difference = skyShape[term] - m_litSkyShape[term];
+
+        skyShapeChange = MathUtil::Max(skyShapeChange, MathUtil::Max(MathUtil::Abs(difference.x), MathUtil::Max(MathUtil::Abs(difference.y), MathUtil::Abs(difference.z))));
+    }
+
+    // with the sky split into its SH terms, its shape is in what the caches hold
+    if (GlimmerSkyTerms == 1 && (!m_hasLitSignature || skyShapeChange > SkyShapeChange))
+    {
+        changes |= GlimmerLightingChangeFlags::SkyShape;
     }
 
     if (!changes)
@@ -217,15 +387,17 @@ EnumFlags<GlimmerLightingChangeFlags> GlimmerTechnique::UpdateLightingSignature(
 
     if (g_cvGlimmerSWRTProbesLogStats.Get())
     {
-        HYP_LOG(Rendering, Info, "Glimmer lighting changed: sun turned {} deg, sun radiance {} -> {}, sky light {} -> {}, sky luminance {} -> {}",
-            MathUtil::RadToDeg(MathUtil::Arccos(MathUtil::Clamp(sunDirection.Dot(m_litSunDirection), -1.0f, 1.0f))),
-            m_litSunRadiance.Sum(), sunRadiance.Sum(), m_litSkyLight, skyLight, m_litSkyLuminance, skyLuminance);
+        HYP_LOG(Rendering, Info, "Glimmer lighting changed: sun keys {} and {} deg from the sun, weight ahead {}, on a path {}, settling {}, sky shape moved {}",
+            MathUtil::RadToDeg(AngleBetween(m_sunKeys.directions[0], sunDirection)),
+            MathUtil::RadToDeg(AngleBetween(m_sunKeys.directions[GlimmerSunKeys - 1], sunDirection)),
+            m_sunKeyWeight, m_hasSunPath, m_isSunKeySettling, skyShapeChange);
     }
 
-    m_litSunDirection = sunDirection;
-    m_litSunRadiance = sunRadiance;
-    m_litSkyLight = skyLight;
-    m_litSkyLuminance = skyLuminance;
+    for (uint32 term = 0; term < 3; term++)
+    {
+        m_litSkyShape[term] = skyShape[term];
+    }
+
     m_hasLitSignature = true;
 
     s_statGlimmerLightingChanges++;
@@ -278,8 +450,11 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         const bool probesEnabled = g_cvGlimmerSWRTProbesEnabled.Get();
 
         const EnumFlags<GlimmerLightingChangeFlags> lightingChanges = UpdateLightingSignature(context.skyProbe);
+
+        GlimmerLightShaderData light;
+        GetGlimmerLightShaderData(context.skyProbe, m_sunKeys, light);
         const bool isRelightSettled = !probesEnabled
-            || (!m_relight->IsBurstRelightingSun() && !(lightingChanges & GlimmerLightingChangeFlags::Sun));
+            || (!m_relight->IsBurstRelightingSun() && !(lightingChanges & GlimmerLightingChangeFlags::SunDirection));
 
         if (probesEnabled)
         {
@@ -320,6 +495,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         shInputs.skyProbe = context.skyProbe;
         shInputs.cloudPass = context.cloudPass;
         shInputs.lightingChanges = lightingChanges;
+        shInputs.light = light;
 
         m_shVolume->Update(context.frame, shInputs);
 
@@ -338,6 +514,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         probeInputs.relight = m_relight.Get();
         probeInputs.cloudPass = context.cloudPass;
         probeInputs.lightingChanges = lightingChanges;
+        probeInputs.light = light;
         probeInputs.isLightingSettling = m_relight->IsBursting() || m_shVolume->IsBursting();
 
         if (probesEnabled)

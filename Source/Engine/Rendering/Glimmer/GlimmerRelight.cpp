@@ -211,7 +211,7 @@ void GlimmerRelight::Schedule(
         }
 
         // the sun's visibility is right again after one pass
-        if (lightingChanges & GlimmerLightingChangeFlags::Sun)
+        if (lightingChanges & GlimmerLightingChangeFlags::SunDirection)
         {
             m_sunTexelsLeft = int32(BurstPassTexels);
         }

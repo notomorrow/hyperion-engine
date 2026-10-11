@@ -23,7 +23,8 @@ class Texture;
 class GlimmerSurfaceCache;
 class GlimmerSpanCache;
 
-static constexpr uint32 GlimmerRelightLayers = 2;
+// GLIMMER_RELIGHT_LAYERS: a layer of sun visibility per surface, then what the 2 surfaces receive, 4 parts to a layer
+static constexpr uint32 GlimmerRelightLayers = 2 + (2 * GlimmerLightParts + 3) / 4;
 
 struct GlimmerRelightShaderData
 {

@@ -3,6 +3,7 @@
 
 #include "../GlimmerCommon.hlsli"
 #include "../GlimmerConstants.hlsli"
+#include "../GlimmerLight.hlsli"
 
 struct GlimmerSHCascade
 {
@@ -24,11 +25,25 @@ uint3 GlimmerSHTexel(uint cascadeIndex, int3 voxel)
         uint(voxel.z & (GLIMMER_SH_GRID_XZ - 1)));
 }
 
-#define GLIMMER_SH_RADIANCE_CHANNEL_STRIDE (GLIMMER_SH_CASCADES * GLIMMER_SH_GRID_Y)
+// the radiance texture holds the light put together first, then each part of it, 3 channels each: a section per channel,
+// laid out GLIMMER_SH_RADIANCE_COLUMNS across
+#define GLIMMER_SH_RADIANCE_SECTIONS (3 * (1 + GLIMMER_LIGHT_PARTS))
+#define GLIMMER_SH_RADIANCE_COLUMNS 8
+#define GLIMMER_SH_RADIANCE_ROW_STRIDE (GLIMMER_SH_CASCADES * GLIMMER_SH_GRID_Y)
+
+uint3 GlimmerSHRadianceSection(uint3 texel, uint section)
+{
+    return texel + uint3((section % GLIMMER_SH_RADIANCE_COLUMNS) * GLIMMER_SH_GRID_XZ, (section / GLIMMER_SH_RADIANCE_COLUMNS) * GLIMMER_SH_RADIANCE_ROW_STRIDE, 0u);
+}
 
 uint3 GlimmerSHRadianceTexel(uint3 texel, uint channel)
 {
-    return texel + uint3(0u, channel * GLIMMER_SH_RADIANCE_CHANNEL_STRIDE, 0u);
+    return GlimmerSHRadianceSection(texel, channel);
+}
+
+uint3 GlimmerSHLightTexel(uint3 texel, uint entry)
+{
+    return GlimmerSHRadianceSection(texel, 3u + entry);
 }
 
 struct GlimmerSHRadiance

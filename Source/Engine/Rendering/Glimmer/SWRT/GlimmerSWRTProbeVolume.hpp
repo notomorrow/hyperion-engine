@@ -89,6 +89,8 @@ struct GlimmerSWRTProbeUpdateInputs
 
     EnumFlags<GlimmerLightingChangeFlags> lightingChanges = GlimmerLightingChangeFlags::None;
     bool isLightingSettling = false;
+
+    GlimmerLightShaderData light;
 };
 
 class GlimmerSWRTProbeVolume final
@@ -115,6 +117,7 @@ public:
 
     const GpuBufferRef& GetBlockTableBuffer() const;
     const GpuBufferRef& GetSHBuffer() const;
+    const GpuBufferRef& GetLightBuffer() const;
     const GpuBufferRef& GetStatesBuffer() const;
     const GpuBufferRef& GetVisibilityBuffer() const;
     const GpuBufferRef& GetSlotsBuffer() const;
@@ -131,7 +134,8 @@ private:
     GpuBufferRef m_slotAgesBuffer;   // per slot: frames since its block was last wanted
     GpuBufferRef m_blockWakeBuffer;  // per slot: the frame one of its probes last saw its light change
     GpuBufferRef m_statesBuffer;
-    GpuBufferRef m_shBuffer;         // 3 per probe
+    GpuBufferRef m_shBuffer;         // 3 per probe: the light put together
+    GpuBufferRef m_lightBuffer;      // 3 per part of the light per probe
     GpuBufferRef m_visibilityBuffer; // GlimmerProbeVisibilityTexels per probe
     GpuBufferRef m_trendBuffer;
     GpuBufferRef m_countersBuffer;
@@ -149,6 +153,9 @@ private:
     EnumFlags<GlimmerLightingChangeFlags> m_pendingLightingChanges;
 
     GlimmerProbeVolumeShaderData m_shaderData;
+
+    GlimmerLightShaderData m_composedLight;
+    bool m_hasComposedLight;
 };
 
 } // namespace Hyperion

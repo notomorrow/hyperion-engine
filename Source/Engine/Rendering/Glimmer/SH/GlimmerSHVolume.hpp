@@ -72,6 +72,8 @@ struct GlimmerSHVolumeUpdateInputs
     const CloudPass* cloudPass = nullptr;
 
     EnumFlags<GlimmerLightingChangeFlags> lightingChanges = GlimmerLightingChangeFlags::None;
+
+    GlimmerLightShaderData light;
 };
 
 class GlimmerSHVolume final
@@ -155,6 +157,7 @@ private:
         bool& inOutHasBarriers);
 
     void StartBurstPass();
+    void Compose(Frame* frame, const GlimmerLightShaderData& light);
 
     Handle<Texture> m_dataTexture;      // sky visibility L1
     Handle<Texture> m_stateTexture;
@@ -175,6 +178,9 @@ private:
     uint32 m_relightWaitFrames;
     bool m_burstSkipsHistory;                           /// the pass under way replaces the radiance rather than blending into what the old lighting left
     bool m_isWakePending;                               /// the lighting changed while the volume couldn't update
+
+    GlimmerLightShaderData m_composedLight;
+    bool m_hasComposedLight;
 
     GlimmerSHVolumeShaderData m_shaderData;
 };

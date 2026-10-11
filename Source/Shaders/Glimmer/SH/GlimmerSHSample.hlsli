@@ -32,11 +32,25 @@ float GlimmerSHAxisVisibility(GlimmerSHVoxel voxelData, float3 voxelToPoint)
     return weightSum > 1e-6 ? dot(visible, weights) / weightSum : 1.0;
 }
 
-/// Based on DDGI:  https://www.jcgt.org/published/0008/02/01/paper-lowres.pdf
-float GlimmerSHSampleCascade(GlimmerSHVolume volume, uint cascadeIndex, float3 P, float3 N, out float4 outVisibility, out GlimmerSHRadiance outRadiance)
+struct GlimmerSHTaps
 {
-    outVisibility = (float4)0.0;
-    outRadiance = (GlimmerSHRadiance)0;
+    uint3 texels[8];
+    float weights[8];
+    float weightSum;
+};
+
+/// Based on DDGI:  https://www.jcgt.org/published/0008/02/01/paper-lowres.pdf
+// the voxels around P and what each counts for; returns how much the cascade covers P
+float GlimmerSHGatherTaps(GlimmerSHVolume volume, uint cascadeIndex, float3 P, float3 N, out GlimmerSHTaps outTaps)
+{
+    [unroll]
+    for (uint tap = 0; tap < 8; tap++)
+    {
+        outTaps.texels[tap] = (uint3)0u;
+        outTaps.weights[tap] = 0.0;
+    }
+
+    outTaps.weightSum = 0.0;
 
     const GlimmerSHCascade cascade = volume.cascades[cascadeIndex];
 
@@ -65,10 +79,6 @@ float GlimmerSHSampleCascade(GlimmerSHVolume volume, uint cascadeIndex, float3 P
     {
         return 0.0;
     }
-
-    float4 visibilitySum = (float4)0.0;
-    GlimmerSHRadiance radianceSum = (GlimmerSHRadiance)0;
-    float weightSum = 0.0;
 
     float trilinearSum = 0.0;
 
@@ -108,24 +118,57 @@ float GlimmerSHSampleCascade(GlimmerSHVolume volume, uint cascadeIndex, float3 P
 
         weight = trilinearWeight * max(weight, GLIMMER_SH_MIN_WEIGHT);
 
-        visibilitySum += GLIMMER_SH_LOAD_DATA(texel) * weight;
-        radianceSum.r += GLIMMER_SH_LOAD_RADIANCE(GlimmerSHRadianceTexel(texel, 0u)) * weight;
-        radianceSum.g += GLIMMER_SH_LOAD_RADIANCE(GlimmerSHRadianceTexel(texel, 1u)) * weight;
-        radianceSum.b += GLIMMER_SH_LOAD_RADIANCE(GlimmerSHRadianceTexel(texel, 2u)) * weight;
-        weightSum += weight;
+        outTaps.texels[corner] = texel;
+        outTaps.weights[corner] = weight;
+        outTaps.weightSum += weight;
     }
 
-    if (weightSum <= 0.0)
+    if (outTaps.weightSum <= 0.0)
     {
         return 0.0;
     }
 
-    outVisibility = visibilitySum / weightSum;
-    outRadiance.r = radianceSum.r / weightSum;
-    outRadiance.g = radianceSum.g / weightSum;
-    outRadiance.b = radianceSum.b / weightSum;
-
     return edgeWeight * smoothstep(0.05, 0.5, trilinearSum);
+}
+
+float GlimmerSHSampleCascade(GlimmerSHVolume volume, uint cascadeIndex, float3 P, float3 N, out float4 outVisibility, out GlimmerSHRadiance outRadiance)
+{
+    outVisibility = (float4)0.0;
+    outRadiance = (GlimmerSHRadiance)0;
+
+    GlimmerSHTaps taps;
+    const float cascadeWeight = GlimmerSHGatherTaps(volume, cascadeIndex, P, N, taps);
+
+    if (cascadeWeight <= 0.0)
+    {
+        return 0.0;
+    }
+
+    float4 visibilitySum = (float4)0.0;
+    GlimmerSHRadiance radianceSum = (GlimmerSHRadiance)0;
+
+    [unroll]
+    for (uint tap = 0; tap < 8; tap++)
+    {
+        [branch]
+        if (taps.weights[tap] > 0.0)
+        {
+            const uint3 texel = taps.texels[tap];
+            const float weight = taps.weights[tap];
+
+            visibilitySum += GLIMMER_SH_LOAD_DATA(texel) * weight;
+            radianceSum.r += GLIMMER_SH_LOAD_RADIANCE(GlimmerSHRadianceTexel(texel, 0u)) * weight;
+            radianceSum.g += GLIMMER_SH_LOAD_RADIANCE(GlimmerSHRadianceTexel(texel, 1u)) * weight;
+            radianceSum.b += GLIMMER_SH_LOAD_RADIANCE(GlimmerSHRadianceTexel(texel, 2u)) * weight;
+        }
+    }
+
+    outVisibility = visibilitySum / taps.weightSum;
+    outRadiance.r = radianceSum.r / taps.weightSum;
+    outRadiance.g = radianceSum.g / taps.weightSum;
+    outRadiance.b = radianceSum.b / taps.weightSum;
+
+    return cascadeWeight;
 }
 
 float GlimmerSHSampleVolume(GlimmerSHVolume volume, float3 P, float3 N, out float4 outVisibility, out GlimmerSHRadiance outRadiance)
@@ -173,5 +216,140 @@ float GlimmerSHSampleVolume(GlimmerSHVolume volume, float3 P, float3 N, out floa
 
     return coverage;
 }
+
+#ifdef GLIMMER_SH_SPLIT
+
+float GlimmerSHSampleCascadeLight(GlimmerSHVolume volume, uint cascadeIndex, float3 P, float3 N, out GlimmerLight outLight)
+{
+    outLight = GlimmerNoLight();
+
+    GlimmerSHTaps taps;
+    const float cascadeWeight = GlimmerSHGatherTaps(volume, cascadeIndex, P, N, taps);
+
+    if (cascadeWeight <= 0.0)
+    {
+        return 0.0;
+    }
+
+    float4 sums[GLIMMER_LIGHT_PARTS * 3];
+
+    for (uint sumIndex = 0; sumIndex < GLIMMER_LIGHT_PARTS * 3; sumIndex++)
+    {
+        sums[sumIndex] = (float4)0.0;
+    }
+
+    [unroll]
+    for (uint tap = 0; tap < 8; tap++)
+    {
+        [branch]
+        if (taps.weights[tap] > 0.0)
+        {
+            for (uint entry = 0; entry < GLIMMER_LIGHT_PARTS * 3; entry++)
+            {
+                sums[entry] += GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(taps.texels[tap], entry)) * taps.weights[tap];
+            }
+        }
+    }
+
+    const float invWeightSum = 1.0 / taps.weightSum;
+
+    [unroll]
+    for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
+    {
+        outLight.parts[part] = GlimmerEvaluateLightPart(part, sums[part * 3u] * invWeightSum, sums[part * 3u + 1u] * invWeightSum, sums[part * 3u + 2u] * invWeightSum, N);
+    }
+
+    return cascadeWeight;
+}
+
+// returns the coverage; the light is what the covered part receives
+float GlimmerSHSampleVolumeLight(GlimmerSHVolume volume, float3 P, float3 N, out GlimmerLight outLight)
+{
+    outLight = GlimmerNoLight();
+
+    if (volume.info.w == 0u)
+    {
+        return 0.0;
+    }
+
+    GlimmerLight light = GlimmerNoLight();
+    float remaining = 1.0;
+
+    [loop]
+    for (uint cascadeIndex = 0; cascadeIndex < GLIMMER_SH_CASCADES && remaining > 1e-3; cascadeIndex++)
+    {
+        GlimmerLight cascadeLight;
+        const float cascadeWeight = GlimmerSHSampleCascadeLight(volume, cascadeIndex, P + N * 0.05, N, cascadeLight);
+
+        if (cascadeWeight <= 0.0)
+        {
+            continue;
+        }
+
+        GlimmerAddLight(light, cascadeLight, (float3)(cascadeWeight * remaining));
+        remaining *= 1.0 - cascadeWeight;
+    }
+
+    const float coverage = 1.0 - remaining;
+
+    if (coverage <= 1e-4)
+    {
+        return 0.0;
+    }
+
+    outLight = GlimmerScaleLight(light, (float3)(1.0 / coverage));
+
+    return coverage;
+}
+
+// what the voxel P is in receives, taken for P: for where a rough answer will do
+bool GlimmerSHSampleNearestLight(GlimmerSHVolume volume, float3 P, float3 N, out GlimmerLight outLight)
+{
+    outLight = GlimmerNoLight();
+
+    if (volume.info.w == 0u)
+    {
+        return false;
+    }
+
+    [loop]
+    for (uint cascadeIndex = 0; cascadeIndex < GLIMMER_SH_CASCADES; cascadeIndex++)
+    {
+        const GlimmerSHCascade cascade = volume.cascades[cascadeIndex];
+
+        const int3 voxel = int3(floor(P * cascade.params.y));
+        const int3 local = voxel - cascade.origin.xyz;
+
+        if (cascade.origin.w == 0 || any(local < 0) || any(local >= int3(GLIMMER_SH_GRID_XZ, GLIMMER_SH_GRID_Y, GLIMMER_SH_GRID_XZ)))
+        {
+            continue;
+        }
+
+        const uint3 texel = GlimmerSHTexel(cascadeIndex, voxel);
+
+        GlimmerSHVoxel voxelData;
+
+        if (!GlimmerSHUnpackVoxel(GLIMMER_SH_LOAD_STATE(texel), voxel, voxelData) || voxelData.isBuried)
+        {
+            continue;
+        }
+
+        for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
+        {
+            outLight.parts[part] = GlimmerEvaluateLightPart(
+                part,
+                GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(texel, part * 3u)),
+                GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(texel, part * 3u + 1u)),
+                GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(texel, part * 3u + 2u)),
+                N);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+#endif // GLIMMER_SH_SPLIT
 
 #endif
