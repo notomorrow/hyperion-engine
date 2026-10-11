@@ -132,7 +132,7 @@ private:
     struct Cascade
     {
         Optional<Vec3i> origin;
-        Array<Box> pending;
+        Array<Box, GlimmerAllocator> pending;
     };
 
     static Box GetWindow(const Vec3i& origin);

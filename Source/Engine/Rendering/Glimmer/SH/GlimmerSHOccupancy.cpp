@@ -289,7 +289,7 @@ void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const
         const Vec3i windowMin = m_builtOrigins[cascadeIndex];
         const Vec3i windowMax = windowMin + Vec3i(int32(GlimmerSHOccupancyGridXZ), int32(GlimmerSHOccupancyGridY), int32(GlimmerSHOccupancyGridXZ));
 
-        Array<Box>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
+        Array<Box, GlimmerAllocator>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
 
         for (const BoundingBox& bounds : tlas.GetSpanDirtyBounds())
         {
@@ -331,7 +331,7 @@ void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const
             MathUtil::FloorToMultiple(int32(MathUtil::Floor(viewerPosition.y / spacing)) - int32(GlimmerSHOccupancyGridY / 2), WindowSnapVoxels),
             MathUtil::FloorToMultiple(int32(MathUtil::Floor(viewerPosition.z / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2), WindowSnapVoxels));
 
-        Array<Box>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
+        Array<Box, GlimmerAllocator>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
 
         const Vec3i builtOrigin = m_builtOrigins[cascadeIndex];
 

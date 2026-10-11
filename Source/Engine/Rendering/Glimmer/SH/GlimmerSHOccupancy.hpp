@@ -98,7 +98,7 @@ private:
     FixedArray<uint32, GlimmerSHCascades> m_builtGenerations;
     FixedArray<int32, GlimmerSHCascades> m_rebuildSlices; // next slice of a rebuild spread over frames, -1 when there's none
     FixedArray<uint32, GlimmerSHCascades> m_rebuildGenerations;
-    FixedArray<Array<Box>, GlimmerSHCascades> m_dirtyBoxes;
+    FixedArray<Array<Box, GlimmerAllocator>, GlimmerSHCascades> m_dirtyBoxes;
 
     GlimmerSHOccupancyShaderData m_shaderData;
     bool m_isSettled;

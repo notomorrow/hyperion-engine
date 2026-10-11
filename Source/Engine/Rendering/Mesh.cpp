@@ -10,6 +10,8 @@
 #include <Rendering/Mesh.hpp>
 #include <Rendering/Frame.hpp>
 
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
+
 #include <Rendering/Util/DeletionQueue.hpp>
 #include <Rendering/Util/MeshBuilder.hpp>
 #include <Rendering/Util/MeshLodGenerator.hpp>
@@ -1246,6 +1248,7 @@ void Mesh::BuildVertexBuffer(
 
 template void Mesh::BuildVertexBuffer<ThreadAllocator>(const VertexInputLayoutDesc& inputLayout, uint8 lodIndex, Array<float, ThreadAllocator>& outData) const;
 template void Mesh::BuildVertexBuffer<DynamicAllocator>(const VertexInputLayoutDesc& inputLayout, uint8 lodIndex, Array<float, DynamicAllocator>& outData) const;
+template void Mesh::BuildVertexBuffer<GlimmerAllocator>(const VertexInputLayoutDesc& inputLayout, uint8 lodIndex, Array<float, GlimmerAllocator>& outData) const;
 
 void Mesh::CalculateNormals(bool weighted)
 {

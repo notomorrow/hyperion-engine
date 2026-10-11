@@ -19,6 +19,7 @@
 
 #include <Rendering/PostFX.hpp>
 #include <Rendering/RenderInterface.hpp>
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
 #include <Rendering/CrashHandler.hpp>
 #include <Rendering/GBuffer.hpp>
 #include <Rendering/FinalPass.hpp>
@@ -309,6 +310,7 @@ void RenderThread::Update()
     RI.EndFrame();
 
     g_renderArena->Reset();
+    g_glimmerArena->Reset();
 
     if (targetFrameRate > 0.0f)
     {

@@ -105,15 +105,18 @@ private:
     bool m_hasClearedGroundCover;
     Vec4f m_groundCoverCoverage;
 
-    Array<GlimmerTerrainPatchShaderData> m_uploadedTerrainPatches;
+    Array<GlimmerTerrainPatchShaderData, GlimmerAllocator> m_uploadedTerrainPatches;
 
     GlimmerGroundShaderData m_groundShaderData;
     FixedArray<GlimmerTexelRect, GlimmerGroundLevels> m_uploadedRects;
 
     FixedArray<AlbedoLevel, GlimmerGroundLevels> m_albedoLevels;
-    Array<Vec4f> m_albedoDirtyWorldRects;
+    
+    Array<Vec4f, GlimmerAllocator> m_albedoDirtyWorldRects;
+
     GlimmerGroundCoverConstantsKey m_groundCoverKey;
     bool m_hasGroundCoverChanged;
+
     uint32 m_albedoGeneration;
     uint32 m_albedoFillCounter;
 };

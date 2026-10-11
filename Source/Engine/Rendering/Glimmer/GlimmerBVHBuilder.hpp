@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
+
 #include <Core/Containers/Array.hpp>
 #include <Core/Utilities/Span.hpp>
 #include <Core/Math/BoundingBox.hpp>
@@ -65,18 +67,24 @@ struct GlimmerBVHBuildParams
 class ENGINE_API GlimmerBVHBuilder
 {
 public:
+    /// Instantiated for GlimmerAllocator and DynamicAllocator
+    template <class AllocatorType>
     static void Build(
         Span<const BoundingBox> primitiveBounds,
         const GlimmerBVHBuildParams& params,
-        Array<GlimmerBVHNode>& outNodes,
-        Array<uint32>& outPrimitiveOrder);
+        Array<GlimmerBVHNode, AllocatorType>& outNodes,
+        Array<uint32, AllocatorType>& outPrimitiveOrder);
 
     /*! \brief Deepest root-to-leaf path, for sizing traversal stacks. */
     static uint32 CalculateDepth(Span<const GlimmerBVHNode> nodes);
 
     /*! \brief Quantizes nodes for the BLAS pool. \ref outLeafEnds gets the index of the last primitive of every leaf.
      *  Returns false if an index doesn't fit a child ref. */
-    static bool PackBLAS(Span<const GlimmerBVHNode> nodes, Array<GlimmerBLASNode>& outNodes, Array<uint32>& outLeafEnds);
+    template <class AllocatorType>
+    static bool PackBLAS(
+        Span<const GlimmerBVHNode> nodes,
+        Array<GlimmerBLASNode, AllocatorType>& outNodes,
+        Array<uint32, AllocatorType>& outLeafEnds);
 };
 
 } // namespace Hyperion

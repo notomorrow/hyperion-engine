@@ -94,11 +94,11 @@ void GlimmerSceneChanges::Quantize(size_t maxChanges)
         lodOnlyBoxes = maxChanges;
     }
 
-    Array<GlimmerSceneChange> merged;
+    Array<GlimmerSceneChange, GlimmerAllocator> merged;
     merged.Reserve(maxChanges);
 
-    Array<BoundingBox> cells;
-    Array<uint8> cellsUsed;
+    Array<BoundingBox, GlimmerTempAllocator> cells;
+    Array<uint8, GlimmerTempAllocator> cellsUsed;
 
     const auto mergeGroup = [&](bool isLodOnly, size_t numBoxes)
     {
@@ -606,8 +606,8 @@ GlimmerTLAS::BuildResult GlimmerTLAS::Build(BuildInput&& input)
             quadrants[quadrant] = quadrants[quadrant].Union(bounds);
         };
 
-        const Array<SpanKey>& previousKeys = input.previousSpanKeys;
-        const Array<SpanKey>& currentKeys = result.spanKeys;
+        const Array<SpanKey, GlimmerAllocator>& previousKeys = input.previousSpanKeys;
+        const Array<SpanKey, GlimmerAllocator>& currentKeys = result.spanKeys;
 
         size_t previousIndex = 0;
         size_t currentIndex = 0;
@@ -644,8 +644,8 @@ GlimmerTLAS::BuildResult GlimmerTLAS::Build(BuildInput&& input)
 
     if (input.hasPrevious)
     {
-        const Array<InstanceRecord>& previousRecords = input.previousInstanceRecords;
-        const Array<InstanceRecord>& currentRecords = result.instanceRecords;
+        const Array<InstanceRecord, GlimmerAllocator>& previousRecords = input.previousInstanceRecords;
+        const Array<InstanceRecord, GlimmerAllocator>& currentRecords = result.instanceRecords;
 
         size_t previousIndex = 0;
         size_t currentIndex = 0;
@@ -694,7 +694,7 @@ GlimmerTLAS::BuildResult GlimmerTLAS::Build(BuildInput&& input)
     params.maxLeafSize = 1;
     params.traversalCost = 0.25f;
 
-    Array<uint32> instanceOrder;
+    Array<uint32, GlimmerAllocator> instanceOrder;
     GlimmerBVHBuilder::Build(input.instanceBounds.ToSpan(), params, result.nodes, instanceOrder);
 
     result.instances.Resize(instanceOrder.Size());

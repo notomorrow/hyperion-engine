@@ -181,7 +181,9 @@ uint32 CalculateGlimmerMipChainCells(uint32 resolution, uint32 numLevels)
     return totalCells;
 }
 
-void CollectGlimmerTerrainPatches(RenderProxyList& rpl, Array<GlimmerTerrainPatchShaderData>& outPatches)
+void CollectGlimmerTerrainPatches(
+    RenderProxyList& rpl,
+    Array<GlimmerTerrainPatchShaderData, GlimmerTempAllocator>& outPatches)
 {
     for (Entity* entity : rpl.GetMeshEntities())
     {

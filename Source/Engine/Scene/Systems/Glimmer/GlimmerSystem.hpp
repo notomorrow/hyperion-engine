@@ -69,7 +69,7 @@ private:
     SharedPtr<GlimmerChannel> m_channel;
     GlimmerGroundClipmap m_groundClipmap;
 
-    Array<GlimmerProbeDebugRecord> m_probeDebugRecords;
+    Array<GlimmerProbeDebugRecord, GlimmerAllocator> m_probeDebugRecords;
     float m_probeStatsLogTimer = 0.0f;
 };
 

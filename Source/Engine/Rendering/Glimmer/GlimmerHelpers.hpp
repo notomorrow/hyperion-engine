@@ -9,6 +9,8 @@
 #include <Rendering/RenderTypes.hpp>
 #include <Rendering/Shared.hpp>
 
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
+
 #include <Core/Containers/Array.hpp>
 
 #include <Core/Utilities/EnumFlags.hpp>
@@ -105,7 +107,7 @@ Handle<Texture> CreateGlimmerStorageTexture(TextureType type, TextureFormat form
 
 uint32 CalculateGlimmerMipChainCells(uint32 resolution, uint32 numLevels);
 
-void CollectGlimmerTerrainPatches(RenderProxyList& rpl, Array<GlimmerTerrainPatchShaderData>& outPatches);
+void CollectGlimmerTerrainPatches(RenderProxyList& rpl, Array<GlimmerTerrainPatchShaderData, GlimmerTempAllocator>& outPatches);
 
 void FillGlimmerGroundCover(TerrainWorldGridLayer* terrain, GlimmerChannelState& outState);
 

@@ -214,7 +214,7 @@ void GlimmerSpanCache::UpdateHeightBounds(Frame* frame, const GlimmerChannelStat
         m_heightBoundsBuffer->SetDebugName(NAME("GlimmerHeightBounds"));
 #endif
 
-        Array<float> unbounded;
+        Array<float, GlimmerAllocator> unbounded;
         unbounded.Resize(numValues);
 
         for (float& value : unbounded)

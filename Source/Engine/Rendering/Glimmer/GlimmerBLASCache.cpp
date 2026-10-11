@@ -516,8 +516,8 @@ GlimmerBLASCache::BuildResult GlimmerBLASCache::BuildBLAS(const Handle<Mesh>& me
         return result;
     }
 
-    Array<float> packedVertices;
-    Array<uint32> indices;
+    Array<float, GlimmerAllocator> packedVertices;
+    Array<uint32, GlimmerAllocator> indices;
 
     VertexInputLayoutDesc inputLayout = StaticVertexInputLayout<VT_Simple>;
     bool hasLightmapUVs = false;
@@ -575,10 +575,10 @@ GlimmerBLASCache::BuildResult GlimmerBLASCache::BuildBLAS(const Handle<Mesh>& me
     const uint32 packedVertexSizeInFloats = uint32(inputLayout.VertexSize() / sizeof(float));
     const uint32 numVertices = uint32(packedVertices.Size() / packedVertexSizeInFloats);
 
-    Array<Vec3f> trianglePositions; // object space, three per triangle
+    Array<Vec3f, GlimmerAllocator> trianglePositions; // object space, three per triangle
     trianglePositions.Reserve(indices.Size());
 
-    Array<Vec2f> triangleLightmapUVs; // three per triangle, when the mesh has them
+    Array<Vec2f, GlimmerAllocator> triangleLightmapUVs; // three per triangle, when the mesh has them
 
     BoundingBox objectBounds;
 
@@ -666,13 +666,13 @@ GlimmerBLASCache::BuildResult GlimmerBLASCache::BuildBLAS(const Handle<Mesh>& me
         result.gridScale[axis] = extent > 0.0f ? extent / float(GlimmerTriangle::GridMax) : 1.0f;
     }
 
-    Array<GlimmerTriangle> unorderedTriangles;
+    Array<GlimmerTriangle, GlimmerAllocator> unorderedTriangles;
     unorderedTriangles.Reserve(trianglePositions.Size() / 3);
 
-    Array<BoundingBox> triangleBounds;
+    Array<BoundingBox, GlimmerAllocator> triangleBounds;
     triangleBounds.Reserve(trianglePositions.Size() / 3);
 
-    Array<GlimmerTriangleLightmapUVs> unorderedLightmapUVs;
+    Array<GlimmerTriangleLightmapUVs, GlimmerAllocator> unorderedLightmapUVs;
 
     for (size_t firstPosition = 0; firstPosition + 2 < trianglePositions.Size(); firstPosition += 3)
     {
@@ -737,8 +737,8 @@ GlimmerBLASCache::BuildResult GlimmerBLASCache::BuildBLAS(const Handle<Mesh>& me
     buildParams.minLeafSize = BLASMinLeafSize;
     buildParams.maxLeafSize = BLASMaxLeafSize;
 
-    Array<GlimmerBVHNode> bvhNodes;
-    Array<uint32> triangleOrder;
+    Array<GlimmerBVHNode, GlimmerAllocator> bvhNodes;
+    Array<uint32, GlimmerAllocator> triangleOrder;
     GlimmerBVHBuilder::Build(triangleBounds.ToSpan(), buildParams, bvhNodes, triangleOrder);
 
     result.triangles.Resize(triangleOrder.Size());
@@ -760,7 +760,7 @@ GlimmerBLASCache::BuildResult GlimmerBLASCache::BuildBLAS(const Handle<Mesh>& me
 
     result.depth = GlimmerBVHBuilder::CalculateDepth(bvhNodes.ToSpan());
 
-    Array<uint32> leafEnds;
+    Array<uint32, GlimmerAllocator> leafEnds;
 
     if (!GlimmerBVHBuilder::PackBLAS(bvhNodes.ToSpan(), result.nodes, leafEnds))
     {
@@ -878,7 +878,7 @@ bool GlimmerBLASCache::MakeContiguousRoom(const Entry& requester, uint32 nodeCou
 {
     const float threshold = requester.priority * DemotionDistanceRatio + DemotionDistanceMargin;
 
-    Array<Entry*> residents;
+    Array<Entry*, GlimmerTempAllocator> residents;
 
     for (auto& it : m_entries)
     {
@@ -888,7 +888,7 @@ bool GlimmerBLASCache::MakeContiguousRoom(const Entry& requester, uint32 nodeCou
         }
     }
 
-    const auto findStretch = [&](bool isNodes, uint32 count, uint32 capacity, Array<Entry*>& outVictims) -> bool
+    const auto findStretch = [&](bool isNodes, uint32 count, uint32 capacity, Array<Entry*, GlimmerTempAllocator>& outVictims) -> bool
     {
         const auto baseOf = [isNodes](const Entry* entry)
         {
@@ -968,7 +968,7 @@ bool GlimmerBLASCache::MakeContiguousRoom(const Entry& requester, uint32 nodeCou
         return true;
     };
 
-    Array<Entry*> victims;
+    Array<Entry*, GlimmerTempAllocator> victims;
 
     if (!findStretch(true, nodeCount, m_nodeAllocator.GetCapacity(), victims)
         || !findStretch(false, triangleCount, m_triangleAllocator.GetCapacity(), victims))
@@ -1130,8 +1130,8 @@ void GlimmerBLASCache::Update(Frame* frame)
     uint32 pendingDemotedNodes = 0;
     uint32 pendingDemotedTriangles = 0;
 
-    Array<Entry*> queued;
-    Array<Entry*> pendingUploads;
+    Array<Entry*, GlimmerTempAllocator> queued;
+    Array<Entry*, GlimmerTempAllocator> pendingUploads;
 
     for (auto& it : m_entries)
     {

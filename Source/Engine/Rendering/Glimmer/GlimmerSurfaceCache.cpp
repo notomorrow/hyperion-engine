@@ -276,8 +276,13 @@ void GlimmerSurfaceCache::UpdateGroundAlbedo(Frame* frame, const GlimmerChannelS
 
     bool isFirstDispatch = true;
 
+    Array<GlimmerTexelRect, GlimmerTempAllocator> rects;
+    rects.Reserve(8);
+
     for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)
     {
+        rects.Resize(0); // keep memory around from previous iteration
+
         AlbedoLevel& albedoLevel = m_albedoLevels[levelIndex];
 
         const Vec2i windowOrigin = state.groundLevels[levelIndex].windowOrigin;
@@ -308,7 +313,6 @@ void GlimmerSurfaceCache::UpdateGroundAlbedo(Frame* frame, const GlimmerChannelS
             && validUploads.min == albedoLevel.unfilledUploads.min
             && validUploads.max == albedoLevel.unfilledUploads.max;
 
-        Array<GlimmerTexelRect> rects;
 
         const auto addRect = [&](const GlimmerTexelRect& rect)
         {
@@ -343,7 +347,8 @@ void GlimmerSurfaceCache::UpdateGroundAlbedo(Frame* frame, const GlimmerChannelS
             {
                 addRect(GlimmerTexelRect {
                     Vec2i(int32(MathUtil::Floor(worldRect.x * invTexelSize)) - 1, int32(MathUtil::Floor(worldRect.y * invTexelSize)) - 1),
-                    Vec2i(int32(MathUtil::Floor(worldRect.z * invTexelSize)) + 2, int32(MathUtil::Floor(worldRect.w * invTexelSize)) + 2) });
+                    Vec2i(int32(MathUtil::Floor(worldRect.z * invTexelSize)) + 2, int32(MathUtil::Floor(worldRect.w * invTexelSize)) + 2)
+                });
             }
 
             isWholeWindow = rects.Size() > MaxAlbedoRects;
@@ -351,8 +356,8 @@ void GlimmerSurfaceCache::UpdateGroundAlbedo(Frame* frame, const GlimmerChannelS
 
         if (isWholeWindow)
         {
-            rects.Clear();
-            rects.PushBack(window);
+            rects.Resize(1);
+            rects[0] = window;
         }
 
         for (const GlimmerTexelRect& rect : rects)

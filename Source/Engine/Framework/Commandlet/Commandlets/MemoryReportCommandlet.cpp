@@ -13,7 +13,10 @@
 
 // For each pool
 #include <Framework/EngineMemory.hpp>
+
 #include <Rendering/RenderMemory.hpp>
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
+
 #include <Physics/PhysicsMemory.hpp>
 
 #include <Scripting/ScriptObjectResource.hpp>
@@ -72,7 +75,7 @@ public:
             s_definitions.Add(
                 "pools",
                 "p",
-                "Comma-separated list of pools to report (object,scene,asset,streaming,physics,render,vulkan,dx12,editor,baker), or 'all'",
+                "Comma-separated list of pools to report (object,scene,asset,streaming,physics,render,glimmer,vulkan,dx12,editor,baker), or 'all'",
                 CommandLineArgumentFlags::NONE,
                 Array<String> { "all" },
                 JSON::Value("all"));
@@ -164,6 +167,7 @@ protected:
         tryAddPool("streaming", g_streamingPool);
         tryAddPool("physics", g_physicsPool);
         tryAddPool("render", g_renderPool);
+        tryAddPool("glimmer", g_glimmerPool);
 
 #ifdef HYP_EDITOR
         tryAddPool("editor", g_editorPool);

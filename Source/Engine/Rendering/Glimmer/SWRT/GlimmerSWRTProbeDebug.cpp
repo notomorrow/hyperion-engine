@@ -108,7 +108,7 @@ void GlimmerSWRTProbeDebug::Update(Frame* frame, const GlimmerSWRTProbeVolume& p
     // this frame slot's last submission has finished by now, so what it copied can be read
     if (m_isPending[slot])
     {
-        Array<GlimmerProbeDebugRecord> records;
+        Array<GlimmerProbeDebugRecord, GlimmerAllocator> records;
         records.Resize(NumProbeDebugRecords);
 
         // readback memory is cached, so the GPU's writes aren't visible until the range is invalidated

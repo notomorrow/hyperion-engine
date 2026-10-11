@@ -100,7 +100,8 @@ private:
         uint32 count;
     };
 
-    Array<Range> m_freeRanges; // sorted by offset, never adjacent
+    Array<Range, GlimmerAllocator> m_freeRanges; // sorted by offset, never adjacent
+    
     uint32 m_capacity = 0;
     uint32 m_numUsed = 0;
 };
@@ -208,36 +209,53 @@ private:
 
     struct BuildResult
     {
-        Array<GlimmerBLASNode> nodes;
-        Array<GlimmerTriangle> triangles;
-        Array<GlimmerTriangleLightmapUVs> lightmapUVs; // one per triangle, or empty
+        Array<GlimmerBLASNode, GlimmerAllocator> nodes;
+
+        Array<GlimmerTriangle, GlimmerAllocator> triangles;
+        Array<GlimmerTriangleLightmapUVs, GlimmerAllocator> lightmapUVs; // one per triangle, or empty
+
         BoundingBox localBounds;
+
         Vec3f gridOrigin = Vec3f::Zero();
         Vec3f gridScale = Vec3f::One();
+        
         uint32 depth = 0;
+
         bool isFail = false; // set when there's nothing to trace, as opposed to mesh data not being readable yet
     };
 
     struct Entry
     {
         EntryState state = EntryState::Queued;
+       
         Handle<Mesh> mesh; // only held until the build finishes
+        
         WeakHandle<Mesh> meshWeak;
         WeakHandle<Mesh> replacementMesh; // a newer mesh with the same id, waiting for this entry's build or references to finish
+        
         uint8 lodIndex = 0;
+
         Task<BuildResult> buildTask;
         BuildResult result;
+
         GlimmerBLASRef ref;
+
         uint32 numReferences = 0;
+
         uint32 lastUsedFrame = 0;
         uint32 failedFrame = 0;
+
         float priority = 0.0f;
         uint32 priorityFrame = ~0u;
+
         uint32 lastNodeCount = 0;
         uint32 lastTriangleCount = 0;
+
         uint32 numDefers = 0;
         float deferredPriority = 0.0f;
+
         uint32 roomRequestFrame = 0;
+
         bool dead = false;
         bool isDemoted = false;
         bool isDeferred = false;
@@ -279,8 +297,8 @@ private:
     GlimmerPoolAllocator m_triangleAllocator;
     GlimmerPoolAllocator m_lightmapUVAllocator;
 
-    Array<DeferredFree> m_deferredFrees;
-    Array<uint64> m_keysToErase; // entries to drop after the Update() loop, which may be iterating them
+    Array<DeferredFree, GlimmerAllocator> m_deferredFrees;
+    Array<uint64, GlimmerAllocator> m_keysToErase; // entries to drop after the Update() loop, which may be iterating them
 
     uint32 m_residentGeneration;
     uint32 m_evictionGeneration;

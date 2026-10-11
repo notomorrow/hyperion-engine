@@ -54,7 +54,7 @@ public:
         const GlimmerSurfaceCache& surfaceCache,
         const GlimmerSpanCache& spanCache);
 
-    HYP_FORCE_INLINE const Array<GlimmerRelightDispatch>& GetDispatches() const
+    HYP_FORCE_INLINE const Array<GlimmerRelightDispatch, GlimmerAllocator>& GetDispatches() const
     {
         return m_dispatches;
     }
@@ -80,7 +80,7 @@ private:
         Vec2i windowOrigin;
         bool isLit = false;
         bool isFilling = false;
-        Array<Rect> pending;
+        Array<Rect, GlimmerAllocator> pending;
         int32 refreshRow = 0; // absolute texel row the refresh is at
     };
 
@@ -104,12 +104,12 @@ private:
     uint32 m_refreshLevel;
     int32 m_refreshBudget;
 
-    Array<Echo> m_echoes;
+    Array<Echo, GlimmerAllocator> m_echoes;
     FixedArray<Vec3i, GlimmerProbeLevels> m_probeWindows;
     bool m_hasProbeWindows;
     uint32 m_frameIndex;
 
-    Array<GlimmerRelightDispatch> m_dispatches;
+    Array<GlimmerRelightDispatch, GlimmerAllocator> m_dispatches;
 
     GlimmerRelightShaderData m_shaderData;
 };

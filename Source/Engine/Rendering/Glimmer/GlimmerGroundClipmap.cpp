@@ -116,7 +116,11 @@ void GlimmerGroundClipmap::AddDirtyRect(uint32 levelIndex, const Vec4f& worldRec
     level.pending.PushBack(rect);
 }
 
-int32 GlimmerGroundClipmap::SampleRect(TerrainWorldGridLayer* terrain, uint32 levelIndex, const Rect& rect, Array<GlimmerGroundUpload>& outUploads) const
+int32 GlimmerGroundClipmap::SampleRect(
+    TerrainWorldGridLayer* terrain,
+    uint32 levelIndex,
+    const Rect& rect,
+    Array<GlimmerGroundUpload, GlimmerAllocator>& outUploads) const
 {
     HYP_SCOPE;
 
@@ -164,7 +168,10 @@ int32 GlimmerGroundClipmap::SampleRect(TerrainWorldGridLayer* terrain, uint32 le
     return rect.Area() * (supersample ? 4 : 1);
 }
 
-void GlimmerGroundClipmap::Update(World* world, const Vec3f& viewerPosition, Array<GlimmerGroundUpload>& outUploads)
+void GlimmerGroundClipmap::Update(
+    World* world,
+    const Vec3f& viewerPosition,
+    Array<GlimmerGroundUpload, GlimmerAllocator>& outUploads)
 {
     HYP_SCOPE;
 

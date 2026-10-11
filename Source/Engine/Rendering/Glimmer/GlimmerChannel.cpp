@@ -41,7 +41,7 @@ void GlimmerChannel::Unregister(const World* world)
     s_channels.Erase(world);
 }
 
-void GlimmerChannel::Publish(const GlimmerChannelState& state, Array<GlimmerGroundUpload>&& groundUploads)
+void GlimmerChannel::Publish(const GlimmerChannelState& state, Array<GlimmerGroundUpload, GlimmerAllocator>&& groundUploads)
 {
     Mutex::Guard guard(m_mutex);
 
@@ -59,16 +59,16 @@ void GlimmerChannel::Publish(const GlimmerChannelState& state, Array<GlimmerGrou
     }
 }
 
-void GlimmerChannel::Consume(GlimmerChannelState& outState, Array<GlimmerGroundUpload>& outGroundUploads)
+void GlimmerChannel::Consume(GlimmerChannelState& outState, Array<GlimmerGroundUpload, GlimmerAllocator>& outGroundUploads)
 {
     Mutex::Guard guard(m_mutex);
 
     outState = m_state;
     outGroundUploads = std::move(m_pendingGroundUploads);
-    m_pendingGroundUploads = Array<GlimmerGroundUpload>();
+    m_pendingGroundUploads = Array<GlimmerGroundUpload, GlimmerAllocator>();
 }
 
-void GlimmerChannel::PublishProbeDebug(Array<GlimmerProbeDebugRecord>&& records)
+void GlimmerChannel::PublishProbeDebug(Array<GlimmerProbeDebugRecord, GlimmerAllocator>&& records)
 {
     Mutex::Guard guard(m_mutex);
 
@@ -76,7 +76,7 @@ void GlimmerChannel::PublishProbeDebug(Array<GlimmerProbeDebugRecord>&& records)
     m_hasProbeDebugRecords = true;
 }
 
-bool GlimmerChannel::ConsumeProbeDebug(Array<GlimmerProbeDebugRecord>& outRecords)
+bool GlimmerChannel::ConsumeProbeDebug(Array<GlimmerProbeDebugRecord, GlimmerAllocator>& outRecords)
 {
     Mutex::Guard guard(m_mutex);
 
@@ -86,7 +86,7 @@ bool GlimmerChannel::ConsumeProbeDebug(Array<GlimmerProbeDebugRecord>& outRecord
     }
 
     outRecords = std::move(m_probeDebugRecords);
-    m_probeDebugRecords = Array<GlimmerProbeDebugRecord>();
+    m_probeDebugRecords = Array<GlimmerProbeDebugRecord, GlimmerAllocator>();
     m_hasProbeDebugRecords = false;
 
     return true;

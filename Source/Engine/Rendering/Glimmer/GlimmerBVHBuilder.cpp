@@ -26,6 +26,7 @@ static HYP_FORCE_INLINE uint32 GetSplitBinIndex(float centroid, float binMin, fl
     return MathUtil::Min(uint32((centroid - binMin) * binScale), NumSplitBins - 1);
 }
 
+template <class AllocatorType>
 class GlimmerBVHBuildContext
 {
 public:
@@ -61,7 +62,7 @@ public:
         m_params.maxLeafSize = MathUtil::Max(m_params.maxLeafSize, m_params.minLeafSize);
     }
 
-    void Build(Array<GlimmerBVHNode>& outNodes, Array<uint32>& outPrimitiveOrder)
+    void Build(Array<GlimmerBVHNode, AllocatorType>& outNodes, Array<uint32, AllocatorType>& outPrimitiveOrder)
     {
         const uint32 numPrimitives = uint32(m_primitiveOrder.Size());
 
@@ -324,28 +325,29 @@ private:
     Span<const BoundingBox> m_primitiveBounds;
     GlimmerBVHBuildParams m_params;
 
-    Array<Vec3f> m_primitiveCentroids;
-    Array<uint32> m_primitiveOrder;
+    Array<Vec3f, AllocatorType> m_primitiveCentroids;
+    Array<uint32, AllocatorType> m_primitiveOrder;
 
-    Array<GlimmerBVHNode> m_nodes;
+    Array<GlimmerBVHNode, AllocatorType> m_nodes;
 
     SplitBin m_bins[NumSplitBins];
 
     float m_boundsPadding = 0.0f;
 };
 
+template <class AllocatorType>
 void GlimmerBVHBuilder::Build(
     Span<const BoundingBox> primitiveBounds,
     const GlimmerBVHBuildParams& params,
-    Array<GlimmerBVHNode>& outNodes,
-    Array<uint32>& outPrimitiveOrder)
+    Array<GlimmerBVHNode, AllocatorType>& outNodes,
+    Array<uint32, AllocatorType>& outPrimitiveOrder)
 {
     HYP_SCOPE;
 
     GlimmerBVHBuildParams clampedParams = params;
     clampedParams.maxDepth = MathUtil::Max(clampedParams.maxDepth, 2u);
 
-    GlimmerBVHBuildContext context { primitiveBounds, clampedParams };
+    GlimmerBVHBuildContext<AllocatorType> context { primitiveBounds, clampedParams };
     context.Build(outNodes, outPrimitiveOrder);
 
     AssertDebug(outNodes.Empty() || GlimmerBVHBuilder::CalculateDepth(outNodes.ToSpan()) <= clampedParams.maxDepth);
@@ -364,7 +366,7 @@ uint32 GlimmerBVHBuilder::CalculateDepth(Span<const GlimmerBVHNode> nodes)
         uint32 depth;
     };
 
-    Array<PendingNode> pending;
+    Array<PendingNode, GlimmerAllocator> pending;
     pending.PushBack(PendingNode { 0, 1 });
 
     uint32 maxDepth = 0;
@@ -390,7 +392,11 @@ uint32 GlimmerBVHBuilder::CalculateDepth(Span<const GlimmerBVHNode> nodes)
     return maxDepth;
 }
 
-bool GlimmerBVHBuilder::PackBLAS(Span<const GlimmerBVHNode> nodes, Array<GlimmerBLASNode>& outNodes, Array<uint32>& outLeafEnds)
+template <class AllocatorType>
+bool GlimmerBVHBuilder::PackBLAS(
+    Span<const GlimmerBVHNode> nodes,
+    Array<GlimmerBLASNode, AllocatorType>& outNodes,
+    Array<uint32, AllocatorType>& outLeafEnds)
 {
     HYP_SCOPE;
 
@@ -480,5 +486,11 @@ bool GlimmerBVHBuilder::PackBLAS(Span<const GlimmerBVHNode> nodes, Array<Glimmer
 
     return true;
 }
+
+template void GlimmerBVHBuilder::Build<GlimmerAllocator>(Span<const BoundingBox> primitiveBounds, const GlimmerBVHBuildParams& params, Array<GlimmerBVHNode, GlimmerAllocator>& outNodes, Array<uint32, GlimmerAllocator>& outPrimitiveOrder);
+template void GlimmerBVHBuilder::Build<DynamicAllocator>(Span<const BoundingBox> primitiveBounds, const GlimmerBVHBuildParams& params, Array<GlimmerBVHNode, DynamicAllocator>& outNodes, Array<uint32, DynamicAllocator>& outPrimitiveOrder);
+
+template bool GlimmerBVHBuilder::PackBLAS<GlimmerAllocator>(Span<const GlimmerBVHNode> nodes, Array<GlimmerBLASNode, GlimmerAllocator>& outNodes, Array<uint32, GlimmerAllocator>& outLeafEnds);
+template bool GlimmerBVHBuilder::PackBLAS<DynamicAllocator>(Span<const GlimmerBVHNode> nodes, Array<GlimmerBLASNode, DynamicAllocator>& outNodes, Array<uint32, DynamicAllocator>& outLeafEnds);
 
 } // namespace Hyperion

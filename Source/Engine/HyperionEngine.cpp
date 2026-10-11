@@ -61,11 +61,13 @@
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/ShaderManager.hpp>
 #include <Rendering/DebugDrawer.hpp>
+#include <Rendering/Shared.hpp>
 
 #include <Rendering/Util/DeletionQueue.hpp>
 #include <Rendering/Util/ShaderCompiler.hpp>
 #include <Rendering/Util/ShaderPropertyDictionary.hpp>
-#include <Rendering/Shared.hpp>
+
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
 
 #include <Scene/ComponentInterface.hpp>
 
@@ -494,6 +496,7 @@ extern "C"
         InitSignalHandlers();
         InitThreads();
         InitMemoryPools();
+        InitGlimmerMemory();
         InitNameRegistry();
 
         ClassRegistry::GetInstance().Initialize();
@@ -902,6 +905,8 @@ extern "C"
         GetObjectContainerMap().Shutdown();
 
         // Pools / arenas
+        ShutdownGlimmerMemory();
+
         delete g_sceneArena;
         g_sceneArena = nullptr;
 

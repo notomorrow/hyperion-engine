@@ -280,7 +280,7 @@ void GlimmerSWRTProbeVolume::CreateResources(Frame* frame)
     m_rayHitsBuffer = CreateProbeBuffer(RayHitSize, size_t(m_maxProbesPerFrame) * GlimmerProbeRays);
 
     // every slot free, no block with a slot or classified, every counter zero
-    Array<uint32> blockTable;
+    Array<uint32, GlimmerAllocator> blockTable;
     blockTable.Resize(GlimmerProbeLevels * GlimmerProbeWindowBlocks);
 
     for (uint32& entry : blockTable)
@@ -288,7 +288,7 @@ void GlimmerSWRTProbeVolume::CreateResources(Frame* frame)
         entry = ~0u;
     }
 
-    Array<Vec4i> slots;
+    Array<Vec4i, GlimmerAllocator> slots;
     slots.Resize(GlimmerProbePoolBlocks);
 
     for (Vec4i& slot : slots)
@@ -296,7 +296,7 @@ void GlimmerSWRTProbeVolume::CreateResources(Frame* frame)
         slot = Vec4i(0, 0, 0, -1);
     }
 
-    Array<Vec4u> states;
+    Array<Vec4u, GlimmerAllocator> states;
     states.Resize(poolProbes);
 
     for (Vec4u& state : states)
@@ -304,7 +304,7 @@ void GlimmerSWRTProbeVolume::CreateResources(Frame* frame)
         state = Vec4u::Zero();
     }
 
-    Array<uint32> zeros;
+    Array<uint32, GlimmerAllocator> zeros;
     zeros.Resize(MathUtil::Max(GlimmerProbePoolBlocks, NumProbeCounters));
 
     for (uint32& zero : zeros)
@@ -329,7 +329,7 @@ void GlimmerSWRTProbeVolume::CreateResources(Frame* frame)
 
     upload(m_blockTableBuffer, blockTable.Data(), blockTable.Size() * sizeof(uint32));
 
-    Array<Vec4i> cells;
+    Array<Vec4i, GlimmerAllocator> cells;
     cells.Resize(GlimmerProbeLevels * GlimmerProbeWindowBlocks);
 
     for (Vec4i& cell : cells)

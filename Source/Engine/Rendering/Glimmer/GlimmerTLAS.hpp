@@ -86,11 +86,10 @@ struct GlimmerSceneChange
 
 struct GlimmerSceneChanges
 {
-    using Iterator = typename Array<GlimmerSceneChange>::Iterator;
-    using ConstIterator = typename Array<GlimmerSceneChange>::ConstIterator;
+    using Iterator = typename Array<GlimmerSceneChange, GlimmerAllocator>::Iterator;
+    using ConstIterator = typename Array<GlimmerSceneChange, GlimmerAllocator>::ConstIterator;
 
-    /// @TODO: https://github.com/HyperionGameTech/HyperionEngine/issues/363
-    Array<GlimmerSceneChange> changes;
+    Array<GlimmerSceneChange, GlimmerAllocator> changes;
 
     void Quantize(size_t maxChanges);
 
@@ -198,7 +197,7 @@ public:
         return m_spanFullyDirty;
     }
 
-    HYP_FORCE_INLINE const Array<BoundingBox>& GetSpanDirtyBounds() const
+    HYP_FORCE_INLINE const Array<BoundingBox, GlimmerAllocator>& GetSpanDirtyBounds() const
     {
         return m_spanDirtyBounds;
     }
@@ -268,34 +267,34 @@ private:
     {
         BoundingBox region;
         Vec3f regionCenter;
-        Array<SpanKey> previousSpanKeys; // sorted; empty for the first build
-        Array<InstanceRecord> previousInstanceRecords; // sorted
-        Array<InstanceRecord> instanceRecords;
+        Array<SpanKey, GlimmerAllocator> previousSpanKeys; // sorted; empty for the first build
+        Array<InstanceRecord, GlimmerAllocator> previousInstanceRecords; // sorted
+        Array<InstanceRecord, GlimmerAllocator> instanceRecords;
         bool hasPrevious = false;
-        Array<GlimmerInstanceShaderData> instances;
-        Array<BoundingBox> instanceBounds;
-        Array<GlimmerSpanInstanceShaderData> spanInstances;
-        Array<BoundingBox> spanInstanceBounds;
-        Array<uint64> blasKeys; // unique
+        Array<GlimmerInstanceShaderData, GlimmerAllocator> instances;
+        Array<BoundingBox, GlimmerAllocator> instanceBounds;
+        Array<GlimmerSpanInstanceShaderData, GlimmerAllocator> spanInstances;
+        Array<BoundingBox, GlimmerAllocator> spanInstanceBounds;
+        Array<uint64, GlimmerAllocator> blasKeys; // unique
     };
 
     struct BuildResult
     {
         BoundingBox region;
-        Array<GlimmerBVHNode> nodes;
-        Array<GlimmerInstanceShaderData> instances;
-        Array<GlimmerInstanceBoundsShaderData> instanceBounds;
-        Array<GlimmerSpanInstanceShaderData> spanInstances;
-        Array<GlimmerSpanChunkShaderData> spanChunks;
+        Array<GlimmerBVHNode, GlimmerAllocator> nodes;
+        Array<GlimmerInstanceShaderData, GlimmerAllocator> instances;
+        Array<GlimmerInstanceBoundsShaderData, GlimmerAllocator> instanceBounds;
+        Array<GlimmerSpanInstanceShaderData, GlimmerAllocator> spanInstances;
+        Array<GlimmerSpanChunkShaderData, GlimmerAllocator> spanChunks;
         uint32 numSpanTriangles = 0;
-        Array<uint64> blasKeys;
+        Array<uint64, GlimmerAllocator> blasKeys;
         uint32 depth = 0;
         double buildMs = 0.0;
         uint64 inputHash = 0; // of the gathered instances, so a rebuild that changed nothing can be dropped
-        Array<SpanKey> spanKeys; // sorted
-        Array<BoundingBox> spanDirtyBounds;
+        Array<SpanKey, GlimmerAllocator> spanKeys; // sorted
+        Array<BoundingBox, GlimmerAllocator> spanDirtyBounds;
         bool spanFullyDirty = true;
-        Array<InstanceRecord> instanceRecords; // sorted
+        Array<InstanceRecord, GlimmerAllocator> instanceRecords; // sorted
         GlimmerSceneChanges changes;
         uint32 numLodOnlyChanges = 0;
     };
@@ -319,10 +318,10 @@ private:
     GpuBufferRef m_spanInstancesBuffer;
     GpuBufferRef m_spanChunksBuffer;
 
-    Array<uint64> m_activeBlasKeys;
+    Array<uint64, GlimmerAllocator> m_activeBlasKeys;
 
     Task<BuildResult> m_buildTask;
-    Array<uint64> m_pendingBlasKeys; // referenced while the build is in flight so the BLASes stay resident
+    Array<uint64, GlimmerAllocator> m_pendingBlasKeys; // referenced while the build is in flight so the BLASes stay resident
 
     BoundingBox m_lastRegion;
     BoundingBox m_lastTracedRegion;
@@ -342,12 +341,12 @@ private:
     bool m_usesLightmaps;
     uint64 m_activeInputHash;
 
-    Array<SpanKey> m_spanKeys;
-    Array<BoundingBox> m_spanDirtyBounds;
+    Array<SpanKey, GlimmerAllocator> m_spanKeys;
+    Array<BoundingBox, GlimmerAllocator> m_spanDirtyBounds;
     bool m_spanFullyDirty;
 
-    Array<InstanceRecord> m_instanceRecords;
-    Array<ChangeSet> m_changeJournal; // oldest first, one per generation
+    Array<InstanceRecord, GlimmerAllocator> m_instanceRecords;
+    Array<ChangeSet, GlimmerAllocator> m_changeJournal; // oldest first, one per generation
 
     GlimmerTLASStats m_stats;
 };

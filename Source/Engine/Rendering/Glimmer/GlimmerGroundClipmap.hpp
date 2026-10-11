@@ -26,7 +26,10 @@ class GlimmerGroundClipmap final
 public:
     GlimmerGroundClipmap();
 
-    void Update(World* world, const Vec3f& viewerPosition, Array<GlimmerGroundUpload>& outUploads);
+    void Update(
+        World* world,
+        const Vec3f& viewerPosition,
+        Array<GlimmerGroundUpload, GlimmerAllocator>& outUploads);
 
     void FillState(GlimmerChannelState& outState) const;
 
@@ -43,12 +46,17 @@ private:
         bool hasWindow = false;
         Vec2i windowOrigin;
         Rect valid;
-        Array<Rect> pending;
+        Array<Rect, GlimmerAllocator> pending;
     };
 
     void MoveWindow(uint32 levelIndex, const Vec2i& desiredOrigin);
     void AddDirtyRect(uint32 levelIndex, const Vec4f& worldRect);
-    int32 SampleRect(TerrainWorldGridLayer* terrain, uint32 levelIndex, const Rect& rect, Array<GlimmerGroundUpload>& outUploads) const;
+
+    int32 SampleRect(
+        TerrainWorldGridLayer* terrain,
+        uint32 levelIndex,
+        const Rect& rect,
+        Array<GlimmerGroundUpload, GlimmerAllocator>& outUploads) const;
 
     FixedArray<Level, GlimmerGroundLevels> m_levels;
     TerrainWorldGridLayer* m_terrain;

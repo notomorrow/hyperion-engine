@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
+
 #include <Core/Containers/Array.hpp>
 #include <Core/Containers/FixedArray.hpp>
 
@@ -39,7 +41,7 @@ struct GlimmerGroundUpload
     uint32 level = 0;
     Vec2i texelMin;
     Vec2u extent;
-    Array<float> heights; // row major, extent.x * extent.y
+    Array<float, GlimmerAllocator> heights; // row major, extent.x * extent.y
 };
 
 // one per terrain splat layer (0 grass, 1 rock, 2 dirt, 3 snow)
@@ -93,18 +95,18 @@ public:
     static void Register(const World* world, const SharedPtr<GlimmerChannel>& channel);
     static void Unregister(const World* world);
 
-    void Publish(const GlimmerChannelState& state, Array<GlimmerGroundUpload>&& groundUploads);
-    void Consume(GlimmerChannelState& outState, Array<GlimmerGroundUpload>& outGroundUploads);
+    void Publish(const GlimmerChannelState& state, Array<GlimmerGroundUpload, GlimmerAllocator>&& groundUploads);
+    void Consume(GlimmerChannelState& outState, Array<GlimmerGroundUpload, GlimmerAllocator>& outGroundUploads);
 
-    void PublishProbeDebug(Array<GlimmerProbeDebugRecord>&& records);
-    bool ConsumeProbeDebug(Array<GlimmerProbeDebugRecord>& outRecords);
+    void PublishProbeDebug(Array<GlimmerProbeDebugRecord, GlimmerAllocator>&& records);
+    bool ConsumeProbeDebug(Array<GlimmerProbeDebugRecord, GlimmerAllocator>& outRecords);
 
 private:
     Mutex m_mutex;
     GlimmerChannelState m_state;
-    Array<GlimmerGroundUpload> m_pendingGroundUploads;
+    Array<GlimmerGroundUpload, GlimmerAllocator> m_pendingGroundUploads;
 
-    Array<GlimmerProbeDebugRecord> m_probeDebugRecords;
+    Array<GlimmerProbeDebugRecord, GlimmerAllocator> m_probeDebugRecords;
     bool m_hasProbeDebugRecords = false;
 };
 

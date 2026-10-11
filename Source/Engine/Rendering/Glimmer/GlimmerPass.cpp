@@ -211,7 +211,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     scene->blasCache->UpdateOncePerFrame(frame);
 
     GlimmerChannelState channelState;
-    Array<GlimmerGroundUpload> groundUploads;
+    Array<GlimmerGroundUpload, GlimmerAllocator> groundUploads;
 
     const SharedPtr<GlimmerChannel> channel = GlimmerChannel::Get(renderSetup.world);
 
@@ -241,7 +241,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
     if (channel)
     {
-        Array<GlimmerTerrainPatchShaderData> terrainPatches;
+        Array<GlimmerTerrainPatchShaderData, GlimmerTempAllocator> terrainPatches;
         CollectGlimmerTerrainPatches(rpl, terrainPatches);
 
         for (View* otherView : renderSetup.world->GetViews())

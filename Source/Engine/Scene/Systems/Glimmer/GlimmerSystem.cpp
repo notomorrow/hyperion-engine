@@ -340,7 +340,7 @@ void GlimmerSystem::Process(float delta, Span<Handle<Scene>> scenes)
     UpdateSceneRegion(false);
 
     GlimmerChannelState state;
-    Array<GlimmerGroundUpload> groundUploads;
+    Array<GlimmerGroundUpload, GlimmerAllocator> groundUploads;
 
     Vec3f viewerPosition;
     state.hasViewer = SceneHelpers::FindViewerPosition(*GetWorld(), viewerPosition);
