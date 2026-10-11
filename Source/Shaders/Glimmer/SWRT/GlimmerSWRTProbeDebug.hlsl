@@ -55,8 +55,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
 
     const int4 slot = glimmerProbeSlots[probeIndex / GLIMMER_PROBES_PER_BLOCK];
-    const uint4 state = glimmerProbeStates[probeIndex];
-
+    
     GlimmerProbeDebugRecord record;
 
     if (slot.w < 0 || slot.w >= GLIMMER_PROBE_LEVELS)
@@ -69,6 +68,8 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
     else
     {
+        const uint4 state = glimmerProbeStates[probeIndex];
+
         const float3 position = GlimmerProbePosition(constants.volume, probeIndex, slot, state);
 
         float groundHeight;

@@ -470,7 +470,7 @@ void GlimmerSurfaceCache::Update(Frame* frame, const GlimmerChannelState& state,
         for (const GlimmerGroundUpload& upload : groundUploads)
         {
             const uint32 numTexels = upload.extent.x * upload.extent.y;
-            const Vec3u groups = helpers::WrapComputeGroupCount((numTexels + GroundUploadGroupSize - 1) / GroundUploadGroupSize);
+            const Vec3u groups = RenderHelpers::WrapComputeGroupCount((numTexels + GroundUploadGroupSize - 1) / GroundUploadGroupSize);
 
             GlimmerGroundUploadConstants constants {};
             constants.texelMinExtent = Vec4i(upload.texelMin.x, upload.texelMin.y, int32(upload.extent.x), int32(upload.extent.y));

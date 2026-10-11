@@ -28,6 +28,7 @@
 #include <Rendering/PlaceholderData.hpp>
 #include <Rendering/CBufferAllocator.hpp>
 #include <Rendering/DDGI.hpp>
+#include <Rendering/RenderHelpers.hpp>
 
 #include <Rendering/Shadows/ShadowMapCache.hpp>
 #include <Rendering/Shadows/ShadowMapAllocator.hpp>
@@ -111,32 +112,6 @@ static StaticShaderPropertyId s_propForwardClustered { ShaderProperty(NAME("FORW
 static StaticShaderPropertyId s_propForwardShading { ShaderProperty(NAME("FORWARD_SHADING")) };
 static StaticShaderPropertyId s_propRayTracingGlobalIllumination { ShaderProperty(NAME("RT_GI")) };
 static StaticShaderPropertyId s_propApplyLightmaps { ShaderProperty(NAME("APPLY_LIGHTMAPS")) };
-
-static HYP_FORCE_INLINE bool IsCubemapShader(StringHash shaderNameHash)
-{
-    static constexpr StringHash CubemapShaderNames[] = { "DrawCubemap"_sh, "RenderSky"_sh };
-
-    return shaderNameHash == CubemapShaderNames[0]
-        || shaderNameHash == CubemapShaderNames[1];
-}
-
-static HYP_FORCE_INLINE bool IsGeometryPassFamily(StringHash shaderNameHash)
-{
-    static constexpr StringHash GeometryPassShaderNames[] = {
-        "GeometryPass"_sh,
-        "Terrain"_sh
-    };
-
-    for (StringHash name : GeometryPassShaderNames)
-    {
-        if (shaderNameHash == name)
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
 
 #pragma region ParallelRenderingState
 
@@ -304,11 +279,9 @@ static void BuildAttributes(const RenderProxyMesh& proxy, RenderableAttributeSet
 
     const bool isPathTracer = g_cvPathTracing.Get();
 
-    // @TODO DRY this up
-    // Shouldn't depend on the names of shaders to conditionally handle stuff!
-    const bool isCubemap = IsCubemapShader(shaderNameHash);
-    const bool isGeometryPassOrSimilar = IsGeometryPassFamily(shaderNameHash);
-    const bool supportsTerrainMorph = (shaderNameHash == "Terrain"_sh || shaderNameHash == "DrawShadowMap"_sh);
+    const bool isCubemap = RenderHelpers::IsCubemapShader(shaderNameHash);
+    const bool isGeometryPassOrSimilar = RenderHelpers::IsGeometryPassFamily(shaderNameHash);
+    const bool shaderSupportsMorph = RenderHelpers::ShaderSupportsMorph(shaderNameHash);
 
     uint8 stencilReferenceValue = 0;
 
@@ -343,7 +316,7 @@ static void BuildAttributes(const RenderProxyMesh& proxy, RenderableAttributeSet
     shaderProperties.Set(Props::s_propInstancing, hasInstancing);
     shaderProperties.Set(Props::s_propAlphaDiscard, hasAlphaDiscard);
     shaderProperties.Set(Props::s_propSkinning, hasSkinning);
-    shaderProperties.Set(Props::s_propTerrainMorph, isTerrainMesh && supportsTerrainMorph);
+    shaderProperties.Set(Props::s_propTerrainMorph, isTerrainMesh && shaderSupportsMorph);
 
     if (isGeometryPassOrSimilar)
     {

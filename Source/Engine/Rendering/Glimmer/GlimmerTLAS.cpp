@@ -179,6 +179,10 @@ GlimmerTLAS::GlimmerTLAS()
       m_spanFullyDirty(true),
       m_dirty(true),
       m_waitingForBLAS(false),
+      m_numTracedWaitingForBLAS(0),
+      m_buildWaitsForTraced(false),
+      m_activeWaitsForTraced(true),
+      m_completeGeneration(0),
       m_usesLightmaps(false)
 {
 }
@@ -255,6 +259,7 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
     HYP_SCOPE;
 
     outNumWaitingForBLAS = 0;
+    m_numTracedWaitingForBLAS = 0;
 
     Set<uint64> blasKeysSeen;
 
@@ -278,6 +283,7 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
         }
 
         float priority = viewerPosition.Distance(objectToWorld.ExtractTranslation());
+        bool mayBeTraced = wantsTraced;
 
         if (proxy.meshAabb.IsValid())
         {
@@ -287,6 +293,8 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
             {
                 return;
             }
+
+            mayBeTraced = wantsTraced && estimatedBounds.Overlaps(tracedRegion);
 
             const Vec3f nearestPoint = Vec3f(
                 MathUtil::Clamp(viewerPosition.x, estimatedBounds.min.x, estimatedBounds.max.x),
@@ -345,6 +353,11 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
 
             if (!hasFallback)
             {
+                if (requestResult == GlimmerBLASRequestResult::Pending && mayBeTraced)
+                {
+                    m_numTracedWaitingForBLAS++;
+                }
+
                 return;
             }
         }
@@ -824,6 +837,14 @@ bool GlimmerTLAS::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& 
     if (m_buildTask.IsValid() && m_buildTask.IsCompleted())
     {
         BuildResult result = std::move(m_buildTask).Await();
+
+        // the first TLAS with every BLAS the traced region asked for, after one or more without
+        if (!m_buildWaitsForTraced && m_activeWaitsForTraced)
+        {
+            m_completeGeneration++;
+        }
+
+        m_activeWaitsForTraced = m_buildWaitsForTraced;
         m_buildTask = Task<BuildResult>();
 
         if (IsReady() && result.inputHash == m_activeInputHash)
@@ -921,6 +942,7 @@ bool GlimmerTLAS::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& 
     m_blasEvictionGenerationAtGather = blasCache.GetEvictionGeneration();
     m_viewerPositionAtGather = viewerPosition;
     m_waitingForBLAS = numWaitingForBLAS != 0;
+    m_buildWaitsForTraced = m_numTracedWaitingForBLAS != 0;
     m_stats.numWaitingForBLAS = numWaitingForBLAS;
 
     m_lastRegion = region;

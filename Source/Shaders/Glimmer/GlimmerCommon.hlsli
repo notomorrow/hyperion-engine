@@ -250,4 +250,9 @@ float4 GlimmerBlendFarField(float4 nearField, float4 farField)
     return select(weight <= 1e-4, (float4)0.0, float4((nearField.rgb * nearField.a + farField.rgb * farWeight) / weight, weight));
 }
 
+float GlimmerLuminance(float3 color)
+{
+    return dot(color, float3(0.2126, 0.7152, 0.0722));
+}
+
 #endif

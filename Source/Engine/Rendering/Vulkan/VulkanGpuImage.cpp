@@ -96,9 +96,9 @@ RendererResult VulkanGpuImage::GenerateMipmaps(VulkanCommandBuffer* commandBuffe
     {
         for (int32 i = 1; i < int32(numMipmaps + 1); i++)
         {
-            const int mipWidth = int(helpers::MipmapSize(m_textureDesc.extent.x, i)),
-                      mipHeight = int(helpers::MipmapSize(m_textureDesc.extent.y, i)),
-                      mipDepth = int(helpers::MipmapSize(m_textureDesc.extent.z, i));
+            const int mipWidth = int(RenderHelpers::MipmapSize(m_textureDesc.extent.x, i)),
+                      mipHeight = int(RenderHelpers::MipmapSize(m_textureDesc.extent.y, i)),
+                      mipDepth = int(RenderHelpers::MipmapSize(m_textureDesc.extent.z, i));
 
             /* Memory barrier for transfer - note that after generating the mipmaps,
                 we'll still need to transfer into a layout primed for reading from shaders. */
@@ -161,9 +161,24 @@ RendererResult VulkanGpuImage::GenerateMipmaps(VulkanCommandBuffer* commandBuffe
                     .baseArrayLayer = src.baseArrayLayer,
                     .layerCount = src.numLayers
                 },
-                .srcOffsets = { { 0, 0, 0 }, { int32(helpers::MipmapSize(m_textureDesc.extent.x, i - 1)), int32(helpers::MipmapSize(m_textureDesc.extent.y, i - 1)), int32(helpers::MipmapSize(m_textureDesc.extent.z, i - 1)) } },
-                .dstSubresource = { .aspectMask = aspectFlagBits, .mipLevel = dst.baseMipLevel, .baseArrayLayer = dst.baseArrayLayer, .layerCount = dst.numLayers },
-                .dstOffsets = { { 0, 0, 0 }, { mipWidth, mipHeight, mipDepth } }
+                .srcOffsets = {
+                    { 0, 0, 0 },
+                    {
+                        int32(RenderHelpers::MipmapSize(m_textureDesc.extent.x, i - 1)),
+                        int32(RenderHelpers::MipmapSize(m_textureDesc.extent.y, i - 1)),
+                        int32(RenderHelpers::MipmapSize(m_textureDesc.extent.z, i - 1))
+                    }
+                },
+                .dstSubresource = {
+                    .aspectMask = aspectFlagBits,
+                    .mipLevel = dst.baseMipLevel,
+                    .baseArrayLayer = dst.baseArrayLayer,
+                    .layerCount = dst.numLayers
+                },
+                .dstOffsets = {
+                    { 0, 0, 0 },
+                    { mipWidth, mipHeight, mipDepth }
+                }
             };
 
             vkCmdBlitImage(

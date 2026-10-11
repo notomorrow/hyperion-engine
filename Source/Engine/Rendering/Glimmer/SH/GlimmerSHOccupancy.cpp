@@ -134,7 +134,7 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
 
     const auto dispatchPass = [&](const StaticShaderPropertyId& modeProperty, uint32 numThreads)
     {
-        const Vec3u groups = helpers::WrapComputeGroupCount((numThreads + OccupancyGroupSize - 1) / OccupancyGroupSize);
+        const Vec3u groups = RenderHelpers::WrapComputeGroupCount((numThreads + OccupancyGroupSize - 1) / OccupancyGroupSize);
 
         GlimmerSHOccupancySplatConstants constants {};
         constants.origin = Vec4i(origin.x, origin.y, origin.z, int32(cascadeIndex));

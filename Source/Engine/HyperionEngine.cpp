@@ -1147,6 +1147,8 @@ extern "C"
             }
         }
 
+        HYP_LOG(Engine, Info, "Action: Console {} {}", commandName, commandLine);
+
         // Look for a CVar with the name of commandName
         CVarBase* cvar = CVarManager::GetInstance().FindVar(commandName);
         if (cvar != nullptr)

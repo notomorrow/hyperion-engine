@@ -64,9 +64,12 @@ struct GlimmerProbeVolume
 //      | sleep interval n: traced every 2^n of its turns (14-15)
 //      | back face rays of last update (16-23)
 //      | rays of last update started inside ground or solid span (24-31)
-// y = offset from its grid point (3 x 10 bit snorm of GLIMMER_PROBE_MAX_OFFSET spacings)
+// y = offset from its grid point (3 x 10 bit snorm of GLIMMER_PROBE_MAX_OFFSET spacings, bits 0-29)
+//      | 1 when its last update nudged it there from an offset it traced clear from (bit 30)
 // z = time of its last update (float bits)
-// w = the last offset it was traced from without ending up inside, packed like y (bits 0-29) | 1 when there is one (bit 31)
+// w = the last offset it was traced from clear of any solid, packed like y (bits 0-29)
+//    | 1 when a nudge from there ended in a solid, so it is held there (bit 30)
+//    | 1 when there is one (bit 31)
 uint GlimmerProbeStateOf(uint4 state)
 {
     return state.x & 0xFu;
@@ -135,6 +138,8 @@ float3 GlimmerUnpackProbeOffset(uint packed)
 }
 
 #define GLIMMER_PROBE_GOOD_OFFSET_VALID 0x80000000u
+#define GLIMMER_PROBE_GOOD_OFFSET_HELD 0x40000000u
+#define GLIMMER_PROBE_OFFSET_NUDGED 0x40000000u
 
 uint GlimmerPackGoodOffset(float3 offset)
 {

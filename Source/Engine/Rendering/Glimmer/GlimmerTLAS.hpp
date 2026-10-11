@@ -188,6 +188,11 @@ public:
         return m_stats.numSpanChunks;
     }
 
+    HYP_FORCE_INLINE uint32 GetCompleteGeneration() const
+    {
+        return m_completeGeneration;
+    }
+
     HYP_FORCE_INLINE bool IsSpanFullyDirty() const
     {
         return m_spanFullyDirty;
@@ -330,6 +335,10 @@ private:
     Map<uint64, uint8> m_instanceLods; // the LOD each instance (entity id << 32 | a hash of its transform within the entity) was given at the last gather
     bool m_dirty;
     bool m_waitingForBLAS;
+    uint32 m_numTracedWaitingForBLAS;
+    bool m_buildWaitsForTraced;  // the build in flight
+    bool m_activeWaitsForTraced; // the TLAS in use
+    uint32 m_completeGeneration;
     bool m_usesLightmaps;
     uint64 m_activeInputHash;
 

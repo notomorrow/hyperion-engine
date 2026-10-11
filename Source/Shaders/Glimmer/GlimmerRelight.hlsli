@@ -1,20 +1,36 @@
 #ifndef GLIMMER_RELIGHT_HLSLI
 #define GLIMMER_RELIGHT_HLSLI
 
+#include "GlimmerLight.hlsli"
+
 #define GLIMMER_RELIGHT_GROUND 0u
 #define GLIMMER_RELIGHT_SPAN_TOP 1u
-#define GLIMMER_RELIGHT_LAYERS 2u
+#define GLIMMER_RELIGHT_SURFACES 2u
 
-#define GLIMMER_RELIGHT_MAX_RATIO 64.0
+#define GLIMMER_RELIGHT_RESOLUTION (GLIMMER_GROUND_RESOLUTION / 2)
+#define GLIMMER_RELIGHT_LAYERS ((GLIMMER_RELIGHT_SURFACES * GLIMMER_LIGHT_PARTS + 3) / 4)
 
 struct GlimmerRelightParams
 {
     int4 levels[GLIMMER_GROUND_LEVELS]; // xy = absolute texel of the lit window's origin, z = 1 once all of it has been lit
 };
 
-uint GlimmerRelightSlice(uint level, uint layer)
+uint3 GlimmerRelightTexel(int2 texel, uint level, uint surface, uint part)
 {
-    return level * GLIMMER_RELIGHT_LAYERS + layer;
+    const uint index = surface * GLIMMER_LIGHT_PARTS + part;
+    const uint quadrant = index & 3u;
+
+    const uint2 block = uint2((texel >> 1) & (GLIMMER_RELIGHT_RESOLUTION - 1));
+
+    return uint3(
+        block + uint2(quadrant & 1u, quadrant >> 1) * GLIMMER_RELIGHT_RESOLUTION,
+        level * GLIMMER_RELIGHT_LAYERS + (index >> 2));
+}
+
+// the texel of each 2x2 block that lights the block (the ground's windows start on even texels, so it's always in with its block)
+bool GlimmerRelightLightsBlock(int2 texel)
+{
+    return all((texel & 1) == 0);
 }
 
 bool GlimmerRelightCovers(bool isGroundHit, float3 hitNormal)
@@ -27,9 +43,9 @@ bool GlimmerRelightCovers(bool isGroundHit, float3 hitNormal)
 #if defined(GLIMMER_RELIGHT_WITH_SAMPLING) && !defined(GLIMMER_RELIGHT_SAMPLING_HLSLI)
 #define GLIMMER_RELIGHT_SAMPLING_HLSLI
 
-bool GlimmerSampleRelight(GlimmerRelightParams params, GlimmerGroundParams ground, uint level, float2 worldXZ, uint layer, out float4 outRelight)
+bool GlimmerSampleRelight(GlimmerRelightParams params, GlimmerGroundParams ground, uint level, float2 worldXZ, uint surface, out GlimmerLight outReceived)
 {
-    outRelight = (float4)0.0;
+    outReceived = GlimmerNoLight();
 
     const int4 litWindow = params.levels[level];
 
@@ -45,9 +61,21 @@ bool GlimmerSampleRelight(GlimmerRelightParams params, GlimmerGroundParams groun
         return false;
     }
 
-    outRelight = glimmerRelight.Load(int4(GlimmerWrapGroundTexel(texel), GlimmerRelightSlice(level, layer), 0));
+    const float4 first = glimmerRelight.Load(int4(GlimmerRelightTexel(texel, level, surface, 0u), 0));
 
-    return outRelight.a >= 0.0;
+    if (first.a < 0.0)
+    {
+        return false;
+    }
+
+    outReceived.parts[0] = first.rgb;
+
+    for (uint part = 1; part < GLIMMER_LIGHT_PARTS; part++)
+    {
+        outReceived.parts[part] = glimmerRelight.Load(int4(GlimmerRelightTexel(texel, level, surface, part), 0)).rgb;
+    }
+
+    return true;
 }
 
 #endif

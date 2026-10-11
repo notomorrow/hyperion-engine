@@ -3709,6 +3709,8 @@ bool EditorSubsystem::StartSimulation()
         return false;
     }
 
+    HYP_LOG(Editor, Info, "Action: StartSimulation");
+
     // Pending prefab edits go into the snapshot too
     if (m_prefabEditState.IsValid())
     {
@@ -3934,6 +3936,8 @@ bool EditorSubsystem::StopSimulation()
 {
     if (m_currentProject.IsValid())
     {
+        HYP_LOG(Editor, Info, "Action: StopSimulation");
+
         Game* gameInstance = m_currentProject->GetGame();
         Assert(gameInstance != nullptr);
 
@@ -5075,6 +5079,8 @@ bool EditorSubsystem::ExecuteCommand(const Handle<EditorCommandBase>& command)
 
         return false;
     }
+
+    HYP_LOG(Editor, Info, "Action: {} {}", command->InstanceClass()->GetName(), String::Join(command->GetArguments(), " "));
 
     if (IsOnThread(g_simThread))
     {

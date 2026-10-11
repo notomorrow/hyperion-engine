@@ -119,17 +119,7 @@ private:
     UniquePtr<GlimmerSHVolume> m_shVolume;
     UniquePtr<GlimmerRelight> m_relight;
 
-    // what of the lighting changed enough to wake the caches
-    EnumFlags<GlimmerLightingChangeFlags> UpdateLightingSignature(EnvProbe* skyProbe);
-
     uint32 m_maskGeneration;
-
-    // the lighting the caches were last woken for
-    Vec3f m_litSunDirection;
-    Vec3f m_litSunRadiance;
-    float m_litSkyLight;
-    float m_litSkyLuminance;
-    bool m_hasLitSignature;
 };
 
 } // namespace Hyperion

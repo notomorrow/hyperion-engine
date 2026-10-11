@@ -4,12 +4,22 @@ PERMUTE(MODE, CLASSIFY, ALLOC, LIST)
 
 #include "GlimmerSWRTCommon.hlsli"
 #include "GlimmerProbeTypes.hlsli"
+#include "../GlimmerLight.hlsli"
 
 #define GLIMMER_SH_OCCUPANCY_NO_TRACE
 #include "../SH/GlimmerSHOccupancy.hlsli"
 #undef GLIMMER_SH_OCCUPANCY_NO_TRACE
 
-#define GLIMMER_PROBE_MAX_CHANGED_BOXES 16
+#define GLIMMER_PROBE_MAX_CHANGED_BOXES (16 + 2 * GLIMMER_GROUND_LEVELS)
+#define GLIMMER_PROBE_CHANGED_HISTORY 2.0
+
+#define GLIMMER_PROBE_CHANGE_NONE 0u
+#define GLIMMER_PROBE_CHANGE_WAKE 1u
+#define GLIMMER_PROBE_CHANGE_MOVED 2u
+
+#define GLIMMER_PROBE_MAX_MOVED_BOXES 4u
+
+#define GLIMMER_PROBE_GROUND_BOX_HEIGHT 1e5
 
 struct GlimmerProbeAllocConstants
 {
@@ -29,10 +39,10 @@ struct GlimmerProbeAllocConstants
 
     float4 viewer; // viewer position in x,y,z
 
-    /// x = 1 when the lighting changed
+    /// x = 1 when every probe is to wake, 2 when every probe is to start over
     /// y = changed boxes
-    /// z = longest sleep interval
-    /// w = estimates a woken probe's history keeps at most (0 = all of it)
+    /// z = longest sleep interval; a probe that reaches it is settled and only traced again when something wakes it
+    /// w = seconds after which a settled probe is traced anyway (0 = never)
     uint4 wake;
 
     float4 changedMin[GLIMMER_PROBE_MAX_CHANGED_BOXES];
@@ -53,6 +63,7 @@ DECLARE_UAV(GlimmerSWRTProbeAlloc, OutSlots) RWStructuredBuffer<int4> OutSlots; 
 DECLARE_UAV(GlimmerSWRTProbeAlloc, OutSlotAges) RWStructuredBuffer<uint> OutSlotAges;   // frames since the block was last wanted
 DECLARE_UAV(GlimmerSWRTProbeAlloc, OutStates) RWStructuredBuffer<uint4> OutStates;
 DECLARE_UAV(GlimmerSWRTProbeAlloc, OutSH) RWStructuredBuffer<float4> OutSH;
+DECLARE_UAV(GlimmerSWRTProbeAlloc, OutLight) RWStructuredBuffer<float4> OutLight;
 DECLARE_UAV(GlimmerSWRTProbeAlloc, OutVisibility) RWStructuredBuffer<uint> OutVisibility;
 DECLARE_UAV(GlimmerSWRTProbeAlloc, OutTrend) RWStructuredBuffer<float4> OutTrend;
 
@@ -99,6 +110,11 @@ void GlimmerResetProbe(uint probeIndex)
     for (uint channel = 0; channel < 3; channel++)
     {
         OutSH[probeIndex * 3u + channel] = (float4)0.0;
+    }
+
+    for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
+    {
+        OutLight[probeIndex * GLIMMER_LIGHT_ENTRIES + entry] = (float4)0.0;
     }
 
     // open in every direction until traced
@@ -588,23 +604,45 @@ bool GlimmerHasSolidNextToProbe(uint levelIndex, float3 gridPosition, float spac
     return false;
 }
 
-bool GlimmerIsProbeWoken(uint probeIndex, float3 position, float reach)
+uint GlimmerProbeChange(float3 position, float reach)
 {
-    if (constants.wake.x != 0u || OutBlockWake[probeIndex / GLIMMER_PROBES_PER_BLOCK] + 1u == constants.volume.info.z)
+    if (constants.wake.x != 0u)
     {
-        return true;
+        return GLIMMER_PROBE_CHANGE_WAKE;
     }
+
+    uint numInstanceBoxes = 0u;
+    bool isInBox = false;
+    bool isInInstanceBox = false;
 
     [loop]
     for (uint boxIndex = 0; boxIndex < min(constants.wake.y, uint(GLIMMER_PROBE_MAX_CHANGED_BOXES)); boxIndex++)
     {
-        if (all(position + reach >= constants.changedMin[boxIndex].xyz) && all(position - reach <= constants.changedMax[boxIndex].xyz))
+        const float3 boxMin = constants.changedMin[boxIndex].xyz;
+        const float3 boxMax = constants.changedMax[boxIndex].xyz;
+
+        const bool isInstanceBox = boxMax.y - boxMin.y < GLIMMER_PROBE_GROUND_BOX_HEIGHT;
+
+        numInstanceBoxes += isInstanceBox ? 1u : 0u;
+
+        if (all(position + reach >= boxMin) && all(position - reach <= boxMax))
         {
-            return true;
+            isInBox = true;
+            isInInstanceBox = isInInstanceBox || isInstanceBox;
         }
     }
 
-    return false;
+    if (isInInstanceBox && numInstanceBoxes <= GLIMMER_PROBE_MAX_MOVED_BOXES)
+    {
+        return GLIMMER_PROBE_CHANGE_MOVED;
+    }
+
+    return isInBox ? GLIMMER_PROBE_CHANGE_WAKE : GLIMMER_PROBE_CHANGE_NONE;
+}
+
+bool GlimmerIsProbeBlockWoken(uint probeIndex)
+{
+    return OutBlockWake[probeIndex / GLIMMER_PROBES_PER_BLOCK] + 1u == constants.volume.info.z;
 }
 
 [numthreads(64, 1, 1)]
@@ -627,7 +665,10 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     uint4 state = OutStates[probeIndex];
     uint probeState = GlimmerProbeStateOf(state);
 
-    if (probeState == GLIMMER_PROBE_STATE_RESET)
+    const bool startsOver = constants.wake.x == 2u
+        && (probeState == GLIMMER_PROBE_STATE_ACTIVE || probeState == GLIMMER_PROBE_STATE_INSIDE);
+
+    if (probeState == GLIMMER_PROBE_STATE_RESET || startsOver)
     {
         GlimmerResetProbe(probeIndex);
 
@@ -711,38 +752,59 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
 
     uint sleepInterval = 0u;
+    bool isSettled = false;
 
     if (probeState == GLIMMER_PROBE_STATE_ACTIVE)
     {
         sleepInterval = min(GlimmerProbeSleepInterval(state), constants.wake.z);
 
-        if (sleepInterval != 0u && GlimmerIsProbeWoken(probeIndex, gridPosition, constants.volume.nearField.y * spacing))
+        uint flags = state.x;
+
+        const uint change = GlimmerProbeChange(gridPosition, constants.volume.nearField.y * spacing);
+
+        if (change != GLIMMER_PROBE_CHANGE_NONE)
         {
             sleepInterval = 0u;
         }
 
-        if (constants.wake.w != 0u)
+        if (change == GLIMMER_PROBE_CHANGE_MOVED)
         {
             float4 trend = OutTrend[probeIndex];
 
-            if (trend.w > float(constants.wake.w))
+            if (trend.w > GLIMMER_PROBE_CHANGED_HISTORY)
             {
-                trend.w = float(constants.wake.w);
+                trend.w = GLIMMER_PROBE_CHANGED_HISTORY;
 
                 OutTrend[probeIndex] = trend;
             }
+            
+            flags = (GlimmerProbeSleepInterval(state) != 0u && GlimmerProbeUpdates(state) > 1u)
+                ? ((flags & ~(0x3Fu << 8)) | (1u << 8))
+                : flags;
+        }
+        else if (sleepInterval != 0u && GlimmerIsProbeBlockWoken(probeIndex))
+        {
+            sleepInterval = 0u;
         }
 
-        if (sleepInterval != GlimmerProbeSleepInterval(state))
+        flags = GlimmerWithSleepInterval(flags, sleepInterval);
+
+        if (flags != state.x)
         {
-            state.x = GlimmerWithSleepInterval(state.x, sleepInterval);
+            state.x = flags;
 
             OutStates[probeIndex] = state;
         }
 
         InterlockedAdd(OutCounters[1], 1u);
 
-        if (sleepInterval != 0u)
+        isSettled = sleepInterval != 0u && sleepInterval == constants.wake.z;
+
+        if (isSettled)
+        {
+            InterlockedAdd(OutCounters[7], 1u);
+        }
+        else if (sleepInterval != 0u)
         {
             InterlockedAdd(OutCounters[5], 8u >> sleepInterval);
             InterlockedAdd(OutCounters[7], 1u);
@@ -762,6 +824,12 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     if (probeState == GLIMMER_PROBE_STATE_INSIDE)
     {
         isDue = phase % (period * max(constants.budget.z, 1u)) == 0u;
+    }
+    else if (isSettled)
+    {
+        const float refreshSeconds = float(constants.wake.w) * (1.0 + float(GlimmerProbeHash(probeIndex) & 0xFFu) / 255.0);
+
+        isDue = constants.wake.w != 0u && constants.volume.params.x - asfloat(state.z) > refreshSeconds;
     }
     else if (sleepInterval != 0u)
     {

@@ -40,7 +40,11 @@
 namespace Hyperion {
 
 static EngineStatGpuTimer s_statGlimmerSHUpdate("Rendering/GPU/Glimmer/SHUpdate");
+static EngineStatGpuTimer s_statGlimmerSHCompose("Rendering/GPU/Glimmer/SHCompose");
 static EngineStatCounter<uint32> s_statGlimmerSHVoxelsTraced("Rendering/Glimmer/SHVoxelsTraced");
+
+static StaticShaderPropertyId s_propSHModeUpdate { ShaderProperty(NAME("MODE"), NAME("UPDATE")) };
+static StaticShaderPropertyId s_propSHModeCompose { ShaderProperty(NAME("MODE"), NAME("COMPOSE")) };
 
 static constexpr int32 VoxelsPerFrame = 512;
 static constexpr int32 RefreshVoxelsPerFrame = 256;
@@ -57,7 +61,10 @@ static constexpr int32 RefreshSliceVoxels = int32(GlimmerSHGridXZ * GlimmerSHGri
 
 static constexpr float RadianceHysteresis = 0.5f;
 
-static constexpr uint32 MaxRelightWaitFrames = 64;
+static constexpr uint32 RadianceSections = 3 + GlimmerLightEntries;
+static constexpr uint32 RadianceColumns = 8;
+static constexpr uint32 RadianceRows = (RadianceSections + RadianceColumns - 1) / RadianceColumns;
+
 static constexpr uint32 MaxOccupancyWaitFrames = 8;
 
 struct GlimmerSHUpdateConstants
@@ -73,6 +80,7 @@ struct GlimmerSHUpdateConstants
     GlimmerProbeVolumeShaderData probes; // zeroed while the probes can't be sampled
     GlimmerSkyShaderData sky;
     EnvProbeShaderData skyProbe;
+    GlimmerLightShaderData light;
 };
 
 GlimmerSHVolume::Box GlimmerSHVolume::Box::Intersect(const Box& a, const Box& b)
@@ -117,12 +125,8 @@ GlimmerSHVolume::GlimmerSHVolume()
       m_seenTLASGeneration(~0u),
       m_occupancyWaitFrames(0),
       m_refreshBudget(0),
-      m_burstPassesLeft(0),
-      m_burstSlices {},
-      m_burstDoneCascades(0),
-      m_relightWaitFrames(0),
-      m_burstSkipsHistory(false),
-      m_isWakePending(false),
+      m_composedLight {},
+      m_hasComposedLight(false),
       m_shaderData {}
 {
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
@@ -148,7 +152,7 @@ void GlimmerSHVolume::CreateResources()
 
     m_dataTexture = CreateGlimmerStorageTexture(TextureType::Texture3D, TextureFormat::RGBA16F, extent, 1, NAME("GlimmerSHData"));
     m_stateTexture = CreateGlimmerStorageTexture(TextureType::Texture3D, TextureFormat::RGBA32, extent, 1, NAME("GlimmerSHState"));
-    m_radianceTexture = CreateGlimmerStorageTexture(TextureType::Texture3D, TextureFormat::RGBA16F, Vec3u(extent.x, extent.y * 3, extent.z), 1, NAME("GlimmerSHRadiance"));
+    m_radianceTexture = CreateGlimmerStorageTexture(TextureType::Texture3D, TextureFormat::RGBA16F, Vec3u(extent.x * RadianceColumns, extent.y * RadianceRows, extent.z), 1, NAME("GlimmerSHRadiance"));
 }
 
 const GpuImageViewRef& GlimmerSHVolume::GetDataImageView() const
@@ -308,7 +312,10 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
         cr << InsertBarrier(m_stateTexture->GetGpuImage(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
         cr << InsertBarrier(m_radianceTexture->GetGpuImage(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
-        cr << SetCurrentShader(ShaderDesc(NAME("GlimmerSHUpdate")));
+        ShaderPropertySet shaderProperties;
+        shaderProperties.Add(s_propSHModeUpdate);
+
+        cr << SetCurrentShader(ShaderDesc(NAME("GlimmerSHUpdate"), shaderProperties));
     }
 
     GlimmerSHUpdateConstants constants {};
@@ -337,6 +344,8 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
     }
 
     GetGlimmerSkyShaderData(inputs.skyProbe, constants.sky, constants.skyProbe);
+
+    constants.light = inputs.light;
 
     GpuBuffer* cbuffer = nullptr;
     size_t cbufferOffset = 0;
@@ -380,7 +389,7 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
     if (probeVolume)
     {
         cr << SetShaderUniform(uniformIndex++, "GlimmerProbeBlockTableBuffer"_sh, probeVolume->GetBlockTableBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
-        cr << SetShaderUniform(uniformIndex++, "GlimmerProbeSHBuffer"_sh, probeVolume->GetSHBuffer().Get(), ShaderDataOffset(0, sizeof(Vec4f)));
+        cr << SetShaderUniform(uniformIndex++, "GlimmerProbeLightBuffer"_sh, probeVolume->GetLightBuffer().Get(), ShaderDataOffset(0, sizeof(Vec4f)));
         cr << SetShaderUniform(uniformIndex++, "GlimmerProbeStatesBuffer"_sh, probeVolume->GetStatesBuffer().Get(), ShaderDataOffset(0, sizeof(Vec4u)));
         cr << SetShaderUniform(uniformIndex++, "GlimmerProbeVisibilityBuffer"_sh, probeVolume->GetVisibilityBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
     }
@@ -388,7 +397,7 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
     {
         // HACK: any structured buffer will do, as the zeroed constants keep the probes from being read
         cr << SetShaderUniform(uniformIndex++, "GlimmerProbeBlockTableBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
-        cr << SetShaderUniform(uniformIndex++, "GlimmerProbeSHBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
+        cr << SetShaderUniform(uniformIndex++, "GlimmerProbeLightBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
         cr << SetShaderUniform(uniformIndex++, "GlimmerProbeStatesBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
         cr << SetShaderUniform(uniformIndex++, "GlimmerProbeVisibilityBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
     }
@@ -468,21 +477,51 @@ bool GlimmerSHVolume::DispatchRefreshSlice(
     return true;
 }
 
-void GlimmerSHVolume::StartBurstPass()
+void GlimmerSHVolume::Compose(Frame* frame, const GlimmerLightShaderData& light)
 {
-    m_burstDoneCascades = 0;
+    ENGINE_STAT_GPU_SCOPE(&s_statGlimmerSHCompose);
 
-    for (int32& burstSlice : m_burstSlices)
-    {
-        burstSlice = INT32_MIN;
-    }
+    CommandRecorder& cr = frame->cr;
+
+    GlimmerSHUpdateConstants constants {};
+    constants.light = light;
+
+    static const EffectVolumeShaderData s_noCloudVolume {};
+    static const CloudWeatherMapShaderData s_noWeatherMap {};
+    static const CloudShadowMapShaderData s_noShadowMap {};
+
+    GpuBuffer* cbuffer = nullptr;
+    size_t cbufferOffset = 0;
+    size_t cbufferSize = 0;
+
+    RI.cbufferAllocator->Write(&constants);
+    RI.cbufferAllocator->Write(&s_noCloudVolume);
+    RI.cbufferAllocator->Write(&s_noWeatherMap);
+    RI.cbufferAllocator->Write(&s_noShadowMap);
+    RI.cbufferAllocator->Commit(cbuffer, cbufferOffset, cbufferSize);
+
+    cr << InsertBarrier(m_radianceTexture->GetGpuImage(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+
+    ShaderPropertySet shaderProperties;
+    shaderProperties.Add(s_propSHModeCompose);
+
+    cr << SetCurrentShader(ShaderDesc(NAME("GlimmerSHUpdate"), shaderProperties));
+
+    cr << SetShaderUniform(0, "CBuffer"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
+    cr << SetShaderUniform(1, "OutRadiance"_sh, RI.textureViewCache->GetOrCreate(m_radianceTexture));
+
+    // 2 rows of voxels a group
+    cr << DispatchCompute(Vec3u { 1, GlimmerSHGridY * GlimmerSHCascades / 2, GlimmerSHGridXZ });
+
+    cr << InsertBarrier(m_radianceTexture->GetGpuImage(), ResourceState::ShaderResource);
+
+    m_composedLight = light;
+    m_hasComposedLight = true;
 }
 
 void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& inputs)
 {
     HYP_SCOPE;
-
-    m_isWakePending |= bool(inputs.lightingChanges);
 
     if (!inputs.surfaceCache || !inputs.spanCache || !inputs.spanCache->GetSpansBuffer().IsValid() || !inputs.occupancy || !inputs.occupancyMaskBuffer.IsValid())
     {
@@ -492,6 +531,12 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
     if (!m_dataTexture.IsValid())
     {
         CreateResources();
+    }
+
+    // voxels that aren't traced this frame still hold the light as it was put together before
+    if (m_shaderData.info.w != 0 && (!m_hasComposedLight || memcmp(&m_composedLight, &inputs.light, sizeof(GlimmerLightShaderData)) != 0))
+    {
+        Compose(frame, inputs.light);
     }
 
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
@@ -614,93 +659,11 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
 
     if (g_cvGlimmerRunOnChange.Get())
     {
-        if (m_isWakePending)
-        {
-            m_isWakePending = false;
-
-            if (m_burstPassesLeft == 0)
-            {
-                m_burstPassesLeft = int32(GlimmerLightingBurstPasses);
-                m_burstSkipsHistory = true;
-
-                StartBurstPass();
-            }
-            else
-            {
-                // the pass under way has traced some voxels under the lighting of before, so it doesn't count
-                m_burstPassesLeft = int32(GlimmerLightingBurstPasses + 1);
-            }
-        }
-
-        const bool isBursting = m_burstPassesLeft > 0;
-        const int32 rate = MathUtil::Max(isBursting ? g_cvGlimmerSHRefreshVoxelsBurst.Get() : g_cvGlimmerSHRefreshVoxels.Get(), 0);
+        const int32 rate = MathUtil::Max(g_cvGlimmerSHRefreshVoxels.Get(), 0);
 
         m_refreshBudget = MathUtil::Min(m_refreshBudget + rate, MathUtil::Max(rate, RefreshSliceVoxels) * 2);
 
-        // ground hits take the sun's visibility from the relight, which has to catch up with the change first
-        const bool isWaitingForRelight = isBursting && !inputs.isRelightSettled && m_relightWaitFrames < MaxRelightWaitFrames;
-
-        if (isWaitingForRelight)
-        {
-            m_relightWaitFrames++;
-        }
-
-        while (m_burstPassesLeft > 0 && !isWaitingForRelight && m_refreshBudget >= RefreshSliceVoxels)
-        {
-            const float radianceHysteresis = m_burstSkipsHistory ? 0.0f : RadianceHysteresis;
-
-            bool hasDispatched = false;
-
-            // finest first; a cascade still tracing what changed or scrolled in gives its turn to the next
-            for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades && !hasDispatched; cascadeIndex++)
-            {
-                if (m_burstDoneCascades & (1u << cascadeIndex))
-                {
-                    continue;
-                }
-
-                bool hasFinishedCascade = false;
-
-                hasDispatched = DispatchRefreshSlice(frame, cascadeIndex, m_burstSlices[cascadeIndex], radianceHysteresis, hasFinishedCascade, inputs, hasBarriers);
-
-                if (hasDispatched)
-                {
-                    m_refreshBudget -= RefreshSliceVoxels;
-                }
-
-                if (hasFinishedCascade)
-                {
-                    m_burstDoneCascades |= 1u << cascadeIndex;
-                }
-            }
-
-            if (m_burstDoneCascades != (1u << GlimmerSHCascades) - 1u)
-            {
-                if (!hasDispatched)
-                {
-                    break;
-                }
-
-                continue;
-            }
-
-            m_burstSkipsHistory = false;
-
-            if (--m_burstPassesLeft > 0)
-            {
-                StartBurstPass();
-            }
-            else
-            {
-                m_relightWaitFrames = 0;
-            }
-        }
-
-        for (uint32 attempt = 0;
-            m_burstPassesLeft == 0
-                && attempt < 2 * GlimmerSHCascades
-                && m_refreshBudget >= RefreshSliceVoxels;
-            attempt++)
+        for (uint32 attempt = 0; attempt < 2 * GlimmerSHCascades && m_refreshBudget >= RefreshSliceVoxels; attempt++)
         {
             uint32 ruler = ++m_refreshStep;
             uint32 cascadeIndex = 0;
@@ -724,12 +687,6 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
         }
 
         budget = 0;
-    }
-    else
-    {
-        m_burstPassesLeft = 0;
-        m_relightWaitFrames = 0;
-        m_isWakePending = false;
     }
 
     const int32 sliceVoxels = RefreshSliceVoxels;
