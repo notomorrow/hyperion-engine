@@ -211,6 +211,20 @@ void TemporalBlending::CreateImages()
     m_historyTexture->SetName(NAME("TemporalBlendingHistory"));
     Check(m_historyTexture->Create());
 
+    {
+        CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder(CommandRecorderQueue::PreRender);
+
+        cr << InsertBarrier(m_resultTexture->GetGpuImage(), ResourceState::CopyDst);
+        cr << FillImage(m_resultTexture->GetGpuImage(), 0.0f, ImageSubResource {});
+        cr << InsertBarrier(m_resultTexture->GetGpuImage(), ResourceState::ShaderResource);
+
+        cr << InsertBarrier(m_historyTexture->GetGpuImage(), ResourceState::CopyDst);
+        cr << FillImage(m_historyTexture->GetGpuImage(), 0.0f, ImageSubResource {});
+        cr << InsertBarrier(m_historyTexture->GetGpuImage(), ResourceState::ShaderResource);
+
+        cr.Done();
+    }
+
     m_currentResultTexture = m_resultTexture;
 }
 

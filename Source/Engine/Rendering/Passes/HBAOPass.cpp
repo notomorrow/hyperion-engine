@@ -86,7 +86,7 @@ void HBAO::CreateTemporalBlending()
 {
     m_temporalBlending = MakeUnique<TemporalBlending>(
         m_extent,
-        TextureFormat::RGBA8,
+        TextureFormat::RGBA16F,
         TemporalBlendTechnique::TECHNIQUE_3,
         DefaultTemporalBlendingFeedback,
         m_upsamplePass->GetAttachment(0)->GetImageView(),
