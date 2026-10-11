@@ -28,7 +28,6 @@ struct GlimmerProbeRayHit
 //////////
 #define GLIMMER_RAY_HIT_DONE 0u
 #define GLIMMER_RAY_HIT_SHADE 1u
-#define GLIMMER_RAY_HIT_SHADE_SWRT 2u
 //////////
 
 struct GlimmerProbeTraceConstants
@@ -137,90 +136,9 @@ DECLARE_SRV(GlimmerProbeTrace, GlimmerRelightTexture) Texture2DArray<float4> gli
 
 #include "../GlimmerHeightfield.hlsli"
 
-#define GLIMMER_SUN_SWRT_DISTANCE 256.0
-
 #define GLIMMER_MASK_RAY_LEVEL_BIAS 1
-#define GLIMMER_SUN_MASK_LEVEL 2
 
 #define GLIMMER_SPAN_FOOTPRINT_SLACK 1.5
-
-#if defined(MODE_SHADE) || defined(MODE_RELIGHT)
-
-float GlimmerTraceSunVisibility(float3 P, float3 N, float3 L, bool traceSWRT)
-{
-    const float3 origin = P + N * 0.05 + L * 0.02;
-
-    float solidsFromT = 0.0;
-
-    if (traceSWRT)
-    {
-        float tFirst;
-        float tLast;
-        float tCovered;
-
-        const bool maskHit = GlimmerMaskTraceRay(constants.mask, GLIMMER_SUN_MASK_LEVEL, origin, L, GLIMMER_SUN_SWRT_DISTANCE, tFirst, tLast, tCovered);
-
-        solidsFromT = min(tCovered, GLIMMER_SPAN_FOOTPRINT_SLACK * constants.spans.levels[0].params.x);
-
-        if (maskHit)
-        {
-            GlimmerSWRTStats stats = GlimmerMakeSWRTStats();
-            GlimmerSWRTHit shadowHit;
-
-            if (TraceGlimmerSWRT(origin, L, tFirst, tLast, uint(constants.volume.nearField.z), true, shadowHit, stats))
-            {
-                return 0.0;
-            }
-
-            solidsFromT = tCovered;
-        }
-    }
-
-    GlimmerHeightfieldHit shadowHit;
-
-    if (GlimmerTraceHeightfield(
-        constants.ground,
-        constants.spans,
-        origin,
-        L,
-        constants.volume.params.w,
-        0u,
-        solidsFromT,
-        constants.params.x,
-        false,
-        shadowHit))
-    {
-        return 0.0;
-    }
-
-    return shadowHit.transmittance;
-}
-
-GlimmerLight GlimmerShadeTracedSurface(float3 P, float3 N, float3 albedo, bool traceSWRT)
-{
-    GlimmerSunVisibility sunVisibility;
-
-    [unroll]
-    for (uint key = 0; key < GLIMMER_SUN_KEYS; key++)
-    {
-        const float3 L = GlimmerSunDirection(key);
-
-        uint earlierKey;
-
-        if (GlimmerSunKeyRepeats(constants.light, key, earlierKey))
-        {
-            sunVisibility.keys[key] = sunVisibility.keys[earlierKey];
-        }
-        else
-        {
-            sunVisibility.keys[key] = GlimmerFacesSun(N, L) ? GlimmerTraceSunVisibility(P, N, L, traceSWRT) : 0.0;
-        }
-    }
-
-    return GlimmerShadeSurface(P, N, albedo, sunVisibility);
-}
-
-#endif // MODE_SHADE || MODE_RELIGHT
 
 #if defined(MODE_RELIGHT)
 
@@ -258,63 +176,34 @@ bool GlimmerRelightSurfaceAt(uint level, uint surface, int2 texel, out float3 ou
     return true;
 }
 
-void GlimmerRelightSurface(int2 texel, uint level, uint surface, bool traceSWRT)
+// texel is the one that lights its 2x2 block
+void GlimmerRelightBlock(int2 texel, uint level, uint surface)
 {
-    float3 P;
-    float3 N;
-    const bool hasSurface = GlimmerRelightSurfaceAt(level, surface, texel, P, N);
+    float3 P = (float3)0.0;
+    float3 N = float3(0.0, 1.0, 0.0);
 
-    float4 visibility = float4(0.0, 0.0, 0.0, hasSurface ? 1.0 : -1.0);
+    // what the block receives is taken where its first texel with the surface is
+    bool hasSurface = false;
+
+    [unroll]
+    for (uint blockTexel = 0; blockTexel < 4; blockTexel++)
+    {
+        if (!hasSurface)
+        {
+            hasSurface = GlimmerRelightSurfaceAt(level, surface, texel + int2(blockTexel & 1u, blockTexel >> 1), P, N);
+        }
+    }
+
+    GlimmerLight received = GlimmerNoLight();
 
     if (hasSurface)
     {
-        [unroll]
-        for (uint key = 0; key < GLIMMER_SUN_KEYS; key++)
-        {
-            const float3 L = GlimmerSunDirection(key);
-
-            uint earlierKey;
-
-            if (GlimmerSunKeyRepeats(constants.light, key, earlierKey))
-            {
-                visibility[key] = visibility[earlierKey];
-            }
-            else
-            {
-                visibility[key] = L.y > -0.1 ? GlimmerTraceSunVisibility(P, N, L, traceSWRT) : 0.0;
-            }
-        }
-    }
-
-    OutRelight[GlimmerRelightVisibilityTexel(texel, level, surface)] = visibility;
-
-    if (!GlimmerRelightLightsBlock(texel))
-    {
-        return;
-    }
-
-    // what the block receives is taken where its first texel with the surface is
-    bool hasBlockSurface = hasSurface;
-
-    [unroll]
-    for (uint neighbor = 1; neighbor < 4; neighbor++)
-    {
-        if (!hasBlockSurface)
-        {
-            hasBlockSurface = GlimmerRelightSurfaceAt(level, surface, texel + int2(neighbor & 1u, neighbor >> 1), P, N);
-        }
-    }
-
-    GlimmerLight indirect = GlimmerNoLight();
-
-    if (hasBlockSurface)
-    {
-        indirect = GlimmerIndirect(P, N);
+        received = GlimmerIndirect(P, N);
     }
 
     for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
     {
-        OutRelight[GlimmerRelightIndirectTexel(texel, level, surface, part)] = float4(indirect.parts[part], 0.0);
+        OutRelight[GlimmerRelightTexel(texel, level, surface, part)] = float4(received.parts[part], part == 0u && !hasSurface ? -1.0 : 0.0);
     }
 }
 
@@ -325,19 +214,20 @@ void GlimmerRelightSurface(int2 texel, uint level, uint surface, bool traceSWRT)
 #define RAYS_PER_PROBE 32
 #define PROBES_PER_GROUP 2
 
-void GlimmerWriteRay(uint rayRecordIndex, GlimmerLight light, float hitT)
+void GlimmerWriteRay(uint rayRecordIndex, GlimmerLight light, float hitT, float escape)
 {
     const uint base = rayRecordIndex * GLIMMER_RAY_UINTS;
 
     OutRays[base] = asuint(hitT);
+    OutRays[base + 1u] = asuint(escape);
 
     [unroll]
     for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
     {
         const uint2 packed = GlimmerPackLightPart(light.parts[part]);
 
-        OutRays[base + 1u + part * 2u] = packed.x;
-        OutRays[base + 2u + part * 2u] = packed.y;
+        OutRays[base + 2u + part * 2u] = packed.x;
+        OutRays[base + 3u + part * 2u] = packed.y;
     }
 }
 
@@ -388,10 +278,13 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     const uint level = constants.relightInfo.x;
     const int2 texel = constants.relightRect.xy + int2(texelIndex % extent.x, texelIndex / extent.x);
 
-    const bool traceSWRT = uint(constants.volume.nearField.z) != 0u;
+    if (!GlimmerRelightLightsBlock(texel))
+    {
+        return;
+    }
 
-    GlimmerRelightSurface(texel, level, GLIMMER_RELIGHT_GROUND, traceSWRT);
-    GlimmerRelightSurface(texel, level, GLIMMER_RELIGHT_SPAN_TOP, traceSWRT);
+    GlimmerRelightBlock(texel, level, GLIMMER_RELIGHT_GROUND);
+    GlimmerRelightBlock(texel, level, GLIMMER_RELIGHT_SPAN_TOP);
 #else
     const uint listIndex = groupId.x * PROBES_PER_GROUP + groupIndex / RAYS_PER_PROBE;
 
@@ -416,11 +309,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
             continue;
         }
 
-        const GlimmerLight surfaceLight = GlimmerShadeTracedSurface(
-            rayHit.positionT.xyz,
-            rayHit.normalFlags.xyz,
-            rayHit.albedoTransmittance.rgb,
-            flags == GLIMMER_RAY_HIT_SHADE_SWRT);
+        const GlimmerLight surfaceLight = GlimmerShadeSurface(rayHit.positionT.xyz, rayHit.normalFlags.xyz, rayHit.albedoTransmittance.rgb);
 
         GlimmerLight rayLight;
 
@@ -432,7 +321,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
         GlimmerAddLight(rayLight, surfaceLight, (float3)rayHit.albedoTransmittance.a);
 
-        GlimmerWriteRay(rayRecordIndex, rayLight, rayHit.positionT.w);
+        GlimmerWriteRay(rayRecordIndex, rayLight, rayHit.positionT.w, 0.0);
     }
 #else
     const uint probeIndex = glimmerProbeUpdateList[listIndex];
@@ -444,7 +333,6 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
     const uint numInstances = uint(constants.volume.nearField.z);
 
-    // whether hits get sun shadows from SWRT (the shade pass asks the footprint mask before tracing)
     const bool swrtEnabled = numInstances != 0u && float(levelIndex) < constants.volume.nearField.x;
     const float swrtReach = constants.volume.nearField.y * level.params.x;
 
@@ -472,6 +360,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
         float hitT = maxDistance;
         GlimmerLight light = GlimmerNoLight();
+        float escape = 0.0;
         bool isDone = true;
         bool isBackface = false;
 
@@ -541,7 +430,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
                         P + heightfieldHit.normal * 0.05,
                         heightfieldHit.normal,
                         hitT,
-                        select(swrtEnabled, GLIMMER_RAY_HIT_SHADE_SWRT, GLIMMER_RAY_HIT_SHADE),
+                        GLIMMER_RAY_HIT_SHADE,
                         albedo,
                         heightfieldHit);
 
@@ -578,7 +467,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
                     P,
                     N,
                     hitT,
-                    GLIMMER_RAY_HIT_SHADE_SWRT,
+                    GLIMMER_RAY_HIT_SHADE,
                     GlimmerGetMaterialAverageAlbedo(instance.data.z),
                     emittingHit);
 
@@ -587,7 +476,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         }
         else
         {
-            light = GlimmerSkyLight(direction, 1.0);
+            escape = heightfieldHit.transmittance;
         }
 
         if (isDone)
@@ -597,7 +486,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
             GlimmerLight rayLight = heightfieldHit.inscatter;
             GlimmerAddLight(rayLight, light, (float3)heightfieldHit.transmittance);
 
-            GlimmerWriteRay(rayRecordIndex, rayLight, select(isBackface, -hitT, hitT));
+            GlimmerWriteRay(rayRecordIndex, rayLight, select(isBackface, -hitT, hitT), escape);
         }
     }
 #endif

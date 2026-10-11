@@ -10,6 +10,7 @@
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHVolume.hpp>
+#include <Rendering/Glimmer/GlimmerCVars.hpp>
 #include <Rendering/Glimmer/SWRT/GlimmerSWRTCVars.hpp>
 
 #include <Rendering/RenderInterface.hpp>
@@ -265,15 +266,9 @@ void GetGlimmerSkyShaderData(EnvProbe* skyProbe, GlimmerSkyShaderData& outSky, E
     }
 }
 
-void GetGlimmerLightShaderData(EnvProbe* skyProbe, const GlimmerSunKeyState& sunKeys, GlimmerLightShaderData& outLight)
+void GetGlimmerLightShaderData(EnvProbe* skyProbe, GlimmerLightShaderData& outLight)
 {
     outLight = GlimmerLightShaderData {};
-    outLight.weights[GlimmerLightRest] = Vec4f(1.0f, 1.0f, 1.0f, 0.0f);
-
-    for (uint32 key = 0; key < GlimmerSunKeys; key++)
-    {
-        outLight.sunDirections[key] = Vec4f(sunKeys.directions[key], 0.0f);
-    }
 
     const WorldShaderData* worldData = GetWorldBufferData();
 
@@ -282,67 +277,53 @@ void GetGlimmerLightShaderData(EnvProbe* skyProbe, const GlimmerSunKeyState& sun
         return;
     }
 
-    const Vec3f sunIrradiance = worldData->sunColor.GetXYZ() * worldData->sunAtmosphereTint.GetXYZ() * worldData->sunDirectionIntensity.w;
-
-    for (uint32 key = 0; key < GlimmerSunKeys; key++)
+    if (skyProbe)
     {
-        outLight.weights[key] = Vec4f(sunIrradiance * sunKeys.weights[key], 0.0f);
-    }
-
-    if (!skyProbe)
-    {
-        return;
-    }
-
-    if (RenderProxyEnvProbe* skyProbeProxy = static_cast<RenderProxyEnvProbe*>(GetRenderProxy(skyProbe)))
-    {
-        const Vec4f* sh = skyProbeProxy->bufferData.shData;
-        const float skyScale = skyProbeProxy->bufferData.worldPosition.w * worldData->skyLightParams.x;
-
-        if (GlimmerSkyTerms > 1)
+        if (RenderProxyEnvProbe* skyProbeProxy = static_cast<RenderProxyEnvProbe*>(GetRenderProxy(skyProbe)))
         {
-            // the probe's terms are of the sky's irradiance; the rays that escape take its radiance
+            // the probe's terms are of the sky's irradiance; the transfer is of radiance
             static const float s_radianceFromIrradiance[9] = { 1.0f, 1.5f, 1.5f, 1.5f, 4.0f, 4.0f, 4.0f, 4.0f, 4.0f };
 
-            for (uint32 term = 0; term < GlimmerSkyTerms; term++)
+            const Vec4f* sh = skyProbeProxy->bufferData.shData;
+            const float skyScale = skyProbeProxy->bufferData.worldPosition.w * worldData->skyLightParams.x;
+
+            for (uint32 term = 0; term < GlimmerLightTerms; term++)
             {
-                outLight.weights[GlimmerLightSky + term] = Vec4f(sh[term].GetXYZ() * (s_radianceFromIrradiance[term] * skyScale), 0.0f);
+                outLight.directWeights[term] = Vec4f(sh[term].GetXYZ() * (s_radianceFromIrradiance[term] * skyScale), 0.0f);
             }
         }
-        else
-        {
-            // the sky's irradiance on an upward surface, per channel: what the sky's part of the light is in units of
-            const Vec4f up = (sh[0] * 0.282095f + sh[1] * 0.488603f - sh[6] * 0.315392f - sh[8] * 0.546274f) * skyScale;
-
-            const Vec3f sky = Vec3f(MathUtil::Max(up.x, 0.0f), MathUtil::Max(up.y, 0.0f), MathUtil::Max(up.z, 0.0f));
-            const float floor = MathUtil::Max(1e-4f, 1e-3f * MathUtil::Max(sky.x, MathUtil::Max(sky.y, sky.z)));
-
-            outLight.weights[GlimmerLightSky] = Vec4f(MathUtil::Max(sky.x, floor), MathUtil::Max(sky.y, floor), MathUtil::Max(sky.z, floor), 0.0f);
-        }
-    }
-}
-
-void GetGlimmerSkyShape(EnvProbe* skyProbe, Vec3f outShape[3])
-{
-    for (uint32 term = 0; term < 3; term++)
-    {
-        outShape[term] = Vec3f::Zero();
     }
 
-    if (!skyProbe)
-    {
-        return;
-    }
+    const Vec3f toSun = worldData->sunDirectionIntensity.GetXYZ();
+    const Vec3f sunDirection = toSun.LengthSquared() > 1e-8f ? toSun.Normalized() : Vec3f(0.0f, 1.0f, 0.0f);
 
-    if (RenderProxyEnvProbe* skyProbeProxy = static_cast<RenderProxyEnvProbe*>(GetRenderProxy(skyProbe)))
-    {
-        const Vec4f* sh = skyProbeProxy->bufferData.shData;
-        const float mean = MathUtil::Max(sh[0].x * 0.2126f + sh[0].y * 0.7152f + sh[0].z * 0.0722f, 1e-6f);
+    // fades out as it sets
+    const float aboveHorizon = MathUtil::Clamp((sunDirection.y + 0.1f) / 0.15f, 0.0f, 1.0f);
 
-        for (uint32 term = 0; term < 3; term++)
-        {
-            outShape[term] = sh[1 + term].GetXYZ() / mean;
-        }
+    const Vec3f sunIrradiance = worldData->sunColor.GetXYZ() * worldData->sunAtmosphereTint.GetXYZ() * (worldData->sunDirectionIntensity.w * aboveHorizon);
+
+    const float sunBasis[9] = {
+        0.282095f,
+        0.488603f * sunDirection.y,
+        0.488603f * sunDirection.z,
+        0.488603f * sunDirection.x,
+        1.092548f * sunDirection.x * sunDirection.y,
+        1.092548f * sunDirection.y * sunDirection.z,
+        0.315392f * (3.0f * sunDirection.z * sunDirection.z - 1.0f),
+        1.092548f * sunDirection.x * sunDirection.z,
+        0.546274f * (sunDirection.x * sunDirection.x - sunDirection.y * sunDirection.y)
+    };
+
+    static const float s_bandOfTerm[9] = { 0.0f, 1.0f, 1.0f, 1.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f };
+
+    const float window = MathUtil::Clamp(g_cvGlimmerSunSHWindow.Get(), 0.0f, 1.0f);
+
+    for (uint32 term = 0; term < GlimmerLightTerms; term++)
+    {
+        const float hann = 0.5f * (1.0f + MathUtil::Cos(MathUtil::pi<float> * s_bandOfTerm[term] / 3.0f));
+        const float damping = MathUtil::Lerp(1.0f, hann, window);
+
+        outLight.bounceWeights[term] = outLight.directWeights[term] + Vec4f(sunIrradiance * (sunBasis[term] * damping), 0.0f);
     }
 }
 

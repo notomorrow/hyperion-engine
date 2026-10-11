@@ -7,38 +7,26 @@
 #define GLIMMER_RELIGHT_SPAN_TOP 1u
 #define GLIMMER_RELIGHT_SURFACES 2u
 
-// per level: a layer per surface with the sun's visibility for each key (a is negative where there's no surface), then the
-// light the surfaces receive at half the resolution, a part to a quadrant of a layer
-#define GLIMMER_RELIGHT_INDIRECT_RESOLUTION (GLIMMER_GROUND_RESOLUTION / 2)
-#define GLIMMER_RELIGHT_INDIRECT_LAYERS ((GLIMMER_RELIGHT_SURFACES * GLIMMER_LIGHT_PARTS + 3) / 4)
-#define GLIMMER_RELIGHT_LAYERS (GLIMMER_RELIGHT_SURFACES + GLIMMER_RELIGHT_INDIRECT_LAYERS)
+// what the surfaces receive, at half the ground's resolution, a part to a quadrant of a layer
+// a is negative in a surface's first part where a block has none of it
+#define GLIMMER_RELIGHT_RESOLUTION (GLIMMER_GROUND_RESOLUTION / 2)
+#define GLIMMER_RELIGHT_LAYERS ((GLIMMER_RELIGHT_SURFACES * GLIMMER_LIGHT_PARTS + 3) / 4)
 
 struct GlimmerRelightParams
 {
     int4 levels[GLIMMER_GROUND_LEVELS]; // xy = absolute texel of the lit window's origin, z = 1 once all of it has been lit
 };
 
-struct GlimmerRelitSurface
-{
-    GlimmerLight indirect;
-    GlimmerSunVisibility sunVisibility;
-};
-
-uint3 GlimmerRelightVisibilityTexel(int2 texel, uint level, uint surface)
-{
-    return uint3(GlimmerWrapGroundTexel(texel), level * GLIMMER_RELIGHT_LAYERS + surface);
-}
-
-uint3 GlimmerRelightIndirectTexel(int2 texel, uint level, uint surface, uint part)
+uint3 GlimmerRelightTexel(int2 texel, uint level, uint surface, uint part)
 {
     const uint index = surface * GLIMMER_LIGHT_PARTS + part;
     const uint quadrant = index & 3u;
 
-    const uint2 block = uint2((texel >> 1) & (GLIMMER_RELIGHT_INDIRECT_RESOLUTION - 1));
+    const uint2 block = uint2((texel >> 1) & (GLIMMER_RELIGHT_RESOLUTION - 1));
 
     return uint3(
-        block + uint2(quadrant & 1u, quadrant >> 1) * GLIMMER_RELIGHT_INDIRECT_RESOLUTION,
-        level * GLIMMER_RELIGHT_LAYERS + GLIMMER_RELIGHT_SURFACES + (index >> 2));
+        block + uint2(quadrant & 1u, quadrant >> 1) * GLIMMER_RELIGHT_RESOLUTION,
+        level * GLIMMER_RELIGHT_LAYERS + (index >> 2));
 }
 
 // the texel of each 2x2 block that lights the block (the ground's windows start on even texels, so it's always in with its block)
@@ -57,10 +45,9 @@ bool GlimmerRelightCovers(bool isGroundHit, float3 hitNormal)
 #if defined(GLIMMER_RELIGHT_WITH_SAMPLING) && !defined(GLIMMER_RELIGHT_SAMPLING_HLSLI)
 #define GLIMMER_RELIGHT_SAMPLING_HLSLI
 
-bool GlimmerSampleRelight(GlimmerRelightParams params, GlimmerGroundParams ground, uint level, float2 worldXZ, uint surface, out GlimmerRelitSurface outRelit)
+bool GlimmerSampleRelight(GlimmerRelightParams params, GlimmerGroundParams ground, uint level, float2 worldXZ, uint surface, out GlimmerLight outReceived)
 {
-    outRelit.indirect = GlimmerNoLight();
-    outRelit.sunVisibility = GlimmerNoSunVisibility();
+    outReceived = GlimmerNoLight();
 
     const int4 litWindow = params.levels[level];
 
@@ -76,22 +63,18 @@ bool GlimmerSampleRelight(GlimmerRelightParams params, GlimmerGroundParams groun
         return false;
     }
 
-    const float4 visibility = glimmerRelight.Load(int4(GlimmerRelightVisibilityTexel(texel, level, surface), 0));
+    const float4 first = glimmerRelight.Load(int4(GlimmerRelightTexel(texel, level, surface, 0u), 0));
 
-    if (visibility.a < 0.0)
+    if (first.a < 0.0)
     {
         return false;
     }
 
-    [unroll]
-    for (uint key = 0; key < GLIMMER_SUN_KEYS; key++)
-    {
-        outRelit.sunVisibility.keys[key] = visibility[key];
-    }
+    outReceived.parts[0] = first.rgb;
 
-    for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
+    for (uint part = 1; part < GLIMMER_LIGHT_PARTS; part++)
     {
-        outRelit.indirect.parts[part] = glimmerRelight.Load(int4(GlimmerRelightIndirectTexel(texel, level, surface, part), 0)).rgb;
+        outReceived.parts[part] = glimmerRelight.Load(int4(GlimmerRelightTexel(texel, level, surface, part), 0)).rgb;
     }
 
     return true;

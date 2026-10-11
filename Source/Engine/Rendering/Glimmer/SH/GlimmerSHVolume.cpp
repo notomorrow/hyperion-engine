@@ -62,11 +62,10 @@ static constexpr int32 RefreshSliceVoxels = int32(GlimmerSHGridXZ * GlimmerSHGri
 static constexpr float RadianceHysteresis = 0.5f;
 
 // GLIMMER_SH_RADIANCE_SECTIONS, laid out GLIMMER_SH_RADIANCE_COLUMNS across
-static constexpr uint32 RadianceSections = 3 * (1 + GlimmerLightParts);
+static constexpr uint32 RadianceSections = 3 + GlimmerLightEntries;
 static constexpr uint32 RadianceColumns = 8;
 static constexpr uint32 RadianceRows = (RadianceSections + RadianceColumns - 1) / RadianceColumns;
 
-static constexpr uint32 MaxRelightWaitFrames = 64;
 static constexpr uint32 MaxOccupancyWaitFrames = 8;
 
 struct GlimmerSHUpdateConstants
@@ -127,12 +126,6 @@ GlimmerSHVolume::GlimmerSHVolume()
       m_seenTLASGeneration(~0u),
       m_occupancyWaitFrames(0),
       m_refreshBudget(0),
-      m_burstPassesLeft(0),
-      m_burstSlices {},
-      m_burstDoneCascades(0),
-      m_relightWaitFrames(0),
-      m_burstSkipsHistory(false),
-      m_isWakePending(false),
       m_composedLight {},
       m_hasComposedLight(false),
       m_shaderData {}
@@ -527,21 +520,9 @@ void GlimmerSHVolume::Compose(Frame* frame, const GlimmerLightShaderData& light)
     m_hasComposedLight = true;
 }
 
-void GlimmerSHVolume::StartBurstPass()
-{
-    m_burstDoneCascades = 0;
-
-    for (int32& burstSlice : m_burstSlices)
-    {
-        burstSlice = INT32_MIN;
-    }
-}
-
 void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& inputs)
 {
     HYP_SCOPE;
-
-    m_isWakePending |= bool(inputs.lightingChanges);
 
     if (!inputs.surfaceCache || !inputs.spanCache || !inputs.spanCache->GetSpansBuffer().IsValid() || !inputs.occupancy || !inputs.occupancyMaskBuffer.IsValid())
     {
@@ -554,7 +535,7 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
     }
 
     // voxels that aren't traced this frame still hold the light as it was put together before
-    if (m_shaderData.info.w != 0 && (!m_hasComposedLight || !m_composedLight.HasSameWeights(inputs.light)))
+    if (m_shaderData.info.w != 0 && (!m_hasComposedLight || !(m_composedLight == inputs.light)))
     {
         Compose(frame, inputs.light);
     }
@@ -679,93 +660,11 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
 
     if (g_cvGlimmerRunOnChange.Get())
     {
-        if (m_isWakePending)
-        {
-            m_isWakePending = false;
-
-            if (m_burstPassesLeft == 0)
-            {
-                m_burstPassesLeft = int32(GlimmerLightingBurstPasses);
-                m_burstSkipsHistory = true;
-
-                StartBurstPass();
-            }
-            else
-            {
-                // the pass under way has traced some voxels under the lighting of before, so it doesn't count
-                m_burstPassesLeft = int32(GlimmerLightingBurstPasses + 1);
-            }
-        }
-
-        const bool isBursting = m_burstPassesLeft > 0;
-        const int32 rate = MathUtil::Max(isBursting ? g_cvGlimmerSHRefreshVoxelsBurst.Get() : g_cvGlimmerSHRefreshVoxels.Get(), 0);
+        const int32 rate = MathUtil::Max(g_cvGlimmerSHRefreshVoxels.Get(), 0);
 
         m_refreshBudget = MathUtil::Min(m_refreshBudget + rate, MathUtil::Max(rate, RefreshSliceVoxels) * 2);
 
-        // ground hits take the sun's visibility from the relight, which has to catch up with the change first
-        const bool isWaitingForRelight = isBursting && !inputs.isRelightSettled && m_relightWaitFrames < MaxRelightWaitFrames;
-
-        if (isWaitingForRelight)
-        {
-            m_relightWaitFrames++;
-        }
-
-        while (m_burstPassesLeft > 0 && !isWaitingForRelight && m_refreshBudget >= RefreshSliceVoxels)
-        {
-            const float radianceHysteresis = m_burstSkipsHistory ? 0.0f : RadianceHysteresis;
-
-            bool hasDispatched = false;
-
-            // finest first; a cascade still tracing what changed or scrolled in gives its turn to the next
-            for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades && !hasDispatched; cascadeIndex++)
-            {
-                if (m_burstDoneCascades & (1u << cascadeIndex))
-                {
-                    continue;
-                }
-
-                bool hasFinishedCascade = false;
-
-                hasDispatched = DispatchRefreshSlice(frame, cascadeIndex, m_burstSlices[cascadeIndex], radianceHysteresis, hasFinishedCascade, inputs, hasBarriers);
-
-                if (hasDispatched)
-                {
-                    m_refreshBudget -= RefreshSliceVoxels;
-                }
-
-                if (hasFinishedCascade)
-                {
-                    m_burstDoneCascades |= 1u << cascadeIndex;
-                }
-            }
-
-            if (m_burstDoneCascades != (1u << GlimmerSHCascades) - 1u)
-            {
-                if (!hasDispatched)
-                {
-                    break;
-                }
-
-                continue;
-            }
-
-            m_burstSkipsHistory = false;
-
-            if (--m_burstPassesLeft > 0)
-            {
-                StartBurstPass();
-            }
-            else
-            {
-                m_relightWaitFrames = 0;
-            }
-        }
-
-        for (uint32 attempt = 0;
-            m_burstPassesLeft == 0
-                && attempt < 2 * GlimmerSHCascades
-                && m_refreshBudget >= RefreshSliceVoxels;
-            attempt++)
+        for (uint32 attempt = 0; attempt < 2 * GlimmerSHCascades && m_refreshBudget >= RefreshSliceVoxels; attempt++)
         {
             uint32 ruler = ++m_refreshStep;
             uint32 cascadeIndex = 0;
@@ -789,12 +688,6 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
         }
 
         budget = 0;
-    }
-    else
-    {
-        m_burstPassesLeft = 0;
-        m_relightWaitFrames = 0;
-        m_isWakePending = false;
     }
 
     const int32 sliceVoxels = RefreshSliceVoxels;

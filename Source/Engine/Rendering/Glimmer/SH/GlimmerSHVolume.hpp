@@ -64,14 +64,11 @@ struct GlimmerSHVolumeUpdateInputs
 
     const GlimmerRelightShaderData* relight = nullptr;
     GpuImageViewRef relightImageView;
-    bool isRelightSettled = true;
 
     const GlimmerSWRTProbeVolume* probeVolume = nullptr;
 
     EnvProbe* skyProbe = nullptr;
     const CloudPass* cloudPass = nullptr;
-
-    EnumFlags<GlimmerLightingChangeFlags> lightingChanges = GlimmerLightingChangeFlags::None;
 
     GlimmerLightShaderData light;
 };
@@ -91,11 +88,6 @@ public:
     HYP_FORCE_INLINE bool IsReady() const
     {
         return m_shaderData.info.w != 0;
-    }
-
-    HYP_FORCE_INLINE bool IsBursting() const
-    {
-        return m_burstPassesLeft > 0;
     }
 
     HYP_FORCE_INLINE const GlimmerSHVolumeShaderData& GetShaderData() const
@@ -156,7 +148,6 @@ private:
         const GlimmerSHVolumeUpdateInputs& inputs,
         bool& inOutHasBarriers);
 
-    void StartBurstPass();
     void Compose(Frame* frame, const GlimmerLightShaderData& light);
 
     Handle<Texture> m_dataTexture;      // sky visibility L1
@@ -172,12 +163,6 @@ private:
     uint32 m_occupancyWaitFrames;
 
     int32 m_refreshBudget;                              /// voxels the refresh may still trace, carried between frames so a rate below a slice still gets its turn
-    int32 m_burstPassesLeft;                            /// passes over every cascade a burst still has to make, the one under way included
-    FixedArray<int32, GlimmerSHCascades> m_burstSlices;
-    uint32 m_burstDoneCascades;                         /// bit per cascade the pass under way is through with
-    uint32 m_relightWaitFrames;
-    bool m_burstSkipsHistory;                           /// the pass under way replaces the radiance rather than blending into what the old lighting left
-    bool m_isWakePending;                               /// the lighting changed while the volume couldn't update
 
     GlimmerLightShaderData m_composedLight;
     bool m_hasComposedLight;

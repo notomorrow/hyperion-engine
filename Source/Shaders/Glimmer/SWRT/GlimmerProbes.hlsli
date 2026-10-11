@@ -180,11 +180,11 @@ float GlimmerSampleProbeLevelLight(GlimmerProbeVolume volume, uint levelIndex, f
         return 0.0;
     }
 
-    float4 sums[GLIMMER_LIGHT_PARTS * 3];
+    float4 entries[GLIMMER_LIGHT_ENTRIES];
 
-    for (uint sumIndex = 0; sumIndex < GLIMMER_LIGHT_PARTS * 3; sumIndex++)
+    for (uint clearEntry = 0; clearEntry < GLIMMER_LIGHT_ENTRIES; clearEntry++)
     {
-        sums[sumIndex] = (float4)0.0;
+        entries[clearEntry] = (float4)0.0;
     }
 
     [unroll]
@@ -193,22 +193,17 @@ float GlimmerSampleProbeLevelLight(GlimmerProbeVolume volume, uint levelIndex, f
         [branch]
         if (taps.weights[tap] > 0.0)
         {
-            const uint base = taps.indices[tap] * (GLIMMER_LIGHT_PARTS * 3u);
+            const uint base = taps.indices[tap] * GLIMMER_LIGHT_ENTRIES;
+            const float weight = taps.weights[tap] / taps.weightSum;
 
-            for (uint entry = 0; entry < GLIMMER_LIGHT_PARTS * 3; entry++)
+            for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
             {
-                sums[entry] += glimmerProbeLight[base + entry] * taps.weights[tap];
+                entries[entry] += glimmerProbeLight[base + entry] * weight;
             }
         }
     }
 
-    const float invWeightSum = 1.0 / taps.weightSum;
-
-    [unroll]
-    for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
-    {
-        outLight.parts[part] = GlimmerEvaluateLightPart(part, sums[part * 3u] * invWeightSum, sums[part * 3u + 1u] * invWeightSum, sums[part * 3u + 2u] * invWeightSum, N);
-    }
+    outLight = GlimmerEvaluateStoredLight(entries, N);
 
     return levelWeight;
 }
@@ -291,12 +286,14 @@ bool SampleGlimmerNearestProbeLight(GlimmerProbeVolume volume, float3 P, float3 
             continue;
         }
 
-        const uint base = probeIndex * (GLIMMER_LIGHT_PARTS * 3u);
+        float4 entries[GLIMMER_LIGHT_ENTRIES];
 
-        for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
+        for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
         {
-            outLight.parts[part] = GlimmerEvaluateLightPart(part, glimmerProbeLight[base + part * 3u], glimmerProbeLight[base + part * 3u + 1u], glimmerProbeLight[base + part * 3u + 2u], N);
+            entries[entry] = glimmerProbeLight[probeIndex * GLIMMER_LIGHT_ENTRIES + entry];
         }
+
+        outLight = GlimmerEvaluateStoredLight(entries, N);
 
         return true;
     }

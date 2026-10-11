@@ -119,28 +119,7 @@ private:
     UniquePtr<GlimmerSHVolume> m_shVolume;
     UniquePtr<GlimmerRelight> m_relight;
 
-    // what of the lighting changed enough to wake the caches
-    EnumFlags<GlimmerLightingChangeFlags> UpdateLightingSignature(EnvProbe* skyProbe);
-
     uint32 m_maskGeneration;
-
-    // points the sun's keys along its path; true when a key was pointed somewhere new
-    bool UpdateSunKeys(const Vec3f& sunDirection);
-
-    GlimmerSunKeyState m_sunKeys;
-    uint32 m_sunKeyFrom;     // the key behind the sun; the other is ahead of it
-    float m_sunKeyWeight;    // how much of the key ahead the sun is at
-    bool m_hasSunKeys;
-    bool m_hasSunPath;       // the key ahead is somewhere the sun is headed
-    bool m_isSunKeySettling; // the key ahead was put on a sun at rest and is being lit
-    Vec3f m_lastSunDirection;
-    double m_lastSunMoveSeconds;
-    double m_sunKeySettleSeconds;
-    double m_sunKeyUpdateSeconds;
-
-    // the lighting the caches were last woken for
-    Vec3f m_litSkyShape[3];
-    bool m_hasLitSignature;
 };
 
 } // namespace Hyperion

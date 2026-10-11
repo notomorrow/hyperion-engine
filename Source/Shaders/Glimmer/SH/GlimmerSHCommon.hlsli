@@ -25,9 +25,9 @@ uint3 GlimmerSHTexel(uint cascadeIndex, int3 voxel)
         uint(voxel.z & (GLIMMER_SH_GRID_XZ - 1)));
 }
 
-// the radiance texture holds the light put together first, then each part of it, 3 channels each: a section per channel,
+// the radiance texture holds the light put together first (r, g, b), then every entry of what a voxel holds: a section each,
 // laid out GLIMMER_SH_RADIANCE_COLUMNS across
-#define GLIMMER_SH_RADIANCE_SECTIONS (3 * (1 + GLIMMER_LIGHT_PARTS))
+#define GLIMMER_SH_RADIANCE_SECTIONS (3 + GLIMMER_LIGHT_ENTRIES)
 #define GLIMMER_SH_RADIANCE_COLUMNS 8
 #define GLIMMER_SH_RADIANCE_ROW_STRIDE (GLIMMER_SH_CASCADES * GLIMMER_SH_GRID_Y)
 

@@ -24,17 +24,12 @@ namespace Hyperion {
 static constexpr uint32 RelightTexelsPerFrame = 4096;
 static constexpr size_t MaxPendingRects = 16;
 
-static constexpr uint32 BurstPassTexels = GlimmerGroundLevels * GlimmerGroundResolution * GlimmerGroundResolution;
-
 #pragma region GlimmerRelight
 
 GlimmerRelight::GlimmerRelight()
     : m_groundGeneration(~0u),
       m_refreshLevel(0),
       m_refreshBudget(0),
-      m_scheduledRefreshTexels(0),
-      m_burstTexelsLeft(0),
-      m_sunTexelsLeft(0),
       m_shaderData {}
 {
 }
@@ -89,8 +84,7 @@ void GlimmerRelight::AddPending(Level& level, const Rect& rect)
 void GlimmerRelight::Schedule(
     const GlimmerChannelState& state,
     const GlimmerSurfaceCache& surfaceCache,
-    const GlimmerSpanCache& spanCache,
-    EnumFlags<GlimmerLightingChangeFlags> lightingChanges)
+    const GlimmerSpanCache& spanCache)
 {
     HYP_SCOPE;
 
@@ -205,18 +199,7 @@ void GlimmerRelight::Schedule(
 
     if (runOnChange)
     {
-        if (lightingChanges)
-        {
-            m_burstTexelsLeft = int32(GlimmerLightingBurstPasses * BurstPassTexels);
-        }
-
-        // the sun's visibility is right again after one pass
-        if (lightingChanges & GlimmerLightingChangeFlags::SunDirection)
-        {
-            m_sunTexelsLeft = int32(BurstPassTexels);
-        }
-
-        const int32 rate = MathUtil::Max(m_burstTexelsLeft > 0 ? g_cvGlimmerRelightTexelsBurst.Get() : g_cvGlimmerRelightTexels.Get(), 0);
+        const int32 rate = MathUtil::Max(g_cvGlimmerRelightTexels.Get(), 0);
 
         m_refreshBudget = MathUtil::Min(m_refreshBudget + rate, MathUtil::Max(rate, rowTexels) * 2);
 
@@ -270,27 +253,8 @@ void GlimmerRelight::Schedule(
 
     if (runOnChange)
     {
-        // the bursts only move on once these have been dispatched
-        m_scheduledRefreshTexels = refreshBudget - budget;
-
-        m_refreshBudget -= m_scheduledRefreshTexels;
+        m_refreshBudget -= refreshBudget - budget;
     }
-    else
-    {
-        m_scheduledRefreshTexels = 0;
-        m_burstTexelsLeft = 0;
-        m_sunTexelsLeft = 0;
-    }
-}
-
-bool GlimmerRelight::IsBursting() const
-{
-    return m_burstTexelsLeft > 0;
-}
-
-bool GlimmerRelight::IsBurstRelightingSun() const
-{
-    return m_sunTexelsLeft > 0;
 }
 
 void GlimmerRelight::OnDispatched()
@@ -308,10 +272,6 @@ void GlimmerRelight::OnDispatched()
         m_shaderData.levels[levelIndex] = Vec4i(level.windowOrigin.x, level.windowOrigin.y, level.isLit ? 1 : 0, 0);
     }
 
-    m_burstTexelsLeft = MathUtil::Max(m_burstTexelsLeft - m_scheduledRefreshTexels, 0);
-    m_sunTexelsLeft = MathUtil::Max(m_sunTexelsLeft - m_scheduledRefreshTexels, 0);
-    m_scheduledRefreshTexels = 0;
-
     m_dispatches.Clear();
 }
 
@@ -326,9 +286,6 @@ void GlimmerRelight::Invalidate()
     m_shaderData = GlimmerRelightShaderData {};
 
     m_refreshBudget = 0;
-    m_scheduledRefreshTexels = 0;
-    m_burstTexelsLeft = 0;
-    m_sunTexelsLeft = 0;
 }
 
 #pragma endregion GlimmerRelight

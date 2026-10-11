@@ -231,11 +231,11 @@ float GlimmerSHSampleCascadeLight(GlimmerSHVolume volume, uint cascadeIndex, flo
         return 0.0;
     }
 
-    float4 sums[GLIMMER_LIGHT_PARTS * 3];
+    float4 entries[GLIMMER_LIGHT_ENTRIES];
 
-    for (uint sumIndex = 0; sumIndex < GLIMMER_LIGHT_PARTS * 3; sumIndex++)
+    for (uint clearEntry = 0; clearEntry < GLIMMER_LIGHT_ENTRIES; clearEntry++)
     {
-        sums[sumIndex] = (float4)0.0;
+        entries[clearEntry] = (float4)0.0;
     }
 
     [unroll]
@@ -244,20 +244,16 @@ float GlimmerSHSampleCascadeLight(GlimmerSHVolume volume, uint cascadeIndex, flo
         [branch]
         if (taps.weights[tap] > 0.0)
         {
-            for (uint entry = 0; entry < GLIMMER_LIGHT_PARTS * 3; entry++)
+            const float weight = taps.weights[tap] / taps.weightSum;
+
+            for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
             {
-                sums[entry] += GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(taps.texels[tap], entry)) * taps.weights[tap];
+                entries[entry] += GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(taps.texels[tap], entry)) * weight;
             }
         }
     }
 
-    const float invWeightSum = 1.0 / taps.weightSum;
-
-    [unroll]
-    for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
-    {
-        outLight.parts[part] = GlimmerEvaluateLightPart(part, sums[part * 3u] * invWeightSum, sums[part * 3u + 1u] * invWeightSum, sums[part * 3u + 2u] * invWeightSum, N);
-    }
+    outLight = GlimmerEvaluateStoredLight(entries, N);
 
     return cascadeWeight;
 }
@@ -334,15 +330,14 @@ bool GlimmerSHSampleNearestLight(GlimmerSHVolume volume, float3 P, float3 N, out
             continue;
         }
 
-        for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
+        float4 entries[GLIMMER_LIGHT_ENTRIES];
+
+        for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
         {
-            outLight.parts[part] = GlimmerEvaluateLightPart(
-                part,
-                GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(texel, part * 3u)),
-                GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(texel, part * 3u + 1u)),
-                GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(texel, part * 3u + 2u)),
-                N);
+            entries[entry] = GLIMMER_SH_LOAD_RADIANCE(GlimmerSHLightTexel(texel, entry));
         }
+
+        outLight = GlimmerEvaluateStoredLight(entries, N);
 
         return true;
     }

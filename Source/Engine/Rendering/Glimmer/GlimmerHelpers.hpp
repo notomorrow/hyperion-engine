@@ -39,27 +39,21 @@ static constexpr float GlimmerMaxRayDistance = 2000.0f;
 
 static constexpr uint32 GlimmerMaxLightmapPages = 4;
 
-static constexpr uint32 GlimmerLightingBurstPasses = 3;
+static constexpr uint32 GlimmerLightTerms = 9;
 
-// NOTE must match GLIMMER_SUN_KEYS and GLIMMER_SKY_TERMS in GlimmerLight.hlsli
-static constexpr uint32 GlimmerSunKeys = 2;
-static constexpr uint32 GlimmerSkyTerms = 9;
+static constexpr uint32 GlimmerLightParts = GlimmerLightTerms + 1;
+static constexpr uint32 GlimmerLightEntries = GlimmerLightParts * 3 + GlimmerLightTerms;
 
-static constexpr uint32 GlimmerLightSky = GlimmerSunKeys;
-static constexpr uint32 GlimmerLightRest = GlimmerSunKeys + GlimmerSkyTerms;
-static constexpr uint32 GlimmerLightParts = GlimmerLightRest + 1;
-
-// what the caches hold of the light is split by where it started, and put back together with these
 struct GlimmerLightShaderData
 {
-    Vec4f weights[GlimmerLightParts];    // rgb = what the part is scaled by
-    Vec4f sunDirections[GlimmerSunKeys]; // xyz = toward the key's sun
+    Vec4f bounceWeights[GlimmerLightTerms]; // rgb = the sun's and the sky's SH term
+    Vec4f directWeights[GlimmerLightTerms]; // rgb = the sky's alone
 
-    HYP_FORCE_INLINE bool HasSameWeights(const GlimmerLightShaderData& other) const
+    HYP_FORCE_INLINE bool operator==(const GlimmerLightShaderData& other) const
     {
-        for (uint32 part = 0; part < GlimmerLightParts; part++)
+        for (uint32 term = 0; term < GlimmerLightTerms; term++)
         {
-            if (weights[part] != other.weights[part])
+            if (bounceWeights[term] != other.bounceWeights[term] || directWeights[term] != other.directWeights[term])
             {
                 return false;
             }
@@ -68,15 +62,6 @@ struct GlimmerLightShaderData
         return true;
     }
 };
-
-enum class GlimmerLightingChangeFlags : uint32
-{
-    None = 0x0,
-    SunDirection = 0x1,
-    SkyShape = 0x2 //!< where the sky is bright, not how bright
-};
-
-HYP_MAKE_ENUM_FLAGS(GlimmerLightingChangeFlags);
 
 struct GlimmerSkyShaderData
 {
@@ -135,17 +120,7 @@ void FillGlimmerGroundCover(TerrainWorldGridLayer* terrain, GlimmerChannelState&
 // the sky as both the probe and SH voxel traces see it
 void GetGlimmerSkyShaderData(EnvProbe* skyProbe, GlimmerSkyShaderData& outSky, EnvProbeShaderData& outSkyProbe);
 
-// the sun directions the caches hold the light of, and how much of each the sun is at now
-struct GlimmerSunKeyState
-{
-    Vec3f directions[GlimmerSunKeys];
-    float weights[GlimmerSunKeys];
-};
-
-void GetGlimmerLightShaderData(EnvProbe* skyProbe, const GlimmerSunKeyState& sunKeys, GlimmerLightShaderData& outLight);
-
-// the L1 of the sky relative to its mean
-void GetGlimmerSkyShape(EnvProbe* skyProbe, Vec3f outShape[3]);
+void GetGlimmerLightShaderData(EnvProbe* skyProbe, GlimmerLightShaderData& outLight);
 
 float GetGlimmerFoliageExtinction();
 

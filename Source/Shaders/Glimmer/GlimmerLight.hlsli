@@ -3,22 +3,24 @@
 
 #include "GlimmerCommon.hlsli"
 
-// NOTE must match GlimmerSunKeys and GlimmerSkyTerms in GlimmerHelpers.hpp
-// sky terms: 1 has the sky as the rays see it in units of its brightness; 4 or 9 has what each SH term of the sky adds
-#define GLIMMER_SUN_KEYS 2
-#define GLIMMER_SKY_TERMS 9
+// the SH terms the distant light (the sun and the sky) is in: 4 or 9
+// NOTE must match GlimmerLightTerms in GlimmerHelpers.hpp
+#define GLIMMER_LIGHT_TERMS 9
 
-#define GLIMMER_LIGHT_SKY GLIMMER_SUN_KEYS
-#define GLIMMER_LIGHT_REST (GLIMMER_SUN_KEYS + GLIMMER_SKY_TERMS)
-#define GLIMMER_LIGHT_PARTS (GLIMMER_LIGHT_REST + 1)
+#define GLIMMER_LIGHT_REST GLIMMER_LIGHT_TERMS
+#define GLIMMER_LIGHT_PARTS (GLIMMER_LIGHT_TERMS + 1)
+
+// what a probe or voxel holds, each an L1: the bounce (r, g, b per part), then the direct (one per term)
+#define GLIMMER_LIGHT_DIRECT (GLIMMER_LIGHT_PARTS * 3)
+#define GLIMMER_LIGHT_ENTRIES (GLIMMER_LIGHT_DIRECT + GLIMMER_LIGHT_TERMS)
 
 #define GLIMMER_LIGHT_PACKED_UINTS (GLIMMER_LIGHT_PARTS * 2)
 #define GLIMMER_LIGHT_PACKED_UINTS_PADDED ((GLIMMER_LIGHT_PACKED_UINTS + 3) / 4 * 4)
 
-// a probe ray: its hit distance, then its light
-#define GLIMMER_RAY_UINTS (GLIMMER_LIGHT_PACKED_UINTS + 1)
+// a probe ray: its hit distance, how much of the sky it escaped to, then its light
+#define GLIMMER_RAY_UINTS (GLIMMER_LIGHT_PACKED_UINTS + 2)
 
-// radiance by where its light started: per unit of each sun key's irradiance, per sky term, and the rest as it is
+// light as what each SH term of the distant light adds to it, then the rest (emissive, lightmaps) as it is
 struct GlimmerLight
 {
     float3 parts[GLIMMER_LIGHT_PARTS];
@@ -26,13 +28,8 @@ struct GlimmerLight
 
 struct GlimmerLightParams
 {
-    float4 weights[GLIMMER_LIGHT_PARTS];    // rgb = what the part is scaled by where the light is put back together
-    float4 sunDirections[GLIMMER_SUN_KEYS]; // xyz = toward the key's sun
-};
-
-struct GlimmerSunVisibility
-{
-    float keys[GLIMMER_SUN_KEYS];
+    float4 bounceWeights[GLIMMER_LIGHT_TERMS]; // rgb = the sun's and the sky's SH term
+    float4 directWeights[GLIMMER_LIGHT_TERMS]; // rgb = the sky's alone: the sun's direct light isn't Glimmer's
 };
 
 GlimmerLight GlimmerNoLight()
@@ -76,30 +73,15 @@ void GlimmerAddLight(inout GlimmerLight light, GlimmerLight other, float3 scale)
     }
 }
 
-float3 GlimmerCompose(GlimmerLightParams params, GlimmerLight light)
-{
-    float3 radiance = (float3)0.0;
-
-    [unroll]
-    for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
-    {
-        radiance += light.parts[part] * params.weights[part].rgb;
-    }
-
-    return radiance;
-}
-
-#if GLIMMER_SKY_TERMS > 1
-
-// the SH basis the sky probe's terms are in
-void GlimmerSkyBasis(float3 direction, out float basis[GLIMMER_SKY_TERMS])
+// the SH basis the distant light's terms are in (the sky probe's)
+void GlimmerLightBasis(float3 direction, out float basis[GLIMMER_LIGHT_TERMS])
 {
     basis[0] = 0.282095;
     basis[1] = 0.488603 * direction.y;
     basis[2] = 0.488603 * direction.z;
     basis[3] = 0.488603 * direction.x;
 
-#if GLIMMER_SKY_TERMS > 4
+#if GLIMMER_LIGHT_TERMS > 4
     basis[4] = 1.092548 * direction.x * direction.y;
     basis[5] = 1.092548 * direction.y * direction.z;
     basis[6] = 0.315392 * (3.0 * direction.z * direction.z - 1.0);
@@ -108,40 +90,21 @@ void GlimmerSkyBasis(float3 direction, out float basis[GLIMMER_SKY_TERMS])
 #endif
 }
 
-#endif
-
-GlimmerSunVisibility GlimmerNoSunVisibility()
+// distant light arriving unblocked along a direction
+GlimmerLight GlimmerDistantLight(float3 direction, float scale)
 {
-    GlimmerSunVisibility visibility;
+    GlimmerLight light = GlimmerNoLight();
+
+    float basis[GLIMMER_LIGHT_TERMS];
+    GlimmerLightBasis(direction, basis);
 
     [unroll]
-    for (uint key = 0; key < GLIMMER_SUN_KEYS; key++)
+    for (uint term = 0; term < GLIMMER_LIGHT_TERMS; term++)
     {
-        visibility.keys[key] = 0.0;
+        light.parts[term] = (float3)(basis[term] * scale);
     }
 
-    return visibility;
-}
-
-// whether a key's sun is where an earlier key's is, so what was traced for that one can be taken for it
-bool GlimmerSunKeyRepeats(GlimmerLightParams params, uint key, out uint outEarlierKey)
-{
-    outEarlierKey = 0u;
-
-#if GLIMMER_SUN_KEYS > 1
-    [unroll]
-    for (uint earlierKey = 0; earlierKey < GLIMMER_SUN_KEYS - 1; earlierKey++)
-    {
-        if (earlierKey < key && dot(params.sunDirections[earlierKey].xyz, params.sunDirections[key].xyz) > 0.9999999)
-        {
-            outEarlierKey = earlierKey;
-
-            return true;
-        }
-    }
-#endif
-
-    return false;
+    return light;
 }
 
 uint2 GlimmerPackLightPart(float3 value)
@@ -156,17 +119,72 @@ float3 GlimmerUnpackLightPart(uint2 packed)
     return f16tof32(uint3(packed.x & 0xFFFFu, packed.x >> 16, packed.y & 0xFFFFu));
 }
 
-float3 GlimmerEvaluateLightPart(uint part, float4 shR, float4 shG, float4 shB, float3 N)
+float GlimmerEvaluateLinearL1(float4 sh, float3 N)
 {
-#if GLIMMER_SKY_TERMS > 1
-    // a sky term's response is signed, which the non-negative reconstruction can't take
-    if (part >= GLIMMER_LIGHT_SKY && part < GLIMMER_LIGHT_REST)
-    {
-        return float3(shR.x + dot(shR.yzw, N), shG.x + dot(shG.yzw, N), shB.x + dot(shB.yzw, N));
-    }
-#endif
+    return sh.x + dot(sh.yzw, N);
+}
 
-    return GlimmerEvaluateL1(shR, shG, shB, N);
+// what a surface facing N receives of what a probe or voxel holds: the bounce and the direct together
+GlimmerLight GlimmerEvaluateStoredLight(float4 entries[GLIMMER_LIGHT_ENTRIES], float3 N)
+{
+    GlimmerLight light;
+
+    // a term's response is signed, which the non-negative reconstruction can't take
+    for (uint term = 0; term < GLIMMER_LIGHT_TERMS; term++)
+    {
+        light.parts[term] = float3(
+            GlimmerEvaluateLinearL1(entries[term * 3u], N),
+            GlimmerEvaluateLinearL1(entries[term * 3u + 1u], N),
+            GlimmerEvaluateLinearL1(entries[term * 3u + 2u], N))
+            + GlimmerEvaluateLinearL1(entries[GLIMMER_LIGHT_DIRECT + term], N);
+    }
+
+    light.parts[GLIMMER_LIGHT_REST] = GlimmerEvaluateL1(
+        entries[GLIMMER_LIGHT_REST * 3u],
+        entries[GLIMMER_LIGHT_REST * 3u + 1u],
+        entries[GLIMMER_LIGHT_REST * 3u + 2u],
+        N);
+
+    return light;
+}
+
+// what a probe or voxel holds under the lighting of now, as r, g, b L1s
+void GlimmerComposeStoredLight(GlimmerLightParams params, float4 entries[GLIMMER_LIGHT_ENTRIES], out float4 outComposed[3])
+{
+    [unroll]
+    for (uint channel = 0; channel < 3; channel++)
+    {
+        outComposed[channel] = entries[GLIMMER_LIGHT_REST * 3u + channel];
+    }
+
+    for (uint term = 0; term < GLIMMER_LIGHT_TERMS; term++)
+    {
+        const float3 bounceWeight = params.bounceWeights[term].rgb;
+        const float3 directWeight = params.directWeights[term].rgb;
+
+        const float4 direct = entries[GLIMMER_LIGHT_DIRECT + term];
+
+        outComposed[0] += entries[term * 3u] * bounceWeight.r + direct * directWeight.r;
+        outComposed[1] += entries[term * 3u + 1u] * bounceWeight.g + direct * directWeight.g;
+        outComposed[2] += entries[term * 3u + 2u] * bounceWeight.b + direct * directWeight.b;
+    }
+}
+
+// a ray's light under the lighting of now
+float3 GlimmerComposeRayLight(GlimmerLightParams params, GlimmerLight light, float3 direction, float escape)
+{
+    float basis[GLIMMER_LIGHT_TERMS];
+    GlimmerLightBasis(direction, basis);
+
+    float3 radiance = light.parts[GLIMMER_LIGHT_REST];
+
+    [unroll]
+    for (uint term = 0; term < GLIMMER_LIGHT_TERMS; term++)
+    {
+        radiance += light.parts[term] * params.bounceWeights[term].rgb + params.directWeights[term].rgb * (basis[term] * escape);
+    }
+
+    return radiance;
 }
 
 #endif

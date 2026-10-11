@@ -40,12 +40,9 @@ extern CVar<float> g_cvGlimmerGroundAlbedo; // where the terrain's own albedo is
 
 extern CVar<bool> g_cvGlimmerRunOnChange;
 extern CVar<bool> g_cvGlimmerSkipLodOnlyChanges;   // an instance that only changed LOD does not retrace the SH voxels or wake the probes around it
-extern CVar<float> g_cvGlimmerSunAngleThreshold;   // degrees the sun turns before the lighting counts as changed, or leaves the path its keys are on
-extern CVar<float> g_cvGlimmerSunKeySpacing;       // degrees between the two sun directions the caches hold the light of
+extern CVar<float> g_cvGlimmerSunSHWindow;         // how much the sun's higher SH bands are damped: 0 is sharpest and rings, 1 is widest
 extern CVar<int> g_cvGlimmerSHRefreshVoxels;       // per frame while the lighting holds
-extern CVar<int> g_cvGlimmerSHRefreshVoxelsBurst;  // per frame for one pass over the volume after it changes
 extern CVar<int> g_cvGlimmerRelightTexels;
-extern CVar<int> g_cvGlimmerRelightTexelsBurst;
 
 /// @TODO Move to GlimmerHelpers?
 bool IsGlimmerSceneRequired();
