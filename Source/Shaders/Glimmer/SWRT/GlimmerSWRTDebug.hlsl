@@ -72,9 +72,11 @@ DECLARE_SRV(GlimmerSWRTDebug, GlimmerSHOccupancyMaskBuffer) StructuredBuffer<uin
 #include "GlimmerSWRT.hlsli"
 #include "../GlimmerMaterial.hlsli"
 
-float3 GlimmerCanopyRadiance(float3 P, float3 albedo, float depthBelowTop, float extinction)
+#include "../GlimmerLight.hlsli"
+
+GlimmerLight GlimmerCanopyRadiance(float3 P, float3 albedo, float depthBelowTop, float extinction)
 {
-    return albedo;
+    return GlimmerRestLight(albedo);
 }
 
 #include "../GlimmerHeightfield.hlsli"

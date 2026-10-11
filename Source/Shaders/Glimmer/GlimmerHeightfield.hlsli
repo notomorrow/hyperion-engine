@@ -2,6 +2,7 @@
 #define GLIMMER_HEIGHTFIELD_HLSLI
 
 #include "GlimmerGround.hlsli"
+#include "GlimmerLight.hlsli"
 
 #define GLIMMER_SPAN_SOLID_THRESHOLD 0.4
 
@@ -237,8 +238,8 @@ struct GlimmerHeightfieldHit
     uint level;
     float3 normal;
     float3 albedo;
-    float transmittance; // how much of what's behind (the hit, or the sky) still reaches the origin
-    float3 inscatter;    // light the canopy scattered toward the origin along the way
+    float transmittance;        // how much of what's behind (the hit, or the sky) still reaches the origin
+    GlimmerLight inscatter;     // light the canopy scattered toward the origin along the way
 };
 
 #define GLIMMER_HEIGHTFIELD_MAX_STEPS 128
@@ -288,7 +289,7 @@ bool GlimmerTraceHeightfield(
     hit.normal = float3(0.0, 1.0, 0.0);
     hit.albedo = (float3)0.0;
     hit.transmittance = 1.0;
-    hit.inscatter = (float3)0.0;
+    hit.inscatter = GlimmerNoLight();
 
     float groundHeight;
     uint level;
@@ -390,13 +391,13 @@ bool GlimmerTraceHeightfield(
                 if (accumulateCanopy)
                 {
                     const float3 midpoint = origin + direction * (0.5 * (previousT + t));
-                    const float3 radiance = GlimmerCanopyRadiance(
+                    const GlimmerLight radiance = GlimmerCanopyRadiance(
                         midpoint,
                         spanSample.canopyAlbedo,
                         max(spanSample.canopyMax - midpoint.y, 0.0),
                         canopy.opticalDepth / canopy.length);
 
-                    hit.inscatter += hit.transmittance * (1.0 - segmentTransmittance) * radiance;
+                    GlimmerAddLight(hit.inscatter, radiance, (float3)(hit.transmittance * (1.0 - segmentTransmittance)));
                 }
 
                 hit.transmittance *= segmentTransmittance;

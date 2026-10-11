@@ -129,7 +129,7 @@ void GlimmerSpanCache::FillLevel(
 
     const auto dispatchPass = [&](const StaticShaderPropertyId& modeProperty, uint32 numThreads)
     {
-        const Vec3u groups = helpers::WrapComputeGroupCount((numThreads + SpanGroupSize - 1) / SpanGroupSize);
+        const Vec3u groups = RenderHelpers::WrapComputeGroupCount((numThreads + SpanGroupSize - 1) / SpanGroupSize);
 
         GlimmerSpanSplatConstants constants {};
         constants.window = Vec4i(windowOrigin.x, windowOrigin.y, int32(levelIndex), int32(rects.count));

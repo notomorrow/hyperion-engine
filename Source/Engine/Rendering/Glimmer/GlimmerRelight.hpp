@@ -9,6 +9,7 @@
 #include <Rendering/RenderTypes.hpp>
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
+#include <Rendering/Glimmer/SWRT/GlimmerSWRTProbeVolume.hpp>
 
 #include <Core/Containers/Array.hpp>
 #include <Core/Containers/FixedArray.hpp>
@@ -23,7 +24,9 @@ class Texture;
 class GlimmerSurfaceCache;
 class GlimmerSpanCache;
 
-static constexpr uint32 GlimmerRelightLayers = 2;
+/// GLIMMER_RELIGHT_LAYERS
+/// what the 2 surfaces receive, 4 parts to a layer
+static constexpr uint32 GlimmerRelightLayers = (2 * GlimmerLightParts + 3) / 4;
 
 struct GlimmerRelightShaderData
 {
@@ -49,8 +52,7 @@ public:
     void Schedule(
         const GlimmerChannelState& state,
         const GlimmerSurfaceCache& surfaceCache,
-        const GlimmerSpanCache& spanCache,
-        EnumFlags<GlimmerLightingChangeFlags> lightingChanges);
+        const GlimmerSpanCache& spanCache);
 
     HYP_FORCE_INLINE const Array<GlimmerRelightDispatch>& GetDispatches() const
     {
@@ -58,9 +60,6 @@ public:
     }
 
     void OnDispatched();
-
-    bool IsBursting() const;
-    bool IsBurstRelightingSun() const;
 
     void Invalidate();
 
@@ -85,7 +84,18 @@ private:
         int32 refreshRow = 0; // absolute texel row the refresh is at
     };
 
+    // what is lit again once the probes around it have had time to settle
+    struct Echo
+    {
+        uint32 level;
+        Rect rect;
+        uint32 frame;
+    };
+
     void AddPending(Level& level, const Rect& rect);
+    void AddEcho(uint32 levelIndex, const Rect& rect);
+    void AddEchoAround(const Vec2f& min, const Vec2f& max);
+    void UpdateProbeWindows(const GlimmerChannelState& state);
 
     Handle<Texture> m_texture;
 
@@ -93,9 +103,11 @@ private:
     uint32 m_groundGeneration;
     uint32 m_refreshLevel;
     int32 m_refreshBudget;
-    int32 m_scheduledRefreshTexels; // refresh texels of the last schedule, counted against the bursts as they're dispatched
-    int32 m_burstTexelsLeft;
-    int32 m_sunTexelsLeft;          // what's left of the pass that brings the sun's visibility up to a change of the sun
+
+    Array<Echo> m_echoes;
+    FixedArray<Vec3i, GlimmerProbeLevels> m_probeWindows;
+    bool m_hasProbeWindows;
+    uint32 m_frameIndex;
 
     Array<GlimmerRelightDispatch> m_dispatches;
 

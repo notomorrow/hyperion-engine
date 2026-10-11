@@ -132,7 +132,7 @@ void GlimmerFootprintMask::Rebuild(Frame* frame, const GlimmerTLAS& tlas, const 
 
     const auto dispatchPass = [&](const StaticShaderPropertyId& modeProperty, Vec4u passInfo, uint32 numGroups)
     {
-        const Vec3u groups = helpers::WrapComputeGroupCount(numGroups);
+        const Vec3u groups = RenderHelpers::WrapComputeGroupCount(numGroups);
 
         passInfo.w = groups.x;
 

@@ -11,7 +11,7 @@
 #include <Core/Math/MathUtil.hpp>
 
 namespace Hyperion {
-namespace helpers {
+namespace RenderHelpers {
 
 uint32 MipmapSize(uint32 srcSize, int lod)
 {
@@ -27,6 +27,6 @@ Vec3u WrapComputeGroupCount(uint32 numGroups)
     return Vec3u { groupsX, (numGroups + groupsX - 1) / groupsX, 1 };
 }
 
-} // namespace helpers
+} // namespace RenderHelpers
 
 } // namespace Hyperion

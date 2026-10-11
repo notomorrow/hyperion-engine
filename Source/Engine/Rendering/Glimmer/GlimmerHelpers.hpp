@@ -39,16 +39,21 @@ static constexpr float GlimmerMaxRayDistance = 2000.0f;
 
 static constexpr uint32 GlimmerMaxLightmapPages = 4;
 
-static constexpr uint32 GlimmerLightingBurstPasses = 3;
+static constexpr uint32 GlimmerLightTerms = 9;
 
-enum class GlimmerLightingChangeFlags : uint32
+static constexpr uint32 GlimmerLightParts = GlimmerLightTerms + 1;
+static constexpr uint32 GlimmerLightEntries = GlimmerLightParts * 3 + GlimmerLightTerms;
+
+struct GlimmerLightShaderData
 {
-    None = 0x0,
-    Sun = 0x1, //!< its direction, colour or intensity
-    Sky = 0x2  //!< its brightness
-};
+    Vec4f bounceWeights[GlimmerLightTerms]; // rgb = the sun's and the sky's SH term
+    Vec4f directWeights[GlimmerLightTerms]; // rgb = the sky's alone
 
-HYP_MAKE_ENUM_FLAGS(GlimmerLightingChangeFlags);
+    GlimmerLightShaderData()
+    {
+        Memory::Zero(this, sizeof(GlimmerLightShaderData));
+    }
+};
 
 struct GlimmerSkyShaderData
 {
@@ -106,6 +111,8 @@ void FillGlimmerGroundCover(TerrainWorldGridLayer* terrain, GlimmerChannelState&
 
 // the sky as both the probe and SH voxel traces see it
 void GetGlimmerSkyShaderData(EnvProbe* skyProbe, GlimmerSkyShaderData& outSky, EnvProbeShaderData& outSkyProbe);
+
+void GetGlimmerLightShaderData(EnvProbe* skyProbe, GlimmerLightShaderData& outLight);
 
 float GetGlimmerFoliageExtinction();
 
