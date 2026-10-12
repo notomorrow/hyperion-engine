@@ -60,6 +60,12 @@ static uint64 ComputeDeviceScore(VulkanFeatures& deviceFeatures)
         score += 100000;
     }
 
+    // breaks ties between GPUs of the same type, never outranks discrete vs integrated
+    if (deviceFeatures.IsRayTracingSupported())
+    {
+        score += 50000;
+    }
+
     uint32 numQueueFamilies = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(deviceFeatures.GetPhysicalDevice(), &numQueueFamilies, nullptr);
 

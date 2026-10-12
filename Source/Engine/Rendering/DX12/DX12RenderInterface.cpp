@@ -289,6 +289,14 @@ RendererResult DX12RenderInterface::Initialize()
 
         score += uint64(desc.DedicatedVideoMemory) / (1024 * 1024);
 
+        // breaks ties between GPUs of the same type, never outranks discrete vs integrated
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 {};
+        if (SUCCEEDED(tempDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5)))
+            && options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
+        {
+            score += 50000;
+        }
+
         HYP_LOG(RenderingBackend, Info, "GPU candidate {}: {} (score {})", candidates.Size(), WideString(desc.Description), score);
 
         candidates.PushBack({ adapter, desc, score });

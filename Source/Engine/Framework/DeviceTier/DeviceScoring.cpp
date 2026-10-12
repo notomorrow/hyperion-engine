@@ -14,6 +14,17 @@ namespace Hyperion {
 
 static constexpr uint64 BytesPerGiB = 1024ull * 1024ull * 1024ull;
 
+/// Apple silicon Pro/Max/Whatever gets a bump
+static bool IsAppleProGpu(const GpuInfo& gpu)
+{
+    if (!gpu.gpuModel.StartsWith("Apple M"))
+    {
+        return false;
+    }
+
+    return gpu.gpuModel.Contains(" Pro") || gpu.gpuModel.Contains(" Max") || gpu.gpuModel.Contains(" Ultra");
+}
+
 int ComputeDeviceGradeScore(const DeviceFacts& facts)
 {
     if (!facts.hasGpu)
@@ -27,7 +38,8 @@ int ComputeDeviceGradeScore(const DeviceFacts& facts)
 
     if (facts.gpu.gpuVendor == GpuVendor::Apple)
     {
-        score = 45.0f + MathUtil::Min(vramGiB, 16.0f);
+        // unified memory, so the VRAM term is capped like an integrated GPU
+        score = (IsAppleProGpu(facts.gpu) ? 45.0f : 25.0f) + MathUtil::Min(vramGiB, 4.0f);
     }
     else if (facts.gpu.isDiscrete)
     {
@@ -37,11 +49,6 @@ int ComputeDeviceGradeScore(const DeviceFacts& facts)
     {
         // integrated GPUs report shared system memory as their VRAM
         score = 5.0f + MathUtil::Min(vramGiB, 4.0f);
-    }
-
-    if (facts.gpu.isDiscrete && facts.gpu.supportsRayTracing)
-    {
-        score += 10.0f;
     }
 
     if (facts.logicalCores >= 8)

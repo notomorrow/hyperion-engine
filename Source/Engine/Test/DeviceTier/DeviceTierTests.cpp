@@ -207,7 +207,7 @@ void TestProfileParsing()
 // comment
 TierProfile "DeviceTiers" {
     Rules = [
-        Rule "Parsed.A" {
+        TierRule "Parsed.A" {
             AtMost = { DeviceGrade = Medium }
             Set = {
                 "Test.Count" = 16384
@@ -216,7 +216,7 @@ TierProfile "DeviceTiers" {
                 "Test.Text" = "abc"
             }
         }
-        Rule "Parsed.B" {
+        TierRule "Parsed.B" {
             When = { DeviceType = Laptop, DeviceGrade = Ultra }
             Set = { "Test.Count" = 1 }
         }

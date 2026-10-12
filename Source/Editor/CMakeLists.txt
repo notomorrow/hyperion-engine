@@ -208,6 +208,9 @@ if(DOTNET_EXECUTABLE)
       file(APPEND ${DOTNET_BUILD_WRAPPER} "\"${DOTNET_EXECUTABLE}\" build \"${EDITOR_CSPROJ_PATH}\" --disable-build-servers --no-restore --configuration ${HYP_BUILD_TYPE}\n")
       add_custom_target(Hyperion.Editor ALL
                   COMMAND ${DOTNET_BUILD_WRAPPER}
+                  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_SOURCE_DIR}/../Config/DeviceTiers.hmf"
+                    "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Config/DeviceTiers.hmf"
                   DEPENDS hyperion Hyperion.NET.Shared Hyperion.NET.Runtime Hyperion.NET.Interop
                   WORKING_DIRECTORY ${EDITOR_PROJECT_DIR}
               )
@@ -219,6 +222,9 @@ if(DOTNET_EXECUTABLE)
       execute_process(COMMAND chmod +x ${DOTNET_BUILD_WRAPPER})
       add_custom_target(Hyperion.Editor ALL
                   COMMAND ${DOTNET_BUILD_WRAPPER}
+                  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_SOURCE_DIR}/../Config/DeviceTiers.hmf"
+                    "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Config/DeviceTiers.hmf"
                   DEPENDS hyperion Hyperion.NET.Shared Hyperion.NET.Runtime Hyperion.NET.Interop
                   WORKING_DIRECTORY ${EDITOR_PROJECT_DIR}
               )
