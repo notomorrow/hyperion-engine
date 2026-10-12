@@ -9,6 +9,9 @@
 #define GLIMMER_SH_RADIANCE_COLUMNS 3
 #define GLIMMER_SH_RADIANCE_ROW_STRIDE (GLIMMER_SH_CASCADES * GLIMMER_SH_GRID_Y)
 
+#define GLIMMER_SH_LIGHT_WIDE_ENTRIES GLIMMER_LIGHT_BOUNCE_SCALARS_ENTRY
+#define GLIMMER_SH_LIGHT_UINTS (GLIMMER_SH_LIGHT_WIDE_ENTRIES + GLIMMER_LIGHT_TRANSFER_ENTRIES + (GLIMMER_LIGHT_ENTRIES - GLIMMER_LIGHT_TRANSFER_ENTRIES) * 2)
+
 struct GlimmerSHCascade
 {
     int4 origin;   // xyz = absolute voxel of the window's first voxel, w = 1 once the cascade has a window
@@ -39,10 +42,43 @@ uint3 GlimmerSHRadianceTexel(uint3 texel, uint channel)
     return GlimmerSHRadianceSection(texel, channel);
 }
 
+bool GlimmerSHIsWideLightEntry(uint entry)
+{
+    return entry < GLIMMER_SH_LIGHT_WIDE_ENTRIES || entry >= GLIMMER_LIGHT_TRANSFER_ENTRIES;
+}
+
 uint GlimmerSHLightIndex(uint3 texel, uint entry)
 {
-    return ((texel.z * GLIMMER_SH_RADIANCE_ROW_STRIDE + texel.y) * GLIMMER_SH_GRID_XZ + texel.x) * GLIMMER_LIGHT_ENTRIES + entry;
+    const uint voxelIndex = (texel.z * GLIMMER_SH_RADIANCE_ROW_STRIDE + texel.y) * GLIMMER_SH_GRID_XZ + texel.x;
+
+    return voxelIndex * GLIMMER_SH_LIGHT_UINTS
+        + entry
+        + min(entry, GLIMMER_SH_LIGHT_WIDE_ENTRIES)
+        + (entry > GLIMMER_LIGHT_TRANSFER_ENTRIES ? entry - GLIMMER_LIGHT_TRANSFER_ENTRIES : 0u);
 }
+
+float4 GlimmerSHUnpackLight(uint entry, uint word0, uint word1)
+{
+    if (GlimmerSHIsWideLightEntry(entry))
+    {
+        return GlimmerUnpackLightEntry(uint2(word0, word1));
+    }
+
+    return GlimmerUnpackTransferEntry(word0, GlimmerIsScalarEntry(entry));
+}
+
+uint2 GlimmerSHPackLight(uint entry, float4 value)
+{
+    if (GlimmerSHIsWideLightEntry(entry))
+    {
+        return GlimmerPackLightEntry(value);
+    }
+
+    return uint2(GlimmerPackTransferEntry(value, GlimmerIsScalarEntry(entry)), 0u);
+}
+
+#define GLIMMER_SH_LOAD_LIGHT_FROM(buffer, texel, entry) \
+    GlimmerSHUnpackLight(entry, buffer[GlimmerSHLightIndex(texel, entry)], buffer[GlimmerSHLightIndex(texel, entry) + (GlimmerSHIsWideLightEntry(entry) ? 1u : 0u)])
 
 struct GlimmerSHRadiance
 {

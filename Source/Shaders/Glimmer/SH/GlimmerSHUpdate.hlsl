@@ -47,7 +47,7 @@ DECLARE_BUFFER_DYNAMIC(GlimmerSHUpdate, CBuffer) cbuffer CBuffer
 };
 
 DECLARE_UAV(GlimmerSHUpdate, OutRadiance) RWTexture3D<float4> OutRadiance;
-DECLARE_UAV(GlimmerSHUpdate, OutLight) RWStructuredBuffer<uint2> OutLight;
+DECLARE_UAV(GlimmerSHUpdate, OutLight) RWStructuredBuffer<uint> OutLight;
 
 void GlimmerSHWriteComposed(uint3 texel, float4 entries[GLIMMER_LIGHT_ENTRIES])
 {
@@ -63,7 +63,15 @@ void GlimmerSHWriteLight(uint3 texel, float4 entries[GLIMMER_LIGHT_ENTRIES])
 {
     for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
     {
-        OutLight[GlimmerSHLightIndex(texel, entry)] = GlimmerPackLightEntry(entries[entry]);
+        const uint2 packed = GlimmerSHPackLight(entry, entries[entry]);
+        const uint index = GlimmerSHLightIndex(texel, entry);
+
+        OutLight[index] = packed.x;
+
+        if (GlimmerSHIsWideLightEntry(entry))
+        {
+            OutLight[index + 1u] = packed.y;
+        }
     }
 
     GlimmerSHWriteComposed(texel, entries);
@@ -80,7 +88,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
     for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
     {
-        light[entry] = GlimmerUnpackLightEntry(OutLight[GlimmerSHLightIndex(texel, entry)]);
+        light[entry] = GLIMMER_SH_LOAD_LIGHT_FROM(OutLight, texel, entry);
     }
 
     GlimmerSHWriteComposed(texel, light);
@@ -128,7 +136,7 @@ DECLARE_SRV(GlimmerSHUpdate, GlimmerSHOccupancyMaskBuffer) StructuredBuffer<uint
 #define GLIMMER_SH_LOAD_DATA(texel) OutData[texel]
 #define GLIMMER_SH_LOAD_STATE(texel) OutState[texel]
 #define GLIMMER_SH_LOAD_RADIANCE(texel) OutRadiance[texel]
-#define GLIMMER_SH_LOAD_LIGHT(index) GlimmerUnpackLightEntry(OutLight[index])
+#define GLIMMER_SH_LOAD_LIGHT(texel, entry) GLIMMER_SH_LOAD_LIGHT_FROM(OutLight, texel, entry)
 
 #define GLIMMER_SH_SPLIT
 #define GLIMMER_APPLY_WITH_SAMPLING
@@ -515,7 +523,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     }
 
     float4 visibility = GlimmerSHProjectSum(gsVisibility[0]);
-    float4 light[GLIMMER_LIGHT_ENTRIES];
+    float4 light[GLIMMER_LIGHT_ENTRIES] = (float4[GLIMMER_LIGHT_ENTRIES])0.0;
 
     [unroll]
     for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
@@ -534,9 +542,9 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
             sumB += float4(value.b, value.b * direction);
         }
 
-        light[part * 3u + 0u] = GlimmerSHProjectSum(sumR);
-        light[part * 3u + 1u] = GlimmerSHProjectSum(sumG);
-        light[part * 3u + 2u] = GlimmerSHProjectSum(sumB);
+        GlimmerSetBounceEntry(light, part, 0u, GlimmerSHProjectSum(sumR));
+        GlimmerSetBounceEntry(light, part, 1u, GlimmerSHProjectSum(sumG));
+        GlimmerSetBounceEntry(light, part, 2u, GlimmerSHProjectSum(sumB));
     }
 
     // a ray that got out brings the distant light along it straight in
@@ -555,7 +563,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
             sum += float4(1.0, direction) * (basis[term] * gsRayEscapes[rayIndex]);
         }
 
-        light[GLIMMER_LIGHT_DIRECT + term] = GlimmerSHProjectSum(sum);
+        light[GLIMMER_LIGHT_DIRECT_ENTRY + term] = GlimmerSHProjectSum(sum);
     }
 
     if (hasHistory)
@@ -564,7 +572,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
         for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
         {
-            light[entry] = lerp(light[entry], GlimmerUnpackLightEntry(OutLight[GlimmerSHLightIndex(texel, entry)]), constants.params.w);
+            light[entry] = lerp(light[entry], GLIMMER_SH_LOAD_LIGHT_FROM(OutLight, texel, entry), constants.params.w);
         }
     }
 

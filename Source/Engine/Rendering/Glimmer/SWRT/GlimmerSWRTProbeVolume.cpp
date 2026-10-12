@@ -693,7 +693,7 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
             cr << SetShaderUniform(uniformIndex++, "GlimmerSHDataTexture"_sh, hasSHVolume ? inputs.shVolume->GetDataImageView() : placeholderView);
             cr << SetShaderUniform(uniformIndex++, "GlimmerSHStateTexture"_sh, hasSHVolume ? inputs.shVolume->GetStateImageView() : placeholderView);
             cr << SetShaderUniform(uniformIndex++, "GlimmerSHRadianceTexture"_sh, hasSHVolume ? inputs.shVolume->GetRadianceImageView() : placeholderView);
-            cr << SetShaderUniform(uniformIndex++, "GlimmerSHLightBuffer"_sh, GetBufferOrPlaceholder(hasSHVolume ? inputs.shVolume->GetLightBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(Vec2u)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerSHLightBuffer"_sh, GetBufferOrPlaceholder(hasSHVolume ? inputs.shVolume->GetLightBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
 
             cr << SetShaderUniform(uniformIndex++, "OutRays"_sh, m_raysBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
             cr << SetShaderUniform(uniformIndex++, "RayHits"_sh, m_rayHitsBuffer.Get(), ShaderDataOffset(0, RayHitSize));

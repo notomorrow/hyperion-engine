@@ -96,7 +96,7 @@ DECLARE_SRV(GlimmerProbeTrace, CloudShadowMapTexture) Texture2D cloudShadowMapTe
 DECLARE_SRV(GlimmerProbeTrace, GlimmerSHDataTexture) Texture3D<float4> glimmerSHData;
 DECLARE_SRV(GlimmerProbeTrace, GlimmerSHStateTexture) Texture3D<uint4> glimmerSHState;
 DECLARE_SRV(GlimmerProbeTrace, GlimmerSHRadianceTexture) Texture3D<float4> glimmerSHRadiance;
-DECLARE_SRV(GlimmerProbeTrace, GlimmerSHLightBuffer) StructuredBuffer<uint2> glimmerSHLight;
+DECLARE_SRV(GlimmerProbeTrace, GlimmerSHLightBuffer) StructuredBuffer<uint> glimmerSHLight;
 
 /// GLIMMER_RAY_UINTS per ray: the hit distance (float bits), then the light's parts
 /// the distance is negative for the back face of one sided geometry, 0 where the probe is underground

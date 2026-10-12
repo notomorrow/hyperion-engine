@@ -259,7 +259,7 @@ float GlimmerSHSampleCascadeLight(GlimmerSHVolume volume, uint cascadeIndex, flo
 
             for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
             {
-                entries[entry] += GLIMMER_SH_LOAD_LIGHT(GlimmerSHLightIndex(taps.texels[tap], entry)) * weight;
+                entries[entry] += GLIMMER_SH_LOAD_LIGHT(taps.texels[tap], entry) * weight;
             }
         }
     }
@@ -343,7 +343,7 @@ bool GlimmerSHSampleNearestLight(GlimmerSHVolume volume, float3 P, float3 N, out
 
         for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
         {
-            entries[entry] = GLIMMER_SH_LOAD_LIGHT(GlimmerSHLightIndex(texel, entry));
+            entries[entry] = GLIMMER_SH_LOAD_LIGHT(texel, entry);
         }
 
         outLight = GlimmerEvaluateStoredLight(entries, N);

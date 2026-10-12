@@ -44,7 +44,12 @@ static constexpr uint32 GlimmerMaxLightmapPages = 4;
 static constexpr uint32 GlimmerLightTerms = 9;
 
 static constexpr uint32 GlimmerLightParts = GlimmerLightTerms + 1;
-static constexpr uint32 GlimmerLightEntries = GlimmerLightParts * 3 + GlimmerLightTerms;
+
+// NOTE must match the layout in GlimmerLight.hlsli
+static constexpr uint32 GlimmerLightFullTerms = 4;
+static constexpr uint32 GlimmerLightScalarTerms = GlimmerLightTerms - GlimmerLightFullTerms;
+static constexpr uint32 GlimmerLightTransferEntries = GlimmerLightFullTerms * 3 + (GlimmerLightScalarTerms * 3 + 3) / 4 + GlimmerLightTerms;
+static constexpr uint32 GlimmerLightEntries = GlimmerLightTransferEntries + 3;
 
 struct GlimmerLightShaderData
 {
