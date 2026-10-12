@@ -2,7 +2,8 @@ param(
     [string]$World = "",
     [string]$Package = "",
     [int]$Seconds = 60,
-    [string]$Project = ""
+    [string]$Project = "",
+    [int]$FrameRate = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -103,7 +104,14 @@ $startTime = Get-Date
 
 try
 {
-    Copy-Item (Join-Path $rootDir "Config\EngineConfig.Web.json") (Join-Path $configDir "EngineConfig.json") -Force
+    $engineConfig = Get-Content (Join-Path $rootDir "Config\EngineConfig.Web.json") -Raw
+
+    if ($FrameRate -gt 0)
+    {
+        $engineConfig = $engineConfig -replace '"TargetFrameRate":\s*\d+', "`"TargetFrameRate`": $FrameRate"
+    }
+
+    Set-Content (Join-Path $configDir "EngineConfig.json") $engineConfig -Encoding ascii
 
     $globalConfig = Get-Content (Join-Path $rootDir "Config\GlobalConfig.Web.json") -Raw | ConvertFrom-Json
     $globalConfig.App.Args = "$($globalConfig.App.Args) --basedir=../../../"

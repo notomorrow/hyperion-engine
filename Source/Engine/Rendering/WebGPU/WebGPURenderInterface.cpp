@@ -62,7 +62,7 @@ extern CVar<bool> g_cvIndirectRendering;
 
 #pragma region WebGPURenderConfig
 
-class WebGPURenderConfig final : public IRenderConfig
+struct WebGPURenderConfig final : public RenderConfig
 {
 public:
     WebGPURenderConfig()
@@ -509,7 +509,7 @@ void WebGPURenderInterface::Shutdown()
     }
 }
 
-const IRenderConfig& WebGPURenderInterface::GetRenderConfig() const
+const RenderConfig& WebGPURenderInterface::GetRenderConfig() const
 {
     return *m_renderConfig;
 }
