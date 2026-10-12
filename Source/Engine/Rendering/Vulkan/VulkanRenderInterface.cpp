@@ -98,7 +98,7 @@ enum VulkanDescriptorPoolRequirements : uint8
 
 #pragma region VulkanRenderConfig
 
-class VulkanRenderConfig final : public RenderConfig
+struct VulkanRenderConfig final : public RenderConfig
 {
 public:
     HYP_DEF_POOL_NEW_DELETE(g_vulkanPool);

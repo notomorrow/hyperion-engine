@@ -81,7 +81,7 @@ extern EngineStatTimer g_statGpuWaitTime;
 
 #pragma region DX12RenderConfig
 
-class DX12RenderConfig final : public RenderConfig
+struct DX12RenderConfig final : public RenderConfig
 {
 public:
     DX12RenderConfig()
