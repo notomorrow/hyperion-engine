@@ -26,7 +26,7 @@
 
 namespace Hyperion {
 
-class WebGPURenderConfig;
+struct WebGPURenderConfig;
 class WebGPUAsyncCompute;
 class WebGPUGpuTimerBackend;
 struct WebGPUTransientCommandBuffer;
@@ -80,7 +80,7 @@ public:
     RendererResult Initialize() override;
     void Shutdown() override;
 
-    const IRenderConfig& GetRenderConfig() const override;
+    const RenderConfig& GetRenderConfig() const override;
 
     WebGPUFrame* GetCurrentFrame() const override;
 
