@@ -221,7 +221,7 @@ Handle<Entity> EditorPlayerSetup::AddGround(const Handle<Node>& parent, Name nam
     Handle<Entity> groundEntity = MakeHandle<Entity>();
     groundEntity->SetName(name);
     groundEntity->SetLocalScale(groundScale);
-    groundEntity->SetLocalTranslation(Vec3f(0.0f, GroundSurfaceHeight - meshBounds.GetMax().y * groundScale.y, 0.0f));
+    groundEntity->SetLocalTranslation(Vec3f(0.0f, -1.0f, 0.0f));
     InitObject(groundEntity);
 
     parent->AddChild(groundEntity);

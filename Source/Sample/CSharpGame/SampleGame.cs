@@ -104,7 +104,7 @@ namespace Hyperion.Samples
             Color steelColor = new Color(0.56f, 0.57f, 0.58f, 1.0f);
 
             // ground slab with its top face at y = 0
-            props.Spawn("Ground", PropShape.Box, new Vec3f(0.0f, -0.5f, 0.0f), new Vec3f(80.0f, 1.0f, 80.0f), steelColor, roughness: 0.1f, metalness: 1.0f);
+            props.Spawn("Ground", PropShape.Box, new Vec3f(0.0f, -1.0f, 0.0f), new Vec3f(80.0f, 1.0f, 80.0f), steelColor, roughness: 0.1f, metalness: 1.0f);
 
             // tower platform
             props.Spawn("TowerPlatform", PropShape.Box,
