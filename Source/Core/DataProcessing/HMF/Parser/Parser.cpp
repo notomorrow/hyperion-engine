@@ -554,6 +554,16 @@ bool Parser::ParseValue(const TypeInfo& typeInfo, BoxedValue& out)
         return ParseVectorValue(typeInfo, out);
     }
 
+    if (typeInfo.IsMapType())
+    {
+        return ParseMapValue(typeInfo, out);
+    }
+
+    if (typeInfo.IsSetType())
+    {
+        return ParseSetValue(typeInfo, out);
+    }
+
     if (typeInfo.IsArrayType())
     {
         return ParseArrayValue(typeInfo, out);

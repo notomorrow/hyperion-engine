@@ -17,6 +17,8 @@
 #include <Framework/EngineGlobals.hpp>
 
 #include <Core/DataProcessing/HMF/HMF.hpp>
+#include <Core/DataProcessing/Shared/CompilerError.hpp>
+#include <Core/DataProcessing/Shared/ErrorList.hpp>
 
 #include <Core/IO/ByteReader.hpp>
 
@@ -243,13 +245,26 @@ void DeviceTierResolver::LoadProfile()
         return;
     }
 
-    HMF::ParseResult parseResult = HMF::Parse(profilePath, stream);
+    HMF::ErrorList errorList;
+    HMF::ParseResult parseResult = HMF::Parse(profilePath, stream, &errorList);
+
+    String parseMessages;
+
+    if (errorList.Size() != 0)
+    {
+        errorList.WriteAllMessages(parseMessages);
+    }
 
     if (parseResult.HasError())
     {
-        HYP_LOG(Engine, Warning, "Failed to parse device tier profile {}: {}", profilePath, parseResult.GetError().GetMessage());
+        HYP_LOG(Engine, Warning, "Failed to parse device tier profile {}: {} {}", profilePath, parseResult.GetError().GetMessage(), parseMessages);
 
         return;
+    }
+
+    if (parseMessages.Any())
+    {
+        HYP_LOG(Engine, Warning, "Device tier profile {} read with errors and/or warnings. {}", profilePath, parseMessages);
     }
 
     if (!parseResult.GetValue().Is<TierProfile>())
@@ -263,6 +278,13 @@ void DeviceTierResolver::LoadProfile()
 
     for (const TierRule& rule : parsedProfile.rules)
     {
+        if (rule.set.Empty())
+        {
+            HYP_LOG(Engine, Warning, "Device tier rule \"{}\" ignored!", GetNameView(rule.name));
+
+            continue;
+        }
+
         if (IsValidCondition(rule, rule.when, "When") && IsValidCondition(rule, rule.atMost, "AtMost"))
         {
             m_profile.rules.PushBack(rule);
