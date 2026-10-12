@@ -135,7 +135,12 @@ float GetShadowCSM(in float4 shadowMapCoord, // w = slice
     float bias = HYP_SHADOW_BIAS;
 
     const float2 uv = (clamp(shadowMapCoord.xy, HYP_SHADOW_ATLAS_EDGE_BIAS, 1.0 - HYP_SHADOW_ATLAS_EDGE_BIAS) * atlasScale) + atlasUV;
+#if defined(BACKEND_WEBGPU) && defined(HYP_SAMPLER_NEAREST)
+    // WebGPU has no filtered reads of a depth texture
+    const float4 shadow_sample = SAMPLE_TEXTURE_2D_ARRAY_LOD(HYP_SAMPLER_NEAREST, shadow_maps, float3(uv, layerIndex), 0);
+#else
     const float4 shadow_sample = SAMPLE_TEXTURE_2D_ARRAY_LOD(HYP_SAMPLER_LINEAR, shadow_maps, float3(uv, layerIndex), 0);
+#endif
     const float shadow_depth = shadow_sample.r;
 
     return max(step(shadowMapCoord.z - bias, shadow_depth), 0.0);

@@ -5,7 +5,7 @@
     },
     "SSGI": false,
     "TAA": true,
-    "FogVolumes": false,
+    "FogVolumes": true,
     "PathTracing": false,
     "DDGI": false,
     "RayTracedReflections": false,
