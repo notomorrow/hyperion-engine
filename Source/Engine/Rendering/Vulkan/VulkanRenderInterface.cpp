@@ -685,7 +685,7 @@ const VulkanDeviceRef& VulkanRenderInterface::GetDevice() const
     return m_instance->GetDevice();
 }
 
-const IRenderConfig& VulkanRenderInterface::GetRenderConfig() const
+const RenderConfig& VulkanRenderInterface::GetRenderConfig() const
 {
     return *m_renderConfig;
 }
