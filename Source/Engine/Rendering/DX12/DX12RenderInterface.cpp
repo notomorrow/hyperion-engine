@@ -81,7 +81,7 @@ extern EngineStatTimer g_statGpuWaitTime;
 
 #pragma region DX12RenderConfig
 
-class DX12RenderConfig final : public IRenderConfig
+class DX12RenderConfig final : public RenderConfig
 {
 public:
     DX12RenderConfig()
@@ -570,7 +570,7 @@ void DX12RenderInterface::Shutdown()
     dxgiFactory.Reset();
 }
 
-const IRenderConfig& DX12RenderInterface::GetRenderConfig() const
+const RenderConfig& DX12RenderInterface::GetRenderConfig() const
 {
     return *m_renderConfig;
 }

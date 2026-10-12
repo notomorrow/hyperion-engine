@@ -70,7 +70,7 @@ public:
     RendererResult Initialize() override;
     void Shutdown() override;
 
-    const IRenderConfig& GetRenderConfig() const override;
+    const RenderConfig& GetRenderConfig() const override;
 
     DX12Frame* GetCurrentFrame() const override;
 

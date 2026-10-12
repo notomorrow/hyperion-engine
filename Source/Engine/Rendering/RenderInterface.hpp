@@ -341,7 +341,7 @@ public:
 
     void CommitPipelineState(PSOType psoType, CommandBuffer* commandBuffer);
 
-    virtual const IRenderConfig& GetRenderConfig() const = 0;
+    virtual const RenderConfig& GetRenderConfig() const = 0;
 
     virtual Frame* GetCurrentFrame() const = 0;
 

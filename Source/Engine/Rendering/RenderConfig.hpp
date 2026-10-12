@@ -10,12 +10,8 @@
 
 namespace Hyperion {
 
-class IRenderConfig
+struct RenderConfig
 {
-protected:
-    IRenderConfig() = default;
-
-public:
     // Whether or not the backend supports bindless textures.
     bool bindlessTextures : 1 = false;
 

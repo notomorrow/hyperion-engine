@@ -106,7 +106,7 @@ public:
     RendererResult Initialize() override;
     void Shutdown() override;
 
-    const IRenderConfig& GetRenderConfig() const override;
+    const RenderConfig& GetRenderConfig() const override;
 
     VulkanFrame* GetCurrentFrame() const override;
 

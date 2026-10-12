@@ -114,7 +114,7 @@ void GetDeferredShaderProperties(
     LightType lightType,
     bool clustered)
 {
-    static const IRenderConfig& s_renderConfig = RI.GetRenderConfig();
+    static const RenderConfig& s_renderConfig = RI.GetRenderConfig();
 
     MergeGlobalShaderProperties(outShaderProperties);
 

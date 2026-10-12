@@ -346,7 +346,7 @@ void WriteBufferData_Material(StructuredBuffer& sbuffer, uint32 idx, IRenderProx
 {
     AssertDebug(idx != InvalidBinding);
 
-    static const IRenderConfig& s_renderConfig = RI.GetRenderConfig();
+    static const RenderConfig& s_renderConfig = RI.GetRenderConfig();
     static const bool s_isBindlessSupported = s_renderConfig.bindlessTextures;
 
     RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
@@ -448,7 +448,7 @@ void OnBindingChanged_Material(Material* material, uint32 prev, uint32 next)
 
 void OnBindingChanged_Texture(Texture* texture, uint32 prev, uint32 next)
 {
-    static const IRenderConfig& s_renderConfig = RI.GetRenderConfig();
+    static const RenderConfig& s_renderConfig = RI.GetRenderConfig();
     static const bool s_isBindlessSupported = s_renderConfig.bindlessTextures;
 
     if (next != InvalidBinding)

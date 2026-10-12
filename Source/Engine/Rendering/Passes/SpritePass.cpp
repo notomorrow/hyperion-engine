@@ -412,7 +412,7 @@ void SpritePass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     RI.cbufferAllocator->Write(&cameraProxy->bufferData);
     RI.cbufferAllocator->Commit(cbuffer, cbufferOffset, cbufferSize);
 
-    static const IRenderConfig& s_renderConfig = RI.GetRenderConfig();
+    static const RenderConfig& s_renderConfig = RI.GetRenderConfig();
     static const bool s_isBindlessSupported = s_renderConfig.bindlessTextures;
 
     cr << SetCurrentViewport(renderSetup.viewport);

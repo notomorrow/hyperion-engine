@@ -1031,7 +1031,7 @@ static void SetForwardShadingConstants(
 // forward surfaces take their GI from the same DDGI volume DeferredIndirect samples
 static bool UseForwardDDGI(const DeferredPassData* dpd)
 {
-    static const IRenderConfig& s_renderConfig = RI.GetRenderConfig();
+    static const RenderConfig& s_renderConfig = RI.GetRenderConfig();
 
     return dpd != nullptr
         && dpd->ddgi != nullptr
