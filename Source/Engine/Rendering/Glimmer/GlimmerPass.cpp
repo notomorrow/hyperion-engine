@@ -239,30 +239,13 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     scene->triangleCache->UpdateOncePerFrame(frame);
 
     GlimmerChannelState channelState;
-    
     Array<GlimmerGroundUpload, GlimmerAllocator> groundUploads;
 
     const SharedPtr<GlimmerChannel> channel = GlimmerChannel::Get(renderSetup.world);
 
     if (channel)
     {
-        channel->Consume(channelState, newGroundUploads);
-    }
-
-    Array<GlimmerGroundUpload>& groundUploads = scene->groundUploads;
-
-    if (channelState.groundGeneration != scene->groundUploadGeneration)
-    {
-        groundUploads.Clear();
-
-        scene->groundUploadGeneration = channelState.groundGeneration;
-    }
-
-    const size_t firstGroundUpload = scene->isWarmingUp ? groundUploads.Size() : 0;
-
-    for (GlimmerGroundUpload& upload : newGroundUploads)
-    {
-        groundUploads.PushBack(std::move(upload));
+        channel->Consume(channelState, groundUploads);
     }
 
     const Vec3f viewerPosition = channelState.hasViewer ? channelState.viewerPosition : region.GetCenter();
@@ -305,7 +288,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
         s_statGlimmerTerrainPatches = uint32(terrainPatches.Size());
 
-        scene->surfaceCache->Update(frame, channelState, groundUploads.ToSpan().Slice(firstGroundUpload, groundUploads.Size() - firstGroundUpload), terrainPatches.ToSpan());
+        scene->surfaceCache->Update(frame, channelState, groundUploads.ToSpan(), terrainPatches.ToSpan());
         scene->spanCache->Update(frame, channelState, *scene->tlas, *scene->blasCache, *scene->surfaceCache);
 
         context.channelState = &channelState;
