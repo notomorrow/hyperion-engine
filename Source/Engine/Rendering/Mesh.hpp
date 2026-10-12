@@ -459,6 +459,8 @@ private:
     /// Frees LOD data in place; callers hold the write scope and handle the version bump / MarkDirty.
     void ClearLodData(uint8 firstLodIndex);
 
+    void InvalidateBVH();
+
     HYP_FIELD(Serialize)
     MeshDesc m_meshDesc;
 

@@ -40,6 +40,8 @@
 #include <Core/Math/MathUtil.hpp>
 #include <Core/Memory/Memory.hpp>
 
+#include <Core/Profiling/PerformanceClock.hpp>
+
 #include <Core/Threading/AtomicVar.hpp>
 #include <Core/Threading/Guarded.hpp>
 #include <Core/Threading/TaskSystem.hpp>
@@ -55,6 +57,8 @@
 
 #include <TerrainStreamingCell.generated.inl>
 
+#include <algorithm>
+
 namespace Hyperion {
 
 ENGINE_API HYP_DECLARE_LOG_CHANNEL(WorldGrid);
@@ -67,8 +71,12 @@ static CVar<float> g_cvTerrainGrassRange("Terrain.Grass.Range", 80.0f);
 static CVar<float> g_cvTerrainGrassDensity("Terrain.Grass.Density", 1.0f);
 ///past this, tiles are planted with fewer, wider patches
 static CVar<float> g_cvTerrainGrassNearRange("Terrain.Grass.NearRange", 30.0f);
+///logs how long each batch of grass tiles took to generate and to reach the scene
+static CVar<bool> g_cvTerrainGrassLogTimings("Terrain.Grass.LogTimings", false);
 ///how much further apart, and wider, the patches of far tiles are
 static constexpr float s_grassFarStretch = 1.8f;
+///tiles are built a few at a time, nearest first, so the ground underfoot isn't waiting on the whole cell
+static constexpr uint32 s_grassTilesPerBuild = 8;
 
 
 ///the physics collider always uses the full-resolution grid, regardless of the mesh LODs in memory
@@ -1583,6 +1591,11 @@ void TerrainStreamingCell::RebuildPatchesInRegion(const Vec2i& minVertex, const 
             vertexRange.layoutDesc = StaticVertexInputLayout<VT_Simple | VT_UV1>;
 
             patch.mesh->UpdateDynamicVertexData(0, 0, vertexRange);
+
+            if (patch.mesh->GetBVH().IsValid())
+            {
+                patch.mesh->UpdateDynamicBVH();
+            }
         }
         else
         {
@@ -1742,8 +1755,14 @@ void TerrainStreamingCell::UpdateGrassSelection(Span<const Vec3f> viewpoints)
     const float nearRange = MathUtil::Max(g_cvTerrainGrassNearRange.Get(), 0.0f);
     const float nearHysteresis = float(TerrainGrassTileQuads) * 0.5f * MathUtil::Max(m_cellInfo.scale.x, m_cellInfo.scale.z);
 
-    Array<uint32> tilesToBuild;
-    Array<uint8> tileDetailLevels;
+    struct GrassTileRequest
+    {
+        uint32 tileIndex;
+        uint8 detailLevel;
+        float distance;
+    };
+
+    Array<GrassTileRequest> tilesToBuild;
     Array<uint32> tilesToRelease;
 
     for (uint32 tileIndex = 0; tileIndex < uint32(numTiles); tileIndex++)
@@ -1788,8 +1807,7 @@ void TerrainStreamingCell::UpdateGrassSelection(Span<const Vec3f> viewpoints)
             // a tile being replanted keeps its old cover until the replacement is built
             if (!tile.isBuildQueued && (!tile.isBuilt || detailLevel != tile.detailLevel || tile.coverVersion != coverVersion))
             {
-                tilesToBuild.PushBack(tileIndex);
-                tileDetailLevels.PushBack(detailLevel);
+                tilesToBuild.PushBack(GrassTileRequest { tileIndex, detailLevel, nearestDistance });
             }
         }
         else if (nearestDistance > releaseRange && (tile.isBuilt || tile.slots.Any()))
@@ -1798,9 +1816,25 @@ void TerrainStreamingCell::UpdateGrassSelection(Span<const Vec3f> viewpoints)
         }
     }
 
-    if (tilesToBuild.Any())
+    std::sort(tilesToBuild.Begin(), tilesToBuild.End(), [](const GrassTileRequest& first, const GrassTileRequest& second)
+        {
+            return first.distance < second.distance;
+        });
+
+    for (uint32 firstRequest = 0; firstRequest < uint32(tilesToBuild.Size()); firstRequest += s_grassTilesPerBuild)
     {
-        QueueGrassBuilds(std::move(tilesToBuild), std::move(tileDetailLevels));
+        const uint32 endRequest = MathUtil::Min(firstRequest + s_grassTilesPerBuild, uint32(tilesToBuild.Size()));
+
+        Array<uint32> tileIndices;
+        Array<uint8> tileDetailLevels;
+
+        for (uint32 requestIndex = firstRequest; requestIndex < endRequest; requestIndex++)
+        {
+            tileIndices.PushBack(tilesToBuild[requestIndex].tileIndex);
+            tileDetailLevels.PushBack(tilesToBuild[requestIndex].detailLevel);
+        }
+
+        QueueGrassBuilds(std::move(tileIndices), std::move(tileDetailLevels));
     }
 
     if (tilesToRelease.Any())
@@ -1835,11 +1869,15 @@ void TerrainStreamingCell::QueueGrassBuilds(Array<uint32>&& tileIndices, Array<u
     Array<uint32> tileBuildGenerations;
     tileBuildGenerations.Reserve(tileIndices.Size());
 
+    Array<uint32> tileReleaseGenerations;
+    tileReleaseGenerations.Reserve(tileIndices.Size());
+
     for (uint32 tileIndex : tileIndices)
     {
         m_grassTiles[tileIndex].isBuildQueued = true;
 
         tileBuildGenerations.PushBack(m_grassTiles[tileIndex].buildGeneration);
+        tileReleaseGenerations.PushBack(m_grassTiles[tileIndex].releaseGeneration);
     }
 
     if (!m_grassHeightsSnapshot.IsValid())
@@ -1904,8 +1942,12 @@ void TerrainStreamingCell::QueueGrassBuilds(Array<uint32>&& tileIndices, Array<u
             tileIndices = std::move(tileIndices),
             detailLevels = std::move(detailLevels),
             tileBuildGenerations = std::move(tileBuildGenerations),
+            tileReleaseGenerations = std::move(tileReleaseGenerations),
+            queuedTimestamp = PerformanceClock::Now(),
             buildGeneration = m_grassBuildGeneration]()
         {
+            const uint64 generateStartTimestamp = PerformanceClock::Now();
+
             Array<GrassTileBuild> tileBuilds;
             tileBuilds.Reserve(tileIndices.Size());
 
@@ -1940,11 +1982,14 @@ void TerrainStreamingCell::QueueGrassBuilds(Array<uint32>&& tileIndices, Array<u
                 tileBuild.detailLevel = detailLevel;
                 tileBuild.coverVersion = coverVersion;
                 tileBuild.tileBuildGeneration = tileBuildGenerations[buildIndex];
+                tileBuild.tileReleaseGeneration = tileReleaseGenerations[buildIndex];
 
                 TerrainGrass::GenerateTile(input, tileBuild.output);
 
                 tileBuilds.PushBack(std::move(tileBuild));
             }
+
+            const double generateMs = PerformanceClock::TimeSince(generateStartTimestamp);
 
             ThreadBase* simThread = GetThreadById(g_simThread);
 
@@ -1954,11 +1999,11 @@ void TerrainStreamingCell::QueueGrassBuilds(Array<uint32>&& tileIndices, Array<u
             }
 
             simThread->GetScheduler().Enqueue(
-                [weakThis, tileBuilds = std::move(tileBuilds), buildGeneration]() mutable
+                [weakThis, tileBuilds = std::move(tileBuilds), buildGeneration, queuedTimestamp, generateMs]() mutable
                 {
                     if (Handle<TerrainStreamingCell> cell = weakThis.Lock(); cell.IsValid())
                     {
-                        cell->ApplyGrassBuilds(std::move(tileBuilds), buildGeneration);
+                        cell->ApplyGrassBuilds(std::move(tileBuilds), buildGeneration, queuedTimestamp, generateMs);
                     }
                 },
                 TaskEnqueueFlags::FIRE_AND_FORGET);
@@ -1967,10 +2012,13 @@ void TerrainStreamingCell::QueueGrassBuilds(Array<uint32>&& tileIndices, Array<u
         TaskEnqueueFlags::FIRE_AND_FORGET);
 }
 
-void TerrainStreamingCell::ApplyGrassBuilds(Array<GrassTileBuild>&& tileBuilds, uint32 buildGeneration)
+void TerrainStreamingCell::ApplyGrassBuilds(Array<GrassTileBuild>&& tileBuilds, uint32 buildGeneration, uint64 queuedTimestamp, double generateMs)
 {
     HYP_SCOPE;
     AssertOnThread(g_simThread);
+
+    const uint64 applyStartTimestamp = PerformanceClock::Now();
+    const double queuedToApplyMs = PerformanceClock::TimeSince(queuedTimestamp);
 
     const bool isCurrent = buildGeneration == m_grassBuildGeneration && !m_isRemoved && m_node.IsValid() && m_layer.IsValid() && !IsStale();
 
@@ -2008,13 +2056,15 @@ void TerrainStreamingCell::ApplyGrassBuilds(Array<GrassTileBuild>&& tileBuilds, 
 
         tile.isBuildQueued = false;
 
-        // planted from ground cover that has since changed - asked for again from the current one
+        // planted from ground cover that has since changed, or for a tile released since - asked for again if still wanted
         if (tileBuild.coverVersion != coverVersion
-            || tileBuild.tileBuildGeneration != tile.buildGeneration
+            || tileBuild.tileReleaseGeneration != tile.releaseGeneration
             || tileBuild.output.slots.Size() != numSlots)
         {
             continue;
         }
+
+        const bool isStale = (tileBuild.tileBuildGeneration != tile.buildGeneration);
 
         if (tile.slots.Size() != numSlots || tile.coverVersion != coverVersion)
         {
@@ -2027,7 +2077,7 @@ void TerrainStreamingCell::ApplyGrassBuilds(Array<GrassTileBuild>&& tileBuilds, 
             tile.slots.Resize(numSlots);
         }
 
-        tile.isBuilt = true;
+        tile.isBuilt = !isStale;
         tile.detailLevel = tileBuild.detailLevel;
         tile.coverVersion = coverVersion;
 
@@ -2106,6 +2156,12 @@ void TerrainStreamingCell::ApplyGrassBuilds(Array<GrassTileBuild>&& tileBuilds, 
     {
         m_scene->MarkStaticRenderResourcesChanged();
     }
+
+    if (g_cvTerrainGrassLogTimings.Get())
+    {
+        HYP_LOG(WorldGrid, Info, "Grass for cell {}: {} tiles, generated in {} ms, applied in {} ms, {} ms from queued to applied",
+            m_cellInfo.coord, tileBuilds.Size(), generateMs, PerformanceClock::TimeSince(applyStartTimestamp), queuedToApplyMs);
+    }
 }
 
 void TerrainStreamingCell::ReleaseUnwantedGrassTiles(Array<uint32>&& tileIndices)
@@ -2162,10 +2218,12 @@ void TerrainStreamingCell::ReleaseGrassTile(uint32 tileIndex)
 
     const bool isBuildQueued = tile.isBuildQueued;
     const uint32 buildGeneration = tile.buildGeneration;
+    const uint32 releaseGeneration = tile.releaseGeneration;
 
     tile = GrassTile {};
     tile.isBuildQueued = isBuildQueued;
-    tile.buildGeneration = buildGeneration + 1;
+    tile.buildGeneration = buildGeneration;
+    tile.releaseGeneration = releaseGeneration + 1;
 }
 
 void TerrainStreamingCell::ReleaseAllGrass()

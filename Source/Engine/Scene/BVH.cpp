@@ -32,9 +32,20 @@ HYP_NODISCARD RayTestResults BVHNode::TestRay(
         for (size_t t = 0; t < triangleIds.Size(); ++t)
         {
             const uint32 triangleId = triangleIds[t];
+
+            if (size_t(triangleId) * 3 + 2 >= indices.Size())
+            {
+                continue;
+            }
+
             const uint32 i0 = indices[triangleId * 3 + 0];
             const uint32 i1 = indices[triangleId * 3 + 1];
             const uint32 i2 = indices[triangleId * 3 + 2];
+
+            if (i0 >= vertices.vertexCount || i1 >= vertices.vertexCount || i2 >= vertices.vertexCount)
+            {
+                continue;
+            }
 
             const float* floatDataOffset0 = vertices.floatData + (i0 * vertexSizeInFloats);
             const float* floatDataOffset1 = vertices.floatData + (i1 * vertexSizeInFloats);
@@ -83,9 +94,20 @@ HYP_NODISCARD RayTestResults BVHNode::TestRay(
         for (size_t t = 0; t < triangleIds.Size(); ++t)
         {
             const uint32 triangleId = triangleIds[t];
+
+            if (size_t(triangleId) * 3 + 2 >= indices.Size())
+            {
+                continue;
+            }
+
             const uint32 i0 = indices[triangleId * 3 + 0];
             const uint32 i1 = indices[triangleId * 3 + 1];
             const uint32 i2 = indices[triangleId * 3 + 2];
+
+            if (i0 >= positions.Size() || i1 >= positions.Size() || i2 >= positions.Size())
+            {
+                continue;
+            }
 
             const Triangle tri {
                 {

@@ -168,6 +168,11 @@ void Mesh::SetVertexData(uint8 lodIndex, const VertexArrayView& view)
 
     m_meshDesc.lods[lodIndex].numVertices = uint32(view.vertexCount);
 
+    if (lodIndex == 0)
+    {
+        InvalidateBVH();
+    }
+
 #ifdef HYP_EDITOR
     if (lodIndex == 0)
     {
@@ -185,6 +190,11 @@ void Mesh::SetIndexData(uint8 lodIndex, Span<const ubyte> indexData)
 
     m_meshDesc.lods[lodIndex].numIndices = uint32(indexData.Size() / GpuElemTypeSize(m_meshDesc.meshAttributes.indexBufferElemType));
 
+    if (lodIndex == 0)
+    {
+        InvalidateBVH();
+    }
+
 #ifdef HYP_EDITOR
     if (lodIndex == 0)
     {
@@ -193,6 +203,21 @@ void Mesh::SetIndexData(uint8 lodIndex, Span<const ubyte> indexData)
 #endif // HYP_EDITOR
 
     MarkDirty();
+}
+
+void Mesh::InvalidateBVH()
+{
+    if (m_bvhData.readOnly)
+    {
+        m_bvhData.raw = nullptr;
+    }
+    else
+    {
+        FreeBlobData(m_bvhData);
+    }
+
+    m_bvhData = BlobDataReference {};
+    m_bvh = BVHNode();
 }
 
 void Mesh::SetIsDynamicMesh(bool isDynamic)
@@ -352,6 +377,8 @@ void Mesh::PageBlobData()
         return;
     }
 
+    bool isPlaceholder = false;
+
     for (uint8 lodIndex = 0; lodIndex < MaxMeshLods; lodIndex++)
     {
         BlobDataReference& vertexData = m_lodData[lodIndex].vertexData;
@@ -424,6 +451,15 @@ void Mesh::PageBlobData()
         const size_t vertexSize = MathUtil::Max(VertexInputLayoutDesc { layoutMask }.VertexSize(), size_t(1));
         m_meshDesc.lods[lodIndex].numVertices = uint32(placeholder->vertexData.ByteSize() / vertexSize);
         m_meshDesc.lods[lodIndex].numIndices = uint32(placeholder->indexData.Size());
+
+        isPlaceholder = true;
+    }
+
+    if (isPlaceholder)
+    {
+        m_bvh = BVHNode();
+
+        return;
     }
 
     // Keep BVH data separate from vertex and index data because it is mutually exclusive from them
@@ -772,6 +808,9 @@ void Mesh::SetMeshData(
 {
     auto writeScope = GetWriteScope();
 
+    const bool hadBvh = m_bvh.IsValid();
+    InvalidateBVH();
+
     for (uint8 lodIndex = 0; lodIndex < MaxMeshLods; lodIndex++)
     {
         FreeBlobData(m_lodData[lodIndex].vertexData);
@@ -815,6 +854,21 @@ void Mesh::SetMeshData(
 
     // recalc aabb
     m_aabb = CalculateAABB();
+
+    if (hadBvh)
+    {
+        BVHNode bvh;
+        BuildBVH(bvh);
+
+        if (IsDynamicMesh())
+        {
+            m_bvh = std::move(bvh);
+        }
+        else
+        {
+            SetBVH(std::move(bvh));
+        }
+    }
 
     MarkDirty();
 

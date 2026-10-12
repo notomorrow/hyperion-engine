@@ -142,8 +142,9 @@ private:
         /// the ground cover version the tile was planted with
         uint32 coverVersion = 0;
 
-        /// bumped when the tile's heights or splat weights change, so builds started before are dropped
+        /// bumped when what the tile grows from change
         uint32 buildGeneration = 0;
+        uint32 releaseGeneration = 0;
 
         bool isBuilt = false;
         bool isBuildQueued = false;
@@ -158,6 +159,7 @@ private:
         uint8 detailLevel = 0;
         uint32 coverVersion = 0;
         uint32 tileBuildGeneration = 0;
+        uint32 tileReleaseGeneration = 0;
         TerrainGrassTileOutput output;
     };
 
@@ -239,7 +241,7 @@ private:
     void InvalidateGrass(const Vec2i& minVertex, const Vec2i& maxVertex);
 
     void QueueGrassBuilds(Array<uint32>&& tileIndices, Array<uint8>&& detailLevels);
-    void ApplyGrassBuilds(Array<GrassTileBuild>&& tileBuilds, uint32 buildGeneration);
+    void ApplyGrassBuilds(Array<GrassTileBuild>&& tileBuilds, uint32 buildGeneration, uint64 queuedTimestamp, double generateMs);
 
     void ReleaseUnwantedGrassTiles(Array<uint32>&& tileIndices);
     void ReleaseGrassTile(uint32 tileIndex);

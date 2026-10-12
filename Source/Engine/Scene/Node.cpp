@@ -1181,10 +1181,13 @@ bool Node::TestRay(const Ray& ray, RayTestResults& outResults, EnumFlags<RayTest
                     const Span<const ubyte> indexData = mesh->GetIndexData(0);
 
                     // @TODO fix for non-uint32 indices
-                    localBvhResults = bvh->TestRay(
-                        localSpaceRay,
-                        vertexData,
-                        Span<const uint32>(reinterpret_cast<const uint32*>(indexData.Data()), indexData.Size() / sizeof(uint32)));
+                    if (vertexData.floatData && indexData.Size() != 0)
+                    {
+                        localBvhResults = bvh->TestRay(
+                            localSpaceRay,
+                            vertexData,
+                            Span<const uint32>(reinterpret_cast<const uint32*>(indexData.Data()), indexData.Size() / sizeof(uint32)));
+                    }
                 }
 
                 if (localBvhResults.Any())

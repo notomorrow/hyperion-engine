@@ -1139,6 +1139,11 @@ bool SceneOctree::TestRay(const Ray& ray, RayTestResults& outResults, EnumFlags<
                         const VertexArrayView vertexData = meshComponent->mesh->GetVertexData(0);
                         const Span<const ubyte> indexData = meshComponent->mesh->GetIndexData(0);
 
+                        if (!vertexData.floatData || indexData.Size() == 0)
+                        {
+                            continue;
+                        }
+
                         // @TODO Fix for non-uint32 indices
                         localBvhResults = bvh.TestRay(
                             localSpaceRay,
