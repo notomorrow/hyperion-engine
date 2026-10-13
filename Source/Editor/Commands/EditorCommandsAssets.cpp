@@ -513,20 +513,41 @@ public:
             return;
         }
 
-        Handle<Prefab> prefab = DynamicCast<Prefab>(asset);
-        if (!prefab.IsValid())
+        Handle<Node> clonedNode;
+
+        Handle<Mesh> mesh = DynamicCast<Mesh>(asset);
+        Handle<Material> meshMaterial;
+
+        if (Handle<Prefab> prefab = DynamicCast<Prefab>(asset))
         {
-            HYP_LOG(Editor, Warning, "EditorCommandAddAsset: Expected prefab, got {}", asset->InstanceClass()->GetName());
+            if (subsystem->IsEditingPrefab() && subsystem->GetPrefabEditState()->GetPrefab() == prefab)
+            {
+                HYP_LOG(Editor, Warning, "EditorCommandAddAsset: cannot add prefab '{}' to itself", assetName);
+                return;
+            }
+
+            clonedNode = prefab->Spawn();
+        }
+        else if (mesh.IsValid())
+        {
+            MaterialAttributes attributes;
+            attributes.shaderName = NAME("GeometryPass");
+
+            meshMaterial = MakeHandle<Material>(NAME_FMT("Material_{}", mesh->GetName()), attributes);
+            meshMaterial->SetIsDynamic(true);
+            InitObject(meshMaterial);
+
+            Handle<Entity> meshEntity = MakeHandle<Entity>();
+            meshEntity->SetName(mesh->GetName());
+
+            clonedNode = meshEntity;
+        }
+        else
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandAddAsset: Expected prefab or mesh, got {}", asset->InstanceClass()->GetName());
             return;
         }
 
-        if (subsystem->IsEditingPrefab() && subsystem->GetPrefabEditState()->GetPrefab() == prefab)
-        {
-            HYP_LOG(Editor, Warning, "EditorCommandAddAsset: cannot add prefab '{}' to itself", assetName);
-            return;
-        }
-
-        Handle<Node> clonedNode = prefab->Spawn();
         if (!clonedNode.IsValid())
         {
             HYP_LOG(Editor, Error, "EditorCommandAddAsset: failed to spawn asset '{}'", assetName);
@@ -551,19 +572,41 @@ public:
         Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
             HYP_FORMAT("Add {}", assetName),
             Proc<EditorActionFunctions()>(
-                [clonedNode, parentNode, previousFocusedNode]() -> EditorActionFunctions
+                [clonedNode, parentNode, previousFocusedNode, mesh, meshMaterial]() -> EditorActionFunctions
                 {
                     return EditorActionFunctions {
                         .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [clonedNode, parentNode](EditorSubsystem* editorSubsystem, EditorProject*)
+                            [clonedNode, parentNode, mesh, meshMaterial](EditorSubsystem* editorSubsystem, EditorProject*)
                             {
                                 parentNode->AddChild(clonedNode);
+
+                                if (meshMaterial.IsValid())
+                                {
+                                    GetCurrentAssetRegistry()->PutAssetUnique(meshMaterial);
+                                    editorSubsystem->OnAssetsChanged(AssetBuckets::Materials.GetIndex());
+
+                                    Handle<Entity> meshEntity = DynamicCast<Entity>(clonedNode);
+
+                                    if (!meshEntity->HasComponent<MeshComponent>())
+                                    {
+                                        meshEntity->AddComponent<MeshComponent>(MeshComponent { mesh, meshMaterial });
+                                    }
+
+                                    meshEntity->SetLocalBounds(mesh->GetAABB());
+                                }
+
                                 editorSubsystem->SetFocusedNode(clonedNode, true);
                             }),
                         .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [clonedNode, previousFocusedNode](EditorSubsystem* editorSubsystem, EditorProject*)
+                            [clonedNode, previousFocusedNode, meshMaterial](EditorSubsystem* editorSubsystem, EditorProject*)
                             {
                                 clonedNode->Remove();
+
+                                if (meshMaterial.IsValid())
+                                {
+                                    GetCurrentAssetRegistry()->RemoveAsset(meshMaterial);
+                                    editorSubsystem->OnAssetsChanged(AssetBuckets::Materials.GetIndex());
+                                }
 
                                 if (Handle<Node> focusedNode = previousFocusedNode.Lock(); focusedNode.IsValid())
                                 {
