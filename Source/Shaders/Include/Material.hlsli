@@ -37,9 +37,11 @@ struct Material
     // color variation, ground normal blend, base occlusion, base occlusion height
     float4 ground_cover;
 
+    // albedo with the diffuse map's average folded in
+    float4 average_albedo;
+
     float4 _pad0;
     float4 _pad1;
-    float4 _pad2;
 };
 
 // enum for packed params

@@ -352,6 +352,18 @@ void WriteBufferData_Material(StructuredBuffer& sbuffer, uint32 idx, IRenderProx
     RenderProxyMaterial* proxyCasted = static_cast<RenderProxyMaterial*>(proxy);
     AssertDebug(proxyCasted != nullptr);
 
+    proxyCasted->bufferData.averageAlbedo = proxyCasted->bufferData.albedo;
+
+    const uint32 diffuseTextureIndex = proxyCasted->boundTextureIndices[0];
+
+    if (diffuseTextureIndex != InvalidBinding)
+    {
+        Texture* diffuseTexture = proxyCasted->boundTextures[diffuseTextureIndex];
+        CreateTextureIfNotAlready(diffuseTexture);
+
+        proxyCasted->bufferData.averageAlbedo *= diffuseTexture->GetAverageColor();
+    }
+
     if (!s_isBindlessSupported)
     {
         sbuffer.Write(idx * sizeof(proxyCasted->bufferData), sizeof(proxyCasted->bufferData), &proxyCasted->bufferData);

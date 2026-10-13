@@ -19,6 +19,9 @@ namespace TextureUtils {
 /// Cutout shaders dither minified samples on that fraction instead of testing it against the cutoff.
 void BuildAlphaCoverageMips(const TextureDesc& desc, ByteBuffer& imageData, float alphaCutoff);
 
+/// Linear average of mip 0 of a 2D texture. White where the format can't be read on the CPU.
+Vec4f ComputeAverageColor(const TextureDesc& desc, ConstByteView imageData);
+
 } // namespace TextureUtils
 
 } // namespace Hyperion

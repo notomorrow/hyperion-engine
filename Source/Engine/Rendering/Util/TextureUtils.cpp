@@ -10,6 +10,8 @@
 
 #include <Core/Containers/Array.hpp>
 
+#include <Util/Img/Bitmap.hpp>
+
 #include <utility>
 
 namespace Hyperion {
@@ -86,6 +88,104 @@ void BuildAlphaCoverageMips(const TextureDesc& desc, ByteBuffer& imageData, floa
             height = mipExtent.y;
         }
     }
+}
+
+template <class ComponentType, bool IsSrgb = false>
+static Vec4f ReadTexel(const ubyte* texel, uint32 numComponents)
+{
+    switch (numComponents)
+    {
+    case 1:
+        return ConstPixelReference<ComponentType, 1, IsSrgb>(texel).GetRGBA();
+    case 2:
+        return ConstPixelReference<ComponentType, 2, IsSrgb>(texel).GetRGBA();
+    case 3:
+        return ConstPixelReference<ComponentType, 3, IsSrgb>(texel).GetRGBA();
+    default:
+        return ConstPixelReference<ComponentType, 4, IsSrgb>(texel).GetRGBA();
+    }
+}
+
+Vec4f ComputeAverageColor(const TextureDesc& textureDesc, ConstByteView imageData)
+{
+    static constexpr uint32 maxSamplesPerAxis = 64;
+
+    const TextureFormat format = textureDesc.format;
+
+    const bool isSrgb = textureDesc.IsSrgb();
+    const bool isUnorm8 = (format >= TextureFormat::R8 && format <= TextureFormat::BGRA8) || isSrgb;
+    const bool isUnorm16 = format >= TextureFormat::R16 && format <= TextureFormat::RGBA16;
+    const bool isFloat16 = format >= TextureFormat::R16F && format <= TextureFormat::RGBA16F;
+    const bool isFloat32 = format >= TextureFormat::R32F && format <= TextureFormat::RGBA32F;
+
+    const bool isBgr = (format >= TextureFormat::B8 && format <= TextureFormat::BGRA8)
+        || (format >= TextureFormat::B8_SRGB && format <= TextureFormat::BGRA8_SRGB);
+
+    const uint32 numComponents = TextureUtils::NumComponents(format);
+    const uint32 bytesPerTexel = numComponents * TextureUtils::BytesPerComponent(format);
+
+    if (textureDesc.type != TextureType::Texture2D
+        || !(isUnorm8 || isUnorm16 || isFloat16 || isFloat32)
+        || bytesPerTexel == 0 || numComponents > 4)
+    {
+        return Vec4f::One();
+    }
+
+    const Vec2u extent = textureDesc.extent.GetXY();
+
+    if (imageData.Data() == nullptr || imageData.Size() < size_t(extent.x) * size_t(extent.y) * bytesPerTexel)
+    {
+        return Vec4f::One();
+    }
+
+    const Vec2u stride = { MathUtil::Max(extent.x / maxSamplesPerAxis, 1u), MathUtil::Max(extent.y / maxSamplesPerAxis, 1u) };
+
+    Vec4f sum = Vec4f::Zero();
+    uint32 numSamples = 0;
+
+    for (uint32 y = stride.y / 2; y < extent.y; y += stride.y)
+    {
+        for (uint32 x = stride.x / 2; x < extent.x; x += stride.x)
+        {
+            const ubyte* texel = imageData.Data() + (size_t(y) * extent.x + x) * bytesPerTexel;
+
+            if (isFloat16)
+            {
+                sum += ReadTexel<Float16>(texel, numComponents);
+            }
+            else if (isFloat32)
+            {
+                sum += ReadTexel<float>(texel, numComponents);
+            }
+            else if (isUnorm16)
+            {
+                // read as raw integers, alpha of 1 included where the format has none
+                const Vec4f raw = ReadTexel<uint16>(texel, numComponents);
+
+                sum += Vec4f(raw.x / 65535.0f, raw.y / 65535.0f, raw.z / 65535.0f, numComponents == 4 ? raw.w / 65535.0f : 1.0f);
+            }
+            else
+            {
+                sum += isSrgb ? ReadTexel<ubyte, true>(texel, numComponents) : ReadTexel<ubyte>(texel, numComponents);
+            }
+
+            ++numSamples;
+        }
+    }
+
+    if (numSamples == 0)
+    {
+        return Vec4f::One();
+    }
+
+    Vec4f average = sum / float(numSamples);
+
+    if (isBgr)
+    {
+        std::swap(average.x, average.z);
+    }
+
+    return average;
 }
 
 } // namespace TextureUtils

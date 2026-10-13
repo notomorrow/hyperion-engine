@@ -130,6 +130,12 @@ public:
 
     void SetImageData(ConstByteView imageData);
 
+    /*! \brief Linear average of the base mip, taken when the image data is uploaded. White until then, or where the format can't be read on the CPU. */
+    HYP_FORCE_INLINE const Vec4f& GetAverageColor() const
+    {
+        return m_averageColor;
+    }
+
     virtual RendererResult Create();
     virtual bool IsCreated() const;
 
@@ -189,6 +195,8 @@ protected:
 
     HYP_FIELD(Transient)
     GpuImageRef m_gpuImage;
+
+    Vec4f m_averageColor = Vec4f::One();
 };
 
 } // namespace Hyperion

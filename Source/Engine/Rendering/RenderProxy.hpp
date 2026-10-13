@@ -480,7 +480,11 @@ struct MaterialShaderData
     // color variation, ground normal blend, base occlusion, base occlusion height
     Vec4f groundCover;
 
-    Vec4f _pad[3];
+    // =====
+    // albedo with the diffuse map's average folded in, for shaders that can't sample the map itself
+    Vec4f averageAlbedo;
+
+    Vec4f _pad[2];
 };
 
 static_assert(sizeof(MaterialShaderData) % 64 == 0);

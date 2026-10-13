@@ -10,17 +10,19 @@ float4 GlimmerGetMaterialAverageAlbedoAlpha(uint materialIndex)
 
     const Material material = materials[materialIndex];
 
+#ifdef HYP_FEATURES_BINDLESS_TEXTURES
     float4 albedo = material.albedo;
 
-#ifdef HYP_FEATURES_BINDLESS_TEXTURES
     if (HAS_TEXTURE(material, DiffuseMap))
     {
         albedo *= textures[NonUniformResourceIndex(material.texture_indices[MATERIAL_TEXTURE_DiffuseMap / 4][MATERIAL_TEXTURE_DiffuseMap % 4])]
             .SampleLevel(glimmerMaterialSampler, float2(0.5, 0.5), 16.0);
     }
-#endif
 
     return albedo;
+#else
+    return material.average_albedo;
+#endif
 }
 
 float3 GlimmerGetMaterialAverageAlbedo(uint materialIndex)

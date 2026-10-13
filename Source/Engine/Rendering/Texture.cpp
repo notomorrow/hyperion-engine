@@ -19,6 +19,7 @@
 #include <Rendering/Bindless.hpp>
 
 #include <Rendering/Util/DeletionQueue.hpp>
+#include <Rendering/Util/TextureUtils.hpp>
 
 #include <Asset/Assets.hpp>
 #include <Asset/AssetRegistry.hpp>
@@ -514,11 +515,16 @@ RendererResult Texture::Create()
             gpuImage = placeholder->GetGpuImage();
         }
 
+        const Vec4f averageColor = shouldUploadTextureData
+            ? TextureUtils::ComputeAverageColor(m_textureDesc, GetImageData())
+            : Vec4f::One();
+
         // done with image data
         readScope.Reset();
 
         auto writeScope = GetWriteScope();
         m_gpuImage = std::move(gpuImage);
+        m_averageColor = averageColor;
 
         // We uploaded it; we're responsible for setting isUploaded to true.
         isUploaded.Store(true);
