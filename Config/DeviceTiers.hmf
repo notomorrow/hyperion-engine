@@ -29,7 +29,7 @@ TierProfile "DeviceTiers" {
             When = { DeviceType = Laptop }
             AtMost = { DeviceGrade = Low }
             Set = {
-                "Editor.SkipRenderingWhenIdle" = true
+                "Editor.SkipRenderingWhenIdle" = -1
             }
         }
     ]
