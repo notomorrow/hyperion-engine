@@ -24,5 +24,13 @@ TierProfile "DeviceTiers" {
                 "Rendering.Glimmer.SWRT.Probes.RaysPerFrame" = 32768
             }
         }
+
+        TierRule "Editor.PreventThrottle" {
+            When = { DeviceType = Laptop }
+            AtMost = { DeviceGrade = Low }
+            Set = {
+                "Editor.SkipRenderingWhenIdle" = true
+            }
+        }
     ]
 }
