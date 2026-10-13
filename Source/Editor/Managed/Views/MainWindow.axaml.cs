@@ -82,6 +82,19 @@ namespace Hyperion.Editor
         private bool _suppressPanelSync;
         private readonly Dictionary<string, object?> _dockContents = new Dictionary<string, object?>();
 
+        private enum ToolbarDensity
+        {
+            Full,
+            Compact, // text labels hidden
+            Wrapped  // compact, with the center tool group on its own row
+        }
+
+        private ToolbarDensity _toolbarDensity;
+        private double _toolbarFullContentWidth;
+        private double _toolbarLabelsWidth = double.NaN;
+        private const double ToolbarGroupGap = 8;
+        private const double ToolbarDensityHysteresis = 12;
+
         public MainWindow()
         {
             var viewModel = new MainWindowViewModel();
@@ -109,7 +122,95 @@ namespace Hyperion.Editor
             AddHandler(InputElement.LostFocusEvent, OnNodeRenameTextBoxLostFocus, RoutingStrategies.Bubble);
             AddHandler(InputElement.KeyDownEvent, OnNodeRenameTextBoxKeyDown, RoutingStrategies.Bubble);
 
+            ToolbarGrid.LayoutUpdated += OnToolbarLayoutUpdated;
+
             Opened += OnWindowOpened;
+        }
+
+        private void OnToolbarLayoutUpdated(object? sender, EventArgs e)
+        {
+            double availableWidth = ToolbarGrid.Bounds.Width;
+
+            if (availableWidth <= 0)
+            {
+                return;
+            }
+
+            double contentWidth = GetToolbarGroupWidth(ToolbarLeftGroup)
+                + GetToolbarGroupWidth(ToolbarCenterGroup)
+                + GetToolbarGroupWidth(ToolbarRightGroup)
+                + ToolbarGroupGap * 2;
+
+            switch (_toolbarDensity)
+            {
+                case ToolbarDensity.Full:
+                    if (contentWidth > availableWidth)
+                    {
+                        _toolbarFullContentWidth = contentWidth;
+                        _toolbarLabelsWidth = double.NaN;
+                        SetToolbarDensity(ToolbarDensity.Compact);
+                    }
+
+                    break;
+
+                case ToolbarDensity.Compact:
+                    if (double.IsNaN(_toolbarLabelsWidth))
+                    {
+                        _toolbarLabelsWidth = Math.Max(_toolbarFullContentWidth - contentWidth, 0);
+                    }
+
+                    if (contentWidth > availableWidth)
+                    {
+                        SetToolbarDensity(ToolbarDensity.Wrapped);
+                    }
+                    else if (contentWidth + _toolbarLabelsWidth + ToolbarDensityHysteresis <= availableWidth)
+                    {
+                        SetToolbarDensity(ToolbarDensity.Full);
+                    }
+
+                    break;
+
+                case ToolbarDensity.Wrapped:
+                    if (contentWidth + ToolbarDensityHysteresis <= availableWidth)
+                    {
+                        SetToolbarDensity(ToolbarDensity.Compact);
+                    }
+
+                    break;
+            }
+        }
+
+        private void SetToolbarDensity(ToolbarDensity density)
+        {
+            _toolbarDensity = density;
+
+            bool wrapped = density == ToolbarDensity.Wrapped;
+
+            Toolbar.Classes.Set("compact", density != ToolbarDensity.Full);
+
+            Grid.SetRow(ToolbarCenterGroup, wrapped ? 1 : 0);
+            Grid.SetColumn(ToolbarCenterGroup, wrapped ? 0 : 1);
+            Grid.SetColumnSpan(ToolbarCenterGroup, wrapped ? 3 : 1);
+            ToolbarCenterGroup.Margin = wrapped ? new Thickness(0, 4, 0, 0) : default;
+        }
+
+        private static double GetToolbarGroupWidth(StackPanel group)
+        {
+            double width = 0;
+            int visibleCount = 0;
+
+            foreach (Control child in group.Children)
+            {
+                if (!child.IsVisible)
+                {
+                    continue;
+                }
+
+                width += child.DesiredSize.Width;
+                visibleCount++;
+            }
+
+            return width + group.Spacing * Math.Max(visibleCount - 1, 0);
         }
 
         private void OnWindowOpened(object? sender, EventArgs e)

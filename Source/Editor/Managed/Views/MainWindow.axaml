@@ -287,6 +287,10 @@
             <Setter Property="Padding" Value="10,6" />
         </Style>
 
+        <Style Selector="Border.toolbar.compact TextBlock.toolbar-label">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
         <Style Selector="TextBlock.mode-label">
             <Setter Property="FontSize" Value="10" />
             <Setter Property="FontWeight" Value="Bold" />
@@ -404,11 +408,18 @@
             </Menu>
 
             <Border
+                x:Name="Toolbar"
                 Padding="8,4"
                 Classes="panel-header toolbar"
                 DockPanel.Dock="Top">
-                <Grid VerticalAlignment="Center" ColumnDefinitions="Auto,*,Auto">
+                <!--  Second row is only used when the toolbar is too narrow, see MainWindow.OnToolbarLayoutUpdated  -->
+                <Grid
+                    x:Name="ToolbarGrid"
+                    VerticalAlignment="Center"
+                    ColumnDefinitions="Auto,*,Auto"
+                    RowDefinitions="Auto,Auto">
                     <StackPanel
+                        x:Name="ToolbarLeftGroup"
                         Grid.Column="0"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
@@ -546,6 +557,7 @@
                                   <TextBlock
                                       VerticalAlignment="Center"
                                       FontSize="11"
+                                      Classes="toolbar-label"
                                       Text="Layers" />
                                   <controls:Codicon
                                       VerticalAlignment="Center"
@@ -680,6 +692,7 @@
                                     <TextBlock 
                                         VerticalAlignment="Center"
                                         FontSize="11"
+                                        Classes="toolbar-label"
                                         Text="Bake" />
                                     <controls:Codicon
                                         VerticalAlignment="Center"
@@ -730,6 +743,7 @@
                               <TextBlock
                                   VerticalAlignment="Center"
                                   FontSize="11"
+                                  Classes="toolbar-label"
                                   Text="Add" />
                               <controls:Codicon
                                   VerticalAlignment="Center"
@@ -746,6 +760,7 @@
                     </StackPanel>
 
                     <StackPanel
+                        x:Name="ToolbarCenterGroup"
                         Grid.Column="1"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
@@ -1119,6 +1134,7 @@
 
 
                     <StackPanel
+                        x:Name="ToolbarRightGroup"
                         Grid.Column="2"
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
@@ -1138,6 +1154,7 @@
                                 <TextBlock
                                     VerticalAlignment="Center"
                                     FontSize="11"
+                                    Classes="toolbar-label"
                                     Text="Build" />
                                 <controls:Codicon
                                     VerticalAlignment="Center"
