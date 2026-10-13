@@ -88,6 +88,7 @@ Material::Material()
     : m_isDynamic(false),
       m_renderProxyVersion(0)
 {
+    m_attributes.shaderName = s_defaultShaderName;
 }
 
 Material::Material(Name name, RenderBucket rb)
@@ -116,6 +117,8 @@ Material::Material(Name name, const Handle<Material>& base)
       m_isDynamic(false),
       m_renderProxyVersion(0)
 {
+    m_attributes.shaderName = s_defaultShaderName;
+
     if (m_base)
     {
         m_parameters = m_base->GetParameters();
