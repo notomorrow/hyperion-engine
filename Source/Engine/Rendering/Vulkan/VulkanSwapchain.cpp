@@ -44,11 +44,21 @@ static constexpr bool UseHDRFormat = false;
 
 static constexpr VkImageUsageFlags ImageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
+#if HYP_IOS || HYP_MACOS
+static constexpr bool RecreateOnSuboptimal = true;
+#else
+static constexpr bool RecreateOnSuboptimal = false;
+#endif
+
+static constexpr uint32 MaxSuboptimalRecreates = 3;
+static constexpr uint32 NumExtentCheckFrames = 30;
+
 static RendererResult AcquireNextImage(
     VulkanSwapchain* swapchain,
     VulkanFrame* frame,
     uint32* index,
-    bool* pOutNeedsRecreate)
+    bool* pOutNeedsRecreate,
+    bool* pOutIsSuboptimal)
 {
     VulkanSemaphore* semaphore = frame->GetImageAvailableSemaphore(swapchain);
     Assert(semaphore != nullptr && semaphore->IsCreated());
@@ -74,6 +84,7 @@ static RendererResult AcquireNextImage(
         return HYP_MAKE_ERROR(RendererError, "Failed to acquire next image", int(vkResult));
     }
 
+    *pOutIsSuboptimal = vkResult == VK_SUBOPTIMAL_KHR;
 
     return {};
 }
@@ -87,7 +98,8 @@ VulkanSwapchain::VulkanSwapchain(VkSurfaceKHR surface, const Vec2u& extent)
       m_surface(surface),
       m_surfaceFormat(),
       m_presentMode(),
-      m_supportDetails()
+      m_supportDetails(),
+      m_requestedExtent(extent)
 {
 }
 
@@ -130,6 +142,18 @@ void VulkanSwapchain::PrepareForFrame(VulkanFrame* frame)
 
     m_acquiredImageIndex = ~0u;
 
+    if (!m_needsRecreate && m_numExtentCheckFramesRemaining != 0)
+    {
+        m_numExtentCheckFramesRemaining--;
+
+        if (HasSurfaceExtentChanged())
+        {
+            HYP_LOG(RenderingBackend, Verbose, "Surface extent no longer matches swapchain extent {}, recreating", m_extent);
+
+            m_needsRecreate = true;
+        }
+    }
+
     for (uint32 attempt = 0; attempt < MaxAcquireAttempts; attempt++)
     {
         if (m_needsRecreate)
@@ -153,10 +177,20 @@ void VulkanSwapchain::PrepareForFrame(VulkanFrame* frame)
             frame->RecreateSemaphores(this);
         }
 
-        RendererResult result = AcquireNextImage(this, frame, &m_acquiredImageIndex, &m_needsRecreate);
+        bool isSuboptimal = false;
+        RendererResult result = AcquireNextImage(this, frame, &m_acquiredImageIndex, &m_needsRecreate, &isSuboptimal);
 
         if (result)
         {
+            if (isSuboptimal)
+            {
+                HandleSuboptimal();
+            }
+            else
+            {
+                m_numSuboptimalRecreates = 0;
+            }
+
             return;
         }
 
@@ -213,7 +247,11 @@ void VulkanSwapchain::PresentFrame(VulkanFrame* frame, VulkanDeviceQueue* queue)
 
         Recreate();
     }
-    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    else if (result == VK_SUBOPTIMAL_KHR)
+    {
+        HandleSuboptimal();
+    }
+    else if (result != VK_SUCCESS)
     {
         CrashHandler::Dump();
 
@@ -256,7 +294,7 @@ RendererResult VulkanSwapchain::Create()
         }
     }
 
-    HYP_LOG(RenderingBackend, Verbose, "Vulkan swapchain m_extent = {}", m_extent);
+    HYP_LOG(RenderingBackend, Verbose, "Vulkan swapchain requested extent = {}", m_requestedExtent);
 
     const Vec2u nativeExtent {
         m_supportDetails.capabilities.currentExtent.width,
@@ -272,7 +310,7 @@ RendererResult VulkanSwapchain::Create()
 
     HYP_LOG(RenderingBackend, Verbose, "Vulkan native swapchain resolution: {}", nativeExtent);
 
-    Vec2u extent = m_extent;
+    Vec2u extent = m_requestedExtent;
 
     if (surfaceDictatesExtent)
     {
@@ -304,10 +342,13 @@ RendererResult VulkanSwapchain::Create()
 
     if (extent.x <= 1 || extent.y <= 1)
     {
-        HYP_LOG(RenderingBackend, Warning, "Resolved a degenerate swapchain extent {} (requested: {}, native: {})", extent, m_extent, nativeExtent);
+        HYP_LOG(RenderingBackend, Warning, "Resolved a degenerate swapchain extent {} (requested: {}, native: {})", extent, m_requestedExtent, nativeExtent);
     }
 
     m_extent = extent;
+
+    // the surface may not have caught up with the requested size yet (e.g. mid-resize), so keep an eye on it for a bit
+    m_numExtentCheckFramesRemaining = (surfaceDictatesExtent && extent != m_requestedExtent) ? NumExtentCheckFrames : 0;
 
     HYP_LOG(RenderingBackend, Verbose, "Using Vulkan swapchain resolution {}", m_extent);
 
@@ -428,14 +469,15 @@ RendererResult VulkanSwapchain::Create()
 
 void VulkanSwapchain::SetExtent(Vec2u newExtent)
 {
-    if (m_extent == newExtent || newExtent.x == 0 || newExtent.y == 0)
+    if (newExtent.x == 0 || newExtent.y == 0)
     {
         return;
     }
 
-    m_extent = newExtent;
+    m_requestedExtent = newExtent;
+    m_numSuboptimalRecreates = 0;
 
-    if (!IsCreated())
+    if (m_extent == newExtent || !IsCreated())
     {
         return;
     }
@@ -443,9 +485,46 @@ void VulkanSwapchain::SetExtent(Vec2u newExtent)
     m_needsRecreate = true;
 }
 
+bool VulkanSwapchain::HasSurfaceExtentChanged() const
+{
+    VkSurfaceCapabilitiesKHR capabilities {};
+
+    if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(RI.GetDevice()->GetFeatures().GetPhysicalDevice(), m_surface, &capabilities) != VK_SUCCESS)
+    {
+        return false;
+    }
+
+    Vec2u surfaceExtent { capabilities.currentExtent.width, capabilities.currentExtent.height };
+
+    if (surfaceExtent.x == UINT32_MAX || surfaceExtent.y == UINT32_MAX
+        || surfaceExtent.x == 0 || surfaceExtent.y == 0)
+    {
+        return false;
+    }
+
+    surfaceExtent = MathUtil::Min(Vec2u { capabilities.maxImageExtent.width, capabilities.maxImageExtent.height }, surfaceExtent);
+    surfaceExtent = MathUtil::Max(Vec2u { capabilities.minImageExtent.width, capabilities.minImageExtent.height }, surfaceExtent);
+
+    return surfaceExtent != m_extent;
+}
+
+void VulkanSwapchain::HandleSuboptimal()
+{
+    // capped so a surface that stays suboptimal for some other reason can't make us recreate every frame
+    if (!RecreateOnSuboptimal || m_needsRecreate || m_numSuboptimalRecreates >= MaxSuboptimalRecreates)
+    {
+        return;
+    }
+
+    HYP_LOG(RenderingBackend, Verbose, "Swapchain {} is suboptimal for its surface, recreating next frame", Id());
+
+    m_numSuboptimalRecreates++;
+    m_needsRecreate = true;
+}
+
 void VulkanSwapchain::Recreate()
 {
-    HYP_LOG(RenderingBackend, Verbose, "Recreating Vulkan swapchain {} with new extent: {}", Id(), m_extent);
+    HYP_LOG(RenderingBackend, Verbose, "Recreating Vulkan swapchain {} with requested extent: {}", Id(), m_requestedExtent);
 
     if (RendererResult waitResult = RI.GetDevice()->WaitIdle(); !waitResult)
     {

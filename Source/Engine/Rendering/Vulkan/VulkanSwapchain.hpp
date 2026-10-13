@@ -86,6 +86,9 @@ private:
     RendererResult ChooseSurfaceFormat();
     RendererResult RetrieveImageHandles();
 
+    bool HasSurfaceExtentChanged() const;
+    void HandleSuboptimal();
+
     VkSwapchainKHR m_handle;
     VkSwapchainKHR m_oldHandle;
     VkSurfaceKHR m_surface;
@@ -93,6 +96,12 @@ private:
     VkPresentModeKHR m_presentMode;
     VulkanSwapchainSupportDetails m_supportDetails;
     Array<VulkanSemaphoreRef, VulkanAllocator> m_presentSemaphores;
+
+    // for suboptimal recreate
+    Vec2u m_requestedExtent;
+    uint32 m_numExtentCheckFramesRemaining = 0;
+    uint32 m_numSuboptimalRecreates = 0;
+
     bool m_ownsSurface = false;
 };
 
