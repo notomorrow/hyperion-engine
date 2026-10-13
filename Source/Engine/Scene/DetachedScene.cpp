@@ -54,6 +54,8 @@ public:
                 pair.second = nullptr;
             }
         }
+
+        m_scenes.Clear();
     }
 
 private:

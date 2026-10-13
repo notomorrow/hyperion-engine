@@ -70,6 +70,7 @@
 #include <Rendering/Glimmer/GlimmerMemory.hpp>
 
 #include <Scene/ComponentInterface.hpp>
+#include <Scene/DetachedScene.hpp>
 
 #include <UI/UIDataSource.hpp> // For UIElementFactoryRegistry
 
@@ -872,6 +873,9 @@ extern "C"
 #endif // HYP_EDITOR
 
         g_appContext.Reset();
+
+        // Scenes created after the sim thread exited would otherwise outlive g_scenePool
+        DestroyDetachedScenes();
 
         ComponentInterfaceRegistry::GetInstance().Shutdown();
 
