@@ -85,13 +85,15 @@ namespace Hyperion.Editor
         private enum ToolbarDensity
         {
             Full,
-            Compact, // text labels hidden
-            Wrapped  // compact, with the center tool group on its own row
+            Compact,   // text labels hidden
+            Condensed, // project and edit groups folded into the overflow menu
+            Wrapped    // last resort. center tool group on its own row
         }
 
         private ToolbarDensity _toolbarDensity;
-        private double _toolbarFullContentWidth;
-        private double _toolbarLabelsWidth = double.NaN;
+        private double _toolbarWidthBeforeStep;
+        // Width each density saves over the one before it, measured when it is first applied
+        private readonly double[] _toolbarSavedWidths = new double[4];
         private const double ToolbarGroupGap = 8;
         private const double ToolbarDensityHysteresis = 12;
 
@@ -141,42 +143,41 @@ namespace Hyperion.Editor
                 + GetToolbarGroupWidth(ToolbarRightGroup)
                 + ToolbarGroupGap * 2;
 
-            switch (_toolbarDensity)
+            int level = (int)_toolbarDensity;
+
+            // First layout since stepping down, so the difference is what the step saved
+            if (double.IsNaN(_toolbarSavedWidths[level]))
             {
-                case ToolbarDensity.Full:
-                    if (contentWidth > availableWidth)
-                    {
-                        _toolbarFullContentWidth = contentWidth;
-                        _toolbarLabelsWidth = double.NaN;
-                        SetToolbarDensity(ToolbarDensity.Compact);
-                    }
+                _toolbarSavedWidths[level] = Math.Max(_toolbarWidthBeforeStep - contentWidth, 0);
+            }
 
-                    break;
+            if (contentWidth > availableWidth)
+            {
+                if (_toolbarDensity != ToolbarDensity.Wrapped)
+                {
+                    _toolbarWidthBeforeStep = contentWidth;
+                    _toolbarSavedWidths[level + 1] = double.NaN;
+                    SetToolbarDensity(_toolbarDensity + 1);
+                }
+            }
+            else if (level > 0 && contentWidth + _toolbarSavedWidths[level] + ToolbarDensityHysteresis <= availableWidth)
+            {
+                SetToolbarDensity(_toolbarDensity - 1);
+            }
+        }
 
-                case ToolbarDensity.Compact:
-                    if (double.IsNaN(_toolbarLabelsWidth))
-                    {
-                        _toolbarLabelsWidth = Math.Max(_toolbarFullContentWidth - contentWidth, 0);
-                    }
+        private void OnToolbarOverflowMenuOpened(object? sender, RoutedEventArgs e)
+        {
+            if (DataContext is not MainWindowViewModel viewModel)
+            {
+                return;
+            }
 
-                    if (contentWidth > availableWidth)
-                    {
-                        SetToolbarDensity(ToolbarDensity.Wrapped);
-                    }
-                    else if (contentWidth + _toolbarLabelsWidth + ToolbarDensityHysteresis <= availableWidth)
-                    {
-                        SetToolbarDensity(ToolbarDensity.Full);
-                    }
+            ToolbarOverflowOpenRecentMenuItem.Items.Clear();
 
-                    break;
-
-                case ToolbarDensity.Wrapped:
-                    if (contentWidth + ToolbarDensityHysteresis <= availableWidth)
-                    {
-                        SetToolbarDensity(ToolbarDensity.Compact);
-                    }
-
-                    break;
+            foreach (Control entry in BuildRecentProjectMenuEntries(viewModel))
+            {
+                ToolbarOverflowOpenRecentMenuItem.Items.Add(entry);
             }
         }
 
@@ -186,7 +187,8 @@ namespace Hyperion.Editor
 
             bool wrapped = density == ToolbarDensity.Wrapped;
 
-            Toolbar.Classes.Set("compact", density != ToolbarDensity.Full);
+            Toolbar.Classes.Set("compact", density >= ToolbarDensity.Compact);
+            Toolbar.Classes.Set("condensed", density >= ToolbarDensity.Condensed);
 
             Grid.SetRow(ToolbarCenterGroup, wrapped ? 1 : 0);
             Grid.SetColumn(ToolbarCenterGroup, wrapped ? 0 : 1);

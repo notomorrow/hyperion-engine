@@ -291,6 +291,18 @@
             <Setter Property="IsVisible" Value="False" />
         </Style>
 
+        <Style Selector="Border.toolbar DropDownButton.toolbar-overflow">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
+        <Style Selector="Border.toolbar.condensed DropDownButton.toolbar-overflow">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+
+        <Style Selector="Border.toolbar.condensed :is(Control).toolbar-collapsible">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
         <Style Selector="TextBlock.mode-label">
             <Setter Property="FontSize" Value="10" />
             <Setter Property="FontWeight" Value="Bold" />
@@ -412,7 +424,7 @@
                 Padding="8,4"
                 Classes="panel-header toolbar"
                 DockPanel.Dock="Top">
-                <!--  Second row is only used when the toolbar is too narrow, see MainWindow.OnToolbarLayoutUpdated  -->
+
                 <Grid
                     x:Name="ToolbarGrid"
                     VerticalAlignment="Center"
@@ -424,8 +436,59 @@
                         VerticalAlignment="Center"
                         Orientation="Horizontal"
                         Spacing="8">
+                        <DropDownButton
+                            VerticalAlignment="Center"
+                            Classes="gizmo toolbar-overflow"
+                            Click="OnDropDownClick"
+                            ToolTip.Tip="File and Edit">
+                            <controls:Codicon Kind="KebabVertical" Size="16" />
+                            <DropDownButton.ContextMenu>
+                                <ContextMenu Opened="OnToolbarOverflowMenuOpened" Placement="Bottom">
+                                    <MenuItem
+                                        Command="{Binding NewProject}"
+                                        Header="New Project..."
+                                        IsEnabled="{Binding !IsSimulating}" />
+                                    <MenuItem
+                                        Command="{Binding OpenProject}"
+                                        Header="Open Project..."
+                                        IsEnabled="{Binding !IsSimulating}" />
+                                    <MenuItem
+                                        x:Name="ToolbarOverflowOpenRecentMenuItem"
+                                        Header="Open Recent"
+                                        IsEnabled="{Binding !IsSimulating}" />
+                                    <MenuItem
+                                        Command="{Binding SaveProject}"
+                                        Header="Save Project"
+                                        IsEnabled="{Binding !IsSimulating}" />
+                                    <Separator />
+                                    <MenuItem
+                                        Command="{Binding Undo}"
+                                        Header="{Binding UndoHeader}"
+                                        IsEnabled="{Binding CanUndo}" />
+                                    <MenuItem
+                                        Command="{Binding Redo}"
+                                        Header="{Binding RedoHeader}"
+                                        IsEnabled="{Binding CanRedo}" />
+                                    <Separator />
+                                    <MenuItem
+                                        Command="{Binding Copy}"
+                                        Header="{Binding CopyHeader}"
+                                        IsEnabled="{Binding CanCopy}" />
+                                    <MenuItem
+                                        Command="{Binding Paste}"
+                                        Header="{Binding PasteHeader}"
+                                        IsEnabled="{Binding CanPaste}" />
+                                    <Separator />
+                                    <MenuItem Command="{Binding SelectAll}" Header="Select All" />
+                                    <MenuItem Command="{Binding SelectAllInViewport}" Header="Select All in Viewport" />
+                                    <MenuItem Command="{Binding SelectNone}" Header="Select None" />
+                                </ContextMenu>
+                            </DropDownButton.ContextMenu>
+                        </DropDownButton>
+
                         <StackPanel
                             VerticalAlignment="Center"
+                            Classes="toolbar-collapsible"
                             Orientation="Vertical"
                             Spacing="2">
                             <!-- <TextBlock Classes="ribbon-label" Text="PROJECT" /> -->
@@ -476,10 +539,11 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <Border Classes="mode-separator" />
+                        <Border Classes="mode-separator toolbar-collapsible" />
 
                         <StackPanel
                             VerticalAlignment="Center"
+                            Classes="toolbar-collapsible"
                             Orientation="Vertical"
                             Spacing="2">
                             <!-- <TextBlock Classes="ribbon-label" Text="EDIT" /> -->
