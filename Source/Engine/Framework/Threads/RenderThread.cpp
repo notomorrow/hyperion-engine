@@ -76,11 +76,11 @@ ENGINE_API extern bool IsOnBatteryPower();
 static constexpr float IdleMaxFrameRate = 15.0f;
 static constexpr float BatteryMaxFrameRate = 30.0f;
 
-CVar<float> g_cvTargetFrameRate("Rendering.TargetFrameRate", 0);                             // 0    = no limit
-CVar<bool> g_cvLimitFrameRateOnBatteryPower("Rendering.LimitFrameRateOnBatteryPower", true); // true = enable framerate cap when on battery
-CVar<bool> g_cvLimitFrameRateWhenIdle("Rendering.LimitFrameRateWhenIdle", true);             // true = enable framerate cap when idling in standalone
-CVar<int> g_cvSkipRendering("Rendering.SkipRendering", 0);                                   // -1   = True, set by SkipRenderingWhenIdle, 0 = False, 1 = True (manually set)
-CVar<int> g_cvSkipRenderingWhenIdle("Editor.SkipRenderingWhenIdle", -1);                     // -1   = set dynamically based on if editor mode
+CVar<float> g_cvTargetFrameRate("Rendering.TargetFrameRate", 0);                                // 0    = no limit
+CVar<bool> g_cvLimitFrameRateOnBatteryPower("Rendering.LimitFrameRateOnBatteryPower", false);   // true = enable framerate cap when on battery
+CVar<bool> g_cvLimitFrameRateWhenIdle("Rendering.LimitFrameRateWhenIdle", false);               // true = enable framerate cap when idling in standalone
+CVar<int> g_cvSkipRendering("Rendering.SkipRendering", 0);                                      // -1   = True, set by SkipRenderingWhenIdle, 0 = False, 1 = True (manually set)
+CVar<int> g_cvSkipRenderingWhenIdle("Editor.SkipRenderingWhenIdle", -1);                        // -1   = set dynamically based on if editor mode
 
 static FrameLimiter g_frameLimiter { 0 };
 AtomicVar<uint32> g_currentFrameRateLimit { 0 };

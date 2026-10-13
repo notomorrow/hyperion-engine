@@ -25,11 +25,14 @@ TierProfile "DeviceTiers" {
             }
         }
 
-        TierRule "Editor.PreventThrottle" {
+        TierRule "PreventThrottle" {
             When = { DeviceType = Laptop }
             AtMost = { DeviceGrade = Low }
             Set = {
                 "Editor.SkipRenderingWhenIdle" = -1
+
+                "Rendering.LimitFrameRateWhenIdle" = true
+                "Rendering.LimitFrameRateOnBatteryPower" = true
             }
         }
     ]
