@@ -29,6 +29,7 @@ class GlimmerSceneInstances;
 class GlimmerSHVolume;
 class GlimmerRelight;
 class GlimmerBrickWorld;
+class GlimmerScratchBuffer;
 struct GlimmerSHOccupancyShaderData;
 
 static constexpr uint32 GlimmerProbeLevels = 4;
@@ -88,6 +89,8 @@ struct GlimmerProbeUpdateInputs
     const CloudPass* cloudPass = nullptr; // its cloud shadows dim the sun at hits; may be nullptr
 
     GlimmerLightShaderData light;
+
+    GlimmerScratchBuffer* scratchBuffer = nullptr; // holds the rays, from the trace to the blend
 };
 
 class GlimmerProbeVolume final
@@ -112,6 +115,11 @@ public:
         return m_shaderData.info.w != 0;
     }
 
+    HYP_FORCE_INLINE uint32 GetPoolBlocks() const
+    {
+        return m_poolBlocks;
+    }
+
     const GpuBufferRef& GetBlockTableBuffer() const;
     const GpuBufferRef& GetSHBuffer() const;
     const GpuBufferRef& GetLightBuffer() const;
@@ -129,18 +137,13 @@ private:
     GpuBufferRef m_blockTableBuffer; // a slot (or ~0) per block of each level's window
     GpuBufferRef m_cellsBuffer;      // per block table entry: the block it was classified for, and whether it wants a slot
     GpuBufferRef m_slotsBuffer;      // per slot: the block's absolute coordinate and level (-1 when free)
-    GpuBufferRef m_slotAgesBuffer;   // per slot: frames since its block was last wanted
-    GpuBufferRef m_blockWakeBuffer;  // per slot: the frame one of its probes last saw its light change
+    GpuBufferRef m_slotTimesBuffer;  // per slot: frames since its block was last wanted, and the frame one of its probes last saw its light change
     GpuBufferRef m_statesBuffer;
     GpuBufferRef m_shBuffer;         // 3 per probe: the light put together
     GpuBufferRef m_lightBuffer;      // 3 per part of the light per probe
     GpuBufferRef m_visibilityBuffer; // GlimmerProbeVisibilityTexels per probe
     GpuBufferRef m_trendBuffer;
-    GpuBufferRef m_countersBuffer;
-    GpuBufferRef m_updateListBuffer;
-
-    GpuBufferRef m_raysBuffer;
-    GpuBufferRef m_rayHitsBuffer; // between the trace and shade passes
+    GpuBufferRef m_countersBuffer;   // NumProbeCounters, then the list of probes this frame updates
 
     GpuBufferRef m_placeholderBuffer;
 

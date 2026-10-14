@@ -73,13 +73,12 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 #else
 
 DECLARE_SRV(GlimmerProbeBlend, Rays) StructuredBuffer<uint> rays;
-DECLARE_SRV(GlimmerProbeBlend, GlimmerProbeUpdateListBuffer) StructuredBuffer<uint> glimmerProbeUpdateList;
 DECLARE_SRV(GlimmerProbeBlend, GlimmerProbeCountersBuffer) StructuredBuffer<uint> glimmerProbeCounters;
 DECLARE_SRV(GlimmerProbeBlend, GlimmerProbeSlotsBuffer) StructuredBuffer<int4> glimmerProbeSlots;
 
 DECLARE_UAV(GlimmerProbeBlend, OutStates) RWStructuredBuffer<uint4> OutStates;
 DECLARE_UAV(GlimmerProbeBlend, OutVisibility) RWStructuredBuffer<uint> OutVisibility;   // GLIMMER_PROBE_VISIBILITY_TEXELS per probe (GlimmerPackHalf2)
-DECLARE_UAV(GlimmerProbeBlend, OutBlockWake) RWStructuredBuffer<uint> OutBlockWake;
+DECLARE_UAV(GlimmerProbeBlend, OutSlotTimes) RWStructuredBuffer<uint2> OutSlotTimes;
 
 /// x = variance of an estimate's luminance, relative to the luminance squared
 /// y = recent mean of how far estimates fall off the history (in standard deviations)
@@ -378,7 +377,7 @@ void GlimmerBlendProbe(uint probeIndex, uint4 state, uint numRays, float invSpac
 
         if (bias > GLIMMER_PROBE_DRIFT_NOISE * GLIMMER_PROBE_WAKE_BLOCK_BIAS)
         {
-            OutBlockWake[probeIndex / GLIMMER_PROBES_PER_BLOCK] = constants.volume.info.z;
+            OutSlotTimes[probeIndex / GLIMMER_PROBES_PER_BLOCK].y = constants.volume.info.z;
         }
 
         float fireflyScale = 1.0;
@@ -455,7 +454,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         return;
     }
 
-    const uint probeIndex = glimmerProbeUpdateList[listIndex];
+    const uint probeIndex = glimmerProbeCounters[GLIMMER_PROBE_COUNTERS + listIndex];
     const int4 slot = glimmerProbeSlots[probeIndex / GLIMMER_PROBES_PER_BLOCK];
 
     const uint4 state = OutStates[probeIndex];
@@ -471,7 +470,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
     if (groupIndex < numRays)
     {
-        const uint base = (listIndex * numRays + groupIndex) * GLIMMER_RAY_UINTS;
+        const uint base = (listIndex * numRays + groupIndex) * GLIMMER_PROBE_RAY_RECORD_UINTS;
 
         gsRayDistances[groupIndex] = asfloat(rays[base]);
         gsRayEscapes[groupIndex] = asfloat(rays[base + 1u]);

@@ -108,6 +108,24 @@ GpuBufferRef CreateGlimmerStructuredBuffer(size_t elementSize, size_t numElement
 
 Handle<Texture> CreateGlimmerStorageTexture(TextureType type, TextureFormat format, const Vec3u& extent, uint16 numLayers, Name name, TextureWrapMode wrapMode = TextureWrapMode::Repeat);
 
+// one buffer shared by passes that don't keep what they write in it past their frame; it only grows
+class GlimmerScratchBuffer final
+{
+public:
+    GlimmerScratchBuffer();
+
+    GlimmerScratchBuffer(const GlimmerScratchBuffer& other) = delete;
+    GlimmerScratchBuffer& operator=(const GlimmerScratchBuffer& other) = delete;
+
+    ~GlimmerScratchBuffer();
+
+    GpuBuffer* Reserve(size_t byteSize);
+
+private:
+    GpuBufferRef m_buffer;
+    size_t m_byteSize;
+};
+
 uint32 CalculateGlimmerMipChainCells(uint32 resolution, uint32 numLevels);
 
 void CollectGlimmerTerrainPatches(RenderProxyList& rpl, Array<GlimmerTerrainPatchShaderData, GlimmerTempAllocator>& outPatches);

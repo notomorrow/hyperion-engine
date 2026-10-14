@@ -25,7 +25,6 @@
 
 namespace Hyperion {
 
-static constexpr uint32 NumProbeDebugRecords = GlimmerProbePoolProbes;
 static constexpr uint32 ProbeDebugGroupSize = 64;
 
 struct GlimmerProbeDebugConstants
@@ -38,6 +37,7 @@ struct GlimmerProbeDebugConstants
 #pragma region GlimmerProbeDebug
 
 GlimmerProbeDebug::GlimmerProbeDebug()
+    : m_numRecords(0)
 {
     for (bool& isPending : m_isPending)
     {
@@ -50,14 +50,16 @@ GlimmerProbeDebug::~GlimmerProbeDebug()
     Reset();
 }
 
-void GlimmerProbeDebug::CreateResources()
+void GlimmerProbeDebug::CreateResources(uint32 numRecords)
 {
-    m_recordsBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, NumProbeDebugRecords * sizeof(GlimmerProbeDebugRecord), alignof(Vec4f));
+    m_numRecords = numRecords;
+
+    m_recordsBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, m_numRecords * sizeof(GlimmerProbeDebugRecord), alignof(Vec4f));
     Check(m_recordsBuffer->Create());
 
     for (GpuBufferRef& readbackBuffer : m_readbackBuffers)
     {
-        readbackBuffer = RI.MakeGpuBuffer(GpuBufferType::ReadbackBuffer, NumProbeDebugRecords * sizeof(GlimmerProbeDebugRecord));
+        readbackBuffer = RI.MakeGpuBuffer(GpuBufferType::ReadbackBuffer, m_numRecords * sizeof(GlimmerProbeDebugRecord));
         readbackBuffer->SetIsCpuAccessible(true);
         Check(readbackBuffer->Create());
     }
@@ -97,9 +99,16 @@ void GlimmerProbeDebug::Update(Frame* frame, const GlimmerProbeVolume& probeVolu
         return;
     }
 
+    const uint32 numRecords = probeVolume.GetPoolBlocks() * GlimmerProbesPerBlock;
+
+    if (m_recordsBuffer.IsValid() && m_numRecords != numRecords)
+    {
+        Reset();
+    }
+
     if (!m_recordsBuffer.IsValid())
     {
-        CreateResources();
+        CreateResources(numRecords);
     }
 
     const uint32 slot = frame->GetFrameIndex() % NumFramesInFlight;
@@ -109,7 +118,7 @@ void GlimmerProbeDebug::Update(Frame* frame, const GlimmerProbeVolume& probeVolu
     if (m_isPending[slot])
     {
         Array<GlimmerProbeDebugRecord, GlimmerAllocator> records;
-        records.Resize(NumProbeDebugRecords);
+        records.Resize(m_numRecords);
 
         // readback memory is cached, so the GPU's writes aren't visible until the range is invalidated
         readbackBuffer->Invalidate();
@@ -149,12 +158,12 @@ void GlimmerProbeDebug::Update(Frame* frame, const GlimmerProbeVolume& probeVolu
     cr << SetShaderUniform(uniformIndex++, "GlimmerSHOccupancyMaskBuffer"_sh, occupancy.GetMaskBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
     cr << SetShaderUniform(uniformIndex++, "OutRecords"_sh, m_recordsBuffer.Get(), ShaderDataOffset(0, sizeof(GlimmerProbeDebugRecord)));
 
-    cr << DispatchCompute(Vec3u { (NumProbeDebugRecords + ProbeDebugGroupSize - 1) / ProbeDebugGroupSize, 1, 1 });
+    cr << DispatchCompute(Vec3u { (m_numRecords + ProbeDebugGroupSize - 1) / ProbeDebugGroupSize, 1, 1 });
 
     cr << InsertBarrier(m_recordsBuffer.Get(), ResourceState::CopySrc, ShaderModuleType::Compute);
     cr << InsertBarrier(readbackBuffer.Get(), ResourceState::CopyDst, ShaderModuleType::Compute);
 
-    cr << CopyBuffer(m_recordsBuffer.Get(), readbackBuffer.Get(), uint32(NumProbeDebugRecords * sizeof(GlimmerProbeDebugRecord)));
+    cr << CopyBuffer(m_recordsBuffer.Get(), readbackBuffer.Get(), uint32(m_numRecords * sizeof(GlimmerProbeDebugRecord)));
 
     m_isPending[slot] = true;
 }

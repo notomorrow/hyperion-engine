@@ -74,7 +74,8 @@ static constexpr StringHash LightmapTextureNames[GlimmerMaxLightmapPages] = {
 #pragma region GlimmerSHOccupancy
 
 GlimmerSHOccupancy::GlimmerSHOccupancy()
-    : m_shaderData {},
+    : m_albedoSumsBuffer(nullptr),
+      m_shaderData {},
       m_isSettled(true)
 {
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
@@ -93,7 +94,6 @@ GlimmerSHOccupancy::~GlimmerSHOccupancy()
     m_texture.Reset();
 
     EnqueueDeletion(std::move(m_maskBuffer));
-    EnqueueDeletion(std::move(m_albedoSumsBuffer));
 }
 
 void GlimmerSHOccupancy::CreateResources()
@@ -114,9 +114,6 @@ void GlimmerSHOccupancy::CreateResources()
 
     m_maskBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, numMaskWords * sizeof(uint32), alignof(uint32));
     Check(m_maskBuffer->Create());
-
-    m_albedoSumsBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, numCascadeVoxels * (AlbedoSumWords + LightmapSumWords) * sizeof(uint32), alignof(uint32));
-    Check(m_albedoSumsBuffer->Create());
 }
 
 const GpuImageViewRef& GlimmerSHOccupancy::GetImageView() const
@@ -161,7 +158,7 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
         cr << SetShaderUniform(uniformIndex++, "CBuffer"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
         cr << SetShaderUniform(uniformIndex++, "OutOccupancy"_sh, RI.textureViewCache->GetOrCreate(m_texture));
         cr << SetShaderUniform(uniformIndex++, "OutOccupancyMask"_sh, m_maskBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
-        cr << SetShaderUniform(uniformIndex++, "OutAlbedoSums"_sh, m_albedoSumsBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
+        cr << SetShaderUniform(uniformIndex++, "OutAlbedoSums"_sh, m_albedoSumsBuffer, ShaderDataOffset(0, sizeof(uint32)));
         cr << SetShaderUniform(uniformIndex++, "SpanInstancesBuffer"_sh, sceneInstances.GetSpanInstancesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanInstanceShaderData)));
         cr << SetShaderUniform(uniformIndex++, "SpanChunksBuffer"_sh, sceneInstances.GetSpanChunksBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanChunkShaderData)));
         cr << SetShaderUniform(uniformIndex++, "GlimmerTrianglesBuffer"_sh, triangleCache.GetTrianglesBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
@@ -184,7 +181,7 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
     {
         cr << InsertBarrier(m_texture->GetGpuImage(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
         cr << InsertBarrier(m_maskBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
-        cr << InsertBarrier(m_albedoSumsBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+        cr << InsertBarrier(m_albedoSumsBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
     };
 
     ENGINE_STAT_GPU_SCOPE(&s_statGlimmerSHOccupancy);
@@ -250,7 +247,7 @@ void GlimmerSHOccupancy::ScrollWindow(Frame* frame, uint32 cascadeIndex, const V
     SetBuilt(cascadeIndex, origin);
 }
 
-void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache, const GlimmerLightmapPages& lightmapPages)
+void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache, const GlimmerLightmapPages& lightmapPages, GlimmerScratchBuffer& scratchBuffer)
 {
     HYP_SCOPE;
 
@@ -263,6 +260,10 @@ void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const
         frame->cr << InsertBarrier(m_texture->GetGpuImage(), ResourceState::ShaderResource, ShaderModuleType::Compute);
         frame->cr << InsertBarrier(m_maskBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
     }
+
+    const size_t numCascadeVoxels = size_t(GlimmerSHOccupancyGridXZ) * GlimmerSHOccupancyGridY * GlimmerSHOccupancyGridXZ;
+
+    m_albedoSumsBuffer = scratchBuffer.Reserve(numCascadeVoxels * (AlbedoSumWords + LightmapSumWords) * sizeof(uint32));
 
     if (!sceneInstances.IsReady() || !triangleCache.IsReady() || !sceneInstances.GetSpanInstancesBuffer().IsValid())
     {

@@ -56,7 +56,8 @@ public:
         const Vec3f& viewerPosition,
         const GlimmerSceneInstances& sceneInstances,
         const GlimmerTriangleCache& triangleCache,
-        const GlimmerLightmapPages& lightmapPages);
+        const GlimmerLightmapPages& lightmapPages,
+        GlimmerScratchBuffer& scratchBuffer);
 
     HYP_FORCE_INLINE const GlimmerSHOccupancyShaderData& GetShaderData() const
     {
@@ -90,7 +91,7 @@ private:
 
     Handle<Texture> m_texture;
     GpuBufferRef m_maskBuffer;
-    GpuBufferRef m_albedoSumsBuffer;
+    GpuBuffer* m_albedoSumsBuffer; // the technique's scratch buffer, for the frame it is splatted in
 
     GlimmerLightmapPages m_lightmapPages;
 

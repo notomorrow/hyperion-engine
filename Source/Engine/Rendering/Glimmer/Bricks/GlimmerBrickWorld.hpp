@@ -217,9 +217,7 @@ private:
     GpuBufferRef m_cardFreeListBuffer;
     GpuBufferRef m_radianceBuffer;
     GpuBufferRef m_crossingLightBuffer;
-    GpuBufferRef m_listHeadsBuffer;
     GpuBufferRef m_listNodesBuffer;
-    GpuBufferRef m_buildListBuffer;
     GpuBufferRef m_liveListBuffer;
 
     FixedArray<GpuBufferRef, NumFramesInFlight> m_readbackBuffers;

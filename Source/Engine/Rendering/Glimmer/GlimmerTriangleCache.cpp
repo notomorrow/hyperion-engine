@@ -277,7 +277,10 @@ void GlimmerTriangleCache::CreatePoolBuffers()
 
     m_lightmapUVsBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerTriangleLightmapUVs), lightmapUVCapacity);
 
-    const uint32 texcoordCapacity = uint32(TexcoordPoolBytes / sizeof(GlimmerTriangleTexcoords));
+    // only bindless devices sample the textures for the bricks; the rest take each material's average
+    const uint32 texcoordCapacity = RI.GetRenderConfig().bindlessTextures
+        ? uint32(TexcoordPoolBytes / sizeof(GlimmerTriangleTexcoords))
+        : 1u;
 
     m_texcoordsBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerTriangleTexcoords), texcoordCapacity);
 
@@ -609,7 +612,9 @@ GlimmerTriangleCache::BuildResult GlimmerTriangleCache::BuildMeshTriangles(const
     trianglePositions.Reserve(indices.Size());
 
     Array<Vec2f, GlimmerAllocator> triangleLightmapUVs; // three per triangle, when the mesh has them
-    Array<Vec2f, GlimmerAllocator> triangleTexcoords; // three per triangle
+    Array<Vec2f, GlimmerAllocator> triangleTexcoords; // three per triangle, on bindless devices
+
+    const bool hasTexcoords = RI.GetRenderConfig().bindlessTextures;
 
     BoundingBox objectBounds;
 
@@ -669,7 +674,11 @@ GlimmerTriangleCache::BuildResult GlimmerTriangleCache::BuildMeshTriangles(const
         for (uint32 corner = 0; corner < 3; corner++)
         {
             trianglePositions.PushBack(positions[corner]);
-            triangleTexcoords.PushBack(texcoords[corner]);
+
+            if (hasTexcoords)
+            {
+                triangleTexcoords.PushBack(texcoords[corner]);
+            }
 
             if (hasLightmapUVs)
             {
@@ -751,7 +760,10 @@ GlimmerTriangleCache::BuildResult GlimmerTriangleCache::BuildMeshTriangles(const
             }
         }
 
-        result.texcoords.PushBack(PackTexcoords(&triangleTexcoords[firstPosition]));
+        if (hasTexcoords)
+        {
+            result.texcoords.PushBack(PackTexcoords(&triangleTexcoords[firstPosition]));
+        }
     }
 
     if (result.triangles.Empty())

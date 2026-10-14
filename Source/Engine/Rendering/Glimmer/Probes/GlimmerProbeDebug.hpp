@@ -39,9 +39,10 @@ public:
     void Reset();
 
 private:
-    void CreateResources();
+    void CreateResources(uint32 numRecords);
 
     GpuBufferRef m_recordsBuffer;
+    uint32 m_numRecords;
     FixedArray<GpuBufferRef, NumFramesInFlight> m_readbackBuffers;
     FixedArray<bool, NumFramesInFlight> m_isPending;
 };

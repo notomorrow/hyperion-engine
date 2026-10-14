@@ -47,7 +47,6 @@ public:
 private:
     void CreateTextures(const Vec2u& extent);
     void CreateSlotBuffers(uint32 numCrossings);
-    void GrowBlockOfBuffer(Frame* frame, uint32 numCrossings);
     void CopyCounts(Frame* frame);
     void ReadCounts(Frame* frame);
 
@@ -61,13 +60,11 @@ private:
     Handle<Texture> m_fullTexture;
     Handle<Texture> m_unusedOutputTexture;
 
-    GpuBufferRef m_blockOfBuffer;
     GpuBufferRef m_blocksBuffer;
     GpuBufferRef m_claimsBuffer;
     GpuBufferRef m_requestsBuffer;
-    GpuBufferRef m_wantedBuffer;
+    GpuBufferRef m_wantedBuffer; // what each resolved pixel found missing, until the finish; then the pixels of the view that get a ray after the spread
     GpuBufferRef m_listBuffer;
-    GpuBufferRef m_wholeBuffer;
     GpuBufferRef m_countsBuffer;
 
     FixedArray<GpuBufferRef, NumFramesInFlight> m_readbackBuffers;

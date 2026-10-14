@@ -68,7 +68,7 @@ DECLARE_SRV(GlimmerProbeAlloc, GlimmerSHOccupancyTexture) Texture3D<float4> glim
 DECLARE_UAV(GlimmerProbeAlloc, OutBlockTable) RWStructuredBuffer<uint> OutBlockTable;
 DECLARE_UAV(GlimmerProbeAlloc, OutCells) RWStructuredBuffer<int4> OutCells;
 DECLARE_UAV(GlimmerProbeAlloc, OutSlots) RWStructuredBuffer<int4> OutSlots;         // xyz = block, w = level (-1 when free)
-DECLARE_UAV(GlimmerProbeAlloc, OutSlotAges) RWStructuredBuffer<uint> OutSlotAges;   // frames since the block was last wanted
+DECLARE_UAV(GlimmerProbeAlloc, OutSlotTimes) RWStructuredBuffer<uint2> OutSlotTimes; // x = frames since the block was last wanted, y = the frame one of its probes last saw its light change
 DECLARE_UAV(GlimmerProbeAlloc, OutStates) RWStructuredBuffer<uint4> OutStates;
 DECLARE_UAV(GlimmerProbeAlloc, OutSH) RWStructuredBuffer<float4> OutSH;
 DECLARE_UAV(GlimmerProbeAlloc, OutLight) RWStructuredBuffer<float4> OutLight;
@@ -84,9 +84,8 @@ DECLARE_UAV(GlimmerProbeAlloc, OutTrend) RWStructuredBuffer<float4> OutTrend;
 // 6 = ditto but last frame
 // 7 = sleeping probes this frame
 // 8 = ditto but last frame
+// from GLIMMER_PROBE_COUNTERS on, the probes listed this frame
 DECLARE_UAV(GlimmerProbeAlloc, OutCounters) RWStructuredBuffer<uint> OutCounters;
-DECLARE_UAV(GlimmerProbeAlloc, OutBlockWake) RWStructuredBuffer<uint> OutBlockWake;
-DECLARE_UAV(GlimmerProbeAlloc, OutUpdateList) RWStructuredBuffer<uint> OutUpdateList;
 
 #include "../GlimmerGround.hlsli"
 
@@ -433,12 +432,12 @@ void CSMain(uint groupIndex : SV_GroupIndex)
 
             if (isWanted)
             {
-                OutSlotAges[slot] = 0u;
+                OutSlotTimes[slot].x = 0u;
             }
             else
             {
-                const uint age = OutSlotAges[slot] + 1u;
-                OutSlotAges[slot] = age;
+                const uint age = OutSlotTimes[slot].x + 1u;
+                OutSlotTimes[slot].x = age;
 
                 if (age > constants.budget.y)
                 {
@@ -574,7 +573,7 @@ void CSMain(uint groupIndex : SV_GroupIndex)
         const uint slot = gsFreeSlots[rank];
 
         OutSlots[slot] = int4(cell.block, int(cell.levelIndex));
-        OutSlotAges[slot] = 0u;
+        OutSlotTimes[slot].x = 0u;
         OutBlockTable[cell.tableIndex] = slot;
 
         for (uint probe = 0; probe < GLIMMER_PROBES_PER_BLOCK; probe++)
@@ -685,7 +684,7 @@ bool GlimmerAreProbeBricksBuilding(float3 position, float reach)
 
 bool GlimmerIsProbeBlockWoken(uint probeIndex)
 {
-    return OutBlockWake[probeIndex / GLIMMER_PROBES_PER_BLOCK] + 1u == constants.volume.info.z;
+    return OutSlotTimes[probeIndex / GLIMMER_PROBES_PER_BLOCK].y + 1u == constants.volume.info.z;
 }
 
 [numthreads(64, 1, 1)]
@@ -908,7 +907,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
     if (listIndex < constants.budget.x)
     {
-        OutUpdateList[listIndex] = probeIndex;
+        OutCounters[GLIMMER_PROBE_COUNTERS + listIndex] = probeIndex;
     }
 }
 

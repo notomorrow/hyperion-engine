@@ -198,7 +198,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
             CollectGlimmerLightmapPages(*context.sceneProxies, lightmapPages);
         }
 
-        m_shOccupancy->Update(context.frame, context.channelState->viewerPosition, sceneInstances, *context.triangleCache, lightmapPages);
+        m_shOccupancy->Update(context.frame, context.channelState->viewerPosition, sceneInstances, *context.triangleCache, lightmapPages, m_scratchBuffer);
 
         GlimmerSHVolumeUpdateInputs shInputs;
         shInputs.viewerPosition = context.channelState->viewerPosition;
@@ -233,6 +233,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         probeInputs.brickWorld = g_cvGlimmerBricksEnabled.Get() ? m_brickWorld.Get() : nullptr;
         probeInputs.cloudPass = context.cloudPass;
         probeInputs.light = light;
+        probeInputs.scratchBuffer = &m_scratchBuffer;
 
         if (probesEnabled)
         {

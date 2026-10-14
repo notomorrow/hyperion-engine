@@ -90,6 +90,8 @@ static constexpr uint32 BrickCountersBytes = BrickNumCounters * sizeof(uint32);
 static constexpr uint32 BrickColumnsPerBrick = GlimmerBrickSide * GlimmerBrickSide;
 static constexpr uint32 BrickTilesPerBrick = (GlimmerBrickSide / GlimmerBrickTile) * (GlimmerBrickSide / GlimmerBrickTile);
 static constexpr uint32 BrickChunkBricks = GlimmerBrickChunkCells * GlimmerBrickChunkCells * GlimmerBrickChunkCells * 3;
+// the counters, then the chunk's list heads, then its build list (NOTE must match GlimmerBrickBuild.hlsl)
+static constexpr uint32 BrickCountersWords = BrickNumCounters + BrickChunkBricks * 2;
 
 static constexpr int32 WindowRecenterChunks = 2;
 static constexpr uint32 MaxEmptyChunkClearsPerFrame = 32;
@@ -172,9 +174,7 @@ GlimmerBrickWorld::~GlimmerBrickWorld()
     EnqueueDeletion(std::move(m_cardFreeListBuffer));
     EnqueueDeletion(std::move(m_radianceBuffer));
     EnqueueDeletion(std::move(m_crossingLightBuffer));
-    EnqueueDeletion(std::move(m_listHeadsBuffer));
     EnqueueDeletion(std::move(m_listNodesBuffer));
-    EnqueueDeletion(std::move(m_buildListBuffer));
     EnqueueDeletion(std::move(m_liveListBuffer));
 
     for (GpuBufferRef& readbackBuffer : m_readbackBuffers)
@@ -216,10 +216,8 @@ static uint64 PoolBytes(uint32 poolBricks, uint32 poolPages, uint32 poolCards)
 void GlimmerBrickWorld::CreateResources()
 {
     m_tableBuffer = CreateBrickBuffer(BrickTableSize, NAME("GlimmerBrickTable"));
-    m_countersBuffer = CreateBrickBuffer(BrickNumCounters, NAME("GlimmerBrickCounters"));
-    m_listHeadsBuffer = CreateBrickBuffer(BrickChunkBricks, NAME("GlimmerBrickListHeads"));
+    m_countersBuffer = CreateBrickBuffer(BrickCountersWords, NAME("GlimmerBrickCounters"));
     m_listNodesBuffer = CreateBrickBuffer(size_t(BrickListNodeCapacity) * BrickListNodeWords, NAME("GlimmerBrickListNodes"));
-    m_buildListBuffer = CreateBrickBuffer(BrickChunkBricks, NAME("GlimmerBrickBuildList"));
 
     CreatePoolResources(InitialPoolBricks, InitialPoolPages, InitialPoolCards);
 }
@@ -418,9 +416,7 @@ void GlimmerBrickWorld::InsertBarriers(Frame* frame, bool isForWriting)
         cr << InsertBarrier(m_freeListBuffer.Get(), state, ShaderModuleType::Compute);
         cr << InsertBarrier(m_pageFreeListBuffer.Get(), state, ShaderModuleType::Compute);
         cr << InsertBarrier(m_cardFreeListBuffer.Get(), state, ShaderModuleType::Compute);
-        cr << InsertBarrier(m_listHeadsBuffer.Get(), state, ShaderModuleType::Compute);
         cr << InsertBarrier(m_listNodesBuffer.Get(), state, ShaderModuleType::Compute);
-        cr << InsertBarrier(m_buildListBuffer.Get(), state, ShaderModuleType::Compute);
     }
 }
 
@@ -498,9 +494,7 @@ void GlimmerBrickWorld::Dispatch(Frame* frame, BuildPass pass, const Box& box, u
     cr << SetShaderUniform(uniformIndex++, "GlimmerBrickFreeListBuffer"_sh, m_freeListBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
     cr << SetShaderUniform(uniformIndex++, "GlimmerBrickPageFreeListBuffer"_sh, m_pageFreeListBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
     cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCardFreeListBuffer"_sh, m_cardFreeListBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
-    cr << SetShaderUniform(uniformIndex++, "GlimmerBrickListHeadsBuffer"_sh, m_listHeadsBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
     cr << SetShaderUniform(uniformIndex++, "GlimmerBrickListNodesBuffer"_sh, m_listNodesBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
-    cr << SetShaderUniform(uniformIndex++, "GlimmerBrickBuildListBuffer"_sh, m_buildListBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
     cr << SetShaderUniform(uniformIndex++, "GlimmerBrickLiveListBuffer"_sh, m_liveListBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
     cr << SetShaderUniform(uniformIndex++, "SpanInstancesBuffer"_sh, sceneInstances.GetSpanInstancesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanInstanceShaderData)));
     cr << SetShaderUniform(uniformIndex++, "SpanChunksBuffer"_sh, sceneInstances.GetSpanChunksBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanChunkShaderData)));
@@ -1117,8 +1111,6 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
 
     InsertBarriers(frame, false);
 
-    cr << InsertBarrier(m_buildListBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
-
     const bool hasIndirect = technique && technique->IsReady();
 
     const auto dispatchPass = [&](const StaticShaderPropertyId& modeProperty, uint32 level, uint32 numThreads)
@@ -1169,7 +1161,6 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
         cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingsBuffer"_sh, m_crossingsBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
         cr << SetShaderUniform(uniformIndex++, "GlimmerBrickMaterialBuffer"_sh, m_materialBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
         cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCountersBuffer"_sh, m_countersBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
-        cr << SetShaderUniform(uniformIndex++, "GlimmerBrickBuildListBuffer"_sh, m_buildListBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
         cr << SetShaderUniform(uniformIndex++, "GlimmerBrickLiveListBuffer"_sh, m_liveListBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
         cr << SetShaderUniform(uniformIndex++, "GlimmerBrickRadianceBuffer"_sh, m_radianceBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
         cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingLightBuffer"_sh, m_crossingLightBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));

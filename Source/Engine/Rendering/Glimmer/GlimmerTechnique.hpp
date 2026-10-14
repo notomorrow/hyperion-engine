@@ -125,6 +125,8 @@ private:
     UniquePtr<GlimmerSHVolume> m_shVolume;
     UniquePtr<GlimmerRelight> m_relight;
     UniquePtr<GlimmerBrickWorld> m_brickWorld;
+
+    GlimmerScratchBuffer m_scratchBuffer; // the SH occupancy's albedo sums, then the probes' rays
 };
 
 } // namespace Hyperion

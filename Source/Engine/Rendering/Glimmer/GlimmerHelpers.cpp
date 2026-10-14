@@ -19,6 +19,8 @@
 #include <Rendering/Texture.hpp>
 #include <Rendering/Material.hpp>
 
+#include <Rendering/Util/DeletionQueue.hpp>
+
 #include <Scene/Entity.hpp>
 #include <Scene/EnvProbe.hpp>
 #include <Scene/LightmapVolume.hpp>
@@ -141,6 +143,35 @@ GpuBufferRef CreateGlimmerStructuredBuffer(size_t elementSize, size_t numElement
     Check(buffer->Create());
 
     return buffer;
+}
+
+GlimmerScratchBuffer::GlimmerScratchBuffer()
+    : m_byteSize(0)
+{
+}
+
+GlimmerScratchBuffer::~GlimmerScratchBuffer()
+{
+    EnqueueDeletion(std::move(m_buffer));
+}
+
+GpuBuffer* GlimmerScratchBuffer::Reserve(size_t byteSize)
+{
+    if (!m_buffer.IsValid() || byteSize > m_byteSize)
+    {
+        EnqueueDeletion(std::move(m_buffer));
+
+        m_byteSize = MathUtil::Max(byteSize, size_t(16));
+
+        m_buffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, m_byteSize, alignof(Vec4f));
+        Check(m_buffer->Create());
+
+#ifdef HYP_RHI_DEBUG_NAMES
+        m_buffer->SetDebugName(NAME("GlimmerScratch"));
+#endif
+    }
+
+    return m_buffer.Get();
 }
 
 Handle<Texture> CreateGlimmerStorageTexture(TextureType type, TextureFormat format, const Vec3u& extent, uint16 numLayers, Name name, TextureWrapMode wrapMode)

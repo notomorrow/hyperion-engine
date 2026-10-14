@@ -43,18 +43,15 @@ DECLARE_BUFFER_DYNAMIC(GlimmerBrickReflections, CBuffer) cbuffer CBuffer
     GlimmerBrickReflectionsConstants constants;
 };
 
-// the block of each crossing, where it has one: checked against the block's own word for who it is of
-DECLARE_UAV(GlimmerBrickReflections, SlotBlockOfBuffer) RWStructuredBuffer<uint> slotBlockOf;
 // ten words a block: its crossing, a hash of that crossing, then four slots of two: what the ray hit, and its key with the ray's length as a half above it
 DECLARE_UAV(GlimmerBrickReflections, SlotBlocksBuffer) RWStructuredBuffer<uint> slotBlocks;
 DECLARE_UAV(GlimmerBrickReflections, SlotClaimsBuffer) RWStructuredBuffer<uint> slotClaims;
 // four words a request: the crossing, which bins, its brick and its column
 DECLARE_UAV(GlimmerBrickReflections, SlotRequestsBuffer) RWStructuredBuffer<uint> slotRequests;
-// what each resolved pixel found missing, four words as a request has them
+// what each resolved pixel found missing, four words as a request has them; after the finish, the pixels of the view that get a ray after the spread
 DECLARE_UAV(GlimmerBrickReflections, SlotWantedBuffer) RWStructuredBuffer<uint> slotWanted;
 DECLARE_UAV(GlimmerBrickReflections, SlotListBuffer) RWStructuredBuffer<uint> slotList;
-// the pixels of the view that get a ray after the spread
-DECLARE_UAV(GlimmerBrickReflections, SlotWholeBuffer) RWStructuredBuffer<uint> slotWhole;
+#define slotWhole slotWanted
 DECLARE_UAV(GlimmerBrickReflections, SlotCountsBuffer) RWStructuredBuffer<uint> slotCounts;
 
 // rgb = radiance times a, a = how much of the pixel's reflection is the bricks'
@@ -75,7 +72,6 @@ DECLARE_SRV(GlimmerBrickReflections, HistoryGuideTexture) Texture2D HistoryGuide
 
 #define COUNT_REQUESTS 0
 #define COUNT_LISTED 1
-#define COUNT_BLOCK_CURSOR 2
 #define COUNT_WHOLE 3
 #define COUNT_SLOT_PIXELS 4
 #define COUNT_PARTIAL_PIXELS 5
@@ -86,6 +82,7 @@ DECLARE_SRV(GlimmerBrickReflections, HistoryGuideTexture) Texture2D HistoryGuide
 #define COUNT_SHARE_LAST 13
 
 #define BLOCK_WORDS 10u
+#define BLOCK_NONE 0xFFFFFFFFu
 #define REQUEST_WORDS 4u
 #define TRACE_ROW 256u
 
@@ -222,6 +219,27 @@ float3 BinDirection(uint level, int2 bin, uint crossing)
 uint CrossingHash(uint crossing)
 {
     return PcgHash(glimmerBrickCrossings[2u * crossing] ^ PcgHash(glimmerBrickCrossings[2u * crossing + 1u] ^ crossing)) | 1u;
+}
+
+// a crossing's block is one of two, picked by its hash
+void BlockChoices(uint hash, out uint outFirst, out uint outSecond)
+{
+    outFirst = (hash >> 1u) % constants.limits.y;
+    outSecond = PcgHash(hash) % constants.limits.y;
+}
+
+bool IsBlockOf(uint block, uint crossing, uint hash)
+{
+    return slotBlocks[block * BLOCK_WORDS] == crossing && slotBlocks[block * BLOCK_WORDS + 1u] == hash;
+}
+
+uint FindBlock(uint crossing, uint hash)
+{
+    uint first;
+    uint second;
+    BlockChoices(hash, first, second);
+
+    return IsBlockOf(first, crossing, hash) ? first : (IsBlockOf(second, crossing, hash) ? second : BLOCK_NONE);
 }
 
 bool LoadBrickPlace(uint brick, out int3 outCell, out uint outAxis)
@@ -456,9 +474,42 @@ void TraceRequest(uint index)
 
     const uint hash = CrossingHash(crossingIndex);
 
-    uint block = slotBlockOf[crossingIndex];
+    uint block = FindBlock(crossingIndex, hash);
 
-    const bool hasBlock = block < constants.limits.y && slotBlocks[block * BLOCK_WORDS] == crossingIndex && slotBlocks[block * BLOCK_WORDS + 1u] == hash;
+    const bool hasBlock = block != BLOCK_NONE;
+
+    if (!hasBlock)
+    {
+        uint first;
+        uint second;
+        BlockChoices(hash, first, second);
+
+        // one whose crossing has changed since is free; otherwise either may go
+        const uint firstOf = slotBlocks[first * BLOCK_WORDS];
+        const uint secondOf = slotBlocks[second * BLOCK_WORDS];
+        const bool isFirstHeld = firstOf < constants.limits.x && CrossingHash(firstOf) == slotBlocks[first * BLOCK_WORDS + 1u];
+        const bool isSecondHeld = secondOf < constants.limits.x && CrossingHash(secondOf) == slotBlocks[second * BLOCK_WORDS + 1u];
+
+        block = !isFirstHeld ? first : (!isSecondHeld ? second : ((PcgHash(hash ^ constants.frame.x) & 1u) != 0u ? second : first));
+    }
+
+    // two requests can come to the same block in a dispatch: the one that locks it writes it, the other asks again next frame.
+    // the lock is even, as no hash is, and the frame's own, so one left in the buffer from before (or garbage) holds nothing
+    const uint locked = (constants.frame.x << 1u) + 2u;
+    const uint lockedFrom = slotBlocks[block * BLOCK_WORDS + 1u];
+
+    if (lockedFrom == locked || (hasBlock && lockedFrom != hash))
+    {
+        return;
+    }
+
+    uint was;
+    InterlockedCompareExchange(slotBlocks[block * BLOCK_WORDS + 1u], lockedFrom, locked, was);
+
+    if (was != lockedFrom)
+    {
+        return;
+    }
 
     uint oldCard[4] = { 0u, 0u, 0u, 0u };
     uint oldKey[4] = { 0u, 0u, 0u, 0u };
@@ -475,14 +526,6 @@ void TraceRequest(uint index)
                 oldKey[slot] = slotBlocks[block * BLOCK_WORDS + 3u + 2u * slot];
             }
         }
-    }
-    else
-    {
-        // the oldest block is whoever's turn it is
-        uint cursor;
-        InterlockedAdd(slotCounts[COUNT_BLOCK_CURSOR], 1u, cursor);
-
-        block = cursor % constants.limits.y;
     }
 
     uint newCard[4] = { 0u, 0u, 0u, 0u };
@@ -556,7 +599,6 @@ void TraceRequest(uint index)
     }
 
     slotBlocks[block * BLOCK_WORDS] = crossingIndex;
-    slotBlocks[block * BLOCK_WORDS + 1u] = hash;
 
     for (uint writeSlot = 0; writeSlot < 4u; writeSlot++)
     {
@@ -564,7 +606,11 @@ void TraceRequest(uint index)
         slotBlocks[block * BLOCK_WORDS + 3u + 2u * writeSlot] = newKey[writeSlot];
     }
 
-    slotBlockOf[crossingIndex] = block;
+    // unlocks it, once what it holds is written
+    DeviceMemoryBarrier();
+
+    uint unlockedFrom;
+    InterlockedExchange(slotBlocks[block * BLOCK_WORDS + 1u], hash, unlockedFrom);
 }
 
 #endif
@@ -687,11 +733,9 @@ void Resolve(int2 pixel, uint2 texel, uint index)
     const float3 receiverPosition = GlimmerBrickCellLow(constants.bricks, receiverCell)
         + GlimmerBrickPoint(receiverAxis, (float2(receiver.column) + 0.5) * width + middleOffset, crossing.depth - dot(slope, middleOffset));
 
-    const uint block = slotBlockOf[receiver.crossing];
+    const uint block = FindBlock(receiver.crossing, CrossingHash(receiver.crossing));
 
-    const bool hasBlock = block < constants.limits.y
-        && slotBlocks[block * BLOCK_WORDS] == receiver.crossing
-        && slotBlocks[block * BLOCK_WORDS + 1u] == CrossingHash(receiver.crossing);
+    const bool hasBlock = block != BLOCK_NONE;
 
     uint heldCard[4] = { 0u, 0u, 0u, 0u };
     uint heldKey[4] = { 0u, 0u, 0u, 0u };

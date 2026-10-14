@@ -27,7 +27,6 @@ DECLARE_SRV(DeferredPass, GlimmerBrickIndexBuffer) StructuredBuffer<uint> glimme
 DECLARE_SRV(DeferredPass, GlimmerBrickCrossingsBuffer) StructuredBuffer<uint> glimmerBrickCrossings;
 DECLARE_SRV(DeferredPass, GlimmerBrickMaterialBuffer) StructuredBuffer<uint> glimmerBrickMaterial;
 DECLARE_SRV(DeferredPass, GlimmerBrickCountersBuffer) StructuredBuffer<uint> glimmerBrickCounters;
-DECLARE_SRV(DeferredPass, GlimmerBrickBuildListBuffer) StructuredBuffer<uint> glimmerBrickBuildList;
 DECLARE_SRV(DeferredPass, GlimmerBrickLiveListBuffer) StructuredBuffer<uint> glimmerBrickLiveList;
 DECLARE_UAV(DeferredPass, GlimmerBrickRadianceBuffer) RWStructuredBuffer<uint> glimmerBrickRadiance;
 DECLARE_UAV(DeferredPass, GlimmerBrickCrossingLightBuffer) RWStructuredBuffer<uint> glimmerBrickCrossingLight;
@@ -63,6 +62,8 @@ DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
 // NOTE must match GlimmerBrickBuild.hlsl
 #define COUNTER_BUILD_BRICKS 2
 #define COUNTER_LIVE_BRICKS 14
+#define NUM_COUNTERS 16
+#define BUILD_LIST_BASE uint(NUM_COUNTERS + GLIMMER_BRICK_CHUNK_CELLS * GLIMMER_BRICK_CHUNK_CELLS * GLIMMER_BRICK_CHUNK_CELLS * 3)
 
 #define COLUMNS_PER_BRICK (GLIMMER_BRICK_SIDE * GLIMMER_BRICK_SIDE)
 
@@ -85,7 +86,7 @@ uint BrickOfSlot(uint slot)
         return GLIMMER_BRICK_NONE;
     }
 
-    const uint boxThread = glimmerBrickBuildList[slot];
+    const uint boxThread = glimmerBrickCounters[BUILD_LIST_BASE + slot];
     const uint cellIndex = boxThread / 3u;
     const uint3 extent = uint3(constants.boxExtent.xyz);
 

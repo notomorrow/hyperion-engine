@@ -39,9 +39,7 @@ DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickCountersBuffer) RWStructuredBuffer<ui
 DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickFreeListBuffer) RWStructuredBuffer<uint> glimmerBrickFreeList;
 DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickPageFreeListBuffer) RWStructuredBuffer<uint> glimmerBrickPageFreeList;
 DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickCardFreeListBuffer) RWStructuredBuffer<uint> glimmerBrickCardFreeList;
-DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickListHeadsBuffer) RWStructuredBuffer<uint> glimmerBrickListHeads;
 DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickListNodesBuffer) RWStructuredBuffer<uint> glimmerBrickListNodes;
-DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickBuildListBuffer) RWStructuredBuffer<uint> glimmerBrickBuildList;
 DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickLiveListBuffer) RWStructuredBuffer<uint> glimmerBrickLiveList;
 
 DECLARE_SRV(GlimmerBrickBuild, SpanInstancesBuffer) StructuredBuffer<GlimmerSpanInstance> spanInstances;
@@ -84,6 +82,9 @@ DECLARE_SAMPLER(GlimmerBrickBuild, SamplerLinearMipmap) SamplerState glimmerMate
 
 #define COLUMNS_PER_BRICK (GLIMMER_BRICK_SIDE * GLIMMER_BRICK_SIDE)
 #define BOX_BRICKS uint(GLIMMER_BRICK_CHUNK_CELLS * GLIMMER_BRICK_CHUNK_CELLS * GLIMMER_BRICK_CHUNK_CELLS * 3)
+// the chunk's list heads and build list sit after the counters (NOTE must match GlimmerBrickWorld.cpp)
+#define LIST_HEADS_BASE uint(NUM_COUNTERS)
+#define BUILD_LIST_BASE (LIST_HEADS_BASE + BOX_BRICKS)
 #define TILES_PER_BRICK (GLIMMER_BRICK_TILES_PER_SIDE * GLIMMER_BRICK_TILES_PER_SIDE)
 
 // crossings within this many column widths in depth, with normals no further apart than SAME_FACING, are one surface
@@ -216,7 +217,7 @@ void BinTriangle(GlimmerSpanInstance instance, uint spanInstanceIndex, uint loca
                 glimmerBrickListNodes[node * LIST_NODE_WORDS + 1u] = localTriangle;
 
                 uint next;
-                InterlockedExchange(glimmerBrickListHeads[BoxBrickIndex(cell, axis)], node, next);
+                InterlockedExchange(glimmerBrickCounters[LIST_HEADS_BASE + BoxBrickIndex(cell, axis)], node, next);
 
                 // the table holds no brick while its box is built, so it adds up the area: one less than it, from GLIMMER_BRICK_NONE
                 uint previousArea;
@@ -621,7 +622,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
     if (threadIndex < BOX_BRICKS)
     {
-        glimmerBrickListHeads[threadIndex] = GLIMMER_BRICK_NONE;
+        glimmerBrickCounters[LIST_HEADS_BASE + threadIndex] = GLIMMER_BRICK_NONE;
     }
 
     if (threadIndex < constants.counts.z)
@@ -707,7 +708,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
     if (threadIndex < BOX_BRICKS)
     {
-        glimmerBrickListHeads[threadIndex] = GLIMMER_BRICK_NONE;
+        glimmerBrickCounters[LIST_HEADS_BASE + threadIndex] = GLIMMER_BRICK_NONE;
     }
 #elif defined(MODE_BIN)
     // a group per chunk
@@ -767,7 +768,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     glimmerBrickTable[tableIndex] = GLIMMER_BRICK_NONE;
 
     // twigs, wires and the like aren't worth a brick
-    if (glimmerBrickListHeads[threadIndex] == GLIMMER_BRICK_NONE || coveredArea < uint(MIN_BRICK_COLUMNS * AREA_SCALE))
+    if (glimmerBrickCounters[LIST_HEADS_BASE + threadIndex] == GLIMMER_BRICK_NONE || coveredArea < uint(MIN_BRICK_COLUMNS * AREA_SCALE))
     {
         return;
     }
@@ -811,14 +812,14 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     uint buildIndex;
     InterlockedAdd(glimmerBrickCounters[COUNTER_BUILD_BRICKS], 1u, buildIndex);
 
-    glimmerBrickBuildList[buildIndex] = threadIndex;
+    glimmerBrickCounters[BUILD_LIST_BASE + buildIndex] = threadIndex;
 #elif defined(MODE_PREFIX)
     if (threadIndex >= glimmerBrickCounters[COUNTER_BUILD_BRICKS])
     {
         return;
     }
 
-    const uint boxThread = glimmerBrickBuildList[threadIndex];
+    const uint boxThread = glimmerBrickCounters[BUILD_LIST_BASE + threadIndex];
     const uint tableIndex = GlimmerBrickTableIndex(BoxCell(boxThread / 3u), boxThread % 3u);
     const uint brick = glimmerBrickTable[tableIndex];
 
@@ -939,7 +940,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         return;
     }
 
-    const uint boxThread = glimmerBrickBuildList[buildIndex];
+    const uint boxThread = glimmerBrickCounters[BUILD_LIST_BASE + buildIndex];
     const int3 cell = BoxCell(boxThread / 3u);
     const uint axis = boxThread % 3u;
 
@@ -952,7 +953,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     }
 
 #if defined(MODE_GATHER) || defined(MODE_COUNT)
-    GatherColumn(brick, axis, cell, glimmerBrickListHeads[boxThread], int2(withinBrick % GLIMMER_BRICK_SIDE, withinBrick / GLIMMER_BRICK_SIDE));
+    GatherColumn(brick, axis, cell, glimmerBrickCounters[LIST_HEADS_BASE + boxThread], int2(withinBrick % GLIMMER_BRICK_SIDE, withinBrick / GLIMMER_BRICK_SIDE));
 #else
     const int2 tile = int2(withinBrick % GLIMMER_BRICK_TILES_PER_SIDE, withinBrick / GLIMMER_BRICK_TILES_PER_SIDE);
 
