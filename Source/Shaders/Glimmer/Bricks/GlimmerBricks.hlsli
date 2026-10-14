@@ -15,8 +15,21 @@
 #define GLIMMER_BRICK_PAGE_CROSSINGS 256
 #define GLIMMER_BRICK_MAX_PAGES 31
 
-// per brick in glimmerBrickIndex: its pages of crossings (count first), then a depth range per tile, then first crossing and count per column
-#define GLIMMER_BRICK_INDEX_TILES (1 + GLIMMER_BRICK_MAX_PAGES)
+// a card is the crossings of a brick facing one way along its axis within a quarter of its depth: its light from tiles of 4x4 columns up
+// finer than that the light is each crossing's own, in glimmerBrickCrossingLight
+#define GLIMMER_BRICK_LAYERS 4
+#define GLIMMER_BRICK_CARDS (2 * GLIMMER_BRICK_LAYERS)
+#define GLIMMER_BRICK_MIPS 6
+#define GLIMMER_BRICK_CARD_FIRST_MIP 2
+#define GLIMMER_BRICK_CARD_SIDE (GLIMMER_BRICK_SIDE >> GLIMMER_BRICK_CARD_FIRST_MIP)
+#define GLIMMER_BRICK_CARD_TEXELS ((4 * GLIMMER_BRICK_CARD_SIDE * GLIMMER_BRICK_CARD_SIDE - 1) / 3)
+
+// per brick in glimmerBrickIndex: its pages of crossings (count first), its cards, where it is, then a depth range per tile, then first crossing and count per column
+#define GLIMMER_BRICK_INDEX_CARDS (1 + GLIMMER_BRICK_MAX_PAGES)
+#define GLIMMER_BRICK_INDEX_CARD_MASK (GLIMMER_BRICK_INDEX_CARDS + GLIMMER_BRICK_CARDS)
+#define GLIMMER_BRICK_INDEX_CELL (GLIMMER_BRICK_INDEX_CARD_MASK + 1)
+#define GLIMMER_BRICK_INDEX_AXIS (GLIMMER_BRICK_INDEX_CELL + 3) // GLIMMER_BRICK_NONE while the brick is free
+#define GLIMMER_BRICK_INDEX_TILES (GLIMMER_BRICK_INDEX_AXIS + 1)
 #define GLIMMER_BRICK_INDEX_COLUMNS (GLIMMER_BRICK_INDEX_TILES + GLIMMER_BRICK_TILES_PER_SIDE * GLIMMER_BRICK_TILES_PER_SIDE)
 #define GLIMMER_BRICK_INDEX_STRIDE (GLIMMER_BRICK_INDEX_COLUMNS + GLIMMER_BRICK_SIDE * GLIMMER_BRICK_SIDE)
 
@@ -174,6 +187,43 @@ float2 GlimmerBrickMaskMiddle(uint mask)
     }
 
     return sum / (4.0 * float(max(countbits(mask), 1u)));
+}
+
+// which card of its brick a crossing is on: by the way it faces along the axis, then by the layer its depth is in
+uint GlimmerBrickCardSlot(GlimmerBrickParams bricks, uint axis, float3 normal, float depth)
+{
+    const uint facing = GlimmerBrickAlong(axis, normal) > 0.0 ? 1u : 0u;
+    const uint layer = uint(clamp(depth * bricks.params.y * float(GLIMMER_BRICK_LAYERS), 0.0, float(GLIMMER_BRICK_LAYERS) - 0.5));
+
+    return facing * uint(GLIMMER_BRICK_LAYERS) + layer;
+}
+
+// level is of the brick's columns, from GLIMMER_BRICK_CARD_FIRST_MIP
+uint GlimmerBrickCardMipOffset(uint level)
+{
+    const uint side = uint(GLIMMER_BRICK_CARD_SIDE);
+    const uint left = side >> (level - uint(GLIMMER_BRICK_CARD_FIRST_MIP));
+
+    return (4u * side * side - 4u * left * left) / 3u;
+}
+
+// radiance as 8 bits a channel under a shared exponent of 5, and in 3 bits how much of the texel is surface: 0 says nothing is there
+uint GlimmerBrickPackLight(float3 light, uint share)
+{
+    light = clamp(light, 0.0, 60000.0);
+
+    const float most = max(light.r, max(light.g, light.b));
+    const int exponent = clamp(int(ceil(log2(max(most, 1e-9)))) + 15, 0, 31);
+    const uint3 q = uint3(min(round(light * (exp2(float(15 - exponent)) * 255.0)), 255.0));
+
+    return q.r | (q.g << 8u) | (q.b << 16u) | (uint(exponent) << 24u) | (share << 29u);
+}
+
+float4 GlimmerBrickUnpackLight(uint packed)
+{
+    const float scale = exp2(float((packed >> 24u) & 31u) - 15.0) / 255.0;
+
+    return float4(float3(float(packed & 0xFFu), float((packed >> 8u) & 0xFFu), float((packed >> 16u) & 0xFFu)) * scale, float(packed >> 29u) / 7.0);
 }
 
 #ifndef GLIMMER_BRICKS_NO_TRACE
@@ -501,6 +551,66 @@ GlimmerBrickReceiver GlimmerFindBrickReceiver(GlimmerBrickParams bricks, float3 
     }
 
     return receiver;
+}
+
+#endif
+
+#ifdef GLIMMER_BRICKS_WITH_LIGHT
+
+
+// the light a card sends on over a patch footprint metres across: rgb = radiance times how much of the patch is surface, a = that share. expects glimmerBrickRadiance
+// read across the same card of the cells beside as well, so that neither a texel's edge nor a card's shows
+float4 GlimmerSampleBrickLight(GlimmerBrickParams bricks, int3 cell, uint axis, uint cardSlot, float3 position, float footprint)
+{
+    const float width = bricks.params.z;
+
+    const uint level = uint(clamp(round(log2(max(footprint * bricks.params.w, 1.0))), float(GLIMMER_BRICK_CARD_FIRST_MIP), float(GLIMMER_BRICK_MIPS - 1)));
+    const int side = int(uint(GLIMMER_BRICK_SIDE) >> level);
+
+    const float2 across = GlimmerBrickAcross(axis, position - GlimmerBrickCellLow(bricks, cell)) * bricks.params.w;
+    const float2 at = across / float(1u << level) - 0.5;
+    const int2 corner = int2(floor(at));
+    const float2 fraction = at - float2(corner);
+
+    const uint mipOffset = GlimmerBrickCardMipOffset(level);
+
+    float4 sum = (float4)0.0;
+
+    [unroll]
+    for (uint tap = 0; tap < 4u; tap++)
+    {
+        const int2 offset = int2(tap & 1u, tap >> 1u);
+        const int2 texel = corner + offset;
+        const int2 beside = int2(floor(float2(texel) / float(side)));
+
+        const int3 otherCell = cell + int3(GlimmerBrickPoint(axis, float2(beside), 0.0));
+
+        if (!GlimmerBrickCellInWindow(bricks, otherCell))
+        {
+            continue;
+        }
+
+        const uint brick = glimmerBrickTable[GlimmerBrickTableIndex(otherCell, axis)];
+
+        if (brick == GLIMMER_BRICK_NONE)
+        {
+            continue;
+        }
+
+        const uint card = glimmerBrickIndex[brick * uint(GLIMMER_BRICK_INDEX_STRIDE) + uint(GLIMMER_BRICK_INDEX_CARDS) + cardSlot];
+
+        if (card == GLIMMER_BRICK_NONE)
+        {
+            continue;
+        }
+
+        const int2 within = texel - beside * side;
+        const float2 weights = lerp(1.0 - fraction, fraction, float2(offset));
+
+        sum += GlimmerBrickUnpackLight(glimmerBrickRadiance[card * uint(GLIMMER_BRICK_CARD_TEXELS) + mipOffset + uint(within.y * side + within.x)]) * (weights.x * weights.y);
+    }
+
+    return float4(sum.rgb, sum.a);
 }
 
 #endif

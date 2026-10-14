@@ -199,13 +199,6 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         m_maskGeneration = tlas.GetGeneration();
     }
 
-    if (g_cvGlimmerBricksEnabled.Get() && context.blasCache)
-    {
-        const Vec3f viewerPosition = context.channelState && context.channelState->hasViewer ? context.channelState->viewerPosition : context.region.GetCenter();
-
-        m_brickWorld->Update(context.frame, viewerPosition, tlas, *context.blasCache);
-    }
-
     if (context.updateLighting && context.surfaceCache && context.spanCache)
     {
         const bool probesEnabled = g_cvGlimmerSWRTProbesEnabled.Get();
@@ -284,6 +277,13 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
     else
     {
         m_probeDebug->Reset();
+    }
+
+    if (g_cvGlimmerBricksEnabled.Get() && context.blasCache)
+    {
+        const Vec3f viewerPosition = context.channelState && context.channelState->hasViewer ? context.channelState->viewerPosition : context.region.GetCenter();
+
+        m_brickWorld->Update(context.frame, viewerPosition, tlas, *context.blasCache, this);
     }
 }
 

@@ -18,6 +18,7 @@ namespace Hyperion {
 
 class GlimmerTLAS;
 class GlimmerBLASCache;
+class GlimmerTechnique;
 struct GlimmerDebugViewContext;
 
 // NOTE must match GlimmerBricks.hlsli
@@ -28,7 +29,12 @@ static constexpr uint32 GlimmerBrickSide = 32;
 static constexpr uint32 GlimmerBrickTile = 4;
 static constexpr uint32 GlimmerBrickPageCrossings = 256;
 static constexpr uint32 GlimmerBrickMaxPages = 31;
-static constexpr uint32 GlimmerBrickIndexStride = 1 + GlimmerBrickMaxPages + (GlimmerBrickSide / GlimmerBrickTile) * (GlimmerBrickSide / GlimmerBrickTile) + GlimmerBrickSide * GlimmerBrickSide;
+static constexpr uint32 GlimmerBrickCards = 8;
+static constexpr uint32 GlimmerBrickMips = 6;
+static constexpr uint32 GlimmerBrickCardFirstMip = 2;
+static constexpr uint32 GlimmerBrickCardSide = GlimmerBrickSide >> GlimmerBrickCardFirstMip;
+static constexpr uint32 GlimmerBrickCardTexels = (4 * GlimmerBrickCardSide * GlimmerBrickCardSide - 1) / 3;
+static constexpr uint32 GlimmerBrickIndexStride = 1 + GlimmerBrickMaxPages + GlimmerBrickCards + 5 + (GlimmerBrickSide / GlimmerBrickTile) * (GlimmerBrickSide / GlimmerBrickTile) + GlimmerBrickSide * GlimmerBrickSide;
 
 static constexpr float GlimmerBrickCellSize = 2.0f;
 
@@ -51,6 +57,8 @@ enum class GlimmerBrickDebugView : int
     Steps,
     Error, // against the BVH: green within a column, yellow within four, red a leak, blue a phantom
     Receiver,
+    Light,
+    LightCoarse,
 
     Max
 };
@@ -65,7 +73,8 @@ public:
 
     ~GlimmerBrickWorld();
 
-    void Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
+    // technique: where the cards' indirect light comes from
+    void Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache, const GlimmerTechnique* technique);
 
     bool RenderDebugView(const GlimmerDebugViewContext& context, GlimmerBrickDebugView debugView);
 
@@ -94,9 +103,9 @@ public:
         return m_crossingsBuffer;
     }
 
-    HYP_FORCE_INLINE const GpuBufferRef& GetExtraBuffer() const
+    HYP_FORCE_INLINE const GpuBufferRef& GetMaterialBuffer() const
     {
-        return m_extraBuffer;
+        return m_materialBuffer;
     }
 
 private:
@@ -128,7 +137,8 @@ private:
     void CreateResources();
     void MoveWindow(Frame* frame, const Vec3i& originChunk, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
     void MarkSceneChanges(const GlimmerTLAS& tlas);
-    void BuildChunk(Frame* frame, Chunk& chunk, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
+    void BuildChunk(Frame* frame, Chunk& chunk, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache, const GlimmerTechnique* technique);
+    void LightBricks(Frame* frame, const GlimmerTechnique* technique, uint32 firstBrick, uint32 numBricks, const Box* buildListBox);
     void Dispatch(Frame* frame, BuildPass pass, const Box& box, uint32 numThreads, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
     void InsertBarriers(Frame* frame, bool isForWriting);
 
@@ -137,10 +147,13 @@ private:
     GpuBufferRef m_tableBuffer;
     GpuBufferRef m_indexBuffer;
     GpuBufferRef m_crossingsBuffer;
-    GpuBufferRef m_extraBuffer;
+    GpuBufferRef m_materialBuffer;
     GpuBufferRef m_countersBuffer;
     GpuBufferRef m_freeListBuffer;
     GpuBufferRef m_pageFreeListBuffer;
+    GpuBufferRef m_cardFreeListBuffer;
+    GpuBufferRef m_radianceBuffer;
+    GpuBufferRef m_crossingLightBuffer;
     GpuBufferRef m_listHeadsBuffer;
     GpuBufferRef m_listNodesBuffer;
     GpuBufferRef m_buildListBuffer;
@@ -150,6 +163,8 @@ private:
     Vec3i m_originChunk;
     uint32 m_poolBricks;
     uint32 m_poolPages;
+    uint32 m_poolCards;
+    uint32 m_relightCursor;
     uint32 m_seenGeneration;
     bool m_hasWindow;
 

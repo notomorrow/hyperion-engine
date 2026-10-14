@@ -14,20 +14,25 @@
 #define DEBUG_VIEW_STEPS 2
 #define DEBUG_VIEW_ERROR 3
 #define DEBUG_VIEW_RECEIVER 4
+#define DEBUG_VIEW_LIGHT 5
+#define DEBUG_VIEW_LIGHT_COARSE 6
 
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickTableBuffer) StructuredBuffer<uint> glimmerBrickTable;
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickIndexBuffer) StructuredBuffer<uint> glimmerBrickIndex;
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickCrossingsBuffer) StructuredBuffer<uint> glimmerBrickCrossings;
-DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickExtraBuffer) StructuredBuffer<uint> glimmerBrickExtra;
+DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickMaterialBuffer) StructuredBuffer<uint> glimmerBrickMaterial;
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickCountersBuffer) StructuredBuffer<uint> glimmerBrickCounters;
+DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickRadianceBuffer) StructuredBuffer<uint> glimmerBrickRadiance;
+DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickCrossingLightBuffer) StructuredBuffer<uint> glimmerBrickCrossingLight;
 
+#define GLIMMER_BRICKS_WITH_LIGHT
 #include "GlimmerBricks.hlsli"
 
 struct GlimmerBrickDebugConstants
 {
     uint4 dimensionsModeInstances; // xy = output size, z = debug view, w = number of instances
     float4 params;                 // x = max trace distance
-    uint4 info;                    // x = pool bricks, y = pool pages
+    uint4 info;                    // x = pool bricks, y = pool pages, z = pool cards
     GlimmerBrickParams bricks;
 };
 
@@ -57,6 +62,7 @@ DECLARE_SRV(GlimmerBrickDebug, GlimmerBLASTrianglesBuffer) StructuredBuffer<uint
 #define COUNTER_DROPPED_COLUMNS 4
 #define COUNTER_DROPPED_NODES 5
 #define COUNTER_FREE_PAGES 6
+#define COUNTER_FREE_CARDS 7
 
 static const float3 DebugLightDirection = normalize(float3(0.45, 0.8, 0.35));
 
@@ -158,6 +164,28 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
             result = float3(0.0, 1.0, 0.0);
         }
     }
+    else if (mode == DEBUG_VIEW_LIGHT || mode == DEBUG_VIEW_LIGHT_COARSE)
+    {
+        if (didHitBricks)
+        {
+            const uint header = brickHit.brick * uint(GLIMMER_BRICK_INDEX_STRIDE);
+
+            const int3 cell = int3(
+                int(glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_CELL)]),
+                int(glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_CELL) + 1u]),
+                int(glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_CELL) + 2u]));
+
+            const uint cardSlot = GlimmerBrickCardSlot(constants.bricks, brickHit.axis, brickHit.normal, brickHit.depth);
+
+            // the crossing's own light, or its card's at the tiles
+            const float4 light = mode == DEBUG_VIEW_LIGHT
+                ? GlimmerBrickUnpackLight(glimmerBrickCrossingLight[brickHit.crossing])
+                : GlimmerSampleBrickLight(constants.bricks, cell, brickHit.axis, cardSlot, cameraPosition + direction * brickHit.t, 4.0 * width);
+
+            // magenta: the card has nothing there
+            result = light.a > 1e-3 ? light.rgb / light.a : float3(1.0, 0.0, 1.0);
+        }
+    }
     else if (mode == DEBUG_VIEW_RECEIVER)
     {
         const float depth = GBufferDepthTexture.Load(int3(coord, 0)).r;
@@ -179,7 +207,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
                 if (receiver.found)
                 {
-                    const uint flags = glimmerBrickExtra[2u * receiver.crossing] >> 29u;
+                    const uint flags = glimmerBrickMaterial[receiver.crossing] >> 29u;
 
                     result = lerp(float3(0.0, 1.0, 0.0), HashColor(receiver.crossing), 0.35) * grey;
 
@@ -196,12 +224,14 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
         }
     }
 
-    // top left: how much of the brick and page pools is used, then whether the build ran out of bricks (red), crossings (yellow) or list nodes (blue)
+    // top left: how much of the brick, page and card pools is used, then whether the build ran out of bricks (red), crossings (yellow) or list nodes (blue)
     if (coord.y < 8u && coord.x < 256u)
     {
-        const float used = coord.y < 4u
+        const float used = coord.y < 3u
             ? 1.0 - float(glimmerBrickCounters[COUNTER_FREE_BRICKS]) / float(max(constants.info.x, 1u))
-            : 1.0 - float(glimmerBrickCounters[COUNTER_FREE_PAGES]) / float(max(constants.info.y, 1u));
+            : (coord.y < 6u
+                ? 1.0 - float(glimmerBrickCounters[COUNTER_FREE_PAGES]) / float(max(constants.info.y, 1u))
+                : 1.0 - float(glimmerBrickCounters[COUNTER_FREE_CARDS]) / float(constants.info.z != 0u ? constants.info.z : 8192u));
 
         result = float(coord.x) / 256.0 < used ? (float3)1.0 : (float3)0.0;
     }
