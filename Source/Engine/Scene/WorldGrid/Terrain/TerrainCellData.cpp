@@ -110,7 +110,14 @@ bool TerrainCellData::EnsureWritableHeights()
             SetBlobDataResident(true);
         }
 
-        return m_heights.raw != nullptr && !m_heights.readOnly;
+        if (m_heights.raw == nullptr || m_heights.readOnly)
+        {
+            return false;
+        }
+
+        MarkDirty();
+
+        return true;
     };
 
     if (makeWritable())
@@ -247,7 +254,14 @@ bool TerrainCellData::EnsureWritableGroundCoverPaint()
             SetBlobDataResident(true, m_groundCoverPaint);
         }
 
-        return m_groundCoverPaint.raw != nullptr && !m_groundCoverPaint.readOnly;
+        if (m_groundCoverPaint.raw == nullptr || m_groundCoverPaint.readOnly)
+        {
+            return false;
+        }
+
+        MarkDirty();
+
+        return true;
     };
 
     if (makeWritable())
