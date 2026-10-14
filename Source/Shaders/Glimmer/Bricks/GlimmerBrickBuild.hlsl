@@ -1,0 +1,728 @@
+#include "../../Include/Defines.hlsli"
+#include "../../Include/Shared.hlsli"
+#include "../../Include/Aabb.hlsli"
+
+#define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+#include "../../Include/Material.hlsli"
+#undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
+
+#include "../../Include/RayTracing/BVH.hlsli"
+#include "../GlimmerCommon.hlsli"
+
+#define GLIMMER_BRICKS_NO_TRACE
+#include "GlimmerBricks.hlsli"
+
+// BIN puts each triangle on the list of every brick of its axis it touches, GATHER makes crossings of a brick's list, a thread per column
+PERMUTE(MODE, INIT, CLEAR, BIN, ALLOC, COUNT, PREFIX, GATHER, TILES)
+
+struct GlimmerBrickBuildConstants
+{
+    GlimmerBrickParams bricks;
+    int4 boxMin;    // xyz = absolute cell
+    int4 boxExtent; // xyz = cells, w = pool pages
+    uint4 counts;   // x = span chunks, y = groups along x, z = pool bricks, w = list node capacity
+};
+
+DECLARE_BUFFER_DYNAMIC(GlimmerBrickBuild, CBuffer) cbuffer CBuffer
+{
+    GlimmerBrickBuildConstants constants;
+};
+
+DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickTableBuffer) RWStructuredBuffer<uint> glimmerBrickTable;
+DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickIndexBuffer) RWStructuredBuffer<uint> glimmerBrickIndex;
+DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickCrossingsBuffer) RWStructuredBuffer<uint> glimmerBrickCrossings;
+DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickExtraBuffer) RWStructuredBuffer<uint> glimmerBrickExtra;
+DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickCountersBuffer) RWStructuredBuffer<uint> glimmerBrickCounters;
+DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickFreeListBuffer) RWStructuredBuffer<uint> glimmerBrickFreeList;
+DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickPageFreeListBuffer) RWStructuredBuffer<uint> glimmerBrickPageFreeList;
+DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickListHeadsBuffer) RWStructuredBuffer<uint> glimmerBrickListHeads;
+DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickListNodesBuffer) RWStructuredBuffer<uint> glimmerBrickListNodes;
+DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickBuildListBuffer) RWStructuredBuffer<uint> glimmerBrickBuildList;
+
+DECLARE_SRV(GlimmerBrickBuild, SpanInstancesBuffer) StructuredBuffer<GlimmerSpanInstance> spanInstances;
+DECLARE_SRV(GlimmerBrickBuild, SpanChunksBuffer) StructuredBuffer<GlimmerSpanChunk> spanChunks;
+DECLARE_SRV(GlimmerBrickBuild, GlimmerBLASTrianglesBuffer) StructuredBuffer<uint> glimmerBLASTriangles;
+DECLARE_SRV(GlimmerBrickBuild, MaterialsBuffer) StructuredBuffer<Material> materials;
+
+#ifdef HYP_FEATURES_BINDLESS_TEXTURES
+DECLARE_SRV(BindlessResources0, Textures) Texture2D textures[];
+#endif
+
+DECLARE_SAMPLER(GlimmerBrickBuild, SamplerLinearMipmap) SamplerState glimmerMaterialSampler;
+
+#include "../GlimmerMaterial.hlsli"
+
+#define GROUP_SIZE 64
+
+// NOTE must match GlimmerBrickWorld.hpp
+#define COUNTER_FREE_BRICKS 0
+#define COUNTER_LIST_NODES 1
+#define COUNTER_BUILD_BRICKS 2
+#define COUNTER_FAILED_BRICKS 3
+#define COUNTER_DROPPED_COLUMNS 4
+#define COUNTER_DROPPED_NODES 5
+#define COUNTER_FREE_PAGES 6
+#define NUM_COUNTERS 8
+
+#define LIST_NODE_WORDS 3u
+#define MAX_LIST_STEPS 65536u
+
+#define COLUMNS_PER_BRICK (GLIMMER_BRICK_SIDE * GLIMMER_BRICK_SIDE)
+#define TILES_PER_BRICK (GLIMMER_BRICK_TILES_PER_SIDE * GLIMMER_BRICK_TILES_PER_SIDE)
+
+// crossings within this many column widths in depth, with normals no further apart than SAME_FACING, are one surface
+#define SAME_DEPTH 0.5
+#define SAME_FACING 0.8
+#define FLAT_AGREEMENT 0.9999
+
+// columns' worth of surface a brick needs to be built
+#define MIN_BRICK_COLUMNS 48.0
+#define AREA_SCALE 4.0
+
+uint BoxCells()
+{
+    return uint(constants.boxExtent.x * constants.boxExtent.y * constants.boxExtent.z);
+}
+
+int3 BoxCell(uint cellIndex)
+{
+    const uint3 extent = uint3(constants.boxExtent.xyz);
+
+    return constants.boxMin.xyz + int3(cellIndex % extent.x, (cellIndex / extent.x) % extent.y, cellIndex / (extent.x * extent.y));
+}
+
+float3 TransformPoint(GlimmerSpanInstance instance, float3 position)
+{
+    const float4 homogeneous = float4(position, 1.0);
+
+    return float3(dot(instance.objectToWorld0, homogeneous), dot(instance.objectToWorld1, homogeneous), dot(instance.objectToWorld2, homogeneous));
+}
+
+struct WorldTriangle
+{
+    float3 p0;
+    float3 p1;
+    float3 p2;
+    float3 normal; // unit length, facing the way the surface does
+    bool isValid;
+};
+
+WorldTriangle LoadWorldTriangle(GlimmerSpanInstance instance, uint localTriangle)
+{
+    const BVHBLASTriangle bvhTriangle = LOAD_BVH_BLAS_TRIANGLE(glimmerBLASTriangles, instance.data.x + localTriangle);
+
+    WorldTriangle worldTriangle;
+    worldTriangle.p0 = TransformPoint(instance, bvhTriangle.position0);
+    worldTriangle.p1 = TransformPoint(instance, bvhTriangle.position1);
+    worldTriangle.p2 = TransformPoint(instance, bvhTriangle.position2);
+
+    const float3 normal = cross(worldTriangle.p1 - worldTriangle.p0, worldTriangle.p2 - worldTriangle.p0);
+    const float doubleArea = length(normal);
+
+    worldTriangle.isValid = doubleArea > 1e-10;
+    worldTriangle.normal = normal / max(doubleArea, 1e-20) * ((instance.data.w & GLIMMER_INSTANCE_FLAG_MIRRORED) != 0u ? -1.0 : 1.0);
+
+    return worldTriangle;
+}
+
+#if defined(MODE_BIN)
+
+void BinTriangle(GlimmerSpanInstance instance, uint spanInstanceIndex, uint localTriangle)
+{
+    const WorldTriangle worldTriangle = LoadWorldTriangle(instance, localTriangle);
+
+    if (!worldTriangle.isValid)
+    {
+        return;
+    }
+
+    const uint axis = GlimmerBrickAxis(worldTriangle.normal);
+
+    const float cellSize = constants.bricks.params.x;
+    const float margin = GlimmerBrickDepthMargin(constants.bricks);
+
+    const float3 triangleMin = min(worldTriangle.p0, min(worldTriangle.p1, worldTriangle.p2));
+    const float3 triangleMax = max(worldTriangle.p0, max(worldTriangle.p1, worldTriangle.p2));
+
+    const int3 cellMin = max(int3(floor((triangleMin - margin) * constants.bricks.params.y)), constants.boxMin.xyz);
+    const int3 cellMax = min(int3(floor((triangleMax + margin) * constants.bricks.params.y)), constants.boxMin.xyz + constants.boxExtent.xyz - 1);
+
+    if (any(cellMax < cellMin))
+    {
+        return;
+    }
+
+    const float3 halfExtent = (float3)(0.5 * cellSize + margin);
+
+    // what the triangle covers of a brick, in columns, at most all of it
+    const float3 doubleArea = cross(worldTriangle.p1 - worldTriangle.p0, worldTriangle.p2 - worldTriangle.p0);
+    const float projectedColumns = 0.5 * abs(GlimmerBrickAlong(axis, doubleArea)) * constants.bricks.params.w * constants.bricks.params.w;
+    const uint coveredArea = uint(min(projectedColumns, float(COLUMNS_PER_BRICK)) * AREA_SCALE + 0.5);
+
+    for (int z = cellMin.z; z <= cellMax.z; z++)
+    {
+        for (int y = cellMin.y; y <= cellMax.y; y++)
+        {
+            for (int x = cellMin.x; x <= cellMax.x; x++)
+            {
+                const int3 cell = int3(x, y, z);
+                const float3 center = (float3(cell) + 0.5) * cellSize;
+
+                if (!TriangleOverlapsBox(worldTriangle.p0, worldTriangle.p1, worldTriangle.p2, worldTriangle.normal, center, halfExtent))
+                {
+                    continue;
+                }
+
+                uint node;
+                InterlockedAdd(glimmerBrickCounters[COUNTER_LIST_NODES], 1u, node);
+
+                if (node >= constants.counts.w)
+                {
+                    uint previous;
+                    InterlockedAdd(glimmerBrickCounters[COUNTER_DROPPED_NODES], 1u, previous);
+
+                    return;
+                }
+
+                glimmerBrickListNodes[node * LIST_NODE_WORDS] = spanInstanceIndex;
+                glimmerBrickListNodes[node * LIST_NODE_WORDS + 1u] = localTriangle;
+
+                uint next;
+                InterlockedExchange(glimmerBrickListHeads[GlimmerBrickTableIndex(cell, axis)], node, next);
+
+                // the table holds no brick while its box is built, so it adds up the area: one less than it, from GLIMMER_BRICK_NONE
+                uint previousArea;
+                InterlockedAdd(glimmerBrickTable[GlimmerBrickTableIndex(cell, axis)], coveredArea, previousArea);
+
+                glimmerBrickListNodes[node * LIST_NODE_WORDS + 2u] = next;
+            }
+        }
+    }
+}
+
+#endif
+
+#if defined(MODE_GATHER) || defined(MODE_COUNT)
+
+struct Gathered
+{
+    float depth;
+    float3 normal;
+    float weight;
+    uint mask;
+    uint material;
+    float most;
+    bool isDoubleSided;
+};
+
+// which sixteenths of a column a triangle has anything in, from its corners across the column in columns
+uint TriangleColumnMask(float2 a, float2 b, float2 c)
+{
+    const float area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+
+    if (abs(area) < 1e-12)
+    {
+        return 0u;
+    }
+
+    const float turn = area > 0.0 ? 1.0 : -1.0;
+    const float2 corners[3] = { a, b, c };
+    const float2 low = min(a, min(b, c));
+    const float2 high = max(a, max(b, c));
+
+    uint mask = 0u;
+
+    for (uint part = 0; part < 16u; part++)
+    {
+        const float2 partLow = float2(float(part & 3u), float(part >> 2u)) * 0.25;
+
+        if (any(partLow > high) || any(partLow + 0.25 < low))
+        {
+            continue;
+        }
+
+        const float2 middle = partLow + 0.125;
+
+        bool isInside = true;
+
+        [unroll]
+        for (uint edgeIndex = 0; edgeIndex < 3u; edgeIndex++)
+        {
+            const float2 from = corners[edgeIndex];
+            const float2 along = corners[(edgeIndex + 1u) % 3u] - from;
+
+            const float within = turn * (along.x * (middle.y - from.y) - along.y * (middle.x - from.x));
+            const float reach = 0.125 * (abs(along.x) + abs(along.y));
+
+            isInside = isInside && within + reach >= 0.0;
+        }
+
+        if (isInside)
+        {
+            mask |= 1u << part;
+        }
+    }
+
+    return mask;
+}
+
+void GatherColumn(uint brick, uint axis, int3 cell, uint listHead, int2 column)
+{
+    const float width = constants.bricks.params.z;
+    const float cellSize = constants.bricks.params.x;
+
+    const float3 columnLow = GlimmerBrickCellLow(constants.bricks, cell) + GlimmerBrickPoint(axis, float2(column) * width, 0.0);
+    const float3 middle = columnLow + GlimmerBrickPoint(axis, (float2)(0.5 * width), 0.0);
+
+    Gathered found[GLIMMER_BRICK_MAX_COLUMN_CROSSINGS];
+    uint count = 0u;
+
+    for (uint clearIndex = 0; clearIndex < GLIMMER_BRICK_MAX_COLUMN_CROSSINGS; clearIndex++)
+    {
+        found[clearIndex] = (Gathered)0;
+    }
+
+    uint node = listHead;
+
+    [loop]
+    for (uint listStep = 0; listStep < MAX_LIST_STEPS && node != GLIMMER_BRICK_NONE; listStep++)
+    {
+        const uint spanInstanceIndex = glimmerBrickListNodes[node * LIST_NODE_WORDS];
+        const uint localTriangle = glimmerBrickListNodes[node * LIST_NODE_WORDS + 1u];
+
+        node = glimmerBrickListNodes[node * LIST_NODE_WORDS + 2u];
+
+        const GlimmerSpanInstance instance = spanInstances[spanInstanceIndex];
+        const WorldTriangle worldTriangle = LoadWorldTriangle(instance, localTriangle);
+
+        const float2 a = GlimmerBrickAcross(axis, worldTriangle.p0 - columnLow) * constants.bricks.params.w;
+        const float2 b = GlimmerBrickAcross(axis, worldTriangle.p1 - columnLow) * constants.bricks.params.w;
+        const float2 c = GlimmerBrickAcross(axis, worldTriangle.p2 - columnLow) * constants.bricks.params.w;
+
+        if (any(min(a, min(b, c)) > 1.0) || any(max(a, max(b, c)) < 0.0))
+        {
+            continue;
+        }
+
+        const float3 normal = worldTriangle.normal;
+        const float depth = dot(normal, worldTriangle.p0 - middle) / GlimmerBrickAlong(axis, normal);
+
+        if (depth < -width || depth >= cellSize + width)
+        {
+            continue;
+        }
+
+        const uint mask = TriangleColumnMask(a, b, c);
+
+        if (mask == 0u)
+        {
+            continue;
+        }
+
+        const float weight = float(countbits(mask));
+
+        uint slot = GLIMMER_BRICK_NONE;
+
+        for (uint foundIndex = 0; foundIndex < count && slot == GLIMMER_BRICK_NONE; foundIndex++)
+        {
+            if (abs(found[foundIndex].depth / found[foundIndex].weight - depth) < SAME_DEPTH * width
+                && dot(normalize(found[foundIndex].normal), normal) > SAME_FACING)
+            {
+                slot = foundIndex;
+            }
+        }
+
+        if (slot == GLIMMER_BRICK_NONE)
+        {
+            if (count == GLIMMER_BRICK_MAX_COLUMN_CROSSINGS)
+            {
+                continue;
+            }
+
+            slot = count++;
+        }
+
+        found[slot].depth += depth * weight;
+        found[slot].normal += normal * weight;
+        found[slot].weight += weight;
+        found[slot].mask |= mask;
+
+        if (weight > found[slot].most)
+        {
+            found[slot].most = weight;
+            found[slot].material = instance.data.z;
+            found[slot].isDoubleSided = (instance.data.w & GLIMMER_INSTANCE_FLAG_DOUBLE_SIDED) != 0u;
+        }
+    }
+
+#if defined(MODE_COUNT)
+    glimmerBrickIndex[GlimmerBrickColumnIndex(brick, column)] = count << 24u;
+#else
+    uint order[GLIMMER_BRICK_MAX_COLUMN_CROSSINGS];
+    float depths[GLIMMER_BRICK_MAX_COLUMN_CROSSINGS];
+
+    for (uint orderIndex = 0; orderIndex < GLIMMER_BRICK_MAX_COLUMN_CROSSINGS; orderIndex++)
+    {
+        order[orderIndex] = orderIndex;
+        depths[orderIndex] = orderIndex < count ? found[orderIndex].depth / found[orderIndex].weight : 0.0;
+    }
+
+    // nearest first
+    for (uint sortIndex = 1; sortIndex < count; sortIndex++)
+    {
+        const uint moved = order[sortIndex];
+
+        uint insertAt = sortIndex;
+
+        while (insertAt > 0u && depths[order[insertAt - 1u]] > depths[moved])
+        {
+            order[insertAt] = order[insertAt - 1u];
+            insertAt--;
+        }
+
+        order[insertAt] = moved;
+    }
+
+    // where the prefix pass put this column, or nowhere when the brick got no pages
+    const uint entry = glimmerBrickIndex[GlimmerBrickColumnIndex(brick, column)];
+    const uint first = entry & 0xFFFFFFu;
+
+    count = min(count, entry >> 24u);
+
+    for (uint writeIndex = 0; writeIndex < count; writeIndex++)
+    {
+        const Gathered crossing = found[order[writeIndex]];
+
+        const float3 normal = normalize(crossing.normal);
+        const float agreement = length(crossing.normal) / crossing.weight;
+
+        uint flags = 0u;
+
+        if (agreement < FLAT_AGREEMENT)
+        {
+            flags |= GLIMMER_BRICK_FLAG_CURVED;
+        }
+
+        if (crossing.isDoubleSided)
+        {
+            flags |= GLIMMER_BRICK_FLAG_DOUBLE_SIDED;
+        }
+
+        float3 color = float3(0.5, 0.5, 0.5);
+        float2 finish = float2(0.0, 1.0);
+
+        if (crossing.material != 0xFFFFFFFFu)
+        {
+            const Material material = materials[crossing.material];
+
+            color = GlimmerGetMaterialAverageAlbedo(crossing.material);
+            finish = float2(GET_MATERIAL_PARAM(material, MATERIAL_PARAM_METALNESS), GET_MATERIAL_PARAM(material, MATERIAL_PARAM_ROUGHNESS));
+        }
+
+        const uint2 packedFinish = uint2(saturate(finish) * 63.0 + 0.5);
+        const uint crossingIndex = first + writeIndex;
+
+        glimmerBrickCrossings[2u * crossingIndex] = GlimmerBrickPackDepth(constants.bricks, depths[order[writeIndex]]) | (GlimmerBrickPackNormal(normal) << 16u);
+        glimmerBrickCrossings[2u * crossingIndex + 1u] = crossing.mask | (GlimmerBrickPackColor(color) << 16u);
+
+        glimmerBrickExtra[2u * crossingIndex] = (crossing.material & 0xFFFFu) | (packedFinish.x << 16u) | (packedFinish.y << 22u) | (flags << 29u);
+        glimmerBrickExtra[2u * crossingIndex + 1u] = uint(column.y) * uint(GLIMMER_BRICK_SIDE) + uint(column.x);
+    }
+
+#endif
+}
+
+#endif
+
+[numthreads(GROUP_SIZE, 1, 1)]
+void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
+{
+    const uint flatGroupIndex = groupId.y * constants.counts.y + groupId.x;
+    const uint threadIndex = flatGroupIndex * GROUP_SIZE + groupIndex;
+
+#if defined(MODE_INIT)
+    const uint tableSize = uint(GLIMMER_BRICK_GRID_XZ * GLIMMER_BRICK_GRID_Y * GLIMMER_BRICK_GRID_XZ * 3);
+
+    if (threadIndex < tableSize)
+    {
+        glimmerBrickTable[threadIndex] = GLIMMER_BRICK_NONE;
+        glimmerBrickListHeads[threadIndex] = GLIMMER_BRICK_NONE;
+    }
+
+    if (threadIndex < constants.counts.z)
+    {
+        glimmerBrickFreeList[threadIndex] = constants.counts.z - 1u - threadIndex;
+    }
+
+    if (threadIndex < uint(constants.boxExtent.w))
+    {
+        glimmerBrickPageFreeList[threadIndex] = uint(constants.boxExtent.w) - 1u - threadIndex;
+    }
+
+    if (threadIndex < NUM_COUNTERS)
+    {
+        glimmerBrickCounters[threadIndex] = threadIndex == COUNTER_FREE_BRICKS ? constants.counts.z : (threadIndex == COUNTER_FREE_PAGES ? uint(constants.boxExtent.w) : 0u);
+    }
+#elif defined(MODE_CLEAR)
+    if (threadIndex == 0u)
+    {
+        glimmerBrickCounters[COUNTER_LIST_NODES] = 0u;
+        glimmerBrickCounters[COUNTER_BUILD_BRICKS] = 0u;
+    }
+
+    if (threadIndex >= BoxCells() * 3u)
+    {
+        return;
+    }
+
+    const uint tableIndex = GlimmerBrickTableIndex(BoxCell(threadIndex / 3u), threadIndex % 3u);
+    const uint brick = glimmerBrickTable[tableIndex];
+
+    if (brick != GLIMMER_BRICK_NONE)
+    {
+        uint slot;
+        InterlockedAdd(glimmerBrickCounters[COUNTER_FREE_BRICKS], 1u, slot);
+
+        glimmerBrickFreeList[slot] = brick;
+        glimmerBrickTable[tableIndex] = GLIMMER_BRICK_NONE;
+
+        const uint header = brick * uint(GLIMMER_BRICK_INDEX_STRIDE);
+        const uint numPages = min(glimmerBrickIndex[header], uint(GLIMMER_BRICK_MAX_PAGES));
+
+        uint pageSlot;
+        InterlockedAdd(glimmerBrickCounters[COUNTER_FREE_PAGES], numPages, pageSlot);
+
+        for (uint pageIndex = 0; pageIndex < numPages; pageIndex++)
+        {
+            glimmerBrickPageFreeList[pageSlot + pageIndex] = glimmerBrickIndex[header + 1u + pageIndex];
+        }
+
+        glimmerBrickIndex[header] = 0u;
+    }
+
+    glimmerBrickListHeads[tableIndex] = GLIMMER_BRICK_NONE;
+#elif defined(MODE_BIN)
+    // a group per chunk
+    const uint chunkIndex = flatGroupIndex;
+
+    if (chunkIndex >= constants.counts.x)
+    {
+        return;
+    }
+
+    const GlimmerSpanChunk chunk = spanChunks[chunkIndex];
+
+    const float margin = GlimmerBrickDepthMargin(constants.bricks);
+    const float3 boxMinPosition = float3(constants.boxMin.xyz) * constants.bricks.params.x - margin;
+    const float3 boxMaxPosition = float3(constants.boxMin.xyz + constants.boxExtent.xyz) * constants.bricks.params.x + margin;
+
+    if (any(chunk.boundsMax.xyz < boxMinPosition) || any(chunk.boundsMin.xyz > boxMaxPosition))
+    {
+        return;
+    }
+
+    const uint spanInstanceIndex = asuint(chunk.boundsMin.w);
+    const GlimmerSpanInstance instance = spanInstances[spanInstanceIndex];
+
+    if ((instance.data.w & GLIMMER_INSTANCE_FLAG_FOLIAGE) != 0u)
+    {
+        return;
+    }
+
+    // mostly cut out alpha tested cards (chains, grilles) aren't surfaces
+    if ((instance.data.w & GLIMMER_INSTANCE_FLAG_ALPHA_TESTED) != 0u && GlimmerGetMaterialAverageAlbedoAlpha(instance.data.z).a < 0.5)
+    {
+        return;
+    }
+
+    for (uint chunkTriangle = groupIndex; chunkTriangle < GLIMMER_SPAN_CHUNK_TRIANGLES; chunkTriangle += GROUP_SIZE)
+    {
+        const uint localTriangle = asuint(chunk.boundsMax.w) + chunkTriangle;
+
+        if (localTriangle >= instance.data.y)
+        {
+            break;
+        }
+
+        BinTriangle(instance, spanInstanceIndex, localTriangle);
+    }
+#elif defined(MODE_ALLOC)
+    if (threadIndex >= BoxCells() * 3u)
+    {
+        return;
+    }
+
+    const uint tableIndex = GlimmerBrickTableIndex(BoxCell(threadIndex / 3u), threadIndex % 3u);
+
+    const uint coveredArea = glimmerBrickTable[tableIndex] + 1u;
+
+    glimmerBrickTable[tableIndex] = GLIMMER_BRICK_NONE;
+
+    // twigs, wires and the like aren't worth a brick
+    if (glimmerBrickListHeads[tableIndex] == GLIMMER_BRICK_NONE || coveredArea < uint(MIN_BRICK_COLUMNS * AREA_SCALE))
+    {
+        return;
+    }
+
+    uint numFree;
+    InterlockedAdd(glimmerBrickCounters[COUNTER_FREE_BRICKS], 0xFFFFFFFFu, numFree);
+
+    if (int(numFree) <= 0)
+    {
+        uint previous;
+        InterlockedAdd(glimmerBrickCounters[COUNTER_FREE_BRICKS], 1u, previous);
+        InterlockedAdd(glimmerBrickCounters[COUNTER_FAILED_BRICKS], 1u, previous);
+
+        return;
+    }
+
+    const uint brick = glimmerBrickFreeList[numFree - 1u];
+
+    glimmerBrickTable[tableIndex] = brick;
+    glimmerBrickIndex[brick * uint(GLIMMER_BRICK_INDEX_STRIDE)] = 0u;
+
+    uint buildIndex;
+    InterlockedAdd(glimmerBrickCounters[COUNTER_BUILD_BRICKS], 1u, buildIndex);
+
+    glimmerBrickBuildList[buildIndex] = threadIndex;
+#elif defined(MODE_PREFIX)
+    if (threadIndex >= glimmerBrickCounters[COUNTER_BUILD_BRICKS])
+    {
+        return;
+    }
+
+    const uint boxThread = glimmerBrickBuildList[threadIndex];
+    const uint brick = glimmerBrickTable[GlimmerBrickTableIndex(BoxCell(boxThread / 3u), boxThread % 3u)];
+
+    if (brick == GLIMMER_BRICK_NONE)
+    {
+        return;
+    }
+
+    const uint header = brick * uint(GLIMMER_BRICK_INDEX_STRIDE);
+    const uint columnsBase = header + uint(GLIMMER_BRICK_INDEX_COLUMNS);
+    const uint pageMask = uint(GLIMMER_BRICK_PAGE_CROSSINGS) - 1u;
+
+    // a column's crossings stay within one page
+    uint cursor = 0u;
+
+    for (uint countColumn = 0; countColumn < COLUMNS_PER_BRICK; countColumn++)
+    {
+        const uint count = glimmerBrickIndex[columnsBase + countColumn] >> 24u;
+
+        if ((cursor & pageMask) + count > uint(GLIMMER_BRICK_PAGE_CROSSINGS))
+        {
+            cursor = (cursor + pageMask) & ~pageMask;
+        }
+
+        cursor += count;
+    }
+
+    uint numPages = (cursor + pageMask) / uint(GLIMMER_BRICK_PAGE_CROSSINGS);
+    uint numFreePages = 0u;
+
+    if (numPages != 0u && numPages <= uint(GLIMMER_BRICK_MAX_PAGES))
+    {
+        InterlockedAdd(glimmerBrickCounters[COUNTER_FREE_PAGES], 0u - numPages, numFreePages);
+
+        if (int(numFreePages) < int(numPages))
+        {
+            uint previous;
+            InterlockedAdd(glimmerBrickCounters[COUNTER_FREE_PAGES], numPages, previous);
+
+            numFreePages = 0u;
+        }
+    }
+
+    const bool hasPages = numFreePages != 0u;
+
+    if (!hasPages && numPages != 0u)
+    {
+        uint previous;
+        InterlockedAdd(glimmerBrickCounters[COUNTER_DROPPED_COLUMNS], 1u, previous);
+
+        numPages = 0u;
+    }
+
+    glimmerBrickIndex[header] = numPages;
+
+    for (uint pageIndex = 0; pageIndex < numPages; pageIndex++)
+    {
+        glimmerBrickIndex[header + 1u + pageIndex] = glimmerBrickPageFreeList[numFreePages - 1u - pageIndex];
+    }
+
+    cursor = 0u;
+
+    for (uint placeColumn = 0; placeColumn < COLUMNS_PER_BRICK; placeColumn++)
+    {
+        const uint count = hasPages ? glimmerBrickIndex[columnsBase + placeColumn] >> 24u : 0u;
+
+        if ((cursor & pageMask) + count > uint(GLIMMER_BRICK_PAGE_CROSSINGS))
+        {
+            cursor = (cursor + pageMask) & ~pageMask;
+        }
+
+        uint first = 0u;
+
+        if (count != 0u)
+        {
+            first = glimmerBrickIndex[header + 1u + cursor / uint(GLIMMER_BRICK_PAGE_CROSSINGS)] * uint(GLIMMER_BRICK_PAGE_CROSSINGS) + (cursor & pageMask);
+        }
+
+        glimmerBrickIndex[columnsBase + placeColumn] = first | (count << 24u);
+
+        cursor += count;
+    }
+#elif defined(MODE_GATHER) || defined(MODE_COUNT) || defined(MODE_TILES)
+#if defined(MODE_GATHER) || defined(MODE_COUNT)
+    const uint perBrick = COLUMNS_PER_BRICK;
+#else
+    const uint perBrick = TILES_PER_BRICK;
+#endif
+
+    const uint buildIndex = threadIndex / perBrick;
+    const uint withinBrick = threadIndex % perBrick;
+
+    if (buildIndex >= glimmerBrickCounters[COUNTER_BUILD_BRICKS])
+    {
+        return;
+    }
+
+    const uint boxThread = glimmerBrickBuildList[buildIndex];
+    const int3 cell = BoxCell(boxThread / 3u);
+    const uint axis = boxThread % 3u;
+
+    const uint tableIndex = GlimmerBrickTableIndex(cell, axis);
+    const uint brick = glimmerBrickTable[tableIndex];
+
+    if (brick == GLIMMER_BRICK_NONE)
+    {
+        return;
+    }
+
+#if defined(MODE_GATHER) || defined(MODE_COUNT)
+    GatherColumn(brick, axis, cell, glimmerBrickListHeads[tableIndex], int2(withinBrick % GLIMMER_BRICK_SIDE, withinBrick / GLIMMER_BRICK_SIDE));
+#else
+    const int2 tile = int2(withinBrick % GLIMMER_BRICK_TILES_PER_SIDE, withinBrick / GLIMMER_BRICK_TILES_PER_SIDE);
+
+    uint nearest = 0xFFFFu;
+    uint furthest = 0u;
+
+    for (uint tileColumn = 0; tileColumn < GLIMMER_BRICK_TILE * GLIMMER_BRICK_TILE; tileColumn++)
+    {
+        const int2 column = tile * GLIMMER_BRICK_TILE + int2(tileColumn % GLIMMER_BRICK_TILE, tileColumn / GLIMMER_BRICK_TILE);
+        const uint entry = glimmerBrickIndex[GlimmerBrickColumnIndex(brick, column)];
+
+        for (uint k = 0; k < (entry >> 24u); k++)
+        {
+            const uint code = glimmerBrickCrossings[2u * ((entry & 0xFFFFFFu) + k)] & 0xFFFFu;
+
+            nearest = min(nearest, code);
+            furthest = max(furthest, code);
+        }
+    }
+
+    glimmerBrickIndex[GlimmerBrickTileIndex(brick, tile)] = nearest | (furthest << 16u);
+#endif
+#endif
+}

@@ -235,6 +235,12 @@ ShaderDefinitions "ShaderDefinitions" {
         ShaderDefinition "GlimmerSHOccupancySplat" {
             CS = "Glimmer/SH/GlimmerSHOccupancySplat.hlsl"
         }
+        ShaderDefinition "GlimmerBrickBuild" {
+            CS = "Glimmer/Bricks/GlimmerBrickBuild.hlsl"
+        }
+        ShaderDefinition "GlimmerBrickDebug" {
+            CS = "Glimmer/Bricks/GlimmerBrickDebug.hlsl"
+        }
         ShaderDefinition "GlimmerIrradiance" {
             VS = "Glimmer/GlimmerIrradiance.hlsl"
             PS = "Glimmer/GlimmerIrradiance.hlsl"

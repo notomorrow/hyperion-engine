@@ -36,6 +36,7 @@ class GlimmerChannel;
 class GlimmerSHOccupancy;
 class GlimmerSHVolume;
 class GlimmerRelight;
+class GlimmerBrickWorld;
 struct GlimmerChannelState;
 
 struct GlimmerSceneRegionParams
@@ -118,6 +119,7 @@ private:
     UniquePtr<GlimmerSHOccupancy> m_shOccupancy;
     UniquePtr<GlimmerSHVolume> m_shVolume;
     UniquePtr<GlimmerRelight> m_relight;
+    UniquePtr<GlimmerBrickWorld> m_brickWorld;
 
     uint32 m_maskGeneration;
 };

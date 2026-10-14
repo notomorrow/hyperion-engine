@@ -17,6 +17,8 @@
 #include <Rendering/Glimmer/SH/GlimmerSHVolume.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHOccupancy.hpp>
 #include <Rendering/Glimmer/GlimmerRelight.hpp>
+#include <Rendering/Glimmer/Bricks/GlimmerBrickWorld.hpp>
+#include <Rendering/Glimmer/Bricks/GlimmerBrickCVars.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
@@ -152,6 +154,7 @@ GlimmerTechnique::GlimmerTechnique()
       m_shOccupancy(MakeUnique<GlimmerSHOccupancy>()),
       m_shVolume(MakeUnique<GlimmerSHVolume>()),
       m_relight(MakeUnique<GlimmerRelight>()),
+      m_brickWorld(MakeUnique<GlimmerBrickWorld>()),
       m_maskGeneration(~0u)
 {
 }
@@ -194,6 +197,13 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         m_footprintMask->Rebuild(context.frame, tlas, Vec2f(regionCenter.x, regionCenter.z), GetGlimmerSWRTRadius(gatherRegion));
 
         m_maskGeneration = tlas.GetGeneration();
+    }
+
+    if (g_cvGlimmerBricksEnabled.Get() && context.blasCache)
+    {
+        const Vec3f viewerPosition = context.channelState && context.channelState->hasViewer ? context.channelState->viewerPosition : context.region.GetCenter();
+
+        m_brickWorld->Update(context.frame, viewerPosition, tlas, *context.blasCache);
     }
 
     if (context.updateLighting && context.surfaceCache && context.spanCache)
@@ -282,7 +292,14 @@ bool GlimmerTechnique::RenderDebugView(const GlimmerDebugViewContext& context)
     HYP_SCOPE;
     AssertOnThread(g_renderThread);
 
-    if (context.techniqueView <= int(GlimmerSWRTDebugView::None) || context.techniqueView >= int(GlimmerSWRTDebugView::Max))
+    if (context.techniqueView >= int(GlimmerSWRTDebugView::Max))
+    {
+        const int brickView = context.techniqueView - int(GlimmerSWRTDebugView::Max) + 1;
+
+        return brickView < int(GlimmerBrickDebugView::Max) && m_brickWorld->RenderDebugView(context, GlimmerBrickDebugView(brickView));
+    }
+
+    if (context.techniqueView <= int(GlimmerSWRTDebugView::None))
     {
         return false;
     }
