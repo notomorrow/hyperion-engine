@@ -344,6 +344,11 @@ PSOutput PSMain(PSInput input)
     }
 #endif
 
+    if (glimmerParams.w == 2u)
+    {
+        result = GlimmerBrickReflectionTexture.Load(int3(pixelCoord, 0)).rgb;
+    }
+
     output.output_color = float4(result, 1.0);
 
     return output;

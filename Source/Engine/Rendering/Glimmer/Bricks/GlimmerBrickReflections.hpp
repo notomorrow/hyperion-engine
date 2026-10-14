@@ -33,6 +33,8 @@ public:
 
     void Render(Frame* frame, View* view, GBuffer* gbuffer, const Vec2u& extent, const GlimmerBrickWorld* brickWorld);
 
+    bool IsDebugView() const;
+
     HYP_FORCE_INLINE bool IsValid() const
     {
         return m_isValid;
@@ -44,6 +46,8 @@ public:
 private:
     void CreateTextures(const Vec2u& extent);
     void CreateSlotBuffers(uint32 numCrossings);
+    void CopyCounts(Frame* frame);
+    void ReadCounts(Frame* frame);
 
     // half resolution
     Handle<Texture> m_rawColorTexture;
@@ -61,7 +65,11 @@ private:
     GpuBufferRef m_requestsBuffer;
     GpuBufferRef m_wantedBuffer;
     GpuBufferRef m_listBuffer;
+    GpuBufferRef m_wholeBuffer;
     GpuBufferRef m_countsBuffer;
+
+    FixedArray<GpuBufferRef, NumFramesInFlight> m_readbackBuffers;
+    FixedArray<bool, NumFramesInFlight> m_isReadbackPending;
 
     Vec2u m_extent;
     uint32 m_numCrossings;

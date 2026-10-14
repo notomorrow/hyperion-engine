@@ -467,6 +467,23 @@ bool TraceGlimmerBricks(GlimmerBrickParams bricks, float3 origin, float3 directi
     return true;
 }
 
+// how far along a ray from inside the window it leaves it, 0 for one that starts outside or with no window
+float GlimmerBrickWindowExit(GlimmerBrickParams bricks, float3 origin, float3 direction)
+{
+    const float3 low = float3(bricks.origin.xyz) * bricks.params.x;
+    const float3 high = low + float3(GlimmerBrickGridSize) * bricks.params.x;
+
+    if (bricks.origin.w == 0 || any(origin < low) || any(origin > high))
+    {
+        return 0.0;
+    }
+
+    const float3 safeDirection = select(abs(direction) > 1e-12, direction, select(direction >= 0.0, 1e-12, -1e-12));
+    const float3 tFar = max((low - origin) / safeDirection, (high - origin) / safeDirection);
+
+    return min(tFar.x, min(tFar.y, tFar.z));
+}
+
 struct GlimmerBrickReceiver
 {
     bool found;

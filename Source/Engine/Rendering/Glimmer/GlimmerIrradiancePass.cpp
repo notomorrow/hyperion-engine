@@ -184,7 +184,7 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
     const GlimmerScenePassData* brickScene = g_cvGlimmerBricksEnabled.Get() && glimmerPass ? glimmerPass->GetSceneForWorld(renderSetup.world) : nullptr;
 
     m_brickReflections->Render(frame, renderSetup.view, m_gbuffer, m_extent, brickScene && brickScene->technique ? brickScene->technique->GetBrickWorld() : nullptr);
-    m_shaderData.params.w = m_brickReflections->IsValid() ? 1u : 0u;
+    m_shaderData.params.w = m_brickReflections->IsValid() ? (m_brickReflections->IsDebugView() ? 2u : 1u) : 0u;
 
     GpuImage* targetImage = GetAttachment(0)->GetGpuImage();
     GpuImage* specularImage = GetAttachment(1)->GetGpuImage();

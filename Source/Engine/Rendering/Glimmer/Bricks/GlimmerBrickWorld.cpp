@@ -46,9 +46,6 @@ static EngineStatGpuTimer s_statGlimmerBrickBuild("Rendering/GPU/Glimmer/BrickBu
 static EngineStatGpuTimer s_statGlimmerBrickLight("Rendering/GPU/Glimmer/BrickLight");
 static EngineStatGpuTimer s_statGlimmerBrickDebug("Rendering/GPU/Glimmer/BrickDebug");
 
-static EngineStatCounter<uint32> s_statGlimmerBrickDirtyChunks("Rendering/Glimmer/BrickDirtyChunks", false);
-static EngineStatCounter<uint32> s_statGlimmerBrickChunkBuilds("Rendering/Glimmer/BrickChunkBuilds");
-
 static StaticShaderPropertyId s_propBrickModeInit { ShaderProperty(NAME("MODE"), NAME("INIT")) };
 static StaticShaderPropertyId s_propBrickModeClear { ShaderProperty(NAME("MODE"), NAME("CLEAR")) };
 static StaticShaderPropertyId s_propBrickModeBin { ShaderProperty(NAME("MODE"), NAME("BIN")) };
@@ -432,7 +429,6 @@ void GlimmerBrickWorld::BuildChunk(Frame* frame, Chunk& chunk, const GlimmerTLAS
     chunk.isBuilt = true;
     chunk.isDirty = false;
 
-    s_statGlimmerBrickChunkBuilds += 1u;
 }
 
 void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache, const GlimmerTechnique* technique)
@@ -506,15 +502,6 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
         hasWritten = true;
     }
 
-    uint32 numDirtyChunks = 0;
-
-    for (const Chunk& chunk : m_chunks)
-    {
-        numDirtyChunks += chunk.isDirty ? 1 : 0;
-    }
-
-    s_statGlimmerBrickDirtyChunks = numDirtyChunks;
-
     if (hasWritten)
     {
         InsertBarriers(frame, false);
@@ -559,7 +546,6 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
         constants.range = Vec4u(firstBrick, numBricks, buildListBox ? 1u : 0u, level);
         constants.params = Vec4f(ShadowBiasColumns, ShadowDistance, 0.0f, 0.0f);
         constants.dispatch = Vec4u(groups.x, 0, 0, 0);
-
 
         if (buildListBox)
         {

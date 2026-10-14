@@ -3,6 +3,7 @@
 #include "../../Include/Packing.hlsli"
 
 PERMUTE(MODE, TRACE, SHADE, RELIGHT)
+PERMUTE(TRACER, BVH, BRICKS)
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../../Include/Material.hlsli"
@@ -30,6 +31,17 @@ struct GlimmerProbeRayHit
 #define GLIMMER_RAY_HIT_SHADE 1u
 //////////
 
+#ifdef TRACER_BRICKS
+DECLARE_SRV(GlimmerProbeTrace, GlimmerBrickTableBuffer) StructuredBuffer<uint> glimmerBrickTable;
+DECLARE_SRV(GlimmerProbeTrace, GlimmerBrickIndexBuffer) StructuredBuffer<uint> glimmerBrickIndex;
+DECLARE_SRV(GlimmerProbeTrace, GlimmerBrickCrossingsBuffer) StructuredBuffer<uint> glimmerBrickCrossings;
+DECLARE_SRV(GlimmerProbeTrace, GlimmerBrickMaterialBuffer) StructuredBuffer<uint> glimmerBrickMaterial;
+#else
+#define GLIMMER_BRICKS_NO_TRACE
+#endif
+
+#include "../Bricks/GlimmerBricks.hlsli"
+
 struct GlimmerProbeTraceConstants
 {
     GlimmerProbeVolume volume;
@@ -44,6 +56,7 @@ struct GlimmerProbeTraceConstants
     GlimmerRelightParams relight;
     int4 relightRect;    // relight pass: xy = absolute texel of the rect to light, zw = its extent
     uint4 relightInfo;   // relight pass: x = ground level, y = groups along x
+    GlimmerBrickParams bricks;
 };
 
 #include "../../Include/Clouds.hlsli"
@@ -69,10 +82,12 @@ DECLARE_SRV(BindlessResources0, Textures) Texture2D textures[];
 
 DECLARE_SAMPLER(GlimmerProbeTrace, SamplerLinearMipmap) SamplerState glimmerMaterialSampler;
 
+#ifndef TRACER_BRICKS
 DECLARE_SRV(GlimmerProbeTrace, GlimmerTLASNodesBuffer) StructuredBuffer<BVHNode> glimmerTLASNodes;
 DECLARE_SRV(GlimmerProbeTrace, GlimmerInstancesBuffer) StructuredBuffer<GlimmerInstance> glimmerInstances;
 DECLARE_SRV(GlimmerProbeTrace, GlimmerBLASNodesBuffer) StructuredBuffer<BVHBLASNode> glimmerBLASNodes;
 DECLARE_SRV(GlimmerProbeTrace, GlimmerBLASTrianglesBuffer) StructuredBuffer<uint> glimmerBLASTriangles;
+#endif
 
 DECLARE_SRV(GlimmerProbeTrace, GlimmerGroundTexture) Texture2DArray<float> glimmerGround;
 DECLARE_SRV(GlimmerProbeTrace, GlimmerGroundAlbedoTexture) Texture2DArray<float4> glimmerGroundAlbedo;
@@ -115,7 +130,9 @@ DECLARE_SRV(GlimmerProbeTrace, GlimmerRelightTexture) Texture2DArray<float4> gli
 
 #define GLIMMER_PROBES_SPLIT
 #include "GlimmerProbes.hlsli"
+#ifndef TRACER_BRICKS
 #include "GlimmerSWRT.hlsli"
+#endif
 #include "GlimmerSWRTFootprint.hlsli"
 #include "../GlimmerMaterial.hlsli"
 
@@ -362,7 +379,14 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         bool isDone = true;
         bool isBackface = false;
 
+#ifndef TRACER_BRICKS
         GlimmerSWRTHit hit;
+#endif
+
+#ifdef TRACER_BRICKS
+        GlimmerBrickHit brickHit;
+#endif
+        bool hitBricks = false;
         bool hitSWRT = false;
 
         float swrtFirst = 0.0;
@@ -382,6 +406,14 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
         if (traceRay)
         {
+#ifdef TRACER_BRICKS
+            hitBricks = TraceGlimmerBricks(constants.bricks, origin, direction, swrtFirst, swrtLast, brickHit);
+
+            if (hitBricks)
+            {
+                hitT = brickHit.t;
+            }
+#else
             GlimmerSWRTStats stats = GlimmerMakeSWRTStats();
             hitSWRT = TraceGlimmerSWRT(origin, direction, swrtFirst, swrtLast, numInstances, false, hit, stats);
 
@@ -389,6 +421,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
             {
                 hitT = hit.t;
             }
+#endif
         }
 
         const float solidsFromT = select(traceRay, swrtCovered, select(traceSWRT, min(swrtCovered, GLIMMER_SPAN_FOOTPRINT_SLACK * constants.spans.levels[0].params.x), 0.0));
@@ -436,6 +469,42 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
                 }
             }
         }
+#ifdef TRACER_BRICKS
+        else if (hitBricks)
+        {
+            const uint packedMaterial = glimmerBrickMaterial[brickHit.crossing];
+            const uint materialIndex = (packedMaterial & 0xFFFFu) == 0xFFFFu ? 0xFFFFFFFFu : (packedMaterial & 0xFFFFu);
+            const bool isBack = dot(brickHit.normal, direction) > 0.0;
+
+            isBackface = isBack && ((packedMaterial >> 29u) & GLIMMER_BRICK_FLAG_DOUBLE_SIDED) == 0u;
+
+            if (!isBackface)
+            {
+                float3 emissive = GlimmerGetMaterialEmissive(materialIndex);
+
+                const float emissiveLuminance = GlimmerLuminance(emissive);
+
+                if (emissiveLuminance > constants.volume.params.z)
+                {
+                    emissive *= constants.volume.params.z / emissiveLuminance;
+                }
+
+                GlimmerHeightfieldHit emittingHit = heightfieldHit;
+                GlimmerAddLight(emittingHit.inscatter, GlimmerRestLight(emissive), (float3)heightfieldHit.transmittance);
+
+                GlimmerWriteRayHit(
+                    rayRecordIndex,
+                    origin + direction * hitT,
+                    isBack ? -brickHit.normal : brickHit.normal,
+                    hitT,
+                    GLIMMER_RAY_HIT_SHADE,
+                    GlimmerBrickUnpackColor(glimmerBrickCrossings[2u * brickHit.crossing + 1u] >> 16u),
+                    emittingHit);
+
+                isDone = false;
+            }
+        }
+#else
         else if (hitSWRT)
         {
             const GlimmerInstance instance = glimmerInstances[hit.instanceIndex];
@@ -472,6 +541,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
                 isDone = false;
             }
         }
+#endif
         else
         {
             escape = heightfieldHit.transmittance;

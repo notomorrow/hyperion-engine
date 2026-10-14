@@ -260,6 +260,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         probeInputs.shVolume = m_shVolume.Get();
         probeInputs.skyProbe = context.skyProbe;
         probeInputs.relight = m_relight.Get();
+        probeInputs.brickWorld = g_cvGlimmerBricksEnabled.Get() ? m_brickWorld.Get() : nullptr;
         probeInputs.cloudPass = context.cloudPass;
         probeInputs.light = light;
 

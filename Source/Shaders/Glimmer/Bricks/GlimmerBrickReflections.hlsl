@@ -1,8 +1,9 @@
 #include "../../Include/Defines.hlsli"
 
 // a pixel finds the crossing it is on, which owns a block of four slots, each the hit of one ray in a bin of directions, and reads the light of what the slots name
-// REQUESTS traces what blocks lacked last frame, RESOLVE reads slots, FINISH asks and lists, RAYS traces for the listed, HISTORY adds frames up, SPREAD fills every pixel
-PERMUTE(MODE, REQUESTS, RESOLVE, FINISH, RAYS, HISTORY, SPREAD)
+// REQUESTS traces what blocks lacked last frame, RESOLVE reads slots, FINISH asks and lists, RAYS traces for the listed, HISTORY adds frames up, SPREAD fills every pixel,
+// then WHOLE_LIST and WHOLE_RAYS give every pixel of a polished thing a ray: a mirror's picture cannot be spread from one pixel in four
+PERMUTE(MODE, REQUESTS, RESOLVE, FINISH, RAYS, HISTORY, SPREAD, WHOLE_LIST, WHOLE_RAYS)
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -34,6 +35,7 @@ struct GlimmerBrickReflectionsConstants
     float4 aim;       // x = alphas across a card is read over along a drawn direction, y = how many times what it has added up a sample may be, z = columns a moving dither reaches
     uint4 frame;      // x = frame, y = 1 when pixels read slots, z = frames a pixel that reads slots adds up, w = frames one that traces for itself adds up
     uint4 limits;     // x = crossings, y = blocks, z = requests a frame at most, w = 1 when there is no last frame to read
+    uint4 debug;      // x = 1 colours each pixel by how it came by its reflection, y = 1 counts into slotCounts
 };
 
 DECLARE_BUFFER_DYNAMIC(GlimmerBrickReflections, CBuffer) cbuffer CBuffer
@@ -51,6 +53,8 @@ DECLARE_UAV(GlimmerBrickReflections, SlotRequestsBuffer) RWStructuredBuffer<uint
 // what each resolved pixel found missing, four words as a request has them
 DECLARE_UAV(GlimmerBrickReflections, SlotWantedBuffer) RWStructuredBuffer<uint> slotWanted;
 DECLARE_UAV(GlimmerBrickReflections, SlotListBuffer) RWStructuredBuffer<uint> slotList;
+// the pixels of the view that get a ray after the spread
+DECLARE_UAV(GlimmerBrickReflections, SlotWholeBuffer) RWStructuredBuffer<uint> slotWhole;
 DECLARE_UAV(GlimmerBrickReflections, SlotCountsBuffer) RWStructuredBuffer<uint> slotCounts;
 
 // rgb = radiance times a, a = how much of the pixel's reflection is the bricks'
@@ -72,6 +76,11 @@ DECLARE_SRV(GlimmerBrickReflections, HistoryGuideTexture) Texture2D HistoryGuide
 #define COUNT_REQUESTS 0
 #define COUNT_LISTED 1
 #define COUNT_BLOCK_CURSOR 2
+#define COUNT_WHOLE 3
+#define COUNT_SLOT_PIXELS 4
+#define COUNT_PARTIAL_PIXELS 5
+#define COUNT_BLANK_PIXELS 6
+#define COUNT_RAY_PIXELS 7
 
 #define BLOCK_WORDS 10u
 #define REQUEST_WORDS 4u
@@ -459,6 +468,15 @@ bool LobeAim(uint2 texel, ReflectionSurface surface, float3 surfaceNormal, out f
 }
 
 // up to a square root of two either way, another each frame: a pixel then reads each of the two mips its width lies between
+void Note(uint counter)
+{
+    if (constants.debug.y != 0u)
+    {
+        uint previous;
+        InterlockedAdd(slotCounts[counter], 1u, previous);
+    }
+}
+
 float BetweenMips(uint own)
 {
     return exp2(UnitFloat(own + constants.frame.x * 2654435769u) - 0.5);
@@ -643,6 +661,8 @@ void Resolve(int2 pixel, uint2 texel, uint index)
 
     if (matte >= 1.0)
     {
+        OutColor[texel] = constants.debug.x != 0u ? float4(0.0, 0.0, 0.0, 1.0) : (float4)0.0;
+
         return;
     }
 
@@ -921,6 +941,8 @@ void Resolve(int2 pixel, uint2 texel, uint index)
 
     if (blank != 0u)
     {
+        Note(COUNT_BLANK_PIXELS);
+
         return;
     }
 
@@ -928,6 +950,14 @@ void Resolve(int2 pixel, uint2 texel, uint index)
     const float total = max(hits + beyond, 1e-6);
 
     OutColor[texel] = float4(light, hits) * ((1.0 - matte) / total);
+
+    Note(missing > 0.0 ? COUNT_PARTIAL_PIXELS : COUNT_SLOT_PIXELS);
+
+    // green: all of it from slots, blue: some bins still to come
+    if (constants.debug.x != 0u)
+    {
+        OutColor[texel] = missing > 0.0 ? float4(0.0, 0.0, 1.0, 1.0) : float4(0.0, 1.0, 0.0, 1.0);
+    }
     OutInfo[texel] = float4(hits > 0.0 ? reach / hits : -1.0, 0.0, 0.0, 0.0);
 }
 
@@ -954,6 +984,8 @@ void Finish(int2 pixel, uint2 texel, uint index)
 
     if (want == WANT_RAY)
     {
+        Note(COUNT_RAY_PIXELS);
+
         const ReflectionSurface surface = LoadSurface(pixel);
         const bool isSampled = constants.frame.w != 0u && surface.roughness >= SAMPLED_FROM;
 
@@ -1030,6 +1062,14 @@ void TraceListed(uint listed)
     const float3 surfaceNormal = LoadSurfaceNormal(pixel, surface.P, surface.N);
     const float matte = MatteShare(surface.roughness);
 
+    // red: a ray of its own, magenta: one filling in for what its slots lack
+    if (constants.debug.x != 0u)
+    {
+        OutColor[texel] = (entry & LIST_SINGLE) != 0u ? float4(1.0, 0.0, 1.0, 1.0) : float4(1.0, 0.0, 0.0, 1.0);
+
+        return;
+    }
+
     const float3 origin = RayStart(surface.P, surfaceNormal);
 
     float3 direction = Reflected(surface, surfaceNormal);
@@ -1086,6 +1126,71 @@ void TraceListed(uint listed)
 
     OutColor[texel] = float4(light.rgb / max(light.a, 1e-6) * coverage, coverage);
     OutInfo[texel] = float4(hit.t, 0.0, 0.0, 0.0);
+}
+
+#endif
+
+#if defined(MODE_WHOLE_LIST)
+
+void ListWhole(uint2 pixel)
+{
+    if (all((pixel & 1u) == 0u))
+    {
+        return;
+    }
+
+    const ReflectionSurface surface = LoadSurface(int2(pixel));
+
+    if (!surface.isValid || surface.roughness >= SAMPLED_FROM)
+    {
+        return;
+    }
+
+    // the guide has the block's resolved pixel unmarked where it traced along the middle of its lobe
+    const float4 resolved = GuideTexture.Load(int3(min(pixel / 2u, constants.dimensions.zw - 1u), 0));
+
+    if (resolved.a < 0.0 || abs(resolved.a - surface.roughness) > ROUGHNESS_TOLERANCE)
+    {
+        return;
+    }
+
+    uint at;
+    InterlockedAdd(slotCounts[COUNT_WHOLE], 1u, at);
+
+    slotWhole[at] = pixel.y * constants.dimensions.x + pixel.x;
+}
+
+#endif
+
+#if defined(MODE_WHOLE_RAYS)
+
+void TraceWhole(uint listed)
+{
+    if (listed >= slotCounts[COUNT_WHOLE])
+    {
+        return;
+    }
+
+    const uint place = slotWhole[listed];
+    const int2 pixel = int2(place % constants.dimensions.x, place / constants.dimensions.x);
+
+    const ReflectionSurface surface = LoadSurface(pixel);
+    const float3 surfaceNormal = LoadSurfaceNormal(pixel, surface.P, surface.N);
+
+    const float3 origin = RayStart(surface.P, surfaceNormal);
+    const float3 direction = Reflected(surface, surfaceNormal);
+
+    GlimmerBrickHit hit;
+    float4 light = (float4)0.0;
+
+    if (TraceGlimmerBricks(constants.bricks, origin, direction, 0.0, constants.params.z, hit) && dot(hit.normal, direction) < 0.0)
+    {
+        light = HitLight(hit, origin + direction * hit.t, constants.params.y * surface.alpha * hit.t);
+    }
+
+    const float coverage = light.a > 0.0 ? 1.0 - MatteShare(surface.roughness) : 0.0;
+
+    OutColor[pixel] = float4(light.rgb / max(light.a, 1e-6) * coverage, coverage);
 }
 
 #endif
@@ -1341,6 +1446,13 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     TraceRequest(dispatchThreadId.y * TRACE_ROW + dispatchThreadId.x);
 #elif defined(MODE_RAYS)
     TraceListed(dispatchThreadId.y * TRACE_ROW + dispatchThreadId.x);
+#elif defined(MODE_WHOLE_LIST)
+    if (all(dispatchThreadId.xy < constants.dimensions.xy))
+    {
+        ListWhole(dispatchThreadId.xy);
+    }
+#elif defined(MODE_WHOLE_RAYS)
+    TraceWhole(dispatchThreadId.y * TRACE_ROW + dispatchThreadId.x);
 #elif defined(MODE_SPREAD)
     const int2 pixel = int2(dispatchThreadId.xy);
 
@@ -1430,6 +1542,11 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     {
         slotCounts[COUNT_REQUESTS] = 0u;
         slotCounts[COUNT_LISTED] = 0u;
+        slotCounts[COUNT_WHOLE] = 0u;
+        slotCounts[COUNT_SLOT_PIXELS] = 0u;
+        slotCounts[COUNT_PARTIAL_PIXELS] = 0u;
+        slotCounts[COUNT_BLANK_PIXELS] = 0u;
+        slotCounts[COUNT_RAY_PIXELS] = 0u;
     }
 
     Resolve(pixel, texel, index);
