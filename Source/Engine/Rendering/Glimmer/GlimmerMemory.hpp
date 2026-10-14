@@ -13,10 +13,10 @@
 
 namespace Hyperion {
 
-static constexpr size_t GlimmerPoolBlockSize = 32 * 1024 * 1024; // 32 MiB -- BLAS / TLAS build data waiting on upload
+static constexpr size_t GlimmerPoolBlockSize = 32 * 1024 * 1024; // 32 MiB -- triangle cache / scene instance build data waiting on upload
 static constexpr size_t GlimmerArenaSize = 1 * 1024 * 1024;      // 1 MiB
 
-ENGINE_API extern Pool* g_glimmerPool;   // thread safe: the sim thread and the BLAS / TLAS build threads use it too
+ENGINE_API extern Pool* g_glimmerPool;   // thread safe: the sim thread and the triangle cache / scene instance build threads use it too
 ENGINE_API extern Arena* g_glimmerArena; // render thread only, reset at the end of every frame
 
 using GlimmerAllocator = AllocatorInstance<Pool, &g_glimmerPool>;

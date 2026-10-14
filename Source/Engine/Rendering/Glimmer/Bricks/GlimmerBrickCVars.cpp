@@ -1,0 +1,28 @@
+/*!
+ *  @author: The Hyperion Contributors
+ *  @date 2016-2026
+ *  @licence MIT
+ */
+
+#include <RenderingPch.hpp>
+
+#include <Rendering/Glimmer/Bricks/GlimmerBrickCVars.hpp>
+
+namespace Hyperion {
+
+CVar<bool> g_cvGlimmerBricksEnabled("Rendering.Glimmer.Bricks.Enabled", true);
+CVar<int> g_cvGlimmerBricksPoolBricks("Rendering.Glimmer.Bricks.PoolBricks", 4096);
+CVar<int> g_cvGlimmerBricksPoolPages("Rendering.Glimmer.Bricks.PoolPages", 16384);
+CVar<int> g_cvGlimmerBricksPoolCards("Rendering.Glimmer.Bricks.PoolCards", 16384);
+CVar<int> g_cvGlimmerBricksPoolBudgetMB("Rendering.Glimmer.Bricks.PoolBudgetMB", 256);
+CVar<int> g_cvGlimmerBricksRelightBricks("Rendering.Glimmer.Bricks.RelightBricks", 128);
+CVar<int> g_cvGlimmerBricksChunksPerFrame("Rendering.Glimmer.Bricks.ChunksPerFrame", 4);
+CVar<bool> g_cvGlimmerBricksTextured("Rendering.Glimmer.Bricks.Textured", true);
+CVar<bool> g_cvGlimmerBricksReflections("Rendering.Glimmer.Bricks.Reflections", true);
+CVar<bool> g_cvGlimmerBricksReflectionsSlots("Rendering.Glimmer.Bricks.Reflections.Slots", true);
+CVar<bool> g_cvGlimmerBricksReflectionsTemporal("Rendering.Glimmer.Bricks.Reflections.Temporal", true);
+CVar<bool> g_cvGlimmerBricksReflectionsHeightfield("Rendering.Glimmer.Bricks.Reflections.Heightfield", true);
+CVar<int> g_cvGlimmerBricksReflectionsView("Rendering.Glimmer.Bricks.Reflections.View", 0);
+CVar<bool> g_cvGlimmerBricksReflectionsStats("Rendering.Glimmer.Bricks.Reflections.Stats", false);
+
+} // namespace Hyperion

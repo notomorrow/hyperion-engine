@@ -7,8 +7,8 @@
 #include <RenderingPch.hpp>
 
 #include <Rendering/Glimmer/GlimmerSpanCache.hpp>
-#include <Rendering/Glimmer/GlimmerTLAS.hpp>
-#include <Rendering/Glimmer/GlimmerBLASCache.hpp>
+#include <Rendering/Glimmer/GlimmerSceneInstances.hpp>
+#include <Rendering/Glimmer/GlimmerTriangleCache.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 
 #include <Rendering/RenderInterface.hpp>
@@ -117,8 +117,8 @@ void GlimmerSpanCache::FillLevel(
     uint32 levelIndex,
     const Vec2i& windowOrigin,
     const RectList& rects,
-    const GlimmerTLAS& tlas,
-    const GlimmerBLASCache& blasCache,
+    const GlimmerSceneInstances& sceneInstances,
+    const GlimmerTriangleCache& triangleCache,
     const GlimmerSurfaceCache& surfaceCache)
 {
     HYP_SCOPE;
@@ -134,7 +134,7 @@ void GlimmerSpanCache::FillLevel(
         GlimmerSpanSplatConstants constants {};
         constants.window = Vec4i(windowOrigin.x, windowOrigin.y, int32(levelIndex), int32(rects.count));
         constants.params = Vec4f(texelSize, 1.0f / texelSize, GlimmerSpansMinFoliageHeight, 0.0f);
-        constants.counts = Vec4u(tlas.GetNumSpanInstances(), tlas.GetNumSpanChunks(), groups.x, 0);
+        constants.counts = Vec4u(sceneInstances.GetNumSpanInstances(), sceneInstances.GetNumSpanChunks(), groups.x, 0);
 
         for (uint32 rectIndex = 0; rectIndex < rects.count; rectIndex++)
         {
@@ -161,9 +161,9 @@ void GlimmerSpanCache::FillLevel(
 
         cr << SetShaderUniform(uniformIndex++, "CBuffer"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
         cr << SetShaderUniform(uniformIndex++, "SpansBuffer"_sh, m_spansBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
-        cr << SetShaderUniform(uniformIndex++, "SpanInstancesBuffer"_sh, tlas.GetSpanInstancesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanInstanceShaderData)));
-        cr << SetShaderUniform(uniformIndex++, "SpanChunksBuffer"_sh, tlas.GetSpanChunksBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanChunkShaderData)));
-        cr << SetShaderUniform(uniformIndex++, "GlimmerBLASTrianglesBuffer"_sh, blasCache.GetTrianglesBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+        cr << SetShaderUniform(uniformIndex++, "SpanInstancesBuffer"_sh, sceneInstances.GetSpanInstancesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanInstanceShaderData)));
+        cr << SetShaderUniform(uniformIndex++, "SpanChunksBuffer"_sh, sceneInstances.GetSpanChunksBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanChunkShaderData)));
+        cr << SetShaderUniform(uniformIndex++, "GlimmerTrianglesBuffer"_sh, triangleCache.GetTrianglesBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
         cr << SetShaderUniform(uniformIndex++, "MaterialsBuffer"_sh, RI.namedBuffers[NamedBuffer::Materials]);
         cr << SetShaderUniform(uniformIndex++, "SamplerLinearMipmap"_sh, RI.placeholderData->GetSamplerLinearMipmap());
         cr << SetShaderUniform(uniformIndex++, "GlimmerGroundTexture"_sh, surfaceCache.GetGroundImageView());
@@ -177,17 +177,17 @@ void GlimmerSpanCache::FillLevel(
 
     dispatchPass(s_propSpanModeClear, GlimmerGroundResolution * GlimmerGroundResolution);
 
-    if (tlas.GetNumSpanChunks() != 0)
+    if (sceneInstances.GetNumSpanChunks() != 0)
     {
         // a group per chunk
-        dispatchPass(s_propSpanModeBounds, tlas.GetNumSpanChunks() * SpanGroupSize);
-        dispatchPass(s_propSpanModeFill, tlas.GetNumSpanChunks() * SpanGroupSize);
+        dispatchPass(s_propSpanModeBounds, sceneInstances.GetNumSpanChunks() * SpanGroupSize);
+        dispatchPass(s_propSpanModeFill, sceneInstances.GetNumSpanChunks() * SpanGroupSize);
     }
 
     cr << InsertBarrier(m_spansBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
 
     m_builtOrigins[levelIndex] = windowOrigin;
-    m_builtGenerations[levelIndex] = tlas.GetGeneration();
+    m_builtGenerations[levelIndex] = sceneInstances.GetGeneration();
 
     m_shaderData.levels[levelIndex].window = Vec4i(windowOrigin.x, windowOrigin.y, 1, 0);
 
@@ -335,7 +335,7 @@ void GlimmerSpanCache::UpdateHeightBounds(Frame* frame, const GlimmerChannelStat
     cr << InsertBarrier(m_heightBoundsBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
 }
 
-void GlimmerSpanCache::Update(Frame* frame, const GlimmerChannelState& state, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache, const GlimmerSurfaceCache& surfaceCache)
+void GlimmerSpanCache::Update(Frame* frame, const GlimmerChannelState& state, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache, const GlimmerSurfaceCache& surfaceCache)
 {
     HYP_SCOPE;
 
@@ -344,7 +344,7 @@ void GlimmerSpanCache::Update(Frame* frame, const GlimmerChannelState& state, co
         lastFilledRect = Rect {};
     }
 
-    if (!tlas.IsReady() || !blasCache.IsReady() || !tlas.GetSpanInstancesBuffer().IsValid())
+    if (!sceneInstances.IsReady() || !triangleCache.IsReady() || !sceneInstances.GetSpanInstancesBuffer().IsValid())
     {
         return;
     }
@@ -358,9 +358,9 @@ void GlimmerSpanCache::Update(Frame* frame, const GlimmerChannelState& state, co
     }
 
     // a swap only has to redo where its span instances changed, on every level; one missed means not knowing where that was
-    if (tlas.GetGeneration() != m_seenGeneration)
+    if (sceneInstances.GetGeneration() != m_seenGeneration)
     {
-        const bool isWholeWindow = tlas.IsSpanFullyDirty() || tlas.GetGeneration() != m_seenGeneration + 1;
+        const bool isWholeWindow = sceneInstances.IsSpanFullyDirty() || sceneInstances.GetGeneration() != m_seenGeneration + 1;
 
         for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)
         {
@@ -368,7 +368,7 @@ void GlimmerSpanCache::Update(Frame* frame, const GlimmerChannelState& state, co
 
             m_changedWholeWindow[levelIndex] |= isWholeWindow;
 
-            for (const BoundingBox& bounds : tlas.GetSpanDirtyBounds())
+            for (const BoundingBox& bounds : sceneInstances.GetSpanDirtyBounds())
             {
                 const Rect rect {
                     Vec2i(int32(MathUtil::Floor(bounds.min.x * invTexelSize)), int32(MathUtil::Floor(bounds.min.z * invTexelSize))),
@@ -379,7 +379,7 @@ void GlimmerSpanCache::Update(Frame* frame, const GlimmerChannelState& state, co
             }
         }
 
-        m_seenGeneration = tlas.GetGeneration();
+        m_seenGeneration = sceneInstances.GetGeneration();
     }
 
     // one level per frame keeps the splat's cost spread out; the finest level is what the near probes see
@@ -472,7 +472,7 @@ void GlimmerSpanCache::Update(Frame* frame, const GlimmerChannelState& state, co
 
         ENGINE_STAT_GPU_SCOPE(&s_statGlimmerSpans);
 
-        FillLevel(frame, levelIndex, windowOrigin, rects, tlas, blasCache, surfaceCache);
+        FillLevel(frame, levelIndex, windowOrigin, rects, sceneInstances, triangleCache, surfaceCache);
 
         break;
     }

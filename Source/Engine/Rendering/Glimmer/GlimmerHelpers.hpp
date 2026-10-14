@@ -28,7 +28,6 @@ class RenderProxyList;
 class TerrainWorldGridLayer;
 
 class EnvProbe;
-struct BoundingBox;
 struct GlimmerChannelState;
 struct GlimmerTerrainPatchShaderData;
 struct EnvProbeShaderData;
@@ -93,10 +92,7 @@ GlimmerTexelRect GetGlimmerGroundWindow(const Vec2i& origin);
 
 void GetGlimmerScrolledRects(const GlimmerTexelRect& oldWindow, const GlimmerTexelRect& newWindow, GlimmerTexelRect& outColumns, GlimmerTexelRect& outRows);
 
-float GetGlimmerNearFieldRadius();
-
-// SWRT only covers the middle of the scene region; the rest is only splatted into the heightfield
-float GetGlimmerSWRTRadius(const BoundingBox& sceneRegion);
+float GetGlimmerRegionMinRadius();
 
 float GetGlimmerSHCascadeSpacing(uint32 cascadeIndex);
 float GetGlimmerSHOccupancySpacing(uint32 cascadeIndex);

@@ -53,7 +53,7 @@ struct GlimmerProbeVolume
     GlimmerProbeLevel levels[GLIMMER_PROBE_LEVELS];
     uint4 info;       // x = number of levels, y = rays per probe, z = frame, w = 1 when the volume can be sampled
     float4 params;    // x = seconds since the volume started, y = how much visibility counts, z = escape radiance clamp, w = max ray distance
-    float4 nearField; // x = levels traced with SWRT, y = SWRT reach in spacings, z = SWRT instances, w = ground albedo
+    float4 nearField; // x = levels that trace the bricks, y = their reach in spacings, z = 1 when there are bricks to trace, w = ground albedo
 };
 
 // da bits:

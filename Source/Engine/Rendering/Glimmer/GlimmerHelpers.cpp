@@ -11,7 +11,6 @@
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHVolume.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTCVars.hpp>
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/RenderProxy.hpp>
@@ -103,14 +102,9 @@ void GetGlimmerScrolledRects(const GlimmerTexelRect& oldWindow, const GlimmerTex
     }
 }
 
-float GetGlimmerNearFieldRadius()
+float GetGlimmerRegionMinRadius()
 {
-    return MathUtil::Max(g_cvGlimmerSWRTNearFieldRadius.Get(), 8.0f);
-}
-
-float GetGlimmerSWRTRadius(const BoundingBox& sceneRegion)
-{
-    return MathUtil::Min(GetGlimmerNearFieldRadius(), 0.5f * sceneRegion.GetExtent().x);
+    return MathUtil::Max(g_cvGlimmerRegionMinRadius.Get(), 8.0f);
 }
 
 float GetGlimmerSHCascadeSpacing(uint32 cascadeIndex)
@@ -331,7 +325,7 @@ void GetGlimmerLightShaderData(EnvProbe* skyProbe, GlimmerLightShaderData& outLi
 
 float GetGlimmerFoliageExtinction()
 {
-    return MathUtil::Max(g_cvGlimmerSWRTFoliageExtinction.Get() * MathUtil::Clamp(g_cvGlimmerSWRTFoliageClumping.Get(), 0.0f, 1.0f), 0.0f);
+    return MathUtil::Max(g_cvGlimmerFoliageExtinction.Get() * MathUtil::Clamp(g_cvGlimmerFoliageClumping.Get(), 0.0f, 1.0f), 0.0f);
 }
 
 void CollectGlimmerLightmapPages(RenderProxyList& rpl, GlimmerLightmapPages& outPages)

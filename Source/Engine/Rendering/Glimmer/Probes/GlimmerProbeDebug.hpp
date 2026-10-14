@@ -14,24 +14,24 @@
 
 namespace Hyperion {
 
-class GlimmerSWRTProbeVolume;
+class GlimmerProbeVolume;
 class GlimmerChannel;
 class GlimmerSurfaceCache;
 class GlimmerSHOccupancy;
 
-class GlimmerSWRTProbeDebug final
+class GlimmerProbeDebug final
 {
 public:
-    GlimmerSWRTProbeDebug();
+    GlimmerProbeDebug();
     
-    GlimmerSWRTProbeDebug(const GlimmerSWRTProbeDebug& other) = delete;
-    GlimmerSWRTProbeDebug& operator=(const GlimmerSWRTProbeDebug& other) = delete;
+    GlimmerProbeDebug(const GlimmerProbeDebug& other) = delete;
+    GlimmerProbeDebug& operator=(const GlimmerProbeDebug& other) = delete;
 
-    ~GlimmerSWRTProbeDebug();
+    ~GlimmerProbeDebug();
 
     void Update(
         Frame* frame,
-        const GlimmerSWRTProbeVolume& probeVolume,
+        const GlimmerProbeVolume& probeVolume,
         const GlimmerSurfaceCache& surfaceCache,
         const GlimmerSHOccupancy& occupancy,
         GlimmerChannel& channel);

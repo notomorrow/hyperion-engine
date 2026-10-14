@@ -7,7 +7,7 @@
 #pragma once
 
 #include <Rendering/RenderTypes.hpp>
-#include <Rendering/Glimmer/GlimmerBVHBuilder.hpp>
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
 
 #include <Core/Containers/Array.hpp>
 #include <Core/Containers/Map.hpp>
@@ -36,7 +36,7 @@ struct GlimmerTriangle
     static constexpr uint32 GridMax = 65535;
 
     uint16 grid[9];
-    uint16 leafFlags;
+    uint16 padding;
 };
 
 static_assert(sizeof(GlimmerTriangle) == 20);
@@ -48,15 +48,21 @@ struct GlimmerTriangleLightmapUVs
 
 static_assert(sizeof(GlimmerTriangleLightmapUVs) == 12);
 
-struct GlimmerBLASRef
+struct GlimmerTriangleTexcoords
+{
+    int16 base[2]; // whole repeats taken off every corner, so the halves stay precise on tiled surfaces
+    uint16 uvs[6]; // UV0 at each corner less the base, as halves
+};
+
+static_assert(sizeof(GlimmerTriangleTexcoords) == 16);
+
+struct GlimmerTriangleRef
 {
     uint64 key = 0;
-    uint32 nodeBase = 0;
-    uint32 nodeCount = 0;
     uint32 triangleBase = 0;
     uint32 triangleCount = 0;
     uint32 lightmapUVBase = ~0u; // ~0u for a mesh without lightmap UVs, or when their pool is full
-    uint32 depth = 0;
+    uint32 texcoordBase = ~0u;   // ~0u when their pool is full
     
     BoundingBox localBounds;
 
@@ -64,7 +70,7 @@ struct GlimmerBLASRef
     Vec3f gridScale = Vec3f::One();
 };
 
-enum class GlimmerBLASRequestResult : uint8
+enum class GlimmerTriangleRequestResult : uint8
 {
     Resident,
     Pending,
@@ -106,7 +112,7 @@ private:
     uint32 m_numUsed = 0;
 };
 
-struct GlimmerBLASCacheStats
+struct GlimmerTriangleCacheStats
 {
     uint32 numResident = 0;
     uint32 numBuilding = 0;
@@ -115,38 +121,38 @@ struct GlimmerBLASCacheStats
     uint32 numDemoted = 0;
     uint32 numWaitingForRoom = 0;
     uint32 numResidentTriangles = 0;
-    uint32 nodesUsed = 0;
-    uint32 nodesCapacity = 0;
     uint32 trianglesUsed = 0;
     uint32 trianglesCapacity = 0;
     uint32 lightmapUVsUsed = 0;
     uint32 lightmapUVsCapacity = 0;
+    uint32 texcoordsUsed = 0;
+    uint32 texcoordsCapacity = 0;
 };
 
-class GlimmerBLASCache final
+class GlimmerTriangleCache final
 {
 public:
-    GlimmerBLASCache();
+    GlimmerTriangleCache();
 
-    GlimmerBLASCache(const GlimmerBLASCache& other) = delete;
-    GlimmerBLASCache& operator=(const GlimmerBLASCache& other) = delete;
+    GlimmerTriangleCache(const GlimmerTriangleCache& other) = delete;
+    GlimmerTriangleCache& operator=(const GlimmerTriangleCache& other) = delete;
 
-    ~GlimmerBLASCache();
+    ~GlimmerTriangleCache();
 
     static uint64 MakeKey(const Mesh* mesh, uint8 lodIndex);
 
     ///\p priority  how far (m) the nearest instance asking for it is from the viewer.
     ///             nearer meshes are built and given pool space first,
-    ///             and push out the BLASes of meshes much farther away when the pool is full
-    GlimmerBLASRequestResult Request(Mesh* mesh, uint8 lodIndex, float priority, GlimmerBLASRef& outRef);
+    ///             and push out the triangles of meshes much farther away when the pool is full
+    GlimmerTriangleRequestResult Request(Mesh* mesh, uint8 lodIndex, float priority, GlimmerTriangleRef& outRef);
 
-    /// Try to get blas ref for the given params. Will not create one if none exists.
-    bool TryGetResident(Mesh* mesh, uint8 lodIndex, float priority, GlimmerBLASRef& outRef);
+    /// Try to get a triangle ref for the given params. Will not create one if none exists.
+    bool TryGetResident(Mesh* mesh, uint8 lodIndex, float priority, GlimmerTriangleRef& outRef);
 
     void AddReferences(Span<const uint64> keys);
     void RemoveReferences(Span<const uint64> keys);
 
-    static SharedPtr<GlimmerBLASCache> AcquireShared();
+    static SharedPtr<GlimmerTriangleCache> AcquireShared();
 
     void UpdateOncePerFrame(Frame* frame);
     void Update(Frame* frame);
@@ -161,27 +167,27 @@ public:
         return m_residentGeneration;
     }
 
-    /// Bumped when the TLASes have to gather again: resident BLASes were demoted to make room (they're freed once no TLAS references
+    /// Bumped when the scene instances have to gather again: resident meshes were demoted to make room (they're freed once no gather references
     /// them), or the LOD error scale changed
     HYP_FORCE_INLINE uint32 GetEvictionGeneration() const
     {
         return m_evictionGeneration;
     }
 
-    /// Scales the geometric error the TLASes allow a mesh's LOD; above 1 while the pool can't hold everything in range
+    /// Scales the geometric error the scene instance gather allows a mesh's LOD; above 1 while the pool can't hold everything in range
     HYP_FORCE_INLINE float GetLodErrorScale() const
     {
         return m_lodErrorScale;
     }
 
-    HYP_FORCE_INLINE const GpuBufferRef& GetNodesBuffer() const
-    {
-        return m_nodesBuffer;
-    }
-
     HYP_FORCE_INLINE const GpuBufferRef& GetTrianglesBuffer() const
     {
         return m_trianglesBuffer;
+    }
+
+    HYP_FORCE_INLINE const GpuBufferRef& GetTexcoordsBuffer() const
+    {
+        return m_texcoordsBuffer;
     }
 
     HYP_FORCE_INLINE const GpuBufferRef& GetLightmapUVsBuffer() const
@@ -191,10 +197,10 @@ public:
 
     HYP_FORCE_INLINE bool IsReady() const
     {
-        return m_nodesBuffer.IsValid() && m_trianglesBuffer.IsValid();
+        return m_trianglesBuffer.IsValid();
     }
 
-    GlimmerBLASCacheStats GetStats() const;
+    GlimmerTriangleCacheStats GetStats() const;
 
 private:
     enum class EntryState : uint8
@@ -209,18 +215,15 @@ private:
 
     struct BuildResult
     {
-        Array<GlimmerBLASNode, GlimmerAllocator> nodes;
-
         Array<GlimmerTriangle, GlimmerAllocator> triangles;
         Array<GlimmerTriangleLightmapUVs, GlimmerAllocator> lightmapUVs; // one per triangle, or empty
+        Array<GlimmerTriangleTexcoords, GlimmerAllocator> texcoords; // one per triangle
 
         BoundingBox localBounds;
 
         Vec3f gridOrigin = Vec3f::Zero();
         Vec3f gridScale = Vec3f::One();
         
-        uint32 depth = 0;
-
         bool isFail = false; // set when there's nothing to trace, as opposed to mesh data not being readable yet
     };
 
@@ -238,7 +241,7 @@ private:
         Task<BuildResult> buildTask;
         BuildResult result;
 
-        GlimmerBLASRef ref;
+        GlimmerTriangleRef ref;
 
         uint32 numReferences = 0;
 
@@ -248,7 +251,6 @@ private:
         float priority = 0.0f;
         uint32 priorityFrame = ~0u;
 
-        uint32 lastNodeCount = 0;
         uint32 lastTriangleCount = 0;
 
         uint32 numDefers = 0;
@@ -263,16 +265,16 @@ private:
 
     struct DeferredFree
     {
-        uint32 nodeOffset;
-        uint32 nodeCount;
         uint32 triangleOffset;
         uint32 triangleCount;
         uint32 frameFreed;
         uint32 lightmapUVOffset;
         uint32 lightmapUVCount;
+        uint32 texcoordOffset;
+        uint32 texcoordCount;
     };
 
-    static BuildResult BuildBLAS(const Handle<Mesh>& mesh, uint8 lodIndex);
+    static BuildResult BuildMeshTriangles(const Handle<Mesh>& mesh, uint8 lodIndex);
 
     void CreatePoolBuffers();
     bool AllocateEntry(Entry& entry);
@@ -280,7 +282,7 @@ private:
     bool RequeueForReplacement(Entry& entry);
     bool EvictOne();
     bool IsWorthBuilding(const Entry& entry, uint32 frameCounter, float farthestDemotablePriority) const;
-    bool MakeContiguousRoom(const Entry& requester, uint32 nodeCount, uint32 triangleCount, uint32& numDemotions);
+    bool MakeContiguousRoom(const Entry& requester, uint32 triangleCount, uint32& numDemotions);
     void Defer(Entry& entry, uint32 frameCounter);
     void FreeEntryRanges(Entry& entry);
     void UploadEntry(Frame* frame, Entry& entry);
@@ -289,13 +291,13 @@ private:
 
     UniquePtr<TaskThreadPool> m_buildPool;
 
-    GpuBufferRef m_nodesBuffer;
     GpuBufferRef m_trianglesBuffer;
     GpuBufferRef m_lightmapUVsBuffer;
+    GpuBufferRef m_texcoordsBuffer;
 
-    GlimmerPoolAllocator m_nodeAllocator;
     GlimmerPoolAllocator m_triangleAllocator;
     GlimmerPoolAllocator m_lightmapUVAllocator;
+    GlimmerPoolAllocator m_texcoordAllocator;
 
     Array<DeferredFree, GlimmerAllocator> m_deferredFrees;
     Array<uint64, GlimmerAllocator> m_keysToErase; // entries to drop after the Update() loop, which may be iterating them

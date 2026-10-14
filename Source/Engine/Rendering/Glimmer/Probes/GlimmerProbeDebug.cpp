@@ -6,8 +6,8 @@
 
 #include <RenderingPch.hpp>
 
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTProbeDebug.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTProbeVolume.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeDebug.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeVolume.hpp>
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHOccupancy.hpp>
@@ -35,9 +35,9 @@ struct GlimmerProbeDebugConstants
     GlimmerSHOccupancyShaderData occupancy;
 };
 
-#pragma region GlimmerSWRTProbeDebug
+#pragma region GlimmerProbeDebug
 
-GlimmerSWRTProbeDebug::GlimmerSWRTProbeDebug()
+GlimmerProbeDebug::GlimmerProbeDebug()
 {
     for (bool& isPending : m_isPending)
     {
@@ -45,12 +45,12 @@ GlimmerSWRTProbeDebug::GlimmerSWRTProbeDebug()
     }
 }
 
-GlimmerSWRTProbeDebug::~GlimmerSWRTProbeDebug()
+GlimmerProbeDebug::~GlimmerProbeDebug()
 {
     Reset();
 }
 
-void GlimmerSWRTProbeDebug::CreateResources()
+void GlimmerProbeDebug::CreateResources()
 {
     m_recordsBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, NumProbeDebugRecords * sizeof(GlimmerProbeDebugRecord), alignof(Vec4f));
     Check(m_recordsBuffer->Create());
@@ -68,7 +68,7 @@ void GlimmerSWRTProbeDebug::CreateResources()
     }
 }
 
-void GlimmerSWRTProbeDebug::Reset()
+void GlimmerProbeDebug::Reset()
 {
     if (!m_recordsBuffer.IsValid())
     {
@@ -88,7 +88,7 @@ void GlimmerSWRTProbeDebug::Reset()
     }
 }
 
-void GlimmerSWRTProbeDebug::Update(Frame* frame, const GlimmerSWRTProbeVolume& probeVolume, const GlimmerSurfaceCache& surfaceCache, const GlimmerSHOccupancy& occupancy, GlimmerChannel& channel)
+void GlimmerProbeDebug::Update(Frame* frame, const GlimmerProbeVolume& probeVolume, const GlimmerSurfaceCache& surfaceCache, const GlimmerSHOccupancy& occupancy, GlimmerChannel& channel)
 {
     HYP_SCOPE;
 
@@ -136,7 +136,7 @@ void GlimmerSWRTProbeDebug::Update(Frame* frame, const GlimmerSWRTProbeVolume& p
 
     cr << InsertBarrier(m_recordsBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
-    cr << SetCurrentShader(ShaderDesc(NAME("GlimmerSWRTProbeDebug")));
+    cr << SetCurrentShader(ShaderDesc(NAME("GlimmerProbeDebug")));
 
     uint32 uniformIndex = 0;
 
@@ -159,6 +159,6 @@ void GlimmerSWRTProbeDebug::Update(Frame* frame, const GlimmerSWRTProbeVolume& p
     m_isPending[slot] = true;
 }
 
-#pragma endregion GlimmerSWRTProbeDebug
+#pragma endregion GlimmerProbeDebug
 
 } // namespace Hyperion

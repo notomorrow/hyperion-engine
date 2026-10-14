@@ -10,6 +10,8 @@
 #include <Rendering/Glimmer/GlimmerPass.hpp>
 #include <Rendering/Glimmer/GlimmerTechnique.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
+#include <Rendering/Glimmer/Bricks/GlimmerBrickReflections.hpp>
+#include <Rendering/Glimmer/Bricks/GlimmerBrickCVars.hpp>
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/RenderProxy.hpp>
@@ -55,6 +57,7 @@ static const Vec2u s_halfResPicks[4] = { Vec2u(0, 0), Vec2u(1, 1), Vec2u(1, 0), 
 
 GlimmerIrradiancePass::GlimmerIrradiancePass(Vec2u extent, GBuffer* gbuffer)
     : FullScreenPass(TextureFormat::RGBA16F, extent, gbuffer),
+      m_brickReflections(MakeUnique<GlimmerBrickReflections>()),
       m_shaderData {},
       m_frameIndex(0)
 {
@@ -77,6 +80,11 @@ const GpuImageViewRef& GlimmerIrradiancePass::GetSpecularImageView() const
 const GpuImageViewRef& GlimmerIrradiancePass::GetReflectionImageView() const
 {
     return m_framebuffer->GetAttachment(2)->GetImageView();
+}
+
+const GpuImageViewRef& GlimmerIrradiancePass::GetBrickReflectionImageView() const
+{
+    return m_brickReflections->GetImageView();
 }
 
 void GlimmerIrradiancePass::CreateFramebuffer()
@@ -172,6 +180,11 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
     const bool isActive = technique && technique->IsReady();
 
     m_shaderData.params = Vec4u(isActive ? 1u : 0u, isActive && isDebugView ? 1u : 0u, g_cvGlimmerSpecularOcclusion.Get() ? 1u : 0u, 0);
+
+    const GlimmerScenePassData* brickScene = g_cvGlimmerBricksEnabled.Get() && glimmerPass ? glimmerPass->GetSceneForWorld(renderSetup.world) : nullptr;
+
+    m_brickReflections->Render(frame, renderSetup.view, m_gbuffer, m_extent, brickScene, renderSetup.envProbe);
+    m_shaderData.params.w = m_brickReflections->IsValid() ? (m_brickReflections->IsDebugView() ? 2u : 1u) : 0u;
 
     GpuImage* targetImage = GetAttachment(0)->GetGpuImage();
     GpuImage* specularImage = GetAttachment(1)->GetGpuImage();

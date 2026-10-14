@@ -14,8 +14,8 @@
 
 namespace Hyperion {
 
-class GlimmerTLAS;
-class GlimmerBLASCache;
+class GlimmerSceneInstances;
+class GlimmerTriangleCache;
 class GlimmerSurfaceCache;
 
 static constexpr uint32 GlimmerSpanValuesPerTexel = 22;
@@ -48,7 +48,7 @@ public:
 
     ~GlimmerSpanCache();
 
-    void Update(Frame* frame, const GlimmerChannelState& state, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache, const GlimmerSurfaceCache& surfaceCache);
+    void Update(Frame* frame, const GlimmerChannelState& state, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache, const GlimmerSurfaceCache& surfaceCache);
 
     HYP_FORCE_INLINE const GlimmerSpanShaderData& GetShaderData() const
     {
@@ -84,8 +84,8 @@ private:
         uint32 levelIndex,
         const Vec2i& windowOrigin,
         const RectList& rects,
-        const GlimmerTLAS& tlas,
-        const GlimmerBLASCache& blasCache,
+        const GlimmerSceneInstances& sceneInstances,
+        const GlimmerTriangleCache& triangleCache,
         const GlimmerSurfaceCache& surfaceCache);
 
     void UpdateHeightBounds(Frame* frame, const GlimmerChannelState& state, const GlimmerSurfaceCache& surfaceCache);
@@ -102,7 +102,7 @@ private:
     uint32 m_builtGenerations[GlimmerGroundLevels];
     Vec2i m_builtOrigins[GlimmerGroundLevels];
 
-    // what TLAS swaps changed since the level was last filled, waiting for its turn
+    // what scene instance swaps changed since the level was last filled, waiting for its turn
     RectList m_changed[GlimmerGroundLevels];
     bool m_changedWholeWindow[GlimmerGroundLevels];
     uint32 m_seenGeneration;

@@ -11,11 +11,11 @@
 #include <Rendering/Glimmer/GlimmerSpanCache.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/GlimmerRelight.hpp>
-#include <Rendering/Glimmer/GlimmerTLAS.hpp>
+#include <Rendering/Glimmer/GlimmerSceneInstances.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTProbeVolume.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTCVars.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeVolume.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeCVars.hpp>
 
 #include <Rendering/Util/DeletionQueue.hpp>
 
@@ -127,7 +127,7 @@ GlimmerSHVolume::GlimmerSHVolume()
     : m_refreshStep(0),
       m_refreshSlices {},
       m_updateIndex(0),
-      m_seenTLASGeneration(~0u),
+      m_seenInstancesGeneration(~0u),
       m_occupancyWaitFrames(0),
       m_refreshBudget(0),
       m_composedLight {},
@@ -347,9 +347,9 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
         constants.relight = *inputs.relight;
     }
 
-    const GlimmerSWRTProbeVolume* probeVolume = inputs.probeVolume;
+    const GlimmerProbeVolume* probeVolume = inputs.probeVolume;
 
-    if (probeVolume && probeVolume->IsReady() && g_cvGlimmerSWRTProbesEnabled.Get())
+    if (probeVolume && probeVolume->IsReady() && g_cvGlimmerProbesEnabled.Get())
     {
         constants.probes = probeVolume->GetShaderData();
     }
@@ -568,11 +568,11 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
         MoveWindow(cascadeIndex, origin);
     }
 
-    if (inputs.tlas && inputs.tlas->IsReady() && inputs.tlas->GetGeneration() != m_seenTLASGeneration)
+    if (inputs.sceneInstances && inputs.sceneInstances->IsReady() && inputs.sceneInstances->GetGeneration() != m_seenInstancesGeneration)
     {
         GlimmerSceneChanges changes;
 
-        const bool isEverywhere = m_seenTLASGeneration == ~0u || !inputs.tlas->GetChangesSince(m_seenTLASGeneration, changes);
+        const bool isEverywhere = m_seenInstancesGeneration == ~0u || !inputs.sceneInstances->GetChangesSince(m_seenInstancesGeneration, changes);
 
         if (isEverywhere)
         {
@@ -606,7 +606,7 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
             }
         }
 
-        m_seenTLASGeneration = inputs.tlas->GetGeneration();
+        m_seenInstancesGeneration = inputs.sceneInstances->GetGeneration();
     }
 
     for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)

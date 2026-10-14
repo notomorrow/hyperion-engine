@@ -2,7 +2,7 @@
 
 PERMUTE(MODE, CLASSIFY, ALLOC, LIST)
 
-#include "GlimmerSWRTCommon.hlsli"
+#include "../GlimmerCommon.hlsli"
 #include "GlimmerProbeTypes.hlsli"
 #include "../GlimmerLight.hlsli"
 
@@ -20,6 +20,11 @@ PERMUTE(MODE, CLASSIFY, ALLOC, LIST)
 #define GLIMMER_PROBE_MAX_MOVED_BOXES 4u
 
 #define GLIMMER_PROBE_GROUND_BOX_HEIGHT 1e5
+
+// NOTE must match GlimmerBrickWorld.hpp
+#define GLIMMER_BRICK_CHUNKS_XZ 16
+#define GLIMMER_BRICK_CHUNKS_Y 8
+#define GLIMMER_BRICK_CHUNK_SIZE 16.0
 
 struct GlimmerProbeAllocConstants
 {
@@ -39,7 +44,7 @@ struct GlimmerProbeAllocConstants
 
     float4 viewer; // viewer position in x,y,z
 
-    /// x = 1 when every probe is to wake, 2 when every probe is to start over
+    /// x = 1 when every probe is to wake
     /// y = changed boxes
     /// z = longest sleep interval; a probe that reaches it is settled and only traced again when something wakes it
     /// w = seconds after which a settled probe is traced anyway (0 = never)
@@ -47,25 +52,28 @@ struct GlimmerProbeAllocConstants
 
     float4 changedMin[GLIMMER_PROBE_MAX_CHANGED_BOXES];
     float4 changedMax[GLIMMER_PROBE_MAX_CHANGED_BOXES];
+
+    int4 brickChunkOrigin;          // xyz = absolute chunk of the bricks' window, w = 0 without bricks, 1 with, 2 when none are built yet
+    uint4 brickChunksBuilding[16];  // a bit per chunk of the window, by its place in it, set while it is being built
 };
 
-DECLARE_BUFFER_DYNAMIC(GlimmerSWRTProbeAlloc, CBuffer) cbuffer CBuffer
+DECLARE_BUFFER_DYNAMIC(GlimmerProbeAlloc, CBuffer) cbuffer CBuffer
 {
     GlimmerProbeAllocConstants constants;
 };
 
-DECLARE_SRV(GlimmerSWRTProbeAlloc, GlimmerGroundTexture) Texture2DArray<float> glimmerGround;
-DECLARE_SRV(GlimmerSWRTProbeAlloc, GlimmerSHOccupancyTexture) Texture3D<float4> glimmerSHOccupancy;
+DECLARE_SRV(GlimmerProbeAlloc, GlimmerGroundTexture) Texture2DArray<float> glimmerGround;
+DECLARE_SRV(GlimmerProbeAlloc, GlimmerSHOccupancyTexture) Texture3D<float4> glimmerSHOccupancy;
 
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutBlockTable) RWStructuredBuffer<uint> OutBlockTable;
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutCells) RWStructuredBuffer<int4> OutCells;
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutSlots) RWStructuredBuffer<int4> OutSlots;         // xyz = block, w = level (-1 when free)
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutSlotAges) RWStructuredBuffer<uint> OutSlotAges;   // frames since the block was last wanted
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutStates) RWStructuredBuffer<uint4> OutStates;
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutSH) RWStructuredBuffer<float4> OutSH;
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutLight) RWStructuredBuffer<float4> OutLight;
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutVisibility) RWStructuredBuffer<uint> OutVisibility;
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutTrend) RWStructuredBuffer<float4> OutTrend;
+DECLARE_UAV(GlimmerProbeAlloc, OutBlockTable) RWStructuredBuffer<uint> OutBlockTable;
+DECLARE_UAV(GlimmerProbeAlloc, OutCells) RWStructuredBuffer<int4> OutCells;
+DECLARE_UAV(GlimmerProbeAlloc, OutSlots) RWStructuredBuffer<int4> OutSlots;         // xyz = block, w = level (-1 when free)
+DECLARE_UAV(GlimmerProbeAlloc, OutSlotAges) RWStructuredBuffer<uint> OutSlotAges;   // frames since the block was last wanted
+DECLARE_UAV(GlimmerProbeAlloc, OutStates) RWStructuredBuffer<uint4> OutStates;
+DECLARE_UAV(GlimmerProbeAlloc, OutSH) RWStructuredBuffer<float4> OutSH;
+DECLARE_UAV(GlimmerProbeAlloc, OutLight) RWStructuredBuffer<float4> OutLight;
+DECLARE_UAV(GlimmerProbeAlloc, OutVisibility) RWStructuredBuffer<uint> OutVisibility;
+DECLARE_UAV(GlimmerProbeAlloc, OutTrend) RWStructuredBuffer<float4> OutTrend;
 
 // 0 = probes listed this frame
 // 1 = active probes this frame
@@ -76,9 +84,9 @@ DECLARE_UAV(GlimmerSWRTProbeAlloc, OutTrend) RWStructuredBuffer<float4> OutTrend
 // 6 = ditto but last frame
 // 7 = sleeping probes this frame
 // 8 = ditto but last frame
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutCounters) RWStructuredBuffer<uint> OutCounters;
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutBlockWake) RWStructuredBuffer<uint> OutBlockWake;
-DECLARE_UAV(GlimmerSWRTProbeAlloc, OutUpdateList) RWStructuredBuffer<uint> OutUpdateList;
+DECLARE_UAV(GlimmerProbeAlloc, OutCounters) RWStructuredBuffer<uint> OutCounters;
+DECLARE_UAV(GlimmerProbeAlloc, OutBlockWake) RWStructuredBuffer<uint> OutBlockWake;
+DECLARE_UAV(GlimmerProbeAlloc, OutUpdateList) RWStructuredBuffer<uint> OutUpdateList;
 
 #include "../GlimmerGround.hlsli"
 
@@ -640,6 +648,41 @@ uint GlimmerProbeChange(float3 position, float reach)
     return isInBox ? GLIMMER_PROBE_CHANGE_WAKE : GLIMMER_PROBE_CHANGE_NONE;
 }
 
+// whether any of the bricks a probe's rays could reach are still being built: the probe then keeps what it has
+bool GlimmerAreProbeBricksBuilding(float3 position, float reach)
+{
+    if (constants.brickChunkOrigin.w != 1)
+    {
+        return constants.brickChunkOrigin.w == 2;
+    }
+
+    const int3 windowChunks = int3(GLIMMER_BRICK_CHUNKS_XZ, GLIMMER_BRICK_CHUNKS_Y, GLIMMER_BRICK_CHUNKS_XZ);
+
+    const int3 chunkMin = max(int3(floor((position - reach) / GLIMMER_BRICK_CHUNK_SIZE)) - constants.brickChunkOrigin.xyz, int3(0, 0, 0));
+    const int3 chunkMax = min(int3(floor((position + reach) / GLIMMER_BRICK_CHUNK_SIZE)) - constants.brickChunkOrigin.xyz, windowChunks - 1);
+
+    [loop]
+    for (int z = chunkMin.z; z <= chunkMax.z; z++)
+    {
+        [loop]
+        for (int y = chunkMin.y; y <= chunkMax.y; y++)
+        {
+            [loop]
+            for (int x = chunkMin.x; x <= chunkMax.x; x++)
+            {
+                const uint bit = uint((z * windowChunks.y + y) * windowChunks.x + x);
+
+                if ((constants.brickChunksBuilding[bit >> 7u][(bit >> 5u) & 3u] >> (bit & 31u)) & 1u)
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
 bool GlimmerIsProbeBlockWoken(uint probeIndex)
 {
     return OutBlockWake[probeIndex / GLIMMER_PROBES_PER_BLOCK] + 1u == constants.volume.info.z;
@@ -665,10 +708,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     uint4 state = OutStates[probeIndex];
     uint probeState = GlimmerProbeStateOf(state);
 
-    const bool startsOver = constants.wake.x == 2u
-        && (probeState == GLIMMER_PROBE_STATE_ACTIVE || probeState == GLIMMER_PROBE_STATE_INSIDE);
-
-    if (probeState == GLIMMER_PROBE_STATE_RESET || startsOver)
+    if (probeState == GLIMMER_PROBE_STATE_RESET)
     {
         GlimmerResetProbe(probeIndex);
 
@@ -840,7 +880,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
         isDue = GlimmerProbeUpdates(state) == 0u || phase % awakePeriod == 0u;
     }
 
-    if (!isDue)
+    if (!isDue || (float(slot.w) < constants.volume.nearField.x && GlimmerAreProbeBricksBuilding(gridPosition, constants.volume.nearField.y * spacing)))
     {
         return;
     }

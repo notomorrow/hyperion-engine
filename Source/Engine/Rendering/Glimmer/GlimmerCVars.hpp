@@ -19,7 +19,27 @@ enum class GlimmerDebugView : int
     TechniqueFirst
 };
 
+enum class GlimmerHeightfieldDebugView : int
+{
+    None = 0,
+    Spans,
+    GroundAlbedo,
+    Occupancy,
+
+    Max
+};
+
 extern CVar<bool> g_cvGlimmerEnabled;
+
+// least horizontal half extent of the scene region, which recenters on the viewer in steps of a quarter of it
+extern CVar<float> g_cvGlimmerRegionMinRadius;
+
+// how far around the viewer static solids and foliage are splatted into the heightfield
+extern CVar<float> g_cvGlimmerSpansRadius;
+
+extern CVar<float> g_cvGlimmerFoliageExtinction;
+// leaves bunch up in crowns with gaps between them, so a texel's leaf area blocks less than if it were spread evenly
+extern CVar<float> g_cvGlimmerFoliageClumping;
 
 extern CVar<float> g_cvGlimmerIntensity;
 extern CVar<int> g_cvGlimmerDebugView;

@@ -39,7 +39,7 @@ DECLARE_UAV(GlimmerSHOccupancySplat, OutOccupancyMask) RWStructuredBuffer<uint> 
 DECLARE_UAV(GlimmerSHOccupancySplat, OutAlbedoSums) RWStructuredBuffer<uint> OutAlbedoSums;
 DECLARE_SRV(GlimmerSHOccupancySplat, SpanInstancesBuffer) StructuredBuffer<GlimmerSpanInstance> spanInstances;
 DECLARE_SRV(GlimmerSHOccupancySplat, SpanChunksBuffer) StructuredBuffer<GlimmerSpanChunk> spanChunks;
-DECLARE_SRV(GlimmerSHOccupancySplat, GlimmerBLASTrianglesBuffer) StructuredBuffer<uint> glimmerBLASTriangles;
+DECLARE_SRV(GlimmerSHOccupancySplat, GlimmerTrianglesBuffer) StructuredBuffer<uint> glimmerTriangles;
 DECLARE_SRV(GlimmerSHOccupancySplat, MaterialsBuffer) StructuredBuffer<Material> materials;
 
 #ifdef HYP_FEATURES_BINDLESS_TEXTURES
@@ -48,7 +48,7 @@ DECLARE_SRV(BindlessResources0, Textures) Texture2D textures[];
 
 DECLARE_SAMPLER(GlimmerSHOccupancySplat, SamplerLinearMipmap) SamplerState glimmerMaterialSampler;
 
-DECLARE_SRV(GlimmerSHOccupancySplat, GlimmerBLASLightmapUVsBuffer) StructuredBuffer<uint> glimmerBLASLightmapUVs;
+DECLARE_SRV(GlimmerSHOccupancySplat, GlimmerTriangleLightmapUVsBuffer) StructuredBuffer<uint> glimmerTriangleLightmapUVs;
 
 DECLARE_SRV(GlimmerSHOccupancySplat, LightmapVolumeIrradianceTexture0) Texture2D LightmapVolumeIrradianceTexture0;
 DECLARE_SRV(GlimmerSHOccupancySplat, LightmapVolumeIrradianceTexture1) Texture2D LightmapVolumeIrradianceTexture1;
@@ -82,7 +82,7 @@ uint LightmapSumIndex(int3 voxel)
 
 float2 LoadLightmapUV(uint uvBase, uint corner)
 {
-    const uint packed = glimmerBLASLightmapUVs[uvBase + corner];
+    const uint packed = glimmerTriangleLightmapUVs[uvBase + corner];
 
     return float2(packed & 0xFFFFu, packed >> 16u) / 65535.0;
 }
@@ -241,7 +241,7 @@ void SplatTriangle(GlimmerSpanInstance instance, uint localTriangle, uint cascad
         return;
     }
 
-    const BVHBLASTriangle bvhTriangle = LOAD_BVH_BLAS_TRIANGLE(glimmerBLASTriangles, instance.data.x + localTriangle);
+    const BVHBLASTriangle bvhTriangle = LOAD_BVH_BLAS_TRIANGLE(glimmerTriangles, instance.data.x + localTriangle);
 
     float3 p0 = TransformPoint(instance, bvhTriangle.position0);
     float3 p1 = TransformPoint(instance, bvhTriangle.position1);

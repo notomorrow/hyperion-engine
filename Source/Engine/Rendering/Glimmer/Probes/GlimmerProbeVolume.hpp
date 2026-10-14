@@ -24,11 +24,11 @@ class CloudPass;
 
 class Texture;
 class EnvProbe;
-class GlimmerBLASCache;
-class GlimmerTLAS;
-class GlimmerFootprintMask;
+class GlimmerTriangleCache;
+class GlimmerSceneInstances;
 class GlimmerSHVolume;
 class GlimmerRelight;
+class GlimmerBrickWorld;
 struct GlimmerSHOccupancyShaderData;
 
 static constexpr uint32 GlimmerProbeLevels = 4;
@@ -64,20 +64,20 @@ struct GlimmerProbeVolumeShaderData
     GlimmerProbeLevelShaderData levels[GlimmerProbeLevels];
     Vec4u info;      // x = number of levels, y = rays per probe, z = frame, w = 1 when the volume can be sampled
     Vec4f params;    // x = seconds since the volume started, y = how much visibility counts (Rendering.Glimmer.Visibility), z = escape radiance clamp, w = max ray distance
-    Vec4f nearField; // x = levels traced with SWRT, y = SWRT reach in spacings, z = SWRT instances, w = ground albedo
+    Vec4f nearField; // x = levels that trace the bricks, y = their reach in spacings, z = 1 when there are bricks to trace, w = ground albedo
 };
 
-struct GlimmerSWRTProbeUpdateInputs
+struct GlimmerProbeUpdateInputs
 {
     Vec3f viewerPosition;
 
     const GlimmerSurfaceCache* surfaceCache = nullptr;
     const GlimmerSpanCache* spanCache = nullptr;
-    const GlimmerBLASCache* blasCache = nullptr;
-    const GlimmerTLAS* tlas = nullptr;
-    const GlimmerFootprintMask* footprintMask = nullptr; // of the tlas; tells the trace where SWRT has anything to hit
+    const GlimmerTriangleCache* triangleCache = nullptr;
+    const GlimmerSceneInstances* sceneInstances = nullptr;
     const GlimmerSHVolume* shVolume = nullptr;           // the far field, for the bounce at hits past the probes; may be nullptr
     GlimmerRelight* relight = nullptr;                   // lit here, before the trace shades heightfield hits from it; may be nullptr
+    const GlimmerBrickWorld* brickWorld = nullptr;       // may be nullptr
 
     // the solids the probe blocks are placed around
     const GlimmerSHOccupancyShaderData* occupancy = nullptr;
@@ -90,17 +90,17 @@ struct GlimmerSWRTProbeUpdateInputs
     GlimmerLightShaderData light;
 };
 
-class GlimmerSWRTProbeVolume final
+class GlimmerProbeVolume final
 {
 public:
-    GlimmerSWRTProbeVolume();
+    GlimmerProbeVolume();
 
-    GlimmerSWRTProbeVolume(const GlimmerSWRTProbeVolume& other) = delete;
-    GlimmerSWRTProbeVolume& operator=(const GlimmerSWRTProbeVolume& other) = delete;
+    GlimmerProbeVolume(const GlimmerProbeVolume& other) = delete;
+    GlimmerProbeVolume& operator=(const GlimmerProbeVolume& other) = delete;
 
-    ~GlimmerSWRTProbeVolume();
+    ~GlimmerProbeVolume();
 
-    void Update(Frame* frame, const GlimmerSWRTProbeUpdateInputs& inputs);
+    void Update(Frame* frame, const GlimmerProbeUpdateInputs& inputs);
 
     HYP_FORCE_INLINE const GlimmerProbeVolumeShaderData& GetShaderData() const
     {
@@ -146,8 +146,7 @@ private:
 
     Time m_startTime;
     uint32 m_frameIndex;
-    uint32 m_seenTLASGeneration;
-    uint32 m_seenTLASCompleteGeneration;
+    uint32 m_seenInstancesGeneration;
     uint32 m_poolBlocks;
     uint32 m_maxProbesPerFrame;
 

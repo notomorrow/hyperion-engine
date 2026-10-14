@@ -415,6 +415,7 @@ void LightingPass::RenderToFramebuffer_Internal(Frame* frame, const RenderSetup&
             cr << SetShaderUniform(numShaderUniforms++, "GlimmerIrradianceTexture"_sh, dpd->glimmerIrradiancePass->GetFinalImageView());
             cr << SetShaderUniform(numShaderUniforms++, "GlimmerSpecularTexture"_sh, dpd->glimmerIrradiancePass->GetSpecularImageView());
             cr << SetShaderUniform(numShaderUniforms++, "GlimmerReflectionTexture"_sh, dpd->glimmerIrradiancePass->GetReflectionImageView());
+            cr << SetShaderUniform(numShaderUniforms++, "GlimmerBrickReflectionTexture"_sh, dpd->glimmerIrradiancePass->GetBrickReflectionImageView());
 
             cr << SetShaderUniform(cbufferUniformIndex, "CBuffer"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
         }

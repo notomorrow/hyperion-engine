@@ -1,6 +1,6 @@
 #include "../../Include/Defines.hlsli"
 
-#include "GlimmerSWRTCommon.hlsli"
+#include "../GlimmerCommon.hlsli"
 #include "GlimmerProbeTypes.hlsli"
 
 #define GLIMMER_SH_OCCUPANCY_NO_TRACE
@@ -14,7 +14,7 @@ struct GlimmerProbeDebugConstants
     GlimmerSHOccupancyParams occupancy;
 };
 
-DECLARE_BUFFER_DYNAMIC(GlimmerSWRTProbeDebug, CBuffer) cbuffer CBuffer
+DECLARE_BUFFER_DYNAMIC(GlimmerProbeDebug, CBuffer) cbuffer CBuffer
 {
     GlimmerProbeDebugConstants constants;
 };
@@ -28,15 +28,15 @@ struct GlimmerProbeDebugRecord
     float4 shB;
 };
 
-DECLARE_SRV(GlimmerSWRTProbeDebug, GlimmerProbeSHBuffer) StructuredBuffer<float4> glimmerProbeSH;
-DECLARE_SRV(GlimmerSWRTProbeDebug, GlimmerProbeStatesBuffer) StructuredBuffer<uint4> glimmerProbeStates;
-DECLARE_SRV(GlimmerSWRTProbeDebug, GlimmerProbeSlotsBuffer) StructuredBuffer<int4> glimmerProbeSlots;
+DECLARE_SRV(GlimmerProbeDebug, GlimmerProbeSHBuffer) StructuredBuffer<float4> glimmerProbeSH;
+DECLARE_SRV(GlimmerProbeDebug, GlimmerProbeStatesBuffer) StructuredBuffer<uint4> glimmerProbeStates;
+DECLARE_SRV(GlimmerProbeDebug, GlimmerProbeSlotsBuffer) StructuredBuffer<int4> glimmerProbeSlots;
 
-DECLARE_SRV(GlimmerSWRTProbeDebug, GlimmerGroundTexture) Texture2DArray<float> glimmerGround;
-DECLARE_SRV(GlimmerSWRTProbeDebug, GlimmerSHOccupancyTexture) Texture3D<float4> glimmerSHOccupancy;
-DECLARE_SRV(GlimmerSWRTProbeDebug, GlimmerSHOccupancyMaskBuffer) StructuredBuffer<uint> glimmerSHOccupancyMask;
+DECLARE_SRV(GlimmerProbeDebug, GlimmerGroundTexture) Texture2DArray<float> glimmerGround;
+DECLARE_SRV(GlimmerProbeDebug, GlimmerSHOccupancyTexture) Texture3D<float4> glimmerSHOccupancy;
+DECLARE_SRV(GlimmerProbeDebug, GlimmerSHOccupancyMaskBuffer) StructuredBuffer<uint> glimmerSHOccupancyMask;
 
-DECLARE_UAV(GlimmerSWRTProbeDebug, OutRecords) RWStructuredBuffer<GlimmerProbeDebugRecord> OutRecords;
+DECLARE_UAV(GlimmerProbeDebug, OutRecords) RWStructuredBuffer<GlimmerProbeDebugRecord> OutRecords;
 
 #include "../SH/GlimmerSHOccupancy.hlsli"
 #include "../GlimmerGround.hlsli"

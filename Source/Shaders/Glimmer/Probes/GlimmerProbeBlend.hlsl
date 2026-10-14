@@ -2,7 +2,7 @@
 
 PERMUTE(MODE, BLEND, COMPOSE)
 
-#include "GlimmerSWRTCommon.hlsli"
+#include "../GlimmerCommon.hlsli"
 
 #include "GlimmerProbeTypes.hlsli"
 #include "../GlimmerLight.hlsli"

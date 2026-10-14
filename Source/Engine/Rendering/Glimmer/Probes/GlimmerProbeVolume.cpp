@@ -6,16 +6,17 @@
 
 #include <RenderingPch.hpp>
 
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTProbeVolume.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeVolume.hpp>
 #include <Rendering/Glimmer/GlimmerRelight.hpp>
-#include <Rendering/Glimmer/GlimmerBLASCache.hpp>
-#include <Rendering/Glimmer/GlimmerTLAS.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerFootprintMask.hpp>
+#include <Rendering/Glimmer/Bricks/GlimmerBrickWorld.hpp>
+#include <Rendering/Glimmer/Bricks/GlimmerBrickCVars.hpp>
+#include <Rendering/Glimmer/GlimmerTriangleCache.hpp>
+#include <Rendering/Glimmer/GlimmerSceneInstances.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHVolume.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHOccupancy.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTCVars.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeCVars.hpp>
 
 #include <Rendering/Clouds/CloudPass.hpp>
 
@@ -67,6 +68,7 @@ static StaticShaderPropertyId s_propAllocModeList { ShaderProperty(NAME("MODE"),
 static StaticShaderPropertyId s_propTraceModeTrace { ShaderProperty(NAME("MODE"), NAME("TRACE")) };
 static StaticShaderPropertyId s_propTraceModeShade { ShaderProperty(NAME("MODE"), NAME("SHADE")) };
 static StaticShaderPropertyId s_propTraceModeRelight { ShaderProperty(NAME("MODE"), NAME("RELIGHT")) };
+
 static StaticShaderPropertyId s_propBlendModeBlend { ShaderProperty(NAME("MODE"), NAME("BLEND")) };
 static StaticShaderPropertyId s_propBlendModeCompose { ShaderProperty(NAME("MODE"), NAME("COMPOSE")) };
 
@@ -79,7 +81,7 @@ static constexpr size_t RayHitSize = 3 * sizeof(Vec4f) + PackedLightSize;
 static constexpr uint32 ProbeLightEntries = GlimmerLightEntries;
 
 static constexpr uint32 ProbesPerTraceGroup = 2;
-static constexpr uint32 RelightGroupSize = 64; // GlimmerSWRTProbeTrace's RAYS_PER_PROBE * PROBES_PER_GROUP
+static constexpr uint32 RelightGroupSize = 64; // GlimmerProbeTrace's RAYS_PER_PROBE * PROBES_PER_GROUP
 static_assert(GlimmerProbeRays == 32);
 
 static constexpr uint32 ListGroupSize = 64;
@@ -114,7 +116,7 @@ struct GlimmerProbeAllocConstants
 
     Vec4f viewer; // viewer position in x,y,z
 
-    /// x = 1 when every probe is to wake, 2 when every probe is to start over
+    /// x = 1 when every probe is to wake
     /// y = changed boxes
     /// z = longest sleep interval; a probe that reaches it is settled and only traced again when something wakes it
     /// w = seconds after which a settled probe is traced anyway (0 = never)
@@ -122,6 +124,9 @@ struct GlimmerProbeAllocConstants
 
     Vec4f changedMin[MaxChangedBoxes];
     Vec4f changedMax[MaxChangedBoxes];
+
+    Vec4i brickChunkOrigin;          // xyz = absolute chunk of the bricks' window, w = 0 without bricks, 1 with, 2 when none are built yet
+    Vec4u brickChunksBuilding[16];   // a bit per chunk of the window, by its place in it, set while it is being built
 };
 
 struct GlimmerProbeTraceConstants
@@ -132,7 +137,6 @@ struct GlimmerProbeTraceConstants
     Vec4u dispatch; // x = probes traced per frame at most
     Vec4f params;   // x = foliage extinction
     GlimmerSkyShaderData sky;
-    GlimmerFootprintMaskShaderData mask;
     GlimmerSHVolumeShaderData sh;
     EnvProbeShaderData skyProbe;
 
@@ -145,6 +149,8 @@ struct GlimmerProbeTraceConstants
     /// x = ground level
     /// y = groups along x
     Vec4u relightInfo;
+
+    GlimmerBrickShaderData bricks;
 };
 
 struct GlimmerProbeBlendConstants
@@ -174,13 +180,12 @@ static GpuBufferRef CreateProbeBuffer(size_t elementSize, size_t numElements)
 }
 
 
-#pragma region GlimmerSWRTProbeVolume
+#pragma region GlimmerProbeVolume
 
-GlimmerSWRTProbeVolume::GlimmerSWRTProbeVolume()
+GlimmerProbeVolume::GlimmerProbeVolume()
     : m_startTime(Time::Now()),
       m_frameIndex(0),
-      m_seenTLASGeneration(~0u),
-      m_seenTLASCompleteGeneration(~0u),
+      m_seenInstancesGeneration(~0u),
       m_poolBlocks(GlimmerProbePoolBlocks),
       m_maxProbesPerFrame(GlimmerMaxProbesPerFrame),
       m_shaderData {},
@@ -189,14 +194,14 @@ GlimmerSWRTProbeVolume::GlimmerSWRTProbeVolume()
 {
 }
 
-GlimmerSWRTProbeVolume::~GlimmerSWRTProbeVolume()
+GlimmerProbeVolume::~GlimmerProbeVolume()
 {
     ReleaseResources();
 
     EnqueueDeletion(std::move(m_placeholderBuffer));
 }
 
-void GlimmerSWRTProbeVolume::ReleaseResources()
+void GlimmerProbeVolume::ReleaseResources()
 {
     for (GpuBufferRef* buffer : { &m_blockTableBuffer, &m_cellsBuffer, &m_slotsBuffer, &m_slotAgesBuffer, &m_blockWakeBuffer, &m_statesBuffer, &m_shBuffer, &m_lightBuffer, &m_visibilityBuffer,
              &m_trendBuffer, &m_countersBuffer, &m_updateListBuffer, &m_raysBuffer, &m_rayHitsBuffer })
@@ -204,13 +209,12 @@ void GlimmerSWRTProbeVolume::ReleaseResources()
         EnqueueDeletion(std::move(*buffer));
     }
 
-    m_seenTLASGeneration = ~0u;
-    m_seenTLASCompleteGeneration = ~0u;
+    m_seenInstancesGeneration = ~0u;
     m_shaderData.info.w = 0;
     m_hasComposedLight = false;
 }
 
-const GpuBufferRef& GlimmerSWRTProbeVolume::GetBufferOrPlaceholder(const GpuBufferRef& buffer) const
+const GpuBufferRef& GlimmerProbeVolume::GetBufferOrPlaceholder(const GpuBufferRef& buffer) const
 {
     if (buffer.IsValid())
     {
@@ -219,7 +223,7 @@ const GpuBufferRef& GlimmerSWRTProbeVolume::GetBufferOrPlaceholder(const GpuBuff
 
     if (!m_placeholderBuffer.IsValid())
     {
-        GlimmerSWRTProbeVolume* self = const_cast<GlimmerSWRTProbeVolume*>(this);
+        GlimmerProbeVolume* self = const_cast<GlimmerProbeVolume*>(this);
 
         self->m_placeholderBuffer = CreateProbeBuffer(sizeof(Vec4f), 1);
     }
@@ -227,40 +231,40 @@ const GpuBufferRef& GlimmerSWRTProbeVolume::GetBufferOrPlaceholder(const GpuBuff
     return m_placeholderBuffer;
 }
 
-const GpuBufferRef& GlimmerSWRTProbeVolume::GetBlockTableBuffer() const
+const GpuBufferRef& GlimmerProbeVolume::GetBlockTableBuffer() const
 {
     return GetBufferOrPlaceholder(m_blockTableBuffer);
 }
 
-const GpuBufferRef& GlimmerSWRTProbeVolume::GetSHBuffer() const
+const GpuBufferRef& GlimmerProbeVolume::GetSHBuffer() const
 {
     return GetBufferOrPlaceholder(m_shBuffer);
 }
 
-const GpuBufferRef& GlimmerSWRTProbeVolume::GetLightBuffer() const
+const GpuBufferRef& GlimmerProbeVolume::GetLightBuffer() const
 {
     return GetBufferOrPlaceholder(m_lightBuffer);
 }
 
-const GpuBufferRef& GlimmerSWRTProbeVolume::GetStatesBuffer() const
+const GpuBufferRef& GlimmerProbeVolume::GetStatesBuffer() const
 {
     return GetBufferOrPlaceholder(m_statesBuffer);
 }
 
-const GpuBufferRef& GlimmerSWRTProbeVolume::GetVisibilityBuffer() const
+const GpuBufferRef& GlimmerProbeVolume::GetVisibilityBuffer() const
 {
     return GetBufferOrPlaceholder(m_visibilityBuffer);
 }
 
-const GpuBufferRef& GlimmerSWRTProbeVolume::GetSlotsBuffer() const
+const GpuBufferRef& GlimmerProbeVolume::GetSlotsBuffer() const
 {
     return GetBufferOrPlaceholder(m_slotsBuffer);
 }
 
-void GlimmerSWRTProbeVolume::CreateResources(Frame* frame)
+void GlimmerProbeVolume::CreateResources(Frame* frame)
 {
-    m_poolBlocks = uint32(MathUtil::Clamp(g_cvGlimmerSWRTProbesPoolBlocks.Get(), 1, int(GlimmerProbePoolBlocks)));
-    m_maxProbesPerFrame = MathUtil::Clamp(uint32(MathUtil::Max(g_cvGlimmerSWRTProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays, MinProbesPerFrameCapacity, GlimmerMaxProbesPerFrame);
+    m_poolBlocks = uint32(MathUtil::Clamp(g_cvGlimmerProbesPoolBlocks.Get(), 1, int(GlimmerProbePoolBlocks)));
+    m_maxProbesPerFrame = MathUtil::Clamp(uint32(MathUtil::Max(g_cvGlimmerProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays, MinProbesPerFrameCapacity, GlimmerMaxProbesPerFrame);
 
     const size_t poolProbes = size_t(m_poolBlocks) * GlimmerProbesPerBlock;
 
@@ -345,7 +349,7 @@ void GlimmerSWRTProbeVolume::CreateResources(Frame* frame)
     upload(m_countersBuffer, zeros.Data(), NumProbeCounters * sizeof(uint32));
 }
 
-void GlimmerSWRTProbeVolume::UpdateWindows(const Vec3f& viewerPosition)
+void GlimmerProbeVolume::UpdateWindows(const Vec3f& viewerPosition)
 {
     const int32 halfWindow = int32(GlimmerProbeWindow / 2);
 
@@ -365,12 +369,12 @@ void GlimmerSWRTProbeVolume::UpdateWindows(const Vec3f& viewerPosition)
     }
 }
 
-void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateInputs& inputs)
+void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& inputs)
 {
     HYP_SCOPE;
 
-    if (!inputs.surfaceCache || !inputs.spanCache || !inputs.blasCache || !inputs.footprintMask || !inputs.occupancy
-        || !inputs.blasCache->IsReady() || !inputs.spanCache->GetSpansBuffer().IsValid())
+    if (!inputs.surfaceCache || !inputs.spanCache || !inputs.triangleCache || !inputs.occupancy
+        || !inputs.triangleCache->IsReady() || !inputs.spanCache->GetSpansBuffer().IsValid())
     {
         return;
     }
@@ -381,8 +385,8 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
 
     if (m_raysBuffer.IsValid())
     {
-        const uint32 poolBlocks = uint32(MathUtil::Clamp(g_cvGlimmerSWRTProbesPoolBlocks.Get(), 1, int(GlimmerProbePoolBlocks)));
-        const uint32 probesPerFrame = MathUtil::Min(uint32(MathUtil::Max(g_cvGlimmerSWRTProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays, GlimmerMaxProbesPerFrame);
+        const uint32 poolBlocks = uint32(MathUtil::Clamp(g_cvGlimmerProbesPoolBlocks.Get(), 1, int(GlimmerProbePoolBlocks)));
+        const uint32 probesPerFrame = MathUtil::Min(uint32(MathUtil::Max(g_cvGlimmerProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays, GlimmerMaxProbesPerFrame);
 
         // sized for what the cvars asked for when they were made
         if (poolBlocks > m_poolBlocks || probesPerFrame > m_maxProbesPerFrame)
@@ -400,12 +404,13 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
 
     UpdateWindows(inputs.viewerPosition);
 
-    const bool hasSWRTScene = inputs.tlas && inputs.tlas->IsReady();
+    // the probes trace the bricks; the scene instances' change journal says which probes to wake
+    const bool hasBricks = inputs.sceneInstances && inputs.sceneInstances->IsReady() && inputs.brickWorld && inputs.brickWorld->IsReady();
 
-    const uint32 probesPerFrame = MathUtil::Clamp(uint32(MathUtil::Max(g_cvGlimmerSWRTProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays, 1u, m_maxProbesPerFrame);
+    const uint32 probesPerFrame = MathUtil::Clamp(uint32(MathUtil::Max(g_cvGlimmerProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays, 1u, m_maxProbesPerFrame);
 
-    const uint32 sleepMaxInterval = g_cvGlimmerSWRTProbesSleep.Get()
-        ? uint32(MathUtil::Clamp(g_cvGlimmerSWRTProbesSleepMaxInterval.Get(), 0, 3))
+    const uint32 sleepMaxInterval = g_cvGlimmerProbesSleep.Get()
+        ? uint32(MathUtil::Clamp(g_cvGlimmerProbesSleepMaxInterval.Get(), 0, 3))
         : 0u;
 
     m_shaderData.info = Vec4u(GlimmerProbeLevels, GlimmerProbeRays, m_frameIndex, m_shaderData.info.w);
@@ -415,9 +420,9 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
         GlimmerSkyMaxLuminance,
         GlimmerMaxRayDistance);
     m_shaderData.nearField = Vec4f(
-        float(MathUtil::Clamp(g_cvGlimmerSWRTNearFieldCascades.Get(), 0, int(GlimmerProbeLevels))),
+        float(MathUtil::Clamp(g_cvGlimmerProbesNearFieldCascades.Get(), 0, int(GlimmerProbeLevels))),
         NearFieldReachSpacings,
-        hasSWRTScene ? float(inputs.tlas->GetNumInstances()) : 0.0f,
+        hasBricks ? 1.0f : 0.0f,
         MathUtil::Clamp(g_cvGlimmerGroundAlbedo.Get(), 0.0f, 1.0f));
 
     const GlimmerGroundShaderData& groundShaderData = inputs.surfaceCache->GetGroundShaderData();
@@ -432,13 +437,13 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
         constants.occupancy = *inputs.occupancy;
         constants.budget = Vec4u(
             probesPerFrame,
-            uint32(MathUtil::Max(g_cvGlimmerSWRTProbesBlockReleaseFrames.Get(), 0)),
-            uint32(MathUtil::Max(g_cvGlimmerSWRTProbesInsideRetryInterval.Get(), 1)),
-            uint32(MathUtil::Clamp(g_cvGlimmerSWRTProbesPoolBlocks.Get(), 1, int(m_poolBlocks))));
+            uint32(MathUtil::Max(g_cvGlimmerProbesBlockReleaseFrames.Get(), 0)),
+            uint32(MathUtil::Max(g_cvGlimmerProbesInsideRetryInterval.Get(), 1)),
+            uint32(MathUtil::Clamp(g_cvGlimmerProbesPoolBlocks.Get(), 1, int(m_poolBlocks))));
         constants.params = Vec4f(
-            MathUtil::Clamp(g_cvGlimmerSWRTProbesBlockMargin.Get(), 0.0f, 2.0f),
-            g_cvGlimmerSWRTProbesMinHeightAboveGround.Get(),
-            float(MathUtil::Max(g_cvGlimmerSWRTProbesClassifyPeriod.Get(), 1)),
+            MathUtil::Clamp(g_cvGlimmerProbesBlockMargin.Get(), 0.0f, 2.0f),
+            g_cvGlimmerProbesMinHeightAboveGround.Get(),
+            float(MathUtil::Max(g_cvGlimmerProbesClassifyPeriod.Get(), 1)),
             0.0f);
         constants.viewer = Vec4f(inputs.viewerPosition.x, inputs.viewerPosition.y, inputs.viewerPosition.z, 0.0f);
 
@@ -446,11 +451,11 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
 
         uint32 numChangedBoxes = 0;
 
-        if (hasSWRTScene && inputs.tlas->GetGeneration() != m_seenTLASGeneration)
+        if (hasBricks && inputs.sceneInstances->GetGeneration() != m_seenInstancesGeneration)
         {
             GlimmerSceneChanges changes;
 
-            if (m_seenTLASGeneration == ~0u || !inputs.tlas->GetChangesSince(m_seenTLASGeneration, changes))
+            if (m_seenInstancesGeneration == ~0u || !inputs.sceneInstances->GetChangesSince(m_seenInstancesGeneration, changes))
             {
                 wakeEverything = true;
             }
@@ -482,7 +487,7 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
                 }
             }
 
-            m_seenTLASGeneration = inputs.tlas->GetGeneration();
+            m_seenInstancesGeneration = inputs.sceneInstances->GetGeneration();
         }
 
         for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)
@@ -503,23 +508,20 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
             }
         }
 
-        bool resetEverything = false;
-
-        if (hasSWRTScene && inputs.tlas->GetCompleteGeneration() != m_seenTLASCompleteGeneration)
-        {
-            resetEverything = m_seenTLASCompleteGeneration != ~0u || inputs.tlas->GetCompleteGeneration() != 0;
-
-            m_seenTLASCompleteGeneration = inputs.tlas->GetCompleteGeneration();
-        }
-
         s_statGlimmerProbeWakes += wakeEverything ? 1u : 0u;
         s_statGlimmerProbeChangedBoxes += numChangedBoxes;
 
         constants.wake = Vec4u(
-            resetEverything ? 2u : (wakeEverything ? 1u : 0u),
+            wakeEverything ? 1u : 0u,
             numChangedBoxes,
             sleepMaxInterval,
-            uint32(MathUtil::Max(g_cvGlimmerSWRTProbesSafetyRefreshSeconds.Get(), 0)));
+            uint32(MathUtil::Max(g_cvGlimmerProbesSafetyRefreshSeconds.Get(), 0)));
+
+        // a probe whose rays could reach bricks still being built keeps what it has until they are
+        if (inputs.brickWorld)
+        {
+            inputs.brickWorld->GetBuildingChunks(constants.brickChunkOrigin, constants.brickChunksBuilding);
+        }
 
         for (const GpuBufferRef* buffer : probeStateBuffers)
         {
@@ -540,7 +542,7 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
             ShaderPropertySet shaderProperties;
             shaderProperties.Add(modeProperty);
 
-            cr << SetCurrentShader(ShaderDesc(NAME("GlimmerSWRTProbeAlloc"), shaderProperties));
+            cr << SetCurrentShader(ShaderDesc(NAME("GlimmerProbeAlloc"), shaderProperties));
 
             uint32 uniformIndex = 0;
 
@@ -598,8 +600,6 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
     // the far field is sampled once it has been traced; until then its constants stay zeroed and the trace treats it as covering nothing
     const bool hasSHVolume = inputs.shVolume && inputs.shVolume->IsReady();
 
-    const GpuBufferRef& tlasNodes = hasSWRTScene ? inputs.tlas->GetNodesBuffer() : inputs.blasCache->GetNodesBuffer();
-    const GpuBufferRef& tlasInstances = hasSWRTScene ? inputs.tlas->GetInstancesBuffer() : inputs.blasCache->GetTrianglesBuffer();
 
     // the probes the hits sample (last frame's) and the list are read only from here to the blend
     for (const GpuBufferRef* buffer : probeStateBuffers)
@@ -616,18 +616,17 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
         constants.params = Vec4f(GetGlimmerFoliageExtinction(), 0.0f, 0.0f, 0.0f);
         constants.sky = skyData;
 
-        // a mask that isn't built yet is left invalid, which has the trace treat all of the SWRT region as occupied
-        if (hasSWRTScene && inputs.footprintMask->IsReady())
-        {
-            constants.mask = inputs.footprintMask->GetShaderData();
-        }
-
         if (hasSHVolume)
         {
             constants.sh = inputs.shVolume->GetShaderData();
         }
 
         constants.skyProbe = skyProbeData;
+
+        if (hasBricks)
+        {
+            constants.bricks = inputs.brickWorld->GetShaderData();
+        }
 
         const GpuImageViewRef relightImageView = inputs.relight ? inputs.relight->GetImageView() : GpuImageViewRef();
 
@@ -659,7 +658,7 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
             ShaderPropertySet shaderProperties;
             shaderProperties.Add(modeProperty);
 
-            cr << SetCurrentShader(ShaderDesc(NAME("GlimmerSWRTProbeTrace"), shaderProperties));
+            cr << SetCurrentShader(ShaderDesc(NAME("GlimmerProbeTrace"), shaderProperties));
 
             uint32 uniformIndex = 0;
 
@@ -667,15 +666,16 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
             cr << SetShaderUniform(uniformIndex++, "WorldsBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
             cr << SetShaderUniform(uniformIndex++, "MaterialsBuffer"_sh, RI.namedBuffers[NamedBuffer::Materials]);
             cr << SetShaderUniform(uniformIndex++, "SamplerLinearMipmap"_sh, RI.placeholderData->GetSamplerLinearMipmap());
-            cr << SetShaderUniform(uniformIndex++, "GlimmerTLASNodesBuffer"_sh, tlasNodes.Get(), ShaderDataOffset(0, sizeof(GlimmerBVHNode)));
-            cr << SetShaderUniform(uniformIndex++, "GlimmerInstancesBuffer"_sh, tlasInstances.Get(), ShaderDataOffset(0, sizeof(GlimmerInstanceShaderData)));
-            cr << SetShaderUniform(uniformIndex++, "GlimmerBLASNodesBuffer"_sh, inputs.blasCache->GetNodesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerBLASNode)));
-            cr << SetShaderUniform(uniformIndex++, "GlimmerBLASTrianglesBuffer"_sh, inputs.blasCache->GetTrianglesBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickTableBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetTableBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickIndexBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetIndexBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingsBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetCrossingsBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickMaterialBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetMaterialBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+
             cr << SetShaderUniform(uniformIndex++, "GlimmerGroundTexture"_sh, groundImageView);
             cr << SetShaderUniform(uniformIndex++, "GlimmerGroundAlbedoTexture"_sh, inputs.surfaceCache->GetGroundAlbedoImageView());
             cr << SetShaderUniform(uniformIndex++, "GlimmerSpansBuffer"_sh, inputs.spanCache->GetSpansBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
             cr << SetShaderUniform(uniformIndex++, "GlimmerHeightBoundsBuffer"_sh, inputs.spanCache->GetHeightBoundsBuffer().Get(), ShaderDataOffset(0, sizeof(float)));
-            cr << SetShaderUniform(uniformIndex++, "FootprintMaskBuffer"_sh, inputs.footprintMask->GetMaskBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
             cr << SetShaderUniform(uniformIndex++, "GlimmerProbeBlockTableBuffer"_sh, m_blockTableBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
             cr << SetShaderUniform(uniformIndex++, "GlimmerProbeLightBuffer"_sh, m_lightBuffer.Get(), ShaderDataOffset(0, sizeof(Vec4f)));
             cr << SetShaderUniform(uniformIndex++, "GlimmerProbeStatesBuffer"_sh, m_statesBuffer.Get(), ShaderDataOffset(0, sizeof(Vec4u)));
@@ -759,20 +759,20 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
         GlimmerProbeBlendConstants constants {};
         constants.volume = m_shaderData;
 
-        const uint32 minHistory = uint32(MathUtil::Clamp(g_cvGlimmerSWRTProbesMinHistory.Get(), 1, 255));
+        const uint32 minHistory = uint32(MathUtil::Clamp(g_cvGlimmerProbesMinHistory.Get(), 1, 255));
 
         constants.dispatch = Vec4u(
             probesPerFrame,
             MaxRelocations,
             minHistory,
-            uint32(MathUtil::Clamp(g_cvGlimmerSWRTProbesMinHistoryChanging.Get(), 0, int(minHistory))));
+            uint32(MathUtil::Clamp(g_cvGlimmerProbesMinHistoryChanging.Get(), 0, int(minHistory))));
 
-        const float historySeconds = MathUtil::Max(g_cvGlimmerSWRTProbesHistorySeconds.Get(), 0.0f);
+        const float historySeconds = MathUtil::Max(g_cvGlimmerProbesHistorySeconds.Get(), 0.0f);
 
         constants.params = Vec4f(
             historySeconds,
-            MathUtil::Clamp(g_cvGlimmerSWRTProbesHistorySecondsChanging.Get(), 0.0f, historySeconds),
-            MathUtil::Max(g_cvGlimmerSWRTProbesRelocateMargin.Get(), 0.0f),
+            MathUtil::Clamp(g_cvGlimmerProbesHistorySecondsChanging.Get(), 0.0f, historySeconds),
+            MathUtil::Max(g_cvGlimmerProbesRelocateMargin.Get(), 0.0f),
             float(sleepMaxInterval));
         constants.light = inputs.light;
 
@@ -793,7 +793,7 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
         ShaderPropertySet blendProperties;
         blendProperties.Add(s_propBlendModeBlend);
 
-        cr << SetCurrentShader(ShaderDesc(NAME("GlimmerSWRTProbeBlend"), blendProperties));
+        cr << SetCurrentShader(ShaderDesc(NAME("GlimmerProbeBlend"), blendProperties));
 
         uint32 uniformIndex = 0;
 
@@ -822,7 +822,7 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
             ShaderPropertySet composeProperties;
             composeProperties.Add(s_propBlendModeCompose);
 
-            cr << SetCurrentShader(ShaderDesc(NAME("GlimmerSWRTProbeBlend"), composeProperties));
+            cr << SetCurrentShader(ShaderDesc(NAME("GlimmerProbeBlend"), composeProperties));
 
             uniformIndex = 0;
 
@@ -847,6 +847,6 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
     m_shaderData.info.w = 1;
 }
 
-#pragma endregion GlimmerSWRTProbeVolume
+#pragma endregion GlimmerProbeVolume
 
 } // namespace Hyperion

@@ -27,8 +27,8 @@ class EnvProbe;
 class CloudPass;
 class GlimmerSurfaceCache;
 class GlimmerSpanCache;
-class GlimmerTLAS;
-class GlimmerSWRTProbeVolume;
+class GlimmerSceneInstances;
+class GlimmerProbeVolume;
 struct GlimmerSHOccupancyShaderData;
 struct GlimmerRelightShaderData;
 
@@ -55,7 +55,7 @@ struct GlimmerSHVolumeUpdateInputs
     Vec3f viewerPosition;
     const GlimmerSurfaceCache* surfaceCache = nullptr;
     const GlimmerSpanCache* spanCache = nullptr;
-    const GlimmerTLAS* tlas = nullptr;
+    const GlimmerSceneInstances* sceneInstances = nullptr;
 
     const GlimmerSHOccupancyShaderData* occupancy = nullptr;
     GpuImageViewRef occupancyImageView;
@@ -65,7 +65,7 @@ struct GlimmerSHVolumeUpdateInputs
     const GlimmerRelightShaderData* relight = nullptr;
     GpuImageViewRef relightImageView;
 
-    const GlimmerSWRTProbeVolume* probeVolume = nullptr;
+    const GlimmerProbeVolume* probeVolume = nullptr;
 
     EnvProbe* skyProbe = nullptr;
     const CloudPass* cloudPass = nullptr;
@@ -165,7 +165,7 @@ private:
     uint32 m_refreshStep;
     FixedArray<int32, GlimmerSHCascades> m_refreshSlices; // absolute, 2 per voxel along z
     uint32 m_updateIndex;
-    uint32 m_seenTLASGeneration;
+    uint32 m_seenInstancesGeneration;
     uint32 m_occupancyWaitFrames;
 
     int32 m_refreshBudget;                              /// voxels the refresh may still trace, carried between frames so a rate below a slice still gets its turn

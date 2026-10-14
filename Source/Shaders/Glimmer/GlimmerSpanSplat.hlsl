@@ -29,7 +29,7 @@ DECLARE_BUFFER_DYNAMIC(GlimmerSpanSplat, CBuffer) cbuffer CBuffer
 DECLARE_UAV(GlimmerSpanSplat, SpansBuffer) RWStructuredBuffer<uint> spans;
 DECLARE_SRV(GlimmerSpanSplat, SpanInstancesBuffer) StructuredBuffer<GlimmerSpanInstance> spanInstances;
 DECLARE_SRV(GlimmerSpanSplat, SpanChunksBuffer) StructuredBuffer<GlimmerSpanChunk> spanChunks;
-DECLARE_SRV(GlimmerSpanSplat, GlimmerBLASTrianglesBuffer) StructuredBuffer<uint> glimmerBLASTriangles;
+DECLARE_SRV(GlimmerSpanSplat, GlimmerTrianglesBuffer) StructuredBuffer<uint> glimmerTriangles;
 DECLARE_SRV(GlimmerSpanSplat, MaterialsBuffer) StructuredBuffer<Material> materials;
 
 #ifdef HYP_FEATURES_BINDLESS_TEXTURES
@@ -125,7 +125,7 @@ float2 TriangleHeightsOverSquare(float3 p0, float3 normal, float2 triangleHeight
 
 void SplatTriangle(GlimmerSpanInstance instance, uint localTriangle, uint level)
 {
-    const BVHBLASTriangle bvhTriangle = LOAD_BVH_BLAS_TRIANGLE(glimmerBLASTriangles, instance.data.x + localTriangle);
+    const BVHBLASTriangle bvhTriangle = LOAD_BVH_BLAS_TRIANGLE(glimmerTriangles, instance.data.x + localTriangle);
 
     const float3 p0 = TransformPoint(instance, bvhTriangle.position0);
     const float3 p1 = TransformPoint(instance, bvhTriangle.position1);
