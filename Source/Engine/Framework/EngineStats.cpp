@@ -166,6 +166,8 @@ static void InitStat(EngineStats* stats, EngineStatBase* stat, const ANSIStringV
     if (stat->type != EST_GROUP)
     {
         stat->id = s_nextStatId.Increment(1, MemoryOrder::RELAXED);
+        Assert(stat->id < EngineStatsMaxStats, "Too many engine stats: raise EngineStatsMaxStats");
+
         engineStats.linearStats[stat->id] = stat;
     }
 

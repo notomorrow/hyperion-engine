@@ -369,7 +369,7 @@ void DX12ComputePipeline::DispatchIndirect(
     ID3D12GraphicsCommandList* cmdList = dx12CommandBuffer->GetCommandList();
     Assert(cmdList != nullptr);
 
-    // Create command signature lazily per-instance so each pipeline uses its own root signature.
+    // A signature of nothing but the dispatch takes no root signature
     if (m_dispatchCommandSignature == nullptr)
     {
         D3D12_INDIRECT_ARGUMENT_DESC argDesc = {};
@@ -380,10 +380,12 @@ void DX12ComputePipeline::DispatchIndirect(
         sigDesc.NumArgumentDescs = 1;
         sigDesc.pArgumentDescs = &argDesc;
 
-        RI.GetDevice()->CreateCommandSignature(
+        const HRESULT result = RI.GetDevice()->CreateCommandSignature(
             &sigDesc,
-            m_rootSignature.Get(),
+            nullptr,
             IID_PPV_ARGS(&m_dispatchCommandSignature));
+
+        Assert(SUCCEEDED(result), "Failed to create dispatch command signature");
     }
 
     cmdList->ExecuteIndirect(

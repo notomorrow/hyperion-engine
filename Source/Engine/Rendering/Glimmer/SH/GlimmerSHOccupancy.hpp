@@ -20,8 +20,8 @@
 namespace Hyperion {
 
 class Texture;
-class GlimmerTLAS;
-class GlimmerBLASCache;
+class GlimmerSceneInstances;
+class GlimmerTriangleCache;
 
 static constexpr uint32 GlimmerSHOccupancyGridXZ = GlimmerSHGridXZ * 2;
 static constexpr uint32 GlimmerSHOccupancyGridY = GlimmerSHGridY * 2;
@@ -54,16 +54,17 @@ public:
     void Update(
         Frame* frame,
         const Vec3f& viewerPosition,
-        const GlimmerTLAS& tlas,
-        const GlimmerBLASCache& blasCache,
-        const GlimmerLightmapPages& lightmapPages);
+        const GlimmerSceneInstances& sceneInstances,
+        const GlimmerTriangleCache& triangleCache,
+        const GlimmerLightmapPages& lightmapPages,
+        GlimmerScratchBuffer& scratchBuffer);
 
     HYP_FORCE_INLINE const GlimmerSHOccupancyShaderData& GetShaderData() const
     {
         return m_shaderData;
     }
 
-    // false while a cascade is still waiting to be rebuilt for the current TLAS or window
+    // false while a cascade is still waiting to be rebuilt for the current scene instances or window
     HYP_FORCE_INLINE bool IsSettled() const
     {
         return m_isSettled;
@@ -84,13 +85,13 @@ private:
         Vec3i max; // exclusive
     };
 
-    void SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const Box& box, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
-    void ScrollWindow(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
+    void SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const Box& box, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache);
+    void ScrollWindow(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache);
     void SetBuilt(uint32 cascadeIndex, const Vec3i& origin);
 
     Handle<Texture> m_texture;
     GpuBufferRef m_maskBuffer;
-    GpuBufferRef m_albedoSumsBuffer;
+    GpuBuffer* m_albedoSumsBuffer; // the technique's scratch buffer, for the frame it is splatted in
 
     GlimmerLightmapPages m_lightmapPages;
 

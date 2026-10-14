@@ -14,7 +14,7 @@ PERMUTE(MODE, UPDATE, COMPOSE)
 #include "../GlimmerCommon.hlsli"
 #include "GlimmerSHCommon.hlsli"
 #include "../GlimmerRelight.hlsli"
-#include "../SWRT/GlimmerProbeTypes.hlsli"
+#include "../Probes/GlimmerProbeTypes.hlsli"
 
 #define GLIMMER_SH_OCCUPANCY_NO_TRACE
 #include "GlimmerSHOccupancy.hlsli"
@@ -124,7 +124,7 @@ DECLARE_SRV(GlimmerSHUpdate, GlimmerProbeStatesBuffer) StructuredBuffer<uint4> g
 DECLARE_SRV(GlimmerSHUpdate, GlimmerProbeVisibilityBuffer) StructuredBuffer<uint> glimmerProbeVisibility;
 
 #define GLIMMER_PROBES_SPLIT
-#include "../SWRT/GlimmerProbes.hlsli"
+#include "../Probes/GlimmerProbes.hlsli"
 
 DECLARE_UAV(GlimmerSHUpdate, OutData) RWTexture3D<float4> OutData;
 DECLARE_UAV(GlimmerSHUpdate, OutState) RWTexture3D<uint4> OutState;

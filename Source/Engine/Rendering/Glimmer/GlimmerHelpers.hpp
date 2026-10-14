@@ -28,7 +28,6 @@ class RenderProxyList;
 class TerrainWorldGridLayer;
 
 class EnvProbe;
-struct BoundingBox;
 struct GlimmerChannelState;
 struct GlimmerTerrainPatchShaderData;
 struct EnvProbeShaderData;
@@ -38,6 +37,8 @@ static constexpr float GlimmerSkyMaxLuminance = 64.0f;
 
 // how far the probe and SH voxel rays look before taking the sky
 static constexpr float GlimmerMaxRayDistance = 2000.0f;
+
+static constexpr float GlimmerDefaultGroundAlbedo = 0.25f;
 
 static constexpr uint32 GlimmerMaxLightmapPages = 4;
 
@@ -93,10 +94,7 @@ GlimmerTexelRect GetGlimmerGroundWindow(const Vec2i& origin);
 
 void GetGlimmerScrolledRects(const GlimmerTexelRect& oldWindow, const GlimmerTexelRect& newWindow, GlimmerTexelRect& outColumns, GlimmerTexelRect& outRows);
 
-float GetGlimmerNearFieldRadius();
-
-// SWRT only covers the middle of the scene region; the rest is only splatted into the heightfield
-float GetGlimmerSWRTRadius(const BoundingBox& sceneRegion);
+float GetGlimmerRegionMinRadius();
 
 float GetGlimmerSHCascadeSpacing(uint32 cascadeIndex);
 float GetGlimmerSHOccupancySpacing(uint32 cascadeIndex);
@@ -109,6 +107,24 @@ Vec4f MakeGlimmerRandomRotation(uint32 seed);
 GpuBufferRef CreateGlimmerStructuredBuffer(size_t elementSize, size_t numElements);
 
 Handle<Texture> CreateGlimmerStorageTexture(TextureType type, TextureFormat format, const Vec3u& extent, uint16 numLayers, Name name, TextureWrapMode wrapMode = TextureWrapMode::Repeat);
+
+// one buffer shared by passes that don't keep what they write in it past their frame; it only grows
+class GlimmerScratchBuffer final
+{
+public:
+    GlimmerScratchBuffer();
+
+    GlimmerScratchBuffer(const GlimmerScratchBuffer& other) = delete;
+    GlimmerScratchBuffer& operator=(const GlimmerScratchBuffer& other) = delete;
+
+    ~GlimmerScratchBuffer();
+
+    GpuBuffer* Reserve(size_t byteSize);
+
+private:
+    GpuBufferRef m_buffer;
+    size_t m_byteSize;
+};
 
 uint32 CalculateGlimmerMipChainCells(uint32 resolution, uint32 numLevels);
 

@@ -26,16 +26,16 @@ class EnvProbe;
 class RenderProxyList;
 class CBufferAllocator;
 class GlimmerSurfaceCache;
-class GlimmerBLASCache;
-class GlimmerTLAS;
+class GlimmerTriangleCache;
+class GlimmerSceneInstances;
 class GlimmerSpanCache;
-class GlimmerFootprintMask;
-class GlimmerSWRTProbeVolume;
-class GlimmerSWRTProbeDebug;
+class GlimmerProbeVolume;
+class GlimmerProbeDebug;
 class GlimmerChannel;
 class GlimmerSHOccupancy;
 class GlimmerSHVolume;
 class GlimmerRelight;
+class GlimmerBrickWorld;
 struct GlimmerChannelState;
 
 struct GlimmerSceneRegionParams
@@ -54,9 +54,8 @@ struct GlimmerTechniqueUpdateContext
     RenderProxyList* sceneProxies = nullptr;
     BoundingBox region;
 
-    GlimmerBLASCache* blasCache = nullptr;
-    const GlimmerTLAS* tlas = nullptr;
-    bool tlasSwapped = false; // a newly built TLAS was swapped in this frame, or its active region moved
+    GlimmerTriangleCache* triangleCache = nullptr;
+    const GlimmerSceneInstances* sceneInstances = nullptr;
 
     const CloudPass* cloudPass = nullptr; // its cloud shadows dim the sun at probe hits; may be nullptr
 
@@ -75,8 +74,8 @@ struct GlimmerDebugViewContext
     View* view = nullptr;
     Framebuffer* gbufferFramebuffer = nullptr;
 
-    const GlimmerBLASCache* blasCache = nullptr;
-    const GlimmerTLAS* tlas = nullptr;
+    const GlimmerTriangleCache* triangleCache = nullptr;
+    const GlimmerSceneInstances* sceneInstances = nullptr;
     const GlimmerSurfaceCache* surfaceCache = nullptr;
     const GlimmerSpanCache* spanCache = nullptr;
 
@@ -105,21 +104,29 @@ public:
 
     bool IsReady() const;
 
-    BoundingBox GetTracedRegion(const BoundingBox& sceneRegion) const;
-
     void Update(const GlimmerTechniqueUpdateContext& context);
 
     bool RenderDebugView(const GlimmerDebugViewContext& context);
 
+    HYP_FORCE_INLINE GlimmerRelight* GetRelight() const
+    {
+        return m_relight.Get();
+    }
+
+    HYP_FORCE_INLINE const GlimmerBrickWorld* GetBrickWorld() const
+    {
+        return m_brickWorld.Get();
+    }
+
 private:
-    UniquePtr<GlimmerFootprintMask> m_footprintMask;
-    UniquePtr<GlimmerSWRTProbeVolume> m_probeVolume;
-    UniquePtr<GlimmerSWRTProbeDebug> m_probeDebug;
+    UniquePtr<GlimmerProbeVolume> m_probeVolume;
+    UniquePtr<GlimmerProbeDebug> m_probeDebug;
     UniquePtr<GlimmerSHOccupancy> m_shOccupancy;
     UniquePtr<GlimmerSHVolume> m_shVolume;
     UniquePtr<GlimmerRelight> m_relight;
+    UniquePtr<GlimmerBrickWorld> m_brickWorld;
 
-    uint32 m_maskGeneration;
+    GlimmerScratchBuffer m_scratchBuffer; // the SH occupancy's albedo sums, then the probes' rays
 };
 
 } // namespace Hyperion

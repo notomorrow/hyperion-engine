@@ -24,11 +24,12 @@ class CloudPass;
 
 class Texture;
 class EnvProbe;
-class GlimmerBLASCache;
-class GlimmerTLAS;
-class GlimmerFootprintMask;
+class GlimmerTriangleCache;
+class GlimmerSceneInstances;
 class GlimmerSHVolume;
 class GlimmerRelight;
+class GlimmerBrickWorld;
+class GlimmerScratchBuffer;
 struct GlimmerSHOccupancyShaderData;
 
 static constexpr uint32 GlimmerProbeLevels = 4;
@@ -64,20 +65,20 @@ struct GlimmerProbeVolumeShaderData
     GlimmerProbeLevelShaderData levels[GlimmerProbeLevels];
     Vec4u info;      // x = number of levels, y = rays per probe, z = frame, w = 1 when the volume can be sampled
     Vec4f params;    // x = seconds since the volume started, y = how much visibility counts (Rendering.Glimmer.Visibility), z = escape radiance clamp, w = max ray distance
-    Vec4f nearField; // x = levels traced with SWRT, y = SWRT reach in spacings, z = SWRT instances, w = ground albedo
+    Vec4f nearField; // x = levels that trace the bricks, y = their reach in spacings, z = 1 when there are bricks to trace, w = ground albedo
 };
 
-struct GlimmerSWRTProbeUpdateInputs
+struct GlimmerProbeUpdateInputs
 {
     Vec3f viewerPosition;
 
     const GlimmerSurfaceCache* surfaceCache = nullptr;
     const GlimmerSpanCache* spanCache = nullptr;
-    const GlimmerBLASCache* blasCache = nullptr;
-    const GlimmerTLAS* tlas = nullptr;
-    const GlimmerFootprintMask* footprintMask = nullptr; // of the tlas; tells the trace where SWRT has anything to hit
+    const GlimmerTriangleCache* triangleCache = nullptr;
+    const GlimmerSceneInstances* sceneInstances = nullptr;
     const GlimmerSHVolume* shVolume = nullptr;           // the far field, for the bounce at hits past the probes; may be nullptr
     GlimmerRelight* relight = nullptr;                   // lit here, before the trace shades heightfield hits from it; may be nullptr
+    const GlimmerBrickWorld* brickWorld = nullptr;       // may be nullptr
 
     // the solids the probe blocks are placed around
     const GlimmerSHOccupancyShaderData* occupancy = nullptr;
@@ -88,19 +89,21 @@ struct GlimmerSWRTProbeUpdateInputs
     const CloudPass* cloudPass = nullptr; // its cloud shadows dim the sun at hits; may be nullptr
 
     GlimmerLightShaderData light;
+
+    GlimmerScratchBuffer* scratchBuffer = nullptr; // holds the rays, from the trace to the blend
 };
 
-class GlimmerSWRTProbeVolume final
+class GlimmerProbeVolume final
 {
 public:
-    GlimmerSWRTProbeVolume();
+    GlimmerProbeVolume();
 
-    GlimmerSWRTProbeVolume(const GlimmerSWRTProbeVolume& other) = delete;
-    GlimmerSWRTProbeVolume& operator=(const GlimmerSWRTProbeVolume& other) = delete;
+    GlimmerProbeVolume(const GlimmerProbeVolume& other) = delete;
+    GlimmerProbeVolume& operator=(const GlimmerProbeVolume& other) = delete;
 
-    ~GlimmerSWRTProbeVolume();
+    ~GlimmerProbeVolume();
 
-    void Update(Frame* frame, const GlimmerSWRTProbeUpdateInputs& inputs);
+    void Update(Frame* frame, const GlimmerProbeUpdateInputs& inputs);
 
     HYP_FORCE_INLINE const GlimmerProbeVolumeShaderData& GetShaderData() const
     {
@@ -110,6 +113,11 @@ public:
     HYP_FORCE_INLINE bool IsReady() const
     {
         return m_shaderData.info.w != 0;
+    }
+
+    HYP_FORCE_INLINE uint32 GetPoolBlocks() const
+    {
+        return m_poolBlocks;
     }
 
     const GpuBufferRef& GetBlockTableBuffer() const;
@@ -129,25 +137,19 @@ private:
     GpuBufferRef m_blockTableBuffer; // a slot (or ~0) per block of each level's window
     GpuBufferRef m_cellsBuffer;      // per block table entry: the block it was classified for, and whether it wants a slot
     GpuBufferRef m_slotsBuffer;      // per slot: the block's absolute coordinate and level (-1 when free)
-    GpuBufferRef m_slotAgesBuffer;   // per slot: frames since its block was last wanted
-    GpuBufferRef m_blockWakeBuffer;  // per slot: the frame one of its probes last saw its light change
+    GpuBufferRef m_slotTimesBuffer;  // per slot: frames since its block was last wanted, and the frame one of its probes last saw its light change
     GpuBufferRef m_statesBuffer;
     GpuBufferRef m_shBuffer;         // 3 per probe: the light put together
     GpuBufferRef m_lightBuffer;      // 3 per part of the light per probe
     GpuBufferRef m_visibilityBuffer; // GlimmerProbeVisibilityTexels per probe
     GpuBufferRef m_trendBuffer;
-    GpuBufferRef m_countersBuffer;
-    GpuBufferRef m_updateListBuffer;
-
-    GpuBufferRef m_raysBuffer;
-    GpuBufferRef m_rayHitsBuffer; // between the trace and shade passes
+    GpuBufferRef m_countersBuffer;   // NumProbeCounters, then the list of probes this frame updates
 
     GpuBufferRef m_placeholderBuffer;
 
     Time m_startTime;
     uint32 m_frameIndex;
-    uint32 m_seenTLASGeneration;
-    uint32 m_seenTLASCompleteGeneration;
+    uint32 m_seenInstancesGeneration;
     uint32 m_poolBlocks;
     uint32 m_maxProbesPerFrame;
 

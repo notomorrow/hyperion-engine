@@ -811,6 +811,22 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer)
                 static_assert(std::is_trivially_destructible_v<DispatchCompute>);
             }
             break;
+            case CommandType::DispatchComputeIndirect:
+            {
+                auto* cmd = static_cast<DispatchComputeIndirect*>(cmdDataPtr);
+
+                EndCurrentPass(commandBuffer);
+
+                RI.CommitPipelineState(PSO_Compute, commandBuffer);
+
+                ComputePipeline* pipeline = RI.state.boundComputePipeline;
+                AssertDebug(pipeline != nullptr);
+
+                pipeline->DispatchIndirect(commandBuffer, MakeStrongRef(cmd->m_argsBuffer), cmd->m_argsOffset);
+
+                static_assert(std::is_trivially_destructible_v<DispatchComputeIndirect>);
+            }
+            break;
             case CommandType::TraceRays:
             {
                 auto* cmd = static_cast<TraceRays*>(cmdDataPtr);

@@ -7,8 +7,8 @@
 #include <RenderingPch.hpp>
 
 #include <Rendering/Glimmer/SH/GlimmerSHOccupancy.hpp>
-#include <Rendering/Glimmer/GlimmerTLAS.hpp>
-#include <Rendering/Glimmer/GlimmerBLASCache.hpp>
+#include <Rendering/Glimmer/GlimmerSceneInstances.hpp>
+#include <Rendering/Glimmer/GlimmerTriangleCache.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
 
 #include <Rendering/RenderInterface.hpp>
@@ -74,7 +74,8 @@ static constexpr StringHash LightmapTextureNames[GlimmerMaxLightmapPages] = {
 #pragma region GlimmerSHOccupancy
 
 GlimmerSHOccupancy::GlimmerSHOccupancy()
-    : m_shaderData {},
+    : m_albedoSumsBuffer(nullptr),
+      m_shaderData {},
       m_isSettled(true)
 {
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
@@ -93,7 +94,6 @@ GlimmerSHOccupancy::~GlimmerSHOccupancy()
     m_texture.Reset();
 
     EnqueueDeletion(std::move(m_maskBuffer));
-    EnqueueDeletion(std::move(m_albedoSumsBuffer));
 }
 
 void GlimmerSHOccupancy::CreateResources()
@@ -114,9 +114,6 @@ void GlimmerSHOccupancy::CreateResources()
 
     m_maskBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, numMaskWords * sizeof(uint32), alignof(uint32));
     Check(m_maskBuffer->Create());
-
-    m_albedoSumsBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, numCascadeVoxels * (AlbedoSumWords + LightmapSumWords) * sizeof(uint32), alignof(uint32));
-    Check(m_albedoSumsBuffer->Create());
 }
 
 const GpuImageViewRef& GlimmerSHOccupancy::GetImageView() const
@@ -124,7 +121,7 @@ const GpuImageViewRef& GlimmerSHOccupancy::GetImageView() const
     return m_texture.IsValid() ? RI.textureViewCache->GetOrCreate(m_texture) : RI.placeholderData->GetImageView3D1x1x1R8();
 }
 
-void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const Box& box, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache)
+void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const Box& box, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache)
 {
     HYP_SCOPE;
 
@@ -139,7 +136,7 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
         GlimmerSHOccupancySplatConstants constants {};
         constants.origin = Vec4i(origin.x, origin.y, origin.z, int32(cascadeIndex));
         constants.params = Vec4f(spacing, 1.0f / spacing, 0.0f, 0.0f);
-        constants.counts = Vec4u(tlas.GetNumSpanInstances(), tlas.GetNumSpanChunks(), groups.x, 0);
+        constants.counts = Vec4u(sceneInstances.GetNumSpanInstances(), sceneInstances.GetNumSpanChunks(), groups.x, 0);
         constants.boxMin = Vec4i(box.min.x, box.min.y, box.min.z, 0);
         constants.boxMax = Vec4i(box.max.x, box.max.y, box.max.z, 0);
         constants.lightmapStencils = m_lightmapPages.stencilValues;
@@ -161,13 +158,13 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
         cr << SetShaderUniform(uniformIndex++, "CBuffer"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
         cr << SetShaderUniform(uniformIndex++, "OutOccupancy"_sh, RI.textureViewCache->GetOrCreate(m_texture));
         cr << SetShaderUniform(uniformIndex++, "OutOccupancyMask"_sh, m_maskBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
-        cr << SetShaderUniform(uniformIndex++, "OutAlbedoSums"_sh, m_albedoSumsBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
-        cr << SetShaderUniform(uniformIndex++, "SpanInstancesBuffer"_sh, tlas.GetSpanInstancesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanInstanceShaderData)));
-        cr << SetShaderUniform(uniformIndex++, "SpanChunksBuffer"_sh, tlas.GetSpanChunksBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanChunkShaderData)));
-        cr << SetShaderUniform(uniformIndex++, "GlimmerBLASTrianglesBuffer"_sh, blasCache.GetTrianglesBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+        cr << SetShaderUniform(uniformIndex++, "OutAlbedoSums"_sh, m_albedoSumsBuffer, ShaderDataOffset(0, sizeof(uint32)));
+        cr << SetShaderUniform(uniformIndex++, "SpanInstancesBuffer"_sh, sceneInstances.GetSpanInstancesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanInstanceShaderData)));
+        cr << SetShaderUniform(uniformIndex++, "SpanChunksBuffer"_sh, sceneInstances.GetSpanChunksBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerSpanChunkShaderData)));
+        cr << SetShaderUniform(uniformIndex++, "GlimmerTrianglesBuffer"_sh, triangleCache.GetTrianglesBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
         cr << SetShaderUniform(uniformIndex++, "MaterialsBuffer"_sh, RI.namedBuffers[NamedBuffer::Materials]);
         cr << SetShaderUniform(uniformIndex++, "SamplerLinearMipmap"_sh, RI.placeholderData->GetSamplerLinearMipmap());
-        cr << SetShaderUniform(uniformIndex++, "GlimmerBLASLightmapUVsBuffer"_sh, blasCache.GetLightmapUVsBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+        cr << SetShaderUniform(uniformIndex++, "GlimmerTriangleLightmapUVsBuffer"_sh, triangleCache.GetLightmapUVsBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
 
         for (uint32 pageIndex = 0; pageIndex < GlimmerMaxLightmapPages; pageIndex++)
         {
@@ -184,7 +181,7 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
     {
         cr << InsertBarrier(m_texture->GetGpuImage(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
         cr << InsertBarrier(m_maskBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
-        cr << InsertBarrier(m_albedoSumsBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+        cr << InsertBarrier(m_albedoSumsBuffer, ResourceState::UnorderedAccess, ShaderModuleType::Compute);
     };
 
     ENGINE_STAT_GPU_SCOPE(&s_statGlimmerSHOccupancy);
@@ -196,12 +193,12 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
 
     dispatchPass(s_propOccupancyModeClear, numBoxVoxels);
 
-    if (tlas.GetNumSpanChunks() != 0)
+    if (sceneInstances.GetNumSpanChunks() != 0)
     {
         insertWriteBarriers();
 
         // a group per chunk
-        dispatchPass(s_propOccupancyModeSplat, tlas.GetNumSpanChunks() * OccupancyGroupSize);
+        dispatchPass(s_propOccupancyModeSplat, sceneInstances.GetNumSpanChunks() * OccupancyGroupSize);
 
         insertWriteBarriers();
 
@@ -218,7 +215,7 @@ void GlimmerSHOccupancy::SetBuilt(uint32 cascadeIndex, const Vec3i& origin)
     m_shaderData.cascades[cascadeIndex].origin = Vec4i(origin.x, origin.y, origin.z, 1);
 }
 
-void GlimmerSHOccupancy::ScrollWindow(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache)
+void GlimmerSHOccupancy::ScrollWindow(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache)
 {
     const Vec3i oldMin = m_builtOrigins[cascadeIndex];
     const Vec3i oldMax = oldMin + OccupancyGridSize;
@@ -244,13 +241,13 @@ void GlimmerSHOccupancy::ScrollWindow(Frame* frame, uint32 cascadeIndex, const V
             continue;
         }
 
-        SplatBox(frame, cascadeIndex, origin, entering, tlas, blasCache);
+        SplatBox(frame, cascadeIndex, origin, entering, sceneInstances, triangleCache);
     }
 
     SetBuilt(cascadeIndex, origin);
 }
 
-void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache, const GlimmerLightmapPages& lightmapPages)
+void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache, const GlimmerLightmapPages& lightmapPages, GlimmerScratchBuffer& scratchBuffer)
 {
     HYP_SCOPE;
 
@@ -264,18 +261,22 @@ void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const
         frame->cr << InsertBarrier(m_maskBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
     }
 
-    if (!tlas.IsReady() || !blasCache.IsReady() || !tlas.GetSpanInstancesBuffer().IsValid())
+    const size_t numCascadeVoxels = size_t(GlimmerSHOccupancyGridXZ) * GlimmerSHOccupancyGridY * GlimmerSHOccupancyGridXZ;
+
+    m_albedoSumsBuffer = scratchBuffer.Reserve(numCascadeVoxels * (AlbedoSumWords + LightmapSumWords) * sizeof(uint32));
+
+    if (!sceneInstances.IsReady() || !triangleCache.IsReady() || !sceneInstances.GetSpanInstancesBuffer().IsValid())
     {
         m_isSettled = true;
 
         return;
     }
 
-    const uint32 generation = tlas.GetGeneration();
+    const uint32 generation = sceneInstances.GetGeneration();
 
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
     {
-        if (m_builtGenerations[cascadeIndex] == generation || m_builtGenerations[cascadeIndex] + 1 != generation || tlas.IsSpanFullyDirty())
+        if (m_builtGenerations[cascadeIndex] == generation || m_builtGenerations[cascadeIndex] + 1 != generation || sceneInstances.IsSpanFullyDirty())
         {
             continue;
         }
@@ -291,7 +292,7 @@ void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const
 
         Array<Box, GlimmerAllocator>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
 
-        for (const BoundingBox& bounds : tlas.GetSpanDirtyBounds())
+        for (const BoundingBox& bounds : sceneInstances.GetSpanDirtyBounds())
         {
             const Vec3i boundsMin = Vec3i(int32(MathUtil::Floor(bounds.min.x * invSpacing)), int32(MathUtil::Floor(bounds.min.y * invSpacing)), int32(MathUtil::Floor(bounds.min.z * invSpacing)));
             const Vec3i boundsMax = Vec3i(int32(MathUtil::Floor(bounds.max.x * invSpacing)), int32(MathUtil::Floor(bounds.max.y * invSpacing)), int32(MathUtil::Floor(bounds.max.z * invSpacing)));
@@ -351,7 +352,7 @@ void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const
                     continue;
                 }
 
-                ScrollWindow(frame, cascadeIndex, origin, tlas, blasCache);
+                ScrollWindow(frame, cascadeIndex, origin, sceneInstances, triangleCache);
 
                 hasRebuilt = true;
             }
@@ -365,7 +366,7 @@ void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const
 
                 if (box.max.x > box.min.x && box.max.y > box.min.y && box.max.z > box.min.z)
                 {
-                    SplatBox(frame, cascadeIndex, origin, box, tlas, blasCache);
+                    SplatBox(frame, cascadeIndex, origin, box, sceneInstances, triangleCache);
                 }
             }
 
@@ -392,7 +393,7 @@ void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const
 
             if (!overlapsBuilt)
             {
-                SplatBox(frame, cascadeIndex, origin, Box { origin, origin + OccupancyGridSize }, tlas, blasCache);
+                SplatBox(frame, cascadeIndex, origin, Box { origin, origin + OccupancyGridSize }, sceneInstances, triangleCache);
 
                 SetBuilt(cascadeIndex, origin);
                 m_builtGenerations[cascadeIndex] = generation;
@@ -410,7 +411,7 @@ void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const
         slice.min.z += m_rebuildSlices[cascadeIndex] * sliceDepth;
         slice.max.z = slice.min.z + sliceDepth;
 
-        SplatBox(frame, cascadeIndex, builtOrigin, slice, tlas, blasCache);
+        SplatBox(frame, cascadeIndex, builtOrigin, slice, sceneInstances, triangleCache);
 
         if (++m_rebuildSlices[cascadeIndex] == RebuildSlices)
         {

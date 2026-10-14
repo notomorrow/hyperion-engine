@@ -11,7 +11,6 @@
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHVolume.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTCVars.hpp>
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/RenderProxy.hpp>
@@ -19,6 +18,8 @@
 #include <Rendering/GpuBuffer.hpp>
 #include <Rendering/Texture.hpp>
 #include <Rendering/Material.hpp>
+
+#include <Rendering/Util/DeletionQueue.hpp>
 
 #include <Scene/Entity.hpp>
 #include <Scene/EnvProbe.hpp>
@@ -103,14 +104,9 @@ void GetGlimmerScrolledRects(const GlimmerTexelRect& oldWindow, const GlimmerTex
     }
 }
 
-float GetGlimmerNearFieldRadius()
+float GetGlimmerRegionMinRadius()
 {
-    return MathUtil::Max(g_cvGlimmerSWRTNearFieldRadius.Get(), 8.0f);
-}
-
-float GetGlimmerSWRTRadius(const BoundingBox& sceneRegion)
-{
-    return MathUtil::Min(GetGlimmerNearFieldRadius(), 0.5f * sceneRegion.GetExtent().x);
+    return 96.0f;
 }
 
 float GetGlimmerSHCascadeSpacing(uint32 cascadeIndex)
@@ -147,6 +143,35 @@ GpuBufferRef CreateGlimmerStructuredBuffer(size_t elementSize, size_t numElement
     Check(buffer->Create());
 
     return buffer;
+}
+
+GlimmerScratchBuffer::GlimmerScratchBuffer()
+    : m_byteSize(0)
+{
+}
+
+GlimmerScratchBuffer::~GlimmerScratchBuffer()
+{
+    EnqueueDeletion(std::move(m_buffer));
+}
+
+GpuBuffer* GlimmerScratchBuffer::Reserve(size_t byteSize)
+{
+    if (!m_buffer.IsValid() || byteSize > m_byteSize)
+    {
+        EnqueueDeletion(std::move(m_buffer));
+
+        m_byteSize = MathUtil::Max(byteSize, size_t(16));
+
+        m_buffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, m_byteSize, alignof(Vec4f));
+        Check(m_buffer->Create());
+
+#ifdef HYP_RHI_DEBUG_NAMES
+        m_buffer->SetDebugName(NAME("GlimmerScratch"));
+#endif
+    }
+
+    return m_buffer.Get();
 }
 
 Handle<Texture> CreateGlimmerStorageTexture(TextureType type, TextureFormat format, const Vec3u& extent, uint16 numLayers, Name name, TextureWrapMode wrapMode)
@@ -319,19 +344,18 @@ void GetGlimmerLightShaderData(EnvProbe* skyProbe, GlimmerLightShaderData& outLi
 
     constexpr float WindowOfTerm[9] = { 1.0f, 0.5f, 0.5f, 0.5f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
 
-    const float window = MathUtil::Clamp(g_cvGlimmerSunSHWindow.Get(), 0.0f, 1.0f);
-
     for (uint32 term = 0; term < GlimmerLightTerms; term++)
     {
-        const float damping = MathUtil::Lerp(1.0f, WindowOfTerm[term], window);
-
-        outLight.bounceWeights[term] = outLight.directWeights[term] + Vec4f(sunIrradiance * (sunBasis[term] * damping), 0.0f);
+        outLight.bounceWeights[term] = outLight.directWeights[term] + Vec4f(sunIrradiance * (sunBasis[term] * WindowOfTerm[term]), 0.0f);
     }
 }
 
 float GetGlimmerFoliageExtinction()
 {
-    return MathUtil::Max(g_cvGlimmerSWRTFoliageExtinction.Get() * MathUtil::Clamp(g_cvGlimmerSWRTFoliageClumping.Get(), 0.0f, 1.0f), 0.0f);
+    // leaves bunch up in crowns with gaps between them, so a texel's leaf area blocks less than if it were spread evenly
+    constexpr float FoliageClumping = 0.7f;
+
+    return MathUtil::Max(g_cvGlimmerFoliageExtinction.Get() * FoliageClumping, 0.0f);
 }
 
 void CollectGlimmerLightmapPages(RenderProxyList& rpl, GlimmerLightmapPages& outPages)

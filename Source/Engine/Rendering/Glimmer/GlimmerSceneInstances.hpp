@@ -7,7 +7,7 @@
 #pragma once
 
 #include <Rendering/RenderTypes.hpp>
-#include <Rendering/Glimmer/GlimmerBVHBuilder.hpp>
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
 
 #include <Core/Containers/Array.hpp>
 #include <Core/Containers/Map.hpp>
@@ -19,7 +19,7 @@
 namespace Hyperion {
 
 class RenderProxyList;
-class GlimmerBLASCache;
+class GlimmerTriangleCache;
 
 enum GlimmerInstanceFlags : uint32
 {
@@ -30,36 +30,17 @@ enum GlimmerInstanceFlags : uint32
     GIF_FOLIAGE = 0x8           //!< span instances only: splatted as canopy rather than solid
 };
 
-struct GlimmerInstanceShaderData
-{
-    float worldToObject[12]; // world to the BLAS's quantization grid space, first three rows, row major
-    uint32 blasNodeBase;
-    uint32 blasTriangleBase;
-    uint32 materialIndex;
-    uint32 flags;
-};
-
-static_assert(sizeof(GlimmerInstanceShaderData) == 64);
-
-struct GlimmerInstanceBoundsShaderData
-{
-    Vec4f min;
-    Vec4f max;
-};
-
-static_assert(sizeof(GlimmerInstanceBoundsShaderData) == 32);
-
 struct GlimmerSpanInstanceShaderData
 {
-    float objectToWorld[12]; // BLAS quantization grid space to world, first three rows, row major
-    uint32 blasTriangleBase;
+    float objectToWorld[12]; // the mesh's quantization grid space to world, first three rows, row major
+    uint32 triangleBase;
     uint32 triangleCount;
     uint32 materialIndex;
     uint32 flags;
     uint32 lightmapUVBase; // ~0u when it has no lightmap to take its indirect light from
     uint32 lightmapRectOffset;
     uint32 lightmapRectSize;
-    uint32 _pad0;
+    uint32 texcoordBase; // ~0u when the triangle pool had no room for its UV0
 };
 
 static_assert(sizeof(GlimmerSpanInstanceShaderData) == 80);
@@ -81,7 +62,7 @@ static constexpr uint32 GlimmerSpanMaxDirtyBounds = 4;
 struct GlimmerSceneChange
 {
     BoundingBox bounds;
-    bool isLodOnly = false; // same instance, transform and material. only the LOD its BLAS was built from differs
+    bool isLodOnly = false; // same instance, transform and material. only the LOD its triangles were built from differs
 };
 
 struct GlimmerSceneChanges
@@ -111,12 +92,9 @@ struct GlimmerSceneChanges
     HYP_DEF_STL_BEGIN_END(changes.Begin(), changes.End());
 };
 
-struct GlimmerTLASStats
+struct GlimmerSceneInstancesStats
 {
-    uint32 numInstances = 0;
-    uint32 numNodes = 0;
-    uint32 depth = 0;
-    uint32 numWaitingForBLAS = 0;
+    uint32 numWaitingForTriangles = 0;
     uint32 numBuilds = 0;
     double lastBuildMs = 0.0;
     uint32 numSpanInstances = 0;
@@ -127,49 +105,39 @@ struct GlimmerTLASStats
     uint32 numEverywhereBuilds = 0;
 };
 
-class GlimmerTLAS final
+class GlimmerSceneInstances final
 {
 public:
-    GlimmerTLAS();
+    struct SpanKey
+    {
+        uint64 hash;
+        BoundingBox bounds;
 
-    GlimmerTLAS(const GlimmerTLAS& other) = delete;
-    GlimmerTLAS& operator=(const GlimmerTLAS& other) = delete;
+        bool operator<(const SpanKey& other) const
+        {
+            return hash < other.hash;
+        }
+    };
 
-    ~GlimmerTLAS();
+    GlimmerSceneInstances();
 
-    bool Update(
+    GlimmerSceneInstances(const GlimmerSceneInstances& other) = delete;
+    GlimmerSceneInstances& operator=(const GlimmerSceneInstances& other) = delete;
+
+    ~GlimmerSceneInstances();
+
+    void Update(
         Frame* frame,
         RenderProxyList& rpl,
         const BoundingBox& region,
-        const BoundingBox& tracedRegion,
         const Vec3f& viewerPosition,
-        GlimmerBLASCache& blasCache);
-        
-    void Release(GlimmerBLASCache& blasCache);
+        GlimmerTriangleCache& triangleCache);
+
+    void Release(GlimmerTriangleCache& triangleCache);
 
     HYP_FORCE_INLINE bool IsReady() const
     {
-        return m_nodesBuffer.IsValid();
-    }
-
-    HYP_FORCE_INLINE const GpuBufferRef& GetNodesBuffer() const
-    {
-        return m_nodesBuffer;
-    }
-
-    HYP_FORCE_INLINE const GpuBufferRef& GetInstancesBuffer() const
-    {
-        return m_instancesBuffer;
-    }
-
-    HYP_FORCE_INLINE const GpuBufferRef& GetInstanceBoundsBuffer() const
-    {
-        return m_instanceBoundsBuffer;
-    }
-
-    HYP_FORCE_INLINE uint32 GetNumInstances() const
-    {
-        return m_stats.numInstances;
+        return m_spanInstancesBuffer.IsValid();
     }
 
     HYP_FORCE_INLINE const GpuBufferRef& GetSpanInstancesBuffer() const
@@ -187,14 +155,14 @@ public:
         return m_stats.numSpanChunks;
     }
 
-    HYP_FORCE_INLINE uint32 GetCompleteGeneration() const
-    {
-        return m_completeGeneration;
-    }
-
     HYP_FORCE_INLINE bool IsSpanFullyDirty() const
     {
         return m_spanFullyDirty;
+    }
+
+    HYP_FORCE_INLINE const Array<SpanKey, GlimmerAllocator>& GetSpanKeys() const
+    {
+        return m_spanKeys;
     }
 
     HYP_FORCE_INLINE const Array<BoundingBox, GlimmerAllocator>& GetSpanDirtyBounds() const
@@ -226,28 +194,17 @@ public:
         return m_activeRegion;
     }
 
-    HYP_FORCE_INLINE const GlimmerTLASStats& GetStats() const
+    HYP_FORCE_INLINE const GlimmerSceneInstancesStats& GetStats() const
     {
         return m_stats;
     }
 
 private:
-    struct SpanKey
-    {
-        uint64 hash;
-        BoundingBox bounds;
-
-        bool operator<(const SpanKey& other) const
-        {
-            return hash < other.hash;
-        }
-    };
-
     struct InstanceRecord
     {
         uint64 identity;    // entity id << 32 | a hash of its transform within the entity
-        uint64 worldHash;   // of its transform, mesh, material, flags and lightmap rect, and whether it's in the traced BVH
-        uint64 geometryKey; // the BLAS it uses, which changes with its LOD
+        uint64 worldHash;   // of its transform, mesh, material, flags and lightmap rect
+        uint64 geometryKey; // the triangles it uses, which change with its LOD
         BoundingBox bounds;
 
         bool operator<(const InstanceRecord& other) const
@@ -271,24 +228,18 @@ private:
         Array<InstanceRecord, GlimmerAllocator> previousInstanceRecords; // sorted
         Array<InstanceRecord, GlimmerAllocator> instanceRecords;
         bool hasPrevious = false;
-        Array<GlimmerInstanceShaderData, GlimmerAllocator> instances;
-        Array<BoundingBox, GlimmerAllocator> instanceBounds;
         Array<GlimmerSpanInstanceShaderData, GlimmerAllocator> spanInstances;
         Array<BoundingBox, GlimmerAllocator> spanInstanceBounds;
-        Array<uint64, GlimmerAllocator> blasKeys; // unique
+        Array<uint64, GlimmerAllocator> meshKeys; // unique
     };
 
     struct BuildResult
     {
         BoundingBox region;
-        Array<GlimmerBVHNode, GlimmerAllocator> nodes;
-        Array<GlimmerInstanceShaderData, GlimmerAllocator> instances;
-        Array<GlimmerInstanceBoundsShaderData, GlimmerAllocator> instanceBounds;
         Array<GlimmerSpanInstanceShaderData, GlimmerAllocator> spanInstances;
         Array<GlimmerSpanChunkShaderData, GlimmerAllocator> spanChunks;
         uint32 numSpanTriangles = 0;
-        Array<uint64, GlimmerAllocator> blasKeys;
-        uint32 depth = 0;
+        Array<uint64, GlimmerAllocator> meshKeys;
         double buildMs = 0.0;
         uint64 inputHash = 0; // of the gathered instances, so a rebuild that changed nothing can be dropped
         Array<SpanKey, GlimmerAllocator> spanKeys; // sorted
@@ -302,42 +253,33 @@ private:
     void Gather(
         RenderProxyList& rpl,
         const BoundingBox& region,
-        const BoundingBox& tracedRegion,
         const Vec3f& viewerPosition,
-        GlimmerBLASCache& blasCache,
+        GlimmerTriangleCache& triangleCache,
         BuildInput& outInput,
-        uint32& outNumWaitingForBLAS);
+        uint32& outNumWaitingForTriangles);
 
     static BuildResult Build(BuildInput&& input);
 
     void Upload(Frame* frame, BuildResult& result);
 
-    GpuBufferRef m_nodesBuffer;
-    GpuBufferRef m_instancesBuffer;
-    GpuBufferRef m_instanceBoundsBuffer;
     GpuBufferRef m_spanInstancesBuffer;
     GpuBufferRef m_spanChunksBuffer;
 
-    Array<uint64, GlimmerAllocator> m_activeBlasKeys;
+    Array<uint64, GlimmerAllocator> m_activeMeshKeys;
 
     Task<BuildResult> m_buildTask;
-    Array<uint64, GlimmerAllocator> m_pendingBlasKeys; // referenced while the build is in flight so the BLASes stay resident
+    Array<uint64, GlimmerAllocator> m_pendingMeshKeys; // referenced while the build is in flight so their triangles stay resident
 
     BoundingBox m_lastRegion;
-    BoundingBox m_lastTracedRegion;
     BoundingBox m_activeRegion;
     uint64 m_lastBuildStartTime;
-    uint32 m_blasGenerationAtGather;
-    uint32 m_blasEvictionGenerationAtGather;
+    uint32 m_triangleGenerationAtGather;
+    uint32 m_triangleEvictionGenerationAtGather;
     Vec3f m_viewerPositionAtGather;
 
     Map<uint64, uint8> m_instanceLods; // the LOD each instance (entity id << 32 | a hash of its transform within the entity) was given at the last gather
     bool m_dirty;
-    bool m_waitingForBLAS;
-    uint32 m_numTracedWaitingForBLAS;
-    bool m_buildWaitsForTraced;  // the build in flight
-    bool m_activeWaitsForTraced; // the TLAS in use
-    uint32 m_completeGeneration;
+    bool m_waitingForTriangles;
     bool m_usesLightmaps;
     uint64 m_activeInputHash;
 
@@ -348,7 +290,7 @@ private:
     Array<InstanceRecord, GlimmerAllocator> m_instanceRecords;
     Array<ChangeSet, GlimmerAllocator> m_changeJournal; // oldest first, one per generation
 
-    GlimmerTLASStats m_stats;
+    GlimmerSceneInstancesStats m_stats;
 };
 
 } // namespace Hyperion

@@ -1,7 +1,7 @@
 #ifndef GLIMMER_APPLY_HLSLI
 #define GLIMMER_APPLY_HLSLI
 
-#include "SWRT/GlimmerSWRTApply.hlsli"
+#include "Probes/GlimmerProbesApply.hlsli"
 #include "SH/GlimmerSHApply.hlsli"
 
 struct GlimmerApply
@@ -24,7 +24,7 @@ struct GlimmerApply
 #if defined(GLIMMER_APPLY_WITH_SAMPLING) && !defined(GLIMMER_APPLY_SAMPLING_HLSLI)
 #define GLIMMER_APPLY_SAMPLING_HLSLI
 
-#include "SWRT/GlimmerSWRTApply.hlsli"
+#include "Probes/GlimmerProbesApply.hlsli"
 #include "SH/GlimmerSHApply.hlsli"
 
 float4 EvaluateGlimmer(GlimmerApply glimmer, float3 P, float3 N)

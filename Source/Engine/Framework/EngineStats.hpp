@@ -28,7 +28,7 @@ class CommandRecorderBase;
 static constexpr uint32 EngineStatsNumSamples = 1000;
 static constexpr uint32 EngineStatsMinSamples = 10;
 
-static constexpr uint16 EngineStatsMaxStats = 128;
+static constexpr uint16 EngineStatsMaxStats = 256;
 
 static constexpr uint16 StatIdMsPerFrame = 0;
 static constexpr uint16 StatIdFps = 1;

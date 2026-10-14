@@ -3,25 +3,27 @@ TierProfile "DeviceTiers" {
         TierRule "Glimmer.High" {
             AtMost = { DeviceGrade = High }
             Set = {
-                "Rendering.Glimmer.SWRT.NearField.Cascades" = 3
-                "Rendering.Glimmer.SWRT.Probes.RaysPerFrame" = 32768
-                "Rendering.Glimmer.SWRT.Probes.PoolBlocks" = 384
+                "Rendering.Glimmer.Probes.NearField.Cascades" = 3
+                "Rendering.Glimmer.Probes.RaysPerFrame" = 32768
+                "Rendering.Glimmer.Probes.PoolBlocks" = 384
             }
         }
         TierRule "Glimmer.Medium" {
             AtMost = { DeviceGrade = Medium }
             Set = {
-                "Rendering.Glimmer.SWRT.NearField.Cascades" = 2
-                "Rendering.Glimmer.SWRT.Probes.RaysPerFrame" = 16384
-                "Rendering.Glimmer.SWRT.Probes.PoolBlocks" = 192
-                "Rendering.Glimmer.SWRT.Spans.Radius" = 192
-                "Rendering.Glimmer.SWRT.Probes.Enabled" = false
+                "Rendering.Glimmer.Probes.NearField.Cascades" = 2
+                "Rendering.Glimmer.Probes.RaysPerFrame" = 16384
+                "Rendering.Glimmer.Probes.PoolBlocks" = 192
+                "Rendering.Glimmer.Spans.Radius" = 192
+                "Rendering.Glimmer.Probes.Enabled" = false
+                
+                "Rendering.Glimmer.Bricks.Reflections" = false
             }
         }
         TierRule "Glimmer.LaptopUltraCap" {
             When = { DeviceType = Laptop, DeviceGrade = Ultra }
             Set = {
-                "Rendering.Glimmer.SWRT.Probes.RaysPerFrame" = 32768
+                "Rendering.Glimmer.Probes.RaysPerFrame" = 32768
             }
         }
 
