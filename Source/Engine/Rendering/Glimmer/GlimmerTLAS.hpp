@@ -7,7 +7,7 @@
 #pragma once
 
 #include <Rendering/RenderTypes.hpp>
-#include <Rendering/Glimmer/GlimmerBVHBuilder.hpp>
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
 
 #include <Core/Containers/Array.hpp>
 #include <Core/Containers/Map.hpp>
@@ -29,17 +29,6 @@ enum GlimmerInstanceFlags : uint32
     GIF_ALPHA_TESTED = 0x4,
     GIF_FOLIAGE = 0x8           //!< span instances only: splatted as canopy rather than solid
 };
-
-struct GlimmerInstanceShaderData
-{
-    float worldToObject[12]; // world to the BLAS's quantization grid space, first three rows, row major
-    uint32 blasNodeBase;
-    uint32 blasTriangleBase;
-    uint32 materialIndex;
-    uint32 flags;
-};
-
-static_assert(sizeof(GlimmerInstanceShaderData) == 64);
 
 struct GlimmerInstanceBoundsShaderData
 {
@@ -114,8 +103,6 @@ struct GlimmerSceneChanges
 struct GlimmerTLASStats
 {
     uint32 numInstances = 0;
-    uint32 numNodes = 0;
-    uint32 depth = 0;
     uint32 numWaitingForBLAS = 0;
     uint32 numBuilds = 0;
     double lastBuildMs = 0.0;
@@ -130,6 +117,17 @@ struct GlimmerTLASStats
 class GlimmerTLAS final
 {
 public:
+    struct SpanKey
+    {
+        uint64 hash;
+        BoundingBox bounds;
+
+        bool operator<(const SpanKey& other) const
+        {
+            return hash < other.hash;
+        }
+    };
+
     GlimmerTLAS();
 
     GlimmerTLAS(const GlimmerTLAS& other) = delete;
@@ -149,17 +147,7 @@ public:
 
     HYP_FORCE_INLINE bool IsReady() const
     {
-        return m_nodesBuffer.IsValid();
-    }
-
-    HYP_FORCE_INLINE const GpuBufferRef& GetNodesBuffer() const
-    {
-        return m_nodesBuffer;
-    }
-
-    HYP_FORCE_INLINE const GpuBufferRef& GetInstancesBuffer() const
-    {
-        return m_instancesBuffer;
+        return m_instanceBoundsBuffer.IsValid();
     }
 
     HYP_FORCE_INLINE const GpuBufferRef& GetInstanceBoundsBuffer() const
@@ -197,6 +185,11 @@ public:
         return m_spanFullyDirty;
     }
 
+    HYP_FORCE_INLINE const Array<SpanKey, GlimmerAllocator>& GetSpanKeys() const
+    {
+        return m_spanKeys;
+    }
+
     HYP_FORCE_INLINE const Array<BoundingBox, GlimmerAllocator>& GetSpanDirtyBounds() const
     {
         return m_spanDirtyBounds;
@@ -232,21 +225,10 @@ public:
     }
 
 private:
-    struct SpanKey
-    {
-        uint64 hash;
-        BoundingBox bounds;
-
-        bool operator<(const SpanKey& other) const
-        {
-            return hash < other.hash;
-        }
-    };
-
     struct InstanceRecord
     {
         uint64 identity;    // entity id << 32 | a hash of its transform within the entity
-        uint64 worldHash;   // of its transform, mesh, material, flags and lightmap rect, and whether it's in the traced BVH
+        uint64 worldHash;   // of its transform, mesh, material, flags and lightmap rect, and whether it's traced
         uint64 geometryKey; // the BLAS it uses, which changes with its LOD
         BoundingBox bounds;
 
@@ -271,7 +253,6 @@ private:
         Array<InstanceRecord, GlimmerAllocator> previousInstanceRecords; // sorted
         Array<InstanceRecord, GlimmerAllocator> instanceRecords;
         bool hasPrevious = false;
-        Array<GlimmerInstanceShaderData, GlimmerAllocator> instances;
         Array<BoundingBox, GlimmerAllocator> instanceBounds;
         Array<GlimmerSpanInstanceShaderData, GlimmerAllocator> spanInstances;
         Array<BoundingBox, GlimmerAllocator> spanInstanceBounds;
@@ -281,14 +262,11 @@ private:
     struct BuildResult
     {
         BoundingBox region;
-        Array<GlimmerBVHNode, GlimmerAllocator> nodes;
-        Array<GlimmerInstanceShaderData, GlimmerAllocator> instances;
         Array<GlimmerInstanceBoundsShaderData, GlimmerAllocator> instanceBounds;
         Array<GlimmerSpanInstanceShaderData, GlimmerAllocator> spanInstances;
         Array<GlimmerSpanChunkShaderData, GlimmerAllocator> spanChunks;
         uint32 numSpanTriangles = 0;
         Array<uint64, GlimmerAllocator> blasKeys;
-        uint32 depth = 0;
         double buildMs = 0.0;
         uint64 inputHash = 0; // of the gathered instances, so a rebuild that changed nothing can be dropped
         Array<SpanKey, GlimmerAllocator> spanKeys; // sorted
@@ -312,8 +290,6 @@ private:
 
     void Upload(Frame* frame, BuildResult& result);
 
-    GpuBufferRef m_nodesBuffer;
-    GpuBufferRef m_instancesBuffer;
     GpuBufferRef m_instanceBoundsBuffer;
     GpuBufferRef m_spanInstancesBuffer;
     GpuBufferRef m_spanChunksBuffer;

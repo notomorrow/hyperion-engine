@@ -7,15 +7,13 @@
 #include "../../Include/Scene.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../../Include/RayTracing/BVH.hlsli"
-#include "../SWRT/GlimmerSWRTCommon.hlsli"
+#include "../GlimmerCommon.hlsli"
 
 #define DEBUG_VIEW_SHADED 1
 #define DEBUG_VIEW_STEPS 2
-#define DEBUG_VIEW_ERROR 3
-#define DEBUG_VIEW_RECEIVER 4
-#define DEBUG_VIEW_LIGHT 5
-#define DEBUG_VIEW_LIGHT_COARSE 6
+#define DEBUG_VIEW_RECEIVER 3
+#define DEBUG_VIEW_LIGHT 4
+#define DEBUG_VIEW_LIGHT_COARSE 5
 
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickTableBuffer) StructuredBuffer<uint> glimmerBrickTable;
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickIndexBuffer) StructuredBuffer<uint> glimmerBrickIndex;
@@ -49,12 +47,7 @@ DECLARE_SRV(GlimmerBrickDebug, GBufferNormalsTexture) Texture2D GBufferNormalsTe
 DECLARE_SRV_DYNAMIC(GlimmerBrickDebug, CamerasBuffer) StructuredBuffer<Camera> _cameras_buffer;
 #define camera _cameras_buffer[0]
 
-DECLARE_SRV(GlimmerBrickDebug, GlimmerTLASNodesBuffer) StructuredBuffer<BVHNode> glimmerTLASNodes;
-DECLARE_SRV(GlimmerBrickDebug, GlimmerInstancesBuffer) StructuredBuffer<GlimmerInstance> glimmerInstances;
-DECLARE_SRV(GlimmerBrickDebug, GlimmerBLASNodesBuffer) StructuredBuffer<BVHBLASNode> glimmerBLASNodes;
-DECLARE_SRV(GlimmerBrickDebug, GlimmerBLASTrianglesBuffer) StructuredBuffer<uint> glimmerBLASTriangles;
 
-#include "../SWRT/GlimmerSWRT.hlsli"
 
 // NOTE must match GlimmerBrickBuild.hlsl
 #define COUNTER_FREE_BRICKS 0
@@ -126,43 +119,6 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     else if (mode == DEBUG_VIEW_STEPS)
     {
         result = HeatColor(float(brickHit.steps) / 256.0);
-    }
-    else if (mode == DEBUG_VIEW_ERROR)
-    {
-        GlimmerSWRTStats stats = GlimmerMakeSWRTStats();
-        GlimmerSWRTHit bvhHit;
-
-        const bool didHitBVH = TraceGlimmerSWRT(cameraPosition, direction, 0.0, maxDistance, constants.dimensionsModeInstances.w, false, bvhHit, stats);
-
-        const float3 bvhPosition = cameraPosition + direction * bvhHit.t;
-        const bool isCovered = didHitBVH && GlimmerBrickCellInWindow(constants.bricks, int3(floor(bvhPosition * constants.bricks.params.y)));
-
-        if (!didHitBVH && !didHitBricks)
-        {
-            result = float3(0.02, 0.02, 0.02);
-        }
-        else if (didHitBVH && !isCovered && !didHitBricks)
-        {
-            result = float3(0.25, 0.25, 0.25);
-        }
-        else if (!didHitBVH || brickHit.t < bvhHit.t - 4.0 * width)
-        {
-            // phantom
-            result = float3(0.0, 0.0, 1.0);
-        }
-        else if (!didHitBricks || brickHit.t > bvhHit.t + 4.0 * width)
-        {
-            // leak
-            result = float3(1.0, 0.0, 0.0);
-        }
-        else if (abs(brickHit.t - bvhHit.t) > width)
-        {
-            result = float3(1.0, 1.0, 0.0);
-        }
-        else
-        {
-            result = float3(0.0, 1.0, 0.0);
-        }
     }
     else if (mode == DEBUG_VIEW_LIGHT || mode == DEBUG_VIEW_LIGHT_COARSE)
     {

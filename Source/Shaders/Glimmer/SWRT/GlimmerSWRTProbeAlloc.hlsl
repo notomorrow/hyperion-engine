@@ -21,6 +21,11 @@ PERMUTE(MODE, CLASSIFY, ALLOC, LIST)
 
 #define GLIMMER_PROBE_GROUND_BOX_HEIGHT 1e5
 
+// NOTE must match GlimmerBrickWorld.hpp
+#define GLIMMER_BRICK_CHUNKS_XZ 16
+#define GLIMMER_BRICK_CHUNKS_Y 8
+#define GLIMMER_BRICK_CHUNK_SIZE 16.0
+
 struct GlimmerProbeAllocConstants
 {
     GlimmerProbeVolume volume;
@@ -47,6 +52,9 @@ struct GlimmerProbeAllocConstants
 
     float4 changedMin[GLIMMER_PROBE_MAX_CHANGED_BOXES];
     float4 changedMax[GLIMMER_PROBE_MAX_CHANGED_BOXES];
+
+    int4 brickChunkOrigin;          // xyz = absolute chunk of the bricks' window, w = 0 without bricks, 1 with, 2 when none are built yet
+    uint4 brickChunksBuilding[16];  // a bit per chunk of the window, by its place in it, set while it is being built
 };
 
 DECLARE_BUFFER_DYNAMIC(GlimmerSWRTProbeAlloc, CBuffer) cbuffer CBuffer
@@ -640,6 +648,41 @@ uint GlimmerProbeChange(float3 position, float reach)
     return isInBox ? GLIMMER_PROBE_CHANGE_WAKE : GLIMMER_PROBE_CHANGE_NONE;
 }
 
+// whether any of the bricks a probe's rays could reach are still being built: the probe then keeps what it has
+bool GlimmerAreProbeBricksBuilding(float3 position, float reach)
+{
+    if (constants.brickChunkOrigin.w != 1)
+    {
+        return constants.brickChunkOrigin.w == 2;
+    }
+
+    const int3 windowChunks = int3(GLIMMER_BRICK_CHUNKS_XZ, GLIMMER_BRICK_CHUNKS_Y, GLIMMER_BRICK_CHUNKS_XZ);
+
+    const int3 chunkMin = max(int3(floor((position - reach) / GLIMMER_BRICK_CHUNK_SIZE)) - constants.brickChunkOrigin.xyz, int3(0, 0, 0));
+    const int3 chunkMax = min(int3(floor((position + reach) / GLIMMER_BRICK_CHUNK_SIZE)) - constants.brickChunkOrigin.xyz, windowChunks - 1);
+
+    [loop]
+    for (int z = chunkMin.z; z <= chunkMax.z; z++)
+    {
+        [loop]
+        for (int y = chunkMin.y; y <= chunkMax.y; y++)
+        {
+            [loop]
+            for (int x = chunkMin.x; x <= chunkMax.x; x++)
+            {
+                const uint bit = uint((z * windowChunks.y + y) * windowChunks.x + x);
+
+                if ((constants.brickChunksBuilding[bit >> 7u][(bit >> 5u) & 3u] >> (bit & 31u)) & 1u)
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
 bool GlimmerIsProbeBlockWoken(uint probeIndex)
 {
     return OutBlockWake[probeIndex / GLIMMER_PROBES_PER_BLOCK] + 1u == constants.volume.info.z;
@@ -840,7 +883,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
         isDue = GlimmerProbeUpdates(state) == 0u || phase % awakePeriod == 0u;
     }
 
-    if (!isDue)
+    if (!isDue || (float(slot.w) < constants.volume.nearField.x && GlimmerAreProbeBricksBuilding(gridPosition, constants.volume.nearField.y * spacing)))
     {
         return;
     }

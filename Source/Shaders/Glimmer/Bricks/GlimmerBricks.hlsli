@@ -5,8 +5,8 @@
 // expects glimmerBrickTable, glimmerBrickIndex and glimmerBrickCrossings to be declared
 
 // NOTE must match GlimmerBrickWorld.hpp
-#define GLIMMER_BRICK_GRID_XZ 64
-#define GLIMMER_BRICK_GRID_Y 32
+#define GLIMMER_BRICK_GRID_XZ 128
+#define GLIMMER_BRICK_GRID_Y 64
 #define GLIMMER_BRICK_CHUNK_CELLS 8
 #define GLIMMER_BRICK_SIDE 32
 #define GLIMMER_BRICK_TILE 4

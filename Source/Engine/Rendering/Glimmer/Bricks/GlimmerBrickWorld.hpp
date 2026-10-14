@@ -22,8 +22,8 @@ class GlimmerTechnique;
 struct GlimmerDebugViewContext;
 
 // NOTE must match GlimmerBricks.hlsli
-static constexpr uint32 GlimmerBrickGridXZ = 64;
-static constexpr uint32 GlimmerBrickGridY = 32;
+static constexpr uint32 GlimmerBrickGridXZ = 128;
+static constexpr uint32 GlimmerBrickGridY = 64;
 static constexpr uint32 GlimmerBrickChunkCells = 8;
 static constexpr uint32 GlimmerBrickSide = 32;
 static constexpr uint32 GlimmerBrickTile = 4;
@@ -55,7 +55,6 @@ enum class GlimmerBrickDebugView : int
     None = 0,
     Shaded,
     Steps,
-    Error, // against the BVH: green within a column, yellow within four, red a leak, blue a phantom
     Receiver,
     Light,
     LightCoarse,
@@ -78,9 +77,18 @@ public:
 
     bool RenderDebugView(const GlimmerDebugViewContext& context, GlimmerBrickDebugView debugView);
 
+    // a bit per chunk of the window, by its place in it, set while it is being built; origin.w is 0 without bricks, 1 with, 2 before any are built
+    void GetBuildingChunks(Vec4i& outOrigin, Vec4u (&outBits)[16]) const;
+
     HYP_FORCE_INLINE bool IsReady() const
     {
         return m_tableBuffer.IsValid() && m_shaderData.origin.w != 0;
+    }
+
+    // every chunk of the window built for the scene as it is
+    HYP_FORCE_INLINE bool IsSettled() const
+    {
+        return IsReady() && m_numDirtyChunks == 0;
     }
 
     HYP_FORCE_INLINE const GlimmerBrickShaderData& GetShaderData() const
@@ -129,6 +137,8 @@ private:
         Vec3i coord;
         bool isBuilt = false;
         bool isDirty = false;
+        bool hasGeometry = false;
+        bool hasBricks = false;
     };
 
     struct Box
@@ -152,6 +162,7 @@ private:
     void CreateResources();
     void MoveWindow(Frame* frame, const Vec3i& originChunk, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
     void MarkSceneChanges(const GlimmerTLAS& tlas);
+    void MarkOccupiedChunks(const GlimmerTLAS& tlas);
     void BuildChunk(Frame* frame, Chunk& chunk, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache, const GlimmerTechnique* technique);
     void LightBricks(Frame* frame, const GlimmerTechnique* technique, uint32 firstBrick, uint32 numBricks, const Box* buildListBox);
     void Dispatch(Frame* frame, BuildPass pass, const Box& box, uint32 numThreads, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
@@ -181,6 +192,9 @@ private:
     uint32 m_poolCards;
     uint32 m_relightCursor;
     uint32 m_seenGeneration;
+    uint32 m_occupancyGeneration;
+    uint32 m_numDirtyChunks;
+    uint32 m_framesUnsettled;
     bool m_hasWindow;
 
     GlimmerBrickShaderData m_shaderData;

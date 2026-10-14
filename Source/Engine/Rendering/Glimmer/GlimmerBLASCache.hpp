@@ -7,7 +7,7 @@
 #pragma once
 
 #include <Rendering/RenderTypes.hpp>
-#include <Rendering/Glimmer/GlimmerBVHBuilder.hpp>
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
 
 #include <Core/Containers/Array.hpp>
 #include <Core/Containers/Map.hpp>
@@ -36,7 +36,7 @@ struct GlimmerTriangle
     static constexpr uint32 GridMax = 65535;
 
     uint16 grid[9];
-    uint16 leafFlags;
+    uint16 padding;
 };
 
 static_assert(sizeof(GlimmerTriangle) == 20);
@@ -51,12 +51,9 @@ static_assert(sizeof(GlimmerTriangleLightmapUVs) == 12);
 struct GlimmerBLASRef
 {
     uint64 key = 0;
-    uint32 nodeBase = 0;
-    uint32 nodeCount = 0;
     uint32 triangleBase = 0;
     uint32 triangleCount = 0;
     uint32 lightmapUVBase = ~0u; // ~0u for a mesh without lightmap UVs, or when their pool is full
-    uint32 depth = 0;
     
     BoundingBox localBounds;
 
@@ -115,8 +112,6 @@ struct GlimmerBLASCacheStats
     uint32 numDemoted = 0;
     uint32 numWaitingForRoom = 0;
     uint32 numResidentTriangles = 0;
-    uint32 nodesUsed = 0;
-    uint32 nodesCapacity = 0;
     uint32 trianglesUsed = 0;
     uint32 trianglesCapacity = 0;
     uint32 lightmapUVsUsed = 0;
@@ -174,11 +169,6 @@ public:
         return m_lodErrorScale;
     }
 
-    HYP_FORCE_INLINE const GpuBufferRef& GetNodesBuffer() const
-    {
-        return m_nodesBuffer;
-    }
-
     HYP_FORCE_INLINE const GpuBufferRef& GetTrianglesBuffer() const
     {
         return m_trianglesBuffer;
@@ -191,7 +181,7 @@ public:
 
     HYP_FORCE_INLINE bool IsReady() const
     {
-        return m_nodesBuffer.IsValid() && m_trianglesBuffer.IsValid();
+        return m_trianglesBuffer.IsValid();
     }
 
     GlimmerBLASCacheStats GetStats() const;
@@ -209,8 +199,6 @@ private:
 
     struct BuildResult
     {
-        Array<GlimmerBLASNode, GlimmerAllocator> nodes;
-
         Array<GlimmerTriangle, GlimmerAllocator> triangles;
         Array<GlimmerTriangleLightmapUVs, GlimmerAllocator> lightmapUVs; // one per triangle, or empty
 
@@ -219,8 +207,6 @@ private:
         Vec3f gridOrigin = Vec3f::Zero();
         Vec3f gridScale = Vec3f::One();
         
-        uint32 depth = 0;
-
         bool isFail = false; // set when there's nothing to trace, as opposed to mesh data not being readable yet
     };
 
@@ -248,7 +234,6 @@ private:
         float priority = 0.0f;
         uint32 priorityFrame = ~0u;
 
-        uint32 lastNodeCount = 0;
         uint32 lastTriangleCount = 0;
 
         uint32 numDefers = 0;
@@ -263,8 +248,6 @@ private:
 
     struct DeferredFree
     {
-        uint32 nodeOffset;
-        uint32 nodeCount;
         uint32 triangleOffset;
         uint32 triangleCount;
         uint32 frameFreed;
@@ -280,7 +263,7 @@ private:
     bool RequeueForReplacement(Entry& entry);
     bool EvictOne();
     bool IsWorthBuilding(const Entry& entry, uint32 frameCounter, float farthestDemotablePriority) const;
-    bool MakeContiguousRoom(const Entry& requester, uint32 nodeCount, uint32 triangleCount, uint32& numDemotions);
+    bool MakeContiguousRoom(const Entry& requester, uint32 triangleCount, uint32& numDemotions);
     void Defer(Entry& entry, uint32 frameCounter);
     void FreeEntryRanges(Entry& entry);
     void UploadEntry(Frame* frame, Entry& entry);
@@ -289,11 +272,9 @@ private:
 
     UniquePtr<TaskThreadPool> m_buildPool;
 
-    GpuBufferRef m_nodesBuffer;
     GpuBufferRef m_trianglesBuffer;
     GpuBufferRef m_lightmapUVsBuffer;
 
-    GlimmerPoolAllocator m_nodeAllocator;
     GlimmerPoolAllocator m_triangleAllocator;
     GlimmerPoolAllocator m_lightmapUVAllocator;
 

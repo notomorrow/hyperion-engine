@@ -13,10 +13,6 @@ namespace Hyperion {
 enum class GlimmerSWRTDebugView : int
 {
     None = 0,
-    Shaded,
-    InstanceId,
-    TraversalCost,
-    DepthCompare,
     FootprintMask,
     Spans,
     GroundAlbedo,

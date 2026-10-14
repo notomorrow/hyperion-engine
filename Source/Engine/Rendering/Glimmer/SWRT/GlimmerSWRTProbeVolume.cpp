@@ -70,8 +70,6 @@ static StaticShaderPropertyId s_propTraceModeTrace { ShaderProperty(NAME("MODE")
 static StaticShaderPropertyId s_propTraceModeShade { ShaderProperty(NAME("MODE"), NAME("SHADE")) };
 static StaticShaderPropertyId s_propTraceModeRelight { ShaderProperty(NAME("MODE"), NAME("RELIGHT")) };
 
-static StaticShaderPropertyId s_propTracerBVH { ShaderProperty(NAME("TRACER"), NAME("BVH")) };
-static StaticShaderPropertyId s_propTracerBricks { ShaderProperty(NAME("TRACER"), NAME("BRICKS")) };
 static StaticShaderPropertyId s_propBlendModeBlend { ShaderProperty(NAME("MODE"), NAME("BLEND")) };
 static StaticShaderPropertyId s_propBlendModeCompose { ShaderProperty(NAME("MODE"), NAME("COMPOSE")) };
 
@@ -127,6 +125,9 @@ struct GlimmerProbeAllocConstants
 
     Vec4f changedMin[MaxChangedBoxes];
     Vec4f changedMax[MaxChangedBoxes];
+
+    Vec4i brickChunkOrigin;          // xyz = absolute chunk of the bricks' window, w = 0 without bricks, 1 with, 2 when none are built yet
+    Vec4u brickChunksBuilding[16];   // a bit per chunk of the window, by its place in it, set while it is being built
 };
 
 struct GlimmerProbeTraceConstants
@@ -407,7 +408,8 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
 
     UpdateWindows(inputs.viewerPosition);
 
-    const bool hasSWRTScene = inputs.tlas && inputs.tlas->IsReady();
+    // the probes trace the bricks; the TLAS still says which instances there are near the viewer
+    const bool hasSWRTScene = inputs.tlas && inputs.tlas->IsReady() && inputs.brickWorld && inputs.brickWorld->IsReady();
 
     const uint32 probesPerFrame = MathUtil::Clamp(uint32(MathUtil::Max(g_cvGlimmerSWRTProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays, 1u, m_maxProbesPerFrame);
 
@@ -528,6 +530,12 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
             sleepMaxInterval,
             uint32(MathUtil::Max(g_cvGlimmerSWRTProbesSafetyRefreshSeconds.Get(), 0)));
 
+        // a probe whose rays could reach bricks still being built keeps what it has until they are
+        if (inputs.brickWorld)
+        {
+            inputs.brickWorld->GetBuildingChunks(constants.brickChunkOrigin, constants.brickChunksBuilding);
+        }
+
         for (const GpuBufferRef* buffer : probeStateBuffers)
         {
             cr << InsertBarrier(buffer->Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
@@ -605,8 +613,6 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
     // the far field is sampled once it has been traced; until then its constants stay zeroed and the trace treats it as covering nothing
     const bool hasSHVolume = inputs.shVolume && inputs.shVolume->IsReady();
 
-    const GpuBufferRef& tlasNodes = hasSWRTScene ? inputs.tlas->GetNodesBuffer() : inputs.blasCache->GetNodesBuffer();
-    const GpuBufferRef& tlasInstances = hasSWRTScene ? inputs.tlas->GetInstancesBuffer() : inputs.blasCache->GetTrianglesBuffer();
 
     // the probes the hits sample (last frame's) and the list are read only from here to the blend
     for (const GpuBufferRef* buffer : probeStateBuffers)
@@ -636,9 +642,8 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
 
         constants.skyProbe = skyProbeData;
 
-        const bool tracesBricks = inputs.brickWorld && inputs.brickWorld->IsReady() && g_cvGlimmerBricksProbeRays.Get() != 0;
 
-        if (tracesBricks)
+        if (hasSWRTScene)
         {
             constants.bricks = inputs.brickWorld->GetShaderData();
         }
@@ -672,7 +677,6 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
 
             ShaderPropertySet shaderProperties;
             shaderProperties.Add(modeProperty);
-            shaderProperties.Add(tracesBricks ? s_propTracerBricks : s_propTracerBVH);
 
             cr << SetCurrentShader(ShaderDesc(NAME("GlimmerSWRTProbeTrace"), shaderProperties));
 
@@ -683,20 +687,10 @@ void GlimmerSWRTProbeVolume::Update(Frame* frame, const GlimmerSWRTProbeUpdateIn
             cr << SetShaderUniform(uniformIndex++, "MaterialsBuffer"_sh, RI.namedBuffers[NamedBuffer::Materials]);
             cr << SetShaderUniform(uniformIndex++, "SamplerLinearMipmap"_sh, RI.placeholderData->GetSamplerLinearMipmap());
 
-            if (tracesBricks)
-            {
-                cr << SetShaderUniform(uniformIndex++, "GlimmerBrickTableBuffer"_sh, inputs.brickWorld->GetTableBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
-                cr << SetShaderUniform(uniformIndex++, "GlimmerBrickIndexBuffer"_sh, inputs.brickWorld->GetIndexBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
-                cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingsBuffer"_sh, inputs.brickWorld->GetCrossingsBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
-                cr << SetShaderUniform(uniformIndex++, "GlimmerBrickMaterialBuffer"_sh, inputs.brickWorld->GetMaterialBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
-            }
-            else
-            {
-                cr << SetShaderUniform(uniformIndex++, "GlimmerTLASNodesBuffer"_sh, tlasNodes.Get(), ShaderDataOffset(0, sizeof(GlimmerBVHNode)));
-                cr << SetShaderUniform(uniformIndex++, "GlimmerInstancesBuffer"_sh, tlasInstances.Get(), ShaderDataOffset(0, sizeof(GlimmerInstanceShaderData)));
-                cr << SetShaderUniform(uniformIndex++, "GlimmerBLASNodesBuffer"_sh, inputs.blasCache->GetNodesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerBLASNode)));
-                cr << SetShaderUniform(uniformIndex++, "GlimmerBLASTrianglesBuffer"_sh, inputs.blasCache->GetTrianglesBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
-            }
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickTableBuffer"_sh, GetBufferOrPlaceholder(hasSWRTScene ? inputs.brickWorld->GetTableBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickIndexBuffer"_sh, GetBufferOrPlaceholder(hasSWRTScene ? inputs.brickWorld->GetIndexBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingsBuffer"_sh, GetBufferOrPlaceholder(hasSWRTScene ? inputs.brickWorld->GetCrossingsBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickMaterialBuffer"_sh, GetBufferOrPlaceholder(hasSWRTScene ? inputs.brickWorld->GetMaterialBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
 
             cr << SetShaderUniform(uniformIndex++, "GlimmerGroundTexture"_sh, groundImageView);
             cr << SetShaderUniform(uniformIndex++, "GlimmerGroundAlbedoTexture"_sh, inputs.surfaceCache->GetGroundAlbedoImageView());

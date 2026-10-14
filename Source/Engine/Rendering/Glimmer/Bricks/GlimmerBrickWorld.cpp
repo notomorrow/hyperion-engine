@@ -40,7 +40,11 @@
 
 #include <Core/Profiling/ProfileScope.hpp>
 
+#include <Core/Logging/Logger.hpp>
+
 namespace Hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Rendering);
 
 static EngineStatGpuTimer s_statGlimmerBrickBuild("Rendering/GPU/Glimmer/BrickBuild");
 static EngineStatGpuTimer s_statGlimmerBrickLight("Rendering/GPU/Glimmer/BrickLight");
@@ -68,6 +72,7 @@ static constexpr uint32 BrickTilesPerBrick = (GlimmerBrickSide / GlimmerBrickTil
 static constexpr uint32 BrickChunkBricks = GlimmerBrickChunkCells * GlimmerBrickChunkCells * GlimmerBrickChunkCells * 3;
 
 static constexpr int32 WindowRecenterChunks = 2;
+static constexpr uint32 MaxEmptyChunkClearsPerFrame = 32;
 static constexpr float ChunkSize = GlimmerBrickCellSize * float(GlimmerBrickChunkCells);
 static constexpr float ChangeMargin = 0.25f;
 static constexpr float ShadowBiasColumns = 0.5f;
@@ -109,6 +114,9 @@ GlimmerBrickWorld::GlimmerBrickWorld()
       m_poolCards(0),
       m_relightCursor(0),
       m_seenGeneration(~0u),
+      m_occupancyGeneration(~0u),
+      m_numDirtyChunks(0),
+      m_framesUnsettled(0),
       m_hasWindow(false),
       m_shaderData {}
 {
@@ -175,7 +183,7 @@ void GlimmerBrickWorld::CreateResources()
     m_pageFreeListBuffer = createBuffer(m_poolPages, NAME("GlimmerBrickPageFreeList"));
     m_cardFreeListBuffer = createBuffer(m_poolCards, NAME("GlimmerBrickCardFreeList"));
     m_radianceBuffer = createBuffer(size_t(m_poolCards) * GlimmerBrickCardTexels, NAME("GlimmerBrickRadiance"));
-    m_listHeadsBuffer = createBuffer(BrickTableSize, NAME("GlimmerBrickListHeads"));
+    m_listHeadsBuffer = createBuffer(BrickChunkBricks, NAME("GlimmerBrickListHeads"));
     m_listNodesBuffer = createBuffer(size_t(BrickListNodeCapacity) * BrickListNodeWords, NAME("GlimmerBrickListNodes"));
     m_buildListBuffer = createBuffer(BrickChunkBricks, NAME("GlimmerBrickBuildList"));
 }
@@ -355,6 +363,7 @@ void GlimmerBrickWorld::MoveWindow(Frame* frame, const Vec3i& originChunk, const
 
                 chunk.coord = coord;
                 chunk.isBuilt = false;
+                chunk.hasBricks = false;
                 chunk.isDirty = true;
             }
         }
@@ -403,6 +412,42 @@ void GlimmerBrickWorld::MarkSceneChanges(const GlimmerTLAS& tlas)
     }
 }
 
+void GlimmerBrickWorld::MarkOccupiedChunks(const GlimmerTLAS& tlas)
+{
+    for (Chunk& chunk : m_chunks)
+    {
+        chunk.hasGeometry = false;
+    }
+
+    const Vec3i windowMax = m_originChunk + ChunkDims - Vec3i(1);
+
+    for (const GlimmerTLAS::SpanKey& spanKey : tlas.GetSpanKeys())
+    {
+        const Vec3f boundsMin = (spanKey.bounds.min - Vec3f(ChangeMargin)) / ChunkSize;
+        const Vec3f boundsMax = (spanKey.bounds.max + Vec3f(ChangeMargin)) / ChunkSize;
+
+        Vec3i chunkMin;
+        Vec3i chunkMax;
+
+        for (int axis = 0; axis < 3; axis++)
+        {
+            chunkMin[axis] = MathUtil::Max(int32(MathUtil::Floor(boundsMin[axis])), m_originChunk[axis]);
+            chunkMax[axis] = MathUtil::Min(int32(MathUtil::Floor(boundsMax[axis])), windowMax[axis]);
+        }
+
+        for (int32 z = chunkMin.z; z <= chunkMax.z; z++)
+        {
+            for (int32 y = chunkMin.y; y <= chunkMax.y; y++)
+            {
+                for (int32 x = chunkMin.x; x <= chunkMax.x; x++)
+                {
+                    m_chunks[ChunkSlot(Vec3i(x, y, z))].hasGeometry = true;
+                }
+            }
+        }
+    }
+}
+
 void GlimmerBrickWorld::BuildChunk(Frame* frame, Chunk& chunk, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache, const GlimmerTechnique* technique)
 {
     const int32 chunkCells = int32(GlimmerBrickChunkCells);
@@ -428,7 +473,7 @@ void GlimmerBrickWorld::BuildChunk(Frame* frame, Chunk& chunk, const GlimmerTLAS
 
     chunk.isBuilt = true;
     chunk.isDirty = false;
-
+    chunk.hasBricks = true;
 }
 
 void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache, const GlimmerTechnique* technique)
@@ -463,10 +508,53 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
     {
         MoveWindow(frame, originChunk, tlas, blasCache);
 
+        m_occupancyGeneration = ~0u;
+
         hasWritten = true;
     }
 
     MarkSceneChanges(tlas);
+
+    if (m_occupancyGeneration != tlas.GetGeneration())
+    {
+        MarkOccupiedChunks(tlas);
+
+        m_occupancyGeneration = tlas.GetGeneration();
+    }
+
+    // a chunk no span instance reaches is done without a build, and only cleared when it had bricks
+    uint32 numClears = 0;
+
+    for (Chunk& chunk : m_chunks)
+    {
+        if (!chunk.isDirty || chunk.hasGeometry)
+        {
+            continue;
+        }
+
+        if (chunk.hasBricks)
+        {
+            if (numClears == MaxEmptyChunkClearsPerFrame)
+            {
+                continue;
+            }
+
+            const int32 chunkCells = int32(GlimmerBrickChunkCells);
+
+            Box box;
+            box.min = Vec3i(chunk.coord.x * chunkCells, chunk.coord.y * chunkCells, chunk.coord.z * chunkCells);
+            box.extent = Vec3i(chunkCells, chunkCells, chunkCells);
+
+            Dispatch(frame, BuildPass::Clear, box, BrickChunkBricks, tlas, blasCache);
+
+            numClears++;
+            hasWritten = true;
+        }
+
+        chunk.isBuilt = true;
+        chunk.isDirty = false;
+        chunk.hasBricks = false;
+    }
 
     const int32 numBuilds = MathUtil::Clamp(g_cvGlimmerBricksChunksPerFrame.Get(), 1, 64);
 
@@ -477,7 +565,7 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
 
         for (Chunk& chunk : m_chunks)
         {
-            if (!chunk.isDirty)
+            if (!chunk.isDirty || !chunk.hasGeometry)
             {
                 continue;
             }
@@ -501,6 +589,22 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
 
         hasWritten = true;
     }
+
+    const bool wasSettled = IsSettled();
+
+    m_numDirtyChunks = 0;
+
+    for (const Chunk& chunk : m_chunks)
+    {
+        m_numDirtyChunks += chunk.isDirty ? 1 : 0;
+    }
+
+    if (IsSettled() && !wasSettled)
+    {
+        HYP_LOG(Rendering, Info, "Glimmer: bricks settled after {} frames", m_framesUnsettled);
+    }
+
+    m_framesUnsettled = IsSettled() ? 0 : m_framesUnsettled + 1;
 
     if (hasWritten)
     {
@@ -603,6 +707,42 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
     cr << InsertBarrier(m_crossingLightBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
 }
 
+void GlimmerBrickWorld::GetBuildingChunks(Vec4i& outOrigin, Vec4u (&outBits)[16]) const
+{
+    for (Vec4u& bits : outBits)
+    {
+        bits = Vec4u::Zero();
+    }
+
+    if (!IsReady())
+    {
+        outOrigin = Vec4i(0, 0, 0, 2);
+
+        return;
+    }
+
+    outOrigin = Vec4i(m_originChunk.x, m_originChunk.y, m_originChunk.z, 1);
+
+    for (const Chunk& chunk : m_chunks)
+    {
+        if (chunk.isBuilt && !chunk.isDirty)
+        {
+            continue;
+        }
+
+        const Vec3i local = chunk.coord - m_originChunk;
+
+        if (local.x < 0 || local.y < 0 || local.z < 0 || local.x >= ChunkDims.x || local.y >= ChunkDims.y || local.z >= ChunkDims.z)
+        {
+            continue;
+        }
+
+        const uint32 bit = uint32((local.z * ChunkDims.y + local.y) * ChunkDims.x + local.x);
+
+        outBits[bit >> 7][(bit >> 5) & 3] |= 1u << (bit & 31);
+    }
+}
+
 bool GlimmerBrickWorld::RenderDebugView(const GlimmerDebugViewContext& context, GlimmerBrickDebugView debugView)
 {
     HYP_SCOPE;
@@ -651,10 +791,6 @@ bool GlimmerBrickWorld::RenderDebugView(const GlimmerDebugViewContext& context, 
     cr << SetShaderUniform(uniformIndex++, "GBufferDepthTexture"_sh, gbufferFramebuffer->GetAttachment(GBufferTarget::Depth)->GetImageView());
     cr << SetShaderUniform(uniformIndex++, "GBufferNormalsTexture"_sh, gbufferFramebuffer->GetAttachment(GBufferTarget::Normals)->GetImageView());
     cr << SetShaderUniform(uniformIndex++, "CamerasBuffer"_sh, RI.namedBuffers[NamedBuffer::Cameras], Resources::GetBinding(context.view->GetCamera()));
-    cr << SetShaderUniform(uniformIndex++, "GlimmerTLASNodesBuffer"_sh, tlas.GetNodesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerBVHNode)));
-    cr << SetShaderUniform(uniformIndex++, "GlimmerInstancesBuffer"_sh, tlas.GetInstancesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerInstanceShaderData)));
-    cr << SetShaderUniform(uniformIndex++, "GlimmerBLASNodesBuffer"_sh, blasCache.GetNodesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerBLASNode)));
-    cr << SetShaderUniform(uniformIndex++, "GlimmerBLASTrianglesBuffer"_sh, blasCache.GetTrianglesBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
     cr << SetShaderUniform(uniformIndex++, "GlimmerBrickTableBuffer"_sh, m_tableBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
     cr << SetShaderUniform(uniformIndex++, "GlimmerBrickIndexBuffer"_sh, m_indexBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
     cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingsBuffer"_sh, m_crossingsBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));

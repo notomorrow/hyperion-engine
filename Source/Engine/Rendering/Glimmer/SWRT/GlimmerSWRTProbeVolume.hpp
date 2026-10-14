@@ -79,7 +79,7 @@ struct GlimmerSWRTProbeUpdateInputs
     const GlimmerFootprintMask* footprintMask = nullptr; // of the tlas; tells the trace where SWRT has anything to hit
     const GlimmerSHVolume* shVolume = nullptr;           // the far field, for the bounce at hits past the probes; may be nullptr
     GlimmerRelight* relight = nullptr;                   // lit here, before the trace shades heightfield hits from it; may be nullptr
-    const GlimmerBrickWorld* brickWorld = nullptr;       // traced in place of the BVH when Rendering.Glimmer.Bricks.ProbeRays is set; may be nullptr
+    const GlimmerBrickWorld* brickWorld = nullptr;       // may be nullptr
 
     // the solids the probe blocks are placed around
     const GlimmerSHOccupancyShaderData* occupancy = nullptr;

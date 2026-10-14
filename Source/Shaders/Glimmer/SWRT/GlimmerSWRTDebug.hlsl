@@ -7,7 +7,6 @@
 #include "../../Include/Scene.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../../Include/RayTracing/BVH.hlsli"
 #include "GlimmerSWRTCommon.hlsli"
 
 // its types now, its tracing once the texture is declared
@@ -25,14 +24,10 @@ struct GlimmerSWRTDebugConstants
     GlimmerSHOccupancyParams occupancy;
 };
 
-#define DEBUG_VIEW_SHADED 1
-#define DEBUG_VIEW_INSTANCE_ID 2
-#define DEBUG_VIEW_TRAVERSAL_COST 3
-#define DEBUG_VIEW_DEPTH_COMPARE 4
-#define DEBUG_VIEW_FOOTPRINT_MASK 5
-#define DEBUG_VIEW_SPANS 6
-#define DEBUG_VIEW_GROUND_ALBEDO 7
-#define DEBUG_VIEW_OCCUPANCY 8
+#define DEBUG_VIEW_FOOTPRINT_MASK 1
+#define DEBUG_VIEW_SPANS 2
+#define DEBUG_VIEW_GROUND_ALBEDO 3
+#define DEBUG_VIEW_OCCUPANCY 4
 
 DECLARE_BUFFER_DYNAMIC(GlimmerSWRTDebug, CBuffer) cbuffer CBuffer
 {
@@ -55,10 +50,6 @@ DECLARE_SRV(BindlessResources0, Textures) Texture2D textures[];
 
 DECLARE_SAMPLER(GlimmerSWRTDebug, SamplerLinearMipmap) SamplerState glimmerMaterialSampler;
 
-DECLARE_SRV(GlimmerSWRTDebug, GlimmerTLASNodesBuffer) StructuredBuffer<BVHNode> glimmerTLASNodes;
-DECLARE_SRV(GlimmerSWRTDebug, GlimmerInstancesBuffer) StructuredBuffer<GlimmerInstance> glimmerInstances;
-DECLARE_SRV(GlimmerSWRTDebug, GlimmerBLASNodesBuffer) StructuredBuffer<BVHBLASNode> glimmerBLASNodes;
-DECLARE_SRV(GlimmerSWRTDebug, GlimmerBLASTrianglesBuffer) StructuredBuffer<uint> glimmerBLASTriangles;
 DECLARE_SRV(GlimmerSWRTDebug, FootprintMaskBuffer) StructuredBuffer<uint> footprintMask;
 DECLARE_SRV(GlimmerSWRTDebug, GlimmerGroundTexture) Texture2DArray<float> glimmerGround;
 DECLARE_SRV(GlimmerSWRTDebug, GlimmerSpansBuffer) StructuredBuffer<uint> glimmerSpans;
@@ -69,7 +60,6 @@ DECLARE_SRV(GlimmerSWRTDebug, GlimmerSHOccupancyMaskBuffer) StructuredBuffer<uin
 
 #include "../SH/GlimmerSHOccupancy.hlsli"
 
-#include "GlimmerSWRT.hlsli"
 #include "../GlimmerMaterial.hlsli"
 
 #include "../GlimmerLight.hlsli"
@@ -155,7 +145,6 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     }
 
     const uint mode = constants.dimensionsModeInstances.z;
-    const uint numInstances = constants.dimensionsModeInstances.w;
 
     const float2 uv = (float2(coord) + 0.5) / float2(dimensions);
 
@@ -163,30 +152,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     const float3 farPosition = ReconstructWorldSpacePositionFromDepth(camera.invProjMat, camera.invViewMat, uv, 1.0).xyz;
     const float3 direction = normalize(farPosition - cameraPosition);
 
-    GlimmerSWRTStats stats = GlimmerMakeSWRTStats();
-    GlimmerSWRTHit hit;
-
-    const bool didHit = TraceGlimmerSWRT(cameraPosition, direction, 0.0, constants.params.x, numInstances, false, hit, stats);
-
-    float3 hitColor = SkyColor(direction);
-    float3 hitNormal = -direction;
-
-    if (didHit)
-    {
-        hitNormal = GlimmerGetHitNormal(hit, direction);
-
-        const GlimmerInstance instance = glimmerInstances[hit.instanceIndex];
-
-        hitColor = ShadeHit(GlimmerGetMaterialAverageAlbedo(instance.data.z), hitNormal);
-
-        // back faces of one sided geometry, which probes inside solids would see
-        if (!hit.frontFace && (instance.data.w & (GLIMMER_INSTANCE_FLAG_DOUBLE_SIDED | GLIMMER_INSTANCE_FLAG_ALPHA_TESTED)) == 0u)
-        {
-            hitColor = lerp(hitColor, float3(1.0, 0.0, 1.0), 0.6);
-        }
-    }
-
-    float4 result = float4(hitColor, 1.0);
+    float4 result = float4(SkyColor(direction), 1.0);
 
     if (mode == DEBUG_VIEW_OCCUPANCY)
     {
@@ -202,24 +168,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
             result.rgb = lightmap.a > 0.0 ? occupancyHit.albedo * lightmap.rgb : ShadeHit(occupancyHit.albedo, occupancyHit.normal);
         }
     }
-    else if (mode == DEBUG_VIEW_INSTANCE_ID)
-    {
-        result.rgb = didHit
-            ? HashColor(hit.instanceIndex) * (0.35 + 0.65 * saturate(dot(hitNormal, DebugLightDirection) * 0.5 + 0.5))
-            : SkyColor(direction) * 0.5;
-    }
-    else if (mode == DEBUG_VIEW_TRAVERSAL_COST)
-    {
-        const float cost = float(stats.nodeVisits) + 2.0 * float(stats.triangleTests) + 8.0 * float(stats.instanceVisits);
-
-        result.rgb = HeatColor(cost / 600.0);
-
-        if (stats.stackOverflows != 0u)
-        {
-            result.rgb = float3(1.0, 1.0, 1.0);
-        }
-    }
-    else if (mode == DEBUG_VIEW_DEPTH_COMPARE || mode == DEBUG_VIEW_FOOTPRINT_MASK || mode == DEBUG_VIEW_SPANS || mode == DEBUG_VIEW_GROUND_ALBEDO)
+    else if (mode == DEBUG_VIEW_FOOTPRINT_MASK || mode == DEBUG_VIEW_SPANS || mode == DEBUG_VIEW_GROUND_ALBEDO)
     {
         const float depth = GBufferDepthTexture.Load(int3(coord, 0)).r;
         const bool hasRasterSurface = depth < 1.0;
@@ -285,27 +234,6 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
             if (hasRasterSurface && GlimmerSampleGround(constants.ground, rasterPosition.xz, 0u, groundHeight, groundLevel) && abs(rasterPosition.y - groundHeight) < 0.5)
             {
                 result.b += 0.35;
-            }
-        }
-        else if (mode == DEBUG_VIEW_DEPTH_COMPARE)
-        {
-            const float tolerance = 0.05 + rasterDistance * 0.01;
-
-            if (!hasRasterSurface)
-            {
-                result.rgb = didHit ? float3(1.0, 0.1, 0.1) : float3(0.1, 0.15, 0.35);
-            }
-            else if (!didHit || hit.t > rasterDistance + tolerance)
-            {
-                result.rgb = float3(0.9, 0.8, 0.2) * grey;
-            }
-            else if (hit.t < rasterDistance - tolerance)
-            {
-                result.rgb = float3(1.0, 0.1, 0.1) * (0.5 + 0.5 * grey);
-            }
-            else
-            {
-                result.rgb = float3(0.15, 0.9, 0.25) * grey * 1.6;
             }
         }
         else

@@ -196,8 +196,6 @@ GlimmerTLAS::~GlimmerTLAS()
         m_buildTask.Await();
     }
 
-    EnqueueDeletion(std::move(m_nodesBuffer));
-    EnqueueDeletion(std::move(m_instancesBuffer));
     EnqueueDeletion(std::move(m_instanceBoundsBuffer));
     EnqueueDeletion(std::move(m_spanInstancesBuffer));
     EnqueueDeletion(std::move(m_spanChunksBuffer));
@@ -275,7 +273,7 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
         const bool isFoliage = (flags & GIF_FOLIAGE) != 0;
 
         const bool wantsSpan = outInput.spanInstances.Size() < MaxSpanInstances;
-        const bool wantsTraced = !isFoliage && outInput.instances.Size() < MaxInstances;
+        const bool wantsTraced = !isFoliage && outInput.instanceBounds.Size() < MaxInstances;
 
         if (!wantsSpan && !wantsTraced)
         {
@@ -406,16 +404,6 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
 
         if (isTraced)
         {
-            const Mat4f worldToGrid = gridToWorld.Inverse();
-
-            GlimmerInstanceShaderData& instance = outInput.instances.EmplaceBack();
-            Memory::Copy(instance.worldToObject, worldToGrid.values, sizeof(instance.worldToObject));
-
-            instance.blasNodeBase = blasRef.nodeBase;
-            instance.blasTriangleBase = blasRef.triangleBase;
-            instance.materialIndex = materialIndex;
-            instance.flags = instanceFlags;
-
             outInput.instanceBounds.PushBack(worldBounds);
 
             isReferenced = true;
@@ -558,8 +546,8 @@ GlimmerTLAS::BuildResult GlimmerTLAS::Build(BuildInput&& input)
     result.region = input.region;
 
     result.inputHash = FNV1::DoHashWords(
-        input.instances.Data(),
-        input.instances.ByteSize(),
+        input.instanceBounds.Data(),
+        input.instanceBounds.ByteSize(),
         FNV1::DoHashWords(input.spanInstances.Data(), input.spanInstances.ByteSize(), 0));
 
     result.blasKeys = std::move(input.blasKeys);
@@ -682,35 +670,13 @@ GlimmerTLAS::BuildResult GlimmerTLAS::Build(BuildInput&& input)
         }
     }
 
-    if (input.instances.Empty())
-    {
-        result.buildMs = PerformanceClock::TimeSince(startTime);
+    result.instanceBounds.Reserve(input.instanceBounds.Size());
 
-        return result;
+    for (const BoundingBox& bounds : input.instanceBounds)
+    {
+        result.instanceBounds.PushBack(GlimmerInstanceBoundsShaderData { Vec4f(bounds.min, 0.0f), Vec4f(bounds.max, 0.0f) });
     }
 
-    GlimmerBVHBuildParams params;
-    params.minLeafSize = 1;
-    params.maxLeafSize = 1;
-    params.traversalCost = 0.25f;
-
-    Array<uint32, GlimmerAllocator> instanceOrder;
-    GlimmerBVHBuilder::Build(input.instanceBounds.ToSpan(), params, result.nodes, instanceOrder);
-
-    result.instances.Resize(instanceOrder.Size());
-    result.instanceBounds.Resize(instanceOrder.Size());
-
-    for (size_t orderIndex = 0; orderIndex < instanceOrder.Size(); orderIndex++)
-    {
-        const uint32 instanceIndex = instanceOrder[orderIndex];
-
-        result.instances[orderIndex] = input.instances[instanceIndex];
-
-        const BoundingBox& bounds = input.instanceBounds[instanceIndex];
-        result.instanceBounds[orderIndex] = GlimmerInstanceBoundsShaderData { Vec4f(bounds.min, 0.0f), Vec4f(bounds.max, 0.0f) };
-    }
-
-    result.depth = GlimmerBVHBuilder::CalculateDepth(result.nodes.ToSpan());
     result.buildMs = PerformanceClock::TimeSince(startTime);
 
     return result;
@@ -722,34 +688,26 @@ void GlimmerTLAS::Upload(Frame* frame, BuildResult& result)
 
     CommandRecorder& cr = frame->cr;
 
-    GpuBufferRef nodesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerBVHNode), result.nodes.Size());
-    GpuBufferRef instancesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerInstanceShaderData), result.instances.Size());
     GpuBufferRef instanceBoundsBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerInstanceBoundsShaderData), result.instanceBounds.Size());
     GpuBufferRef spanInstancesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerSpanInstanceShaderData), result.spanInstances.Size());
     GpuBufferRef spanChunksBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerSpanChunkShaderData), result.spanChunks.Size());
 
-    const size_t nodesByteSize = result.nodes.ByteSize();
-    const size_t instancesByteSize = result.instances.ByteSize();
     const size_t instanceBoundsByteSize = result.instanceBounds.ByteSize();
     const size_t spanInstancesByteSize = result.spanInstances.ByteSize();
     const size_t spanChunksByteSize = result.spanChunks.ByteSize();
-    const size_t totalByteSize = nodesByteSize + instancesByteSize + instanceBoundsByteSize + spanInstancesByteSize + spanChunksByteSize;
+    const size_t totalByteSize = instanceBoundsByteSize + spanInstancesByteSize + spanChunksByteSize;
 
     if (totalByteSize != 0)
     {
         GpuBuffer* stagingBuffer = RI.stagingBufferPool->AcquireStagingBuffer(totalByteSize);
         Assert(stagingBuffer != nullptr);
 
-        stagingBuffer->Copy(0, nodesByteSize, result.nodes.Data());
-        stagingBuffer->Copy(nodesByteSize, instancesByteSize, result.instances.Data());
-        stagingBuffer->Copy(nodesByteSize + instancesByteSize, instanceBoundsByteSize, result.instanceBounds.Data());
-        stagingBuffer->Copy(nodesByteSize + instancesByteSize + instanceBoundsByteSize, spanInstancesByteSize, result.spanInstances.Data());
-        stagingBuffer->Copy(nodesByteSize + instancesByteSize + instanceBoundsByteSize + spanInstancesByteSize, spanChunksByteSize, result.spanChunks.Data());
+        stagingBuffer->Copy(0, instanceBoundsByteSize, result.instanceBounds.Data());
+        stagingBuffer->Copy(instanceBoundsByteSize, spanInstancesByteSize, result.spanInstances.Data());
+        stagingBuffer->Copy(instanceBoundsByteSize + spanInstancesByteSize, spanChunksByteSize, result.spanChunks.Data());
         stagingBuffer->Flush(0, totalByteSize);
 
         cr << InsertBarrier(stagingBuffer, ResourceState::CopySrc);
-        cr << InsertBarrier(nodesBuffer.Get(), ResourceState::CopyDst);
-        cr << InsertBarrier(instancesBuffer.Get(), ResourceState::CopyDst);
         cr << InsertBarrier(instanceBoundsBuffer.Get(), ResourceState::CopyDst);
         cr << InsertBarrier(spanInstancesBuffer.Get(), ResourceState::CopyDst);
         cr << InsertBarrier(spanChunksBuffer.Get(), ResourceState::CopyDst);
@@ -766,31 +724,21 @@ void GlimmerTLAS::Upload(Frame* frame, BuildResult& result)
             copyOffset += byteSize;
         };
 
-        copyInto(nodesBuffer, nodesByteSize);
-        copyInto(instancesBuffer, instancesByteSize);
         copyInto(instanceBoundsBuffer, instanceBoundsByteSize);
         copyInto(spanInstancesBuffer, spanInstancesByteSize);
         copyInto(spanChunksBuffer, spanChunksByteSize);
     }
 
-    cr << InsertBarrier(nodesBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
-    cr << InsertBarrier(instancesBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
     cr << InsertBarrier(instanceBoundsBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
     cr << InsertBarrier(spanInstancesBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
     cr << InsertBarrier(spanChunksBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
 
 #ifdef HYP_RHI_DEBUG_NAMES
-    nodesBuffer->SetDebugName(NAME("GlimmerTLASNodes"));
-    instancesBuffer->SetDebugName(NAME("GlimmerTLASInstances"));
     instanceBoundsBuffer->SetDebugName(NAME("GlimmerTLASInstanceBounds"));
 #endif
 
-    EnqueueDeletion(std::move(m_nodesBuffer));
-    EnqueueDeletion(std::move(m_instancesBuffer));
     EnqueueDeletion(std::move(m_instanceBoundsBuffer));
 
-    m_nodesBuffer = std::move(nodesBuffer);
-    m_instancesBuffer = std::move(instancesBuffer);
     m_instanceBoundsBuffer = std::move(instanceBoundsBuffer);
 
     EnqueueDeletion(std::move(m_spanInstancesBuffer));
@@ -874,9 +822,7 @@ bool GlimmerTLAS::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& 
             m_activeBlasKeys = std::move(result.blasKeys);
             m_pendingBlasKeys.Clear();
 
-            m_stats.numInstances = uint32(result.instances.Size());
-            m_stats.numNodes = uint32(result.nodes.Size());
-            m_stats.depth = result.depth;
+            m_stats.numInstances = uint32(result.instanceBounds.Size());
             m_stats.lastBuildMs = result.buildMs;
             m_stats.numSpanInstances = uint32(result.spanInstances.Size());
             m_stats.numSpanTriangles = result.numSpanTriangles;

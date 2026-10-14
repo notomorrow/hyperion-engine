@@ -70,6 +70,7 @@ DECLARE_SAMPLER(GlimmerBrickBuild, SamplerLinearMipmap) SamplerState glimmerMate
 #define MAX_LIST_STEPS 65536u
 
 #define COLUMNS_PER_BRICK (GLIMMER_BRICK_SIDE * GLIMMER_BRICK_SIDE)
+#define BOX_BRICKS uint(GLIMMER_BRICK_CHUNK_CELLS * GLIMMER_BRICK_CHUNK_CELLS * GLIMMER_BRICK_CHUNK_CELLS * 3)
 #define TILES_PER_BRICK (GLIMMER_BRICK_TILES_PER_SIDE * GLIMMER_BRICK_TILES_PER_SIDE)
 
 // crossings within this many column widths in depth, with normals no further apart than SAME_FACING, are one surface
@@ -84,6 +85,14 @@ DECLARE_SAMPLER(GlimmerBrickBuild, SamplerLinearMipmap) SamplerState glimmerMate
 uint BoxCells()
 {
     return uint(constants.boxExtent.x * constants.boxExtent.y * constants.boxExtent.z);
+}
+
+// a brick's place among those of the box being built, which is a chunk
+uint BoxBrickIndex(int3 cell, uint axis)
+{
+    const int3 local = cell - constants.boxMin.xyz;
+
+    return ((uint(local.z) * uint(constants.boxExtent.y) + uint(local.y)) * uint(constants.boxExtent.x) + uint(local.x)) * 3u + axis;
 }
 
 int3 BoxCell(uint cellIndex)
@@ -194,7 +203,7 @@ void BinTriangle(GlimmerSpanInstance instance, uint spanInstanceIndex, uint loca
                 glimmerBrickListNodes[node * LIST_NODE_WORDS + 1u] = localTriangle;
 
                 uint next;
-                InterlockedExchange(glimmerBrickListHeads[GlimmerBrickTableIndex(cell, axis)], node, next);
+                InterlockedExchange(glimmerBrickListHeads[BoxBrickIndex(cell, axis)], node, next);
 
                 // the table holds no brick while its box is built, so it adds up the area: one less than it, from GLIMMER_BRICK_NONE
                 uint previousArea;
@@ -458,6 +467,10 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     if (threadIndex < tableSize)
     {
         glimmerBrickTable[threadIndex] = GLIMMER_BRICK_NONE;
+    }
+
+    if (threadIndex < BOX_BRICKS)
+    {
         glimmerBrickListHeads[threadIndex] = GLIMMER_BRICK_NONE;
     }
 
@@ -537,7 +550,10 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         }
     }
 
-    glimmerBrickListHeads[tableIndex] = GLIMMER_BRICK_NONE;
+    if (threadIndex < BOX_BRICKS)
+    {
+        glimmerBrickListHeads[threadIndex] = GLIMMER_BRICK_NONE;
+    }
 #elif defined(MODE_BIN)
     // a group per chunk
     const uint chunkIndex = flatGroupIndex;
@@ -596,7 +612,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     glimmerBrickTable[tableIndex] = GLIMMER_BRICK_NONE;
 
     // twigs, wires and the like aren't worth a brick
-    if (glimmerBrickListHeads[tableIndex] == GLIMMER_BRICK_NONE || coveredArea < uint(MIN_BRICK_COLUMNS * AREA_SCALE))
+    if (glimmerBrickListHeads[threadIndex] == GLIMMER_BRICK_NONE || coveredArea < uint(MIN_BRICK_COLUMNS * AREA_SCALE))
     {
         return;
     }
@@ -768,7 +784,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     }
 
 #if defined(MODE_GATHER) || defined(MODE_COUNT)
-    GatherColumn(brick, axis, cell, glimmerBrickListHeads[tableIndex], int2(withinBrick % GLIMMER_BRICK_SIDE, withinBrick / GLIMMER_BRICK_SIDE));
+    GatherColumn(brick, axis, cell, glimmerBrickListHeads[boxThread], int2(withinBrick % GLIMMER_BRICK_SIDE, withinBrick / GLIMMER_BRICK_SIDE));
 #else
     const int2 tile = int2(withinBrick % GLIMMER_BRICK_TILES_PER_SIDE, withinBrick / GLIMMER_BRICK_TILES_PER_SIDE);
 
