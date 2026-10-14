@@ -7,7 +7,6 @@ PERMUTE(MODE, CLEAR, BOUNDS, FILL)
 #include "../Include/Material.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../Include/RayTracing/BVH.hlsli"
 #include "GlimmerCommon.hlsli"
 
 #define GLIMMER_SPAN_MAX_RECTS 4
@@ -29,7 +28,7 @@ DECLARE_BUFFER_DYNAMIC(GlimmerSpanSplat, CBuffer) cbuffer CBuffer
 DECLARE_UAV(GlimmerSpanSplat, SpansBuffer) RWStructuredBuffer<uint> spans;
 DECLARE_SRV(GlimmerSpanSplat, SpanInstancesBuffer) StructuredBuffer<GlimmerSpanInstance> spanInstances;
 DECLARE_SRV(GlimmerSpanSplat, SpanChunksBuffer) StructuredBuffer<GlimmerSpanChunk> spanChunks;
-DECLARE_SRV(GlimmerSpanSplat, GlimmerBLASTrianglesBuffer) StructuredBuffer<uint> glimmerBLASTriangles;
+DECLARE_SRV(GlimmerSpanSplat, GlimmerTrianglesBuffer) StructuredBuffer<uint> glimmerTriangles;
 DECLARE_SRV(GlimmerSpanSplat, MaterialsBuffer) StructuredBuffer<Material> materials;
 
 #ifdef HYP_FEATURES_BINDLESS_TEXTURES
@@ -125,11 +124,11 @@ float2 TriangleHeightsOverSquare(float3 p0, float3 normal, float2 triangleHeight
 
 void SplatTriangle(GlimmerSpanInstance instance, uint localTriangle, uint level)
 {
-    const BVHBLASTriangle bvhTriangle = LOAD_BVH_BLAS_TRIANGLE(glimmerBLASTriangles, instance.data.x + localTriangle);
+    const GlimmerTriangle glimmerTriangle = LOAD_GLIMMER_TRIANGLE(glimmerTriangles, instance.data.x + localTriangle);
 
-    const float3 p0 = TransformPoint(instance, bvhTriangle.position0);
-    const float3 p1 = TransformPoint(instance, bvhTriangle.position1);
-    const float3 p2 = TransformPoint(instance, bvhTriangle.position2);
+    const float3 p0 = TransformPoint(instance, glimmerTriangle.position0);
+    const float3 p1 = TransformPoint(instance, glimmerTriangle.position1);
+    const float3 p2 = TransformPoint(instance, glimmerTriangle.position2);
 
     const float texelSize = constants.params.x;
     const float invTexelSize = constants.params.y;

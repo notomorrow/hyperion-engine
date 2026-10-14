@@ -11,11 +11,11 @@
 #include <Rendering/Glimmer/GlimmerSpanCache.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/GlimmerRelight.hpp>
-#include <Rendering/Glimmer/GlimmerTLAS.hpp>
+#include <Rendering/Glimmer/GlimmerSceneInstances.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTProbeVolume.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTCVars.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeVolume.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeCVars.hpp>
 
 #include <Rendering/Util/DeletionQueue.hpp>
 
@@ -49,7 +49,7 @@ static StaticShaderPropertyId s_propSHModeUpdate { ShaderProperty(NAME("MODE"), 
 static StaticShaderPropertyId s_propSHModeCompose { ShaderProperty(NAME("MODE"), NAME("COMPOSE")) };
 
 static constexpr int32 VoxelsPerFrame = 512;
-static constexpr int32 RefreshVoxelsPerFrame = 256;
+static constexpr int32 IdleRefreshVoxelsPerFrame = 64;
 
 // lines the windows up with GlimmerSHOccupancy's, which snap to 8 of its half spaced voxels
 static constexpr int32 WindowSnapVoxels = 4;
@@ -127,7 +127,7 @@ GlimmerSHVolume::GlimmerSHVolume()
     : m_refreshStep(0),
       m_refreshSlices {},
       m_updateIndex(0),
-      m_seenTLASGeneration(~0u),
+      m_seenInstancesGeneration(~0u),
       m_occupancyWaitFrames(0),
       m_refreshBudget(0),
       m_composedLight {},
@@ -339,7 +339,7 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
     constants.params = Vec4f(
         GetGlimmerFoliageExtinction(),
         GlimmerMaxRayDistance,
-        MathUtil::Clamp(g_cvGlimmerGroundAlbedo.Get(), 0.0f, 1.0f),
+        GlimmerDefaultGroundAlbedo,
         radianceHysteresis);
 
     if (inputs.relight && inputs.relightImageView.IsValid())
@@ -347,9 +347,9 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
         constants.relight = *inputs.relight;
     }
 
-    const GlimmerSWRTProbeVolume* probeVolume = inputs.probeVolume;
+    const GlimmerProbeVolume* probeVolume = inputs.probeVolume;
 
-    if (probeVolume && probeVolume->IsReady() && g_cvGlimmerSWRTProbesEnabled.Get())
+    if (probeVolume && probeVolume->IsReady() && g_cvGlimmerProbesEnabled.Get())
     {
         constants.probes = probeVolume->GetShaderData();
     }
@@ -568,11 +568,11 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
         MoveWindow(cascadeIndex, origin);
     }
 
-    if (inputs.tlas && inputs.tlas->IsReady() && inputs.tlas->GetGeneration() != m_seenTLASGeneration)
+    if (inputs.sceneInstances && inputs.sceneInstances->IsReady() && inputs.sceneInstances->GetGeneration() != m_seenInstancesGeneration)
     {
         GlimmerSceneChanges changes;
 
-        const bool isEverywhere = m_seenTLASGeneration == ~0u || !inputs.tlas->GetChangesSince(m_seenTLASGeneration, changes);
+        const bool isEverywhere = m_seenInstancesGeneration == ~0u || !inputs.sceneInstances->GetChangesSince(m_seenInstancesGeneration, changes);
 
         if (isEverywhere)
         {
@@ -583,20 +583,17 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
         }
         else
         {
-            if (g_cvGlimmerSkipLodOnlyChanges.Get())
+            GlimmerSceneChanges worldChanges;
+
+            for (const GlimmerSceneChange& change : changes)
             {
-                GlimmerSceneChanges worldChanges;
-
-                for (const GlimmerSceneChange& change : changes)
+                if (!change.isLodOnly)
                 {
-                    if (!change.isLodOnly)
-                    {
-                        worldChanges.Add(change);
-                    }
+                    worldChanges.Add(change);
                 }
-
-                changes = std::move(worldChanges);
             }
+
+            changes = std::move(worldChanges);
 
             changes.Quantize(MaxSolidChangeBoxes);
 
@@ -606,7 +603,7 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
             }
         }
 
-        m_seenTLASGeneration = inputs.tlas->GetGeneration();
+        m_seenInstancesGeneration = inputs.sceneInstances->GetGeneration();
     }
 
     for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)
@@ -672,43 +669,9 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
         }
     }
 
-    if (g_cvGlimmerRunOnChange.Get())
-    {
-        const int32 rate = MathUtil::Max(g_cvGlimmerSHRefreshVoxels.Get(), 0);
+    m_refreshBudget = MathUtil::Min(m_refreshBudget + IdleRefreshVoxelsPerFrame, MathUtil::Max(IdleRefreshVoxelsPerFrame, RefreshSliceVoxels) * 2);
 
-        m_refreshBudget = MathUtil::Min(m_refreshBudget + rate, MathUtil::Max(rate, RefreshSliceVoxels) * 2);
-
-        for (uint32 attempt = 0; attempt < 2 * GlimmerSHCascades && m_refreshBudget >= RefreshSliceVoxels; attempt++)
-        {
-            uint32 ruler = ++m_refreshStep;
-            uint32 cascadeIndex = 0;
-
-            while ((ruler & 1u) == 0u && cascadeIndex + 1 < GlimmerSHCascades)
-            {
-                ruler >>= 1;
-                cascadeIndex++;
-            }
-
-            bool hasFinishedCascade = false;
-
-            if (!DispatchRefreshSlice(frame, cascadeIndex, m_refreshSlices[cascadeIndex], RadianceHysteresis, hasFinishedCascade, inputs, hasBarriers))
-            {
-                continue;
-            }
-
-            m_refreshBudget -= RefreshSliceVoxels;
-
-            attempt = 0;
-        }
-
-        budget = 0;
-    }
-
-    const int32 sliceVoxels = RefreshSliceVoxels;
-
-    budget = MathUtil::Min(budget, RefreshVoxelsPerFrame);
-
-    for (uint32 attempt = 0; attempt < 2 * GlimmerSHCascades && budget >= sliceVoxels; attempt++)
+    for (uint32 attempt = 0; attempt < 2 * GlimmerSHCascades && m_refreshBudget >= RefreshSliceVoxels; attempt++)
     {
         uint32 ruler = ++m_refreshStep;
         uint32 cascadeIndex = 0;
@@ -726,7 +689,7 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
             continue;
         }
 
-        budget -= sliceVoxels;
+        m_refreshBudget -= RefreshSliceVoxels;
 
         attempt = 0;
     }

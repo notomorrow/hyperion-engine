@@ -23,8 +23,8 @@ class World;
 class Texture;
 class CBufferAllocator;
 class GlimmerSurfaceCache;
-class GlimmerBLASCache;
-class GlimmerTLAS;
+class GlimmerTriangleCache;
+class GlimmerSceneInstances;
 class GlimmerSpanCache;
 
 struct GlimmerApplyShaderData
@@ -42,8 +42,8 @@ public:
     GlimmerScenePassData();
     virtual ~GlimmerScenePassData() override;
 
-    SharedPtr<GlimmerBLASCache> blasCache;
-    UniquePtr<GlimmerTLAS> tlas;
+    SharedPtr<GlimmerTriangleCache> triangleCache;
+    UniquePtr<GlimmerSceneInstances> sceneInstances;
     UniquePtr<GlimmerSurfaceCache> surfaceCache;
     UniquePtr<GlimmerSpanCache> spanCache;
 

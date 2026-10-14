@@ -26,6 +26,27 @@ struct GlimmerTerrainPatch
     uint4 data;      // x = material index
 };
 
+struct GlimmerTriangle
+{
+    float3 position0;
+    float3 position1;
+    float3 position2;
+};
+
+#define LOAD_GLIMMER_TRIANGLE(buffer, triangleIndex) \
+    UnpackGlimmerTriangle((buffer)[(triangleIndex) * 5u], (buffer)[(triangleIndex) * 5u + 1u], (buffer)[(triangleIndex) * 5u + 2u], (buffer)[(triangleIndex) * 5u + 3u], (buffer)[(triangleIndex) * 5u + 4u])
+
+GlimmerTriangle UnpackGlimmerTriangle(uint word0, uint word1, uint word2, uint word3, uint word4)
+{
+    GlimmerTriangle glimmerTriangle;
+
+    glimmerTriangle.position0 = float3(word0 & 0xFFFFu, word0 >> 16u, word1 & 0xFFFFu);
+    glimmerTriangle.position1 = float3(word1 >> 16u, word2 & 0xFFFFu, word2 >> 16u);
+    glimmerTriangle.position2 = float3(word3 & 0xFFFFu, word3 >> 16u, word4 & 0xFFFFu);
+
+    return glimmerTriangle;
+}
+
 uint2 GlimmerWrapGroundTexel(int2 texel)
 {
     return uint2(texel & (GLIMMER_GROUND_RESOLUTION - 1));
@@ -123,8 +144,8 @@ struct GlimmerSpanInstance
     float4 objectToWorld0;
     float4 objectToWorld1;
     float4 objectToWorld2;
-    uint4 data;     // x = BLAS triangle base, y = triangle count, z = material index, w = flags
-    uint4 lightmap; // x = BLAS lightmap UV base (~0 without a lightmap), y = lightmap rect offset, z = lightmap rect size
+    uint4 data;     // x = triangle pool base, y = triangle count, z = material index, w = flags
+    uint4 lightmap; // x = lightmap UV pool base (~0 without a lightmap), y = lightmap rect offset, z = lightmap rect size, w = UV0 pool base (~0 without)
 };
 
 #define GLIMMER_SPAN_CHUNK_TRIANGLES 256

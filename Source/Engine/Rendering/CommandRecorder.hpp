@@ -66,6 +66,7 @@ enum class CommandType : uint8
     CopyBuffer,
     GenerateMipmaps,
     DispatchCompute,
+    DispatchComputeIndirect,
     TraceRays,
     SetAsyncShaderLoadingEnabled,
     SetStencilState,
@@ -706,6 +707,26 @@ public:
 private:
     ComputePipeline* m_pipeline;
     Vec3u m_workgroupCount;
+};
+
+class DispatchComputeIndirect final : public CmdBase
+{
+public:
+    template <class>
+    friend class TCommandRecorder;
+
+    DispatchComputeIndirect(GpuBuffer* argsBuffer, uint32 argsOffset)
+        : m_argsBuffer(argsBuffer),
+          m_argsOffset(argsOffset)
+    {
+        Assert(argsBuffer);
+    }
+
+    static constexpr CommandType ThisCommandType = CommandType::DispatchComputeIndirect;
+
+private:
+    GpuBuffer* m_argsBuffer;
+    uint32 m_argsOffset;
 };
 
 class TraceRays final : public CmdBase

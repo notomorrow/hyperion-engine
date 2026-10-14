@@ -181,6 +181,23 @@ struct IncludeScanCacheEntry
 Mutex s_includeScanCacheMutex;
 Map<String, IncludeScanCacheEntry> s_includeScanCache;
 
+Mutex s_bundleCompileMutexesMutex;
+Map<Name, UniquePtr<Mutex>> s_bundleCompileMutexes;
+
+Mutex& GetBundleCompileMutex(Name bundleName)
+{
+    Mutex::Guard guard(s_bundleCompileMutexesMutex);
+
+    UniquePtr<Mutex>& mutex = s_bundleCompileMutexes[bundleName];
+
+    if (!mutex)
+    {
+        mutex = MakeUnique<Mutex>();
+    }
+
+    return *mutex;
+}
+
 } // namespace
 
 /*! \brief Scan a shader source file for local #include "..." directives,
@@ -2816,6 +2833,8 @@ bool ShaderCompiler::CompileBundle(
     {
         return false;
     }
+
+    Mutex::Guard bundleCompileGuard(GetBundleCompileMutex(decl.name));
 
     if (!outBundle.IsValid())
     {

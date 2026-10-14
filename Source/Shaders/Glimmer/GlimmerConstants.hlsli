@@ -1,7 +1,7 @@
 #ifndef GLIMMER_CONSTANTS_HLSLI
 #define GLIMMER_CONSTANTS_HLSLI
 
-/////////////SWRT/////////////
+/////////////Probes/////////////
 
 #define GLIMMER_PROBE_INSIDE_FRACTION 0.25
 #define GLIMMER_PROBE_OUTSIDE_FRACTION 0.05

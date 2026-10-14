@@ -13,6 +13,12 @@
 
 #define GLIMMER_PROBE_NO_SLOT 0xFFFFFFFFu
 
+// counters ahead of the update list in one buffer (NOTE must match NumProbeCounters in GlimmerProbeVolume.cpp)
+#define GLIMMER_PROBE_COUNTERS 16u
+
+// a ray's GLIMMER_RAY_UINTS, then room for its hit until the shade pass (NOTE must match RayRecordSize in GlimmerProbeVolume.cpp)
+#define GLIMMER_PROBE_RAY_RECORD_UINTS (GLIMMER_RAY_UINTS + 10u)
+
 #define GLIMMER_PROBE_STATE_FREE 0u
 #define GLIMMER_PROBE_STATE_ACTIVE 1u
 #define GLIMMER_PROBE_STATE_BURIED 2u  // under the ground; never traced
@@ -53,7 +59,7 @@ struct GlimmerProbeVolume
     GlimmerProbeLevel levels[GLIMMER_PROBE_LEVELS];
     uint4 info;       // x = number of levels, y = rays per probe, z = frame, w = 1 when the volume can be sampled
     float4 params;    // x = seconds since the volume started, y = how much visibility counts, z = escape radiance clamp, w = max ray distance
-    float4 nearField; // x = levels traced with SWRT, y = SWRT reach in spacings, z = SWRT instances, w = ground albedo
+    float4 nearField; // x = levels that trace the bricks, y = their reach in spacings, z = 1 when there are bricks to trace, w = ground albedo
 };
 
 // da bits:

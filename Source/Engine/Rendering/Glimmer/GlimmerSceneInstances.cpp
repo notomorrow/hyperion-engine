@@ -6,8 +6,8 @@
 
 #include <RenderingPch.hpp>
 
-#include <Rendering/Glimmer/GlimmerTLAS.hpp>
-#include <Rendering/Glimmer/GlimmerBLASCache.hpp>
+#include <Rendering/Glimmer/GlimmerSceneInstances.hpp>
+#include <Rendering/Glimmer/GlimmerTriangleCache.hpp>
 #include <Rendering/Glimmer/GlimmerSpanCache.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
 
@@ -44,7 +44,6 @@ namespace Hyperion {
 
 extern CVar<bool> g_cvLightmapVolumes;
 
-static constexpr uint32 MaxInstances = 131072;
 static constexpr uint32 MaxSpanInstances = 262144;
 
 static constexpr float SolidLodErrorMeters = 0.05f;
@@ -169,41 +168,34 @@ void GlimmerSceneChanges::Quantize(size_t maxChanges)
 
 #pragma endregion GlimmerSceneChanges
 
-#pragma region GlimmerTLAS
+#pragma region GlimmerSceneInstances
 
-GlimmerTLAS::GlimmerTLAS()
+GlimmerSceneInstances::GlimmerSceneInstances()
     : m_lastBuildStartTime(0),
-      m_blasGenerationAtGather(~0u),
-      m_blasEvictionGenerationAtGather(0),
+      m_triangleGenerationAtGather(~0u),
+      m_triangleEvictionGenerationAtGather(0),
       m_activeInputHash(0),
       m_spanFullyDirty(true),
       m_dirty(true),
-      m_waitingForBLAS(false),
-      m_numTracedWaitingForBLAS(0),
-      m_buildWaitsForTraced(false),
-      m_activeWaitsForTraced(true),
-      m_completeGeneration(0),
+      m_waitingForTriangles(false),
       m_usesLightmaps(false)
 {
 }
 
-GlimmerTLAS::~GlimmerTLAS()
+GlimmerSceneInstances::~GlimmerSceneInstances()
 {
-    AssertDebug(m_activeBlasKeys.Empty() && m_pendingBlasKeys.Empty());
+    AssertDebug(m_activeMeshKeys.Empty() && m_pendingMeshKeys.Empty());
 
     if (m_buildTask.IsValid() && !m_buildTask.IsCompleted())
     {
         m_buildTask.Await();
     }
 
-    EnqueueDeletion(std::move(m_nodesBuffer));
-    EnqueueDeletion(std::move(m_instancesBuffer));
-    EnqueueDeletion(std::move(m_instanceBoundsBuffer));
     EnqueueDeletion(std::move(m_spanInstancesBuffer));
     EnqueueDeletion(std::move(m_spanChunksBuffer));
 }
 
-void GlimmerTLAS::Release(GlimmerBLASCache& blasCache)
+void GlimmerSceneInstances::Release(GlimmerTriangleCache& triangleCache)
 {
     if (m_buildTask.IsValid() && !m_buildTask.IsCompleted())
     {
@@ -212,14 +204,14 @@ void GlimmerTLAS::Release(GlimmerBLASCache& blasCache)
 
     m_buildTask = Task<BuildResult>();
 
-    blasCache.RemoveReferences(m_activeBlasKeys.ToSpan());
-    blasCache.RemoveReferences(m_pendingBlasKeys.ToSpan());
+    triangleCache.RemoveReferences(m_activeMeshKeys.ToSpan());
+    triangleCache.RemoveReferences(m_pendingMeshKeys.ToSpan());
 
-    m_activeBlasKeys.Clear();
-    m_pendingBlasKeys.Clear();
+    m_activeMeshKeys.Clear();
+    m_pendingMeshKeys.Clear();
 }
 
-bool GlimmerTLAS::GetChangesSince(
+bool GlimmerSceneInstances::GetChangesSince(
     uint32 seenGeneration,
     GlimmerSceneChanges& outChanges) const
 {
@@ -254,16 +246,15 @@ bool GlimmerTLAS::GetChangesSince(
     return true;
 }
 
-void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const BoundingBox& tracedRegion, const Vec3f& viewerPosition, GlimmerBLASCache& blasCache, BuildInput& outInput, uint32& outNumWaitingForBLAS)
+void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& region, const Vec3f& viewerPosition, GlimmerTriangleCache& triangleCache, BuildInput& outInput, uint32& outNumWaitingForTriangles)
 {
     HYP_SCOPE;
 
-    outNumWaitingForBLAS = 0;
-    m_numTracedWaitingForBLAS = 0;
+    outNumWaitingForTriangles = 0;
 
-    Set<uint64> blasKeysSeen;
+    Set<uint64> meshKeysSeen;
 
-    const float lodErrorScale = blasCache.GetLodErrorScale();
+    const float lodErrorScale = triangleCache.GetLodErrorScale();
 
     Map<uint64, uint8> instanceLods;
 
@@ -274,16 +265,12 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
     {
         const bool isFoliage = (flags & GIF_FOLIAGE) != 0;
 
-        const bool wantsSpan = outInput.spanInstances.Size() < MaxSpanInstances;
-        const bool wantsTraced = !isFoliage && outInput.instances.Size() < MaxInstances;
-
-        if (!wantsSpan && !wantsTraced)
+        if (outInput.spanInstances.Size() >= MaxSpanInstances)
         {
             return;
         }
 
         float priority = viewerPosition.Distance(objectToWorld.ExtractTranslation());
-        bool mayBeTraced = wantsTraced;
 
         if (proxy.meshAabb.IsValid())
         {
@@ -293,8 +280,6 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
             {
                 return;
             }
-
-            mayBeTraced = wantsTraced && estimatedBounds.Overlaps(tracedRegion);
 
             const Vec3f nearestPoint = Vec3f(
                 MathUtil::Clamp(viewerPosition.x, estimatedBounds.min.x, estimatedBounds.max.x),
@@ -332,37 +317,32 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
 
         instanceLods.Set(instanceKey, lodIndex);
 
-        GlimmerBLASRef blasRef;
+        GlimmerTriangleRef triangleRef;
 
-        const GlimmerBLASRequestResult requestResult = blasCache.Request(proxy.mesh, lodIndex, priority, blasRef);
+        const GlimmerTriangleRequestResult requestResult = triangleCache.Request(proxy.mesh, lodIndex, priority, triangleRef);
 
-        if (requestResult != GlimmerBLASRequestResult::Resident)
+        if (requestResult != GlimmerTriangleRequestResult::Resident)
         {
-            if (requestResult == GlimmerBLASRequestResult::Pending)
+            if (requestResult == GlimmerTriangleRequestResult::Pending)
             {
-                outNumWaitingForBLAS++;
+                outNumWaitingForTriangles++;
             }
 
-            bool hasFallback = previousLod != lodIndex && blasCache.TryGetResident(proxy.mesh, previousLod, priority, blasRef);
+            bool hasFallback = previousLod != lodIndex && triangleCache.TryGetResident(proxy.mesh, previousLod, priority, triangleRef);
 
             for (uint8 distance = 1; !hasFallback && distance < MaxMeshLods; distance++)
             {
-                hasFallback = (lodIndex + distance < MaxMeshLods && blasCache.TryGetResident(proxy.mesh, uint8(lodIndex + distance), priority, blasRef))
-                    || (lodIndex >= distance && blasCache.TryGetResident(proxy.mesh, uint8(lodIndex - distance), priority, blasRef));
+                hasFallback = (lodIndex + distance < MaxMeshLods && triangleCache.TryGetResident(proxy.mesh, uint8(lodIndex + distance), priority, triangleRef))
+                    || (lodIndex >= distance && triangleCache.TryGetResident(proxy.mesh, uint8(lodIndex - distance), priority, triangleRef));
             }
 
             if (!hasFallback)
             {
-                if (requestResult == GlimmerBLASRequestResult::Pending && mayBeTraced)
-                {
-                    m_numTracedWaitingForBLAS++;
-                }
-
                 return;
             }
         }
 
-        const BoundingBox worldBounds = objectToWorld * blasRef.localBounds;
+        const BoundingBox worldBounds = objectToWorld * triangleRef.localBounds;
 
         if (!worldBounds.IsValid() || !worldBounds.Overlaps(region))
         {
@@ -376,59 +356,28 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
 
         const uint32 instanceFlags = flags | (objectToWorld.Determinant() < 0.0f ? GIF_MIRRORED : GIF_NONE);
 
-        const Mat4f gridToWorld = objectToWorld * Mat4f::Translation(blasRef.gridOrigin) * Mat4f::Scaling(blasRef.gridScale);
+        const Mat4f gridToWorld = objectToWorld * Mat4f::Translation(triangleRef.gridOrigin) * Mat4f::Scaling(triangleRef.gridScale);
 
-        bool isReferenced = false;
+        GlimmerSpanInstanceShaderData& spanInstance = outInput.spanInstances.EmplaceBack();
+        Memory::Copy(spanInstance.objectToWorld, gridToWorld.values, sizeof(spanInstance.objectToWorld));
 
-        if (wantsSpan)
+        spanInstance.triangleBase = triangleRef.triangleBase;
+        spanInstance.triangleCount = triangleRef.triangleCount;
+        spanInstance.materialIndex = materialIndex;
+        spanInstance.flags = instanceFlags;
+
+        const bool hasLightmap = lightmapRectOffset != 0 && triangleRef.lightmapUVBase != ~0u;
+
+        spanInstance.lightmapUVBase = hasLightmap ? triangleRef.lightmapUVBase : ~0u;
+        spanInstance.lightmapRectOffset = hasLightmap ? lightmapRectOffset : 0;
+        spanInstance.lightmapRectSize = hasLightmap ? lightmapRectSize : 0;
+        spanInstance.texcoordBase = triangleRef.texcoordBase;
+
+        outInput.spanInstanceBounds.PushBack(worldBounds);
+
+        if (meshKeysSeen.Insert(triangleRef.key).second)
         {
-            GlimmerSpanInstanceShaderData& spanInstance = outInput.spanInstances.EmplaceBack();
-            Memory::Copy(spanInstance.objectToWorld, gridToWorld.values, sizeof(spanInstance.objectToWorld));
-
-            spanInstance.blasTriangleBase = blasRef.triangleBase;
-            spanInstance.triangleCount = blasRef.triangleCount;
-            spanInstance.materialIndex = materialIndex;
-            spanInstance.flags = instanceFlags;
-
-            const bool hasLightmap = lightmapRectOffset != 0 && blasRef.lightmapUVBase != ~0u;
-
-            spanInstance.lightmapUVBase = hasLightmap ? blasRef.lightmapUVBase : ~0u;
-            spanInstance.lightmapRectOffset = hasLightmap ? lightmapRectOffset : 0;
-            spanInstance.lightmapRectSize = hasLightmap ? lightmapRectSize : 0;
-            spanInstance._pad0 = 0;
-
-            outInput.spanInstanceBounds.PushBack(worldBounds);
-
-            isReferenced = true;
-        }
-
-        const bool isTraced = wantsTraced && worldBounds.Overlaps(tracedRegion);
-
-        if (isTraced)
-        {
-            const Mat4f worldToGrid = gridToWorld.Inverse();
-
-            GlimmerInstanceShaderData& instance = outInput.instances.EmplaceBack();
-            Memory::Copy(instance.worldToObject, worldToGrid.values, sizeof(instance.worldToObject));
-
-            instance.blasNodeBase = blasRef.nodeBase;
-            instance.blasTriangleBase = blasRef.triangleBase;
-            instance.materialIndex = materialIndex;
-            instance.flags = instanceFlags;
-
-            outInput.instanceBounds.PushBack(worldBounds);
-
-            isReferenced = true;
-        }
-
-        if (!isReferenced)
-        {
-            return;
-        }
-
-        if (blasKeysSeen.Insert(blasRef.key).second)
-        {
-            outInput.blasKeys.PushBack(blasRef.key);
+            outInput.meshKeys.PushBack(triangleRef.key);
         }
 
         struct
@@ -438,14 +387,12 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
             uint32 flags;
             uint32 lightmapRectOffset;
             uint32 lightmapRectSize;
-            uint32 isTraced;
-            uint32 _pad0;
-        } content = { uint64(uintptr_t(proxy.mesh)), materialIndex, instanceFlags, lightmapRectOffset, lightmapRectSize, isTraced ? 1u : 0u, 0u };
+        } content = { uint64(uintptr_t(proxy.mesh)), materialIndex, instanceFlags, lightmapRectOffset, lightmapRectSize };
 
         InstanceRecord& record = outInput.instanceRecords.EmplaceBack();
         record.identity = instanceKey;
         record.worldHash = FNV1::DoHashWords(objectToWorld.values, sizeof(objectToWorld.values), FNV1::DoHashWords(&content, sizeof(content), 0));
-        record.geometryKey = blasRef.key;
+        record.geometryKey = triangleRef.key;
         record.bounds = worldBounds;
     };
 
@@ -547,7 +494,7 @@ void GlimmerTLAS::Gather(RenderProxyList& rpl, const BoundingBox& region, const 
     m_instanceLods = std::move(instanceLods);
 }
 
-GlimmerTLAS::BuildResult GlimmerTLAS::Build(BuildInput&& input)
+GlimmerSceneInstances::BuildResult GlimmerSceneInstances::Build(BuildInput&& input)
 {
     HYP_SCOPE;
 
@@ -557,12 +504,9 @@ GlimmerTLAS::BuildResult GlimmerTLAS::Build(BuildInput&& input)
 
     result.region = input.region;
 
-    result.inputHash = FNV1::DoHashWords(
-        input.instances.Data(),
-        input.instances.ByteSize(),
-        FNV1::DoHashWords(input.spanInstances.Data(), input.spanInstances.ByteSize(), 0));
+    result.inputHash = FNV1::DoHashWords(input.spanInstances.Data(), input.spanInstances.ByteSize(), 0);
 
-    result.blasKeys = std::move(input.blasKeys);
+    result.meshKeys = std::move(input.meshKeys);
 
     result.spanInstances = std::move(input.spanInstances);
 
@@ -682,75 +626,34 @@ GlimmerTLAS::BuildResult GlimmerTLAS::Build(BuildInput&& input)
         }
     }
 
-    if (input.instances.Empty())
-    {
-        result.buildMs = PerformanceClock::TimeSince(startTime);
-
-        return result;
-    }
-
-    GlimmerBVHBuildParams params;
-    params.minLeafSize = 1;
-    params.maxLeafSize = 1;
-    params.traversalCost = 0.25f;
-
-    Array<uint32, GlimmerAllocator> instanceOrder;
-    GlimmerBVHBuilder::Build(input.instanceBounds.ToSpan(), params, result.nodes, instanceOrder);
-
-    result.instances.Resize(instanceOrder.Size());
-    result.instanceBounds.Resize(instanceOrder.Size());
-
-    for (size_t orderIndex = 0; orderIndex < instanceOrder.Size(); orderIndex++)
-    {
-        const uint32 instanceIndex = instanceOrder[orderIndex];
-
-        result.instances[orderIndex] = input.instances[instanceIndex];
-
-        const BoundingBox& bounds = input.instanceBounds[instanceIndex];
-        result.instanceBounds[orderIndex] = GlimmerInstanceBoundsShaderData { Vec4f(bounds.min, 0.0f), Vec4f(bounds.max, 0.0f) };
-    }
-
-    result.depth = GlimmerBVHBuilder::CalculateDepth(result.nodes.ToSpan());
     result.buildMs = PerformanceClock::TimeSince(startTime);
 
     return result;
 }
 
-void GlimmerTLAS::Upload(Frame* frame, BuildResult& result)
+void GlimmerSceneInstances::Upload(Frame* frame, BuildResult& result)
 {
     HYP_SCOPE;
 
     CommandRecorder& cr = frame->cr;
 
-    GpuBufferRef nodesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerBVHNode), result.nodes.Size());
-    GpuBufferRef instancesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerInstanceShaderData), result.instances.Size());
-    GpuBufferRef instanceBoundsBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerInstanceBoundsShaderData), result.instanceBounds.Size());
     GpuBufferRef spanInstancesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerSpanInstanceShaderData), result.spanInstances.Size());
     GpuBufferRef spanChunksBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerSpanChunkShaderData), result.spanChunks.Size());
 
-    const size_t nodesByteSize = result.nodes.ByteSize();
-    const size_t instancesByteSize = result.instances.ByteSize();
-    const size_t instanceBoundsByteSize = result.instanceBounds.ByteSize();
     const size_t spanInstancesByteSize = result.spanInstances.ByteSize();
     const size_t spanChunksByteSize = result.spanChunks.ByteSize();
-    const size_t totalByteSize = nodesByteSize + instancesByteSize + instanceBoundsByteSize + spanInstancesByteSize + spanChunksByteSize;
+    const size_t totalByteSize = spanInstancesByteSize + spanChunksByteSize;
 
     if (totalByteSize != 0)
     {
         GpuBuffer* stagingBuffer = RI.stagingBufferPool->AcquireStagingBuffer(totalByteSize);
         Assert(stagingBuffer != nullptr);
 
-        stagingBuffer->Copy(0, nodesByteSize, result.nodes.Data());
-        stagingBuffer->Copy(nodesByteSize, instancesByteSize, result.instances.Data());
-        stagingBuffer->Copy(nodesByteSize + instancesByteSize, instanceBoundsByteSize, result.instanceBounds.Data());
-        stagingBuffer->Copy(nodesByteSize + instancesByteSize + instanceBoundsByteSize, spanInstancesByteSize, result.spanInstances.Data());
-        stagingBuffer->Copy(nodesByteSize + instancesByteSize + instanceBoundsByteSize + spanInstancesByteSize, spanChunksByteSize, result.spanChunks.Data());
+        stagingBuffer->Copy(0, spanInstancesByteSize, result.spanInstances.Data());
+        stagingBuffer->Copy(spanInstancesByteSize, spanChunksByteSize, result.spanChunks.Data());
         stagingBuffer->Flush(0, totalByteSize);
 
         cr << InsertBarrier(stagingBuffer, ResourceState::CopySrc);
-        cr << InsertBarrier(nodesBuffer.Get(), ResourceState::CopyDst);
-        cr << InsertBarrier(instancesBuffer.Get(), ResourceState::CopyDst);
-        cr << InsertBarrier(instanceBoundsBuffer.Get(), ResourceState::CopyDst);
         cr << InsertBarrier(spanInstancesBuffer.Get(), ResourceState::CopyDst);
         cr << InsertBarrier(spanChunksBuffer.Get(), ResourceState::CopyDst);
 
@@ -766,32 +669,12 @@ void GlimmerTLAS::Upload(Frame* frame, BuildResult& result)
             copyOffset += byteSize;
         };
 
-        copyInto(nodesBuffer, nodesByteSize);
-        copyInto(instancesBuffer, instancesByteSize);
-        copyInto(instanceBoundsBuffer, instanceBoundsByteSize);
         copyInto(spanInstancesBuffer, spanInstancesByteSize);
         copyInto(spanChunksBuffer, spanChunksByteSize);
     }
 
-    cr << InsertBarrier(nodesBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
-    cr << InsertBarrier(instancesBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
-    cr << InsertBarrier(instanceBoundsBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
     cr << InsertBarrier(spanInstancesBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
     cr << InsertBarrier(spanChunksBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
-
-#ifdef HYP_RHI_DEBUG_NAMES
-    nodesBuffer->SetDebugName(NAME("GlimmerTLASNodes"));
-    instancesBuffer->SetDebugName(NAME("GlimmerTLASInstances"));
-    instanceBoundsBuffer->SetDebugName(NAME("GlimmerTLASInstanceBounds"));
-#endif
-
-    EnqueueDeletion(std::move(m_nodesBuffer));
-    EnqueueDeletion(std::move(m_instancesBuffer));
-    EnqueueDeletion(std::move(m_instanceBoundsBuffer));
-
-    m_nodesBuffer = std::move(nodesBuffer);
-    m_instancesBuffer = std::move(instancesBuffer);
-    m_instanceBoundsBuffer = std::move(instanceBoundsBuffer);
 
     EnqueueDeletion(std::move(m_spanInstancesBuffer));
     EnqueueDeletion(std::move(m_spanChunksBuffer));
@@ -800,12 +683,12 @@ void GlimmerTLAS::Upload(Frame* frame, BuildResult& result)
     m_spanChunksBuffer = std::move(spanChunksBuffer);
 }
 
-bool GlimmerTLAS::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& region, const BoundingBox& tracedRegion, const Vec3f& viewerPosition, GlimmerBLASCache& blasCache)
+void GlimmerSceneInstances::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& region, const Vec3f& viewerPosition, GlimmerTriangleCache& triangleCache)
 {
     HYP_SCOPE;
     AssertOnThread(g_renderThread);
 
-    if (rpl.GetMeshEntities().GetDiff().NeedsUpdate() || region != m_lastRegion || tracedRegion != m_lastTracedRegion)
+    if (rpl.GetMeshEntities().GetDiff().NeedsUpdate() || region != m_lastRegion)
     {
         m_dirty = true;
     }
@@ -815,48 +698,35 @@ bool GlimmerTLAS::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& 
         m_dirty = true;
     }
 
-    if (m_waitingForBLAS && blasCache.GetResidentGeneration() != m_blasGenerationAtGather)
+    if (m_waitingForTriangles && triangleCache.GetResidentGeneration() != m_triangleGenerationAtGather)
     {
         m_dirty = true;
     }
 
     const float viewerMoved = viewerPosition.Distance(m_viewerPositionAtGather);
 
-    if ((m_waitingForBLAS && viewerMoved > ViewerMoveRegatherDistance) || viewerMoved > ViewerMoveLodRegatherDistance)
+    if ((m_waitingForTriangles && viewerMoved > ViewerMoveRegatherDistance) || viewerMoved > ViewerMoveLodRegatherDistance)
     {
         m_dirty = true;
     }
 
-    if (blasCache.GetEvictionGeneration() != m_blasEvictionGenerationAtGather)
+    if (triangleCache.GetEvictionGeneration() != m_triangleEvictionGenerationAtGather)
     {
         m_dirty = true;
     }
-
-    bool swapped = false;
 
     if (m_buildTask.IsValid() && m_buildTask.IsCompleted())
     {
         BuildResult result = std::move(m_buildTask).Await();
 
-        // the first TLAS with every BLAS the traced region asked for, after one or more without
-        if (!m_buildWaitsForTraced && m_activeWaitsForTraced)
-        {
-            m_completeGeneration++;
-        }
-
-        m_activeWaitsForTraced = m_buildWaitsForTraced;
         m_buildTask = Task<BuildResult>();
 
         if (IsReady() && result.inputHash == m_activeInputHash)
         {
-            blasCache.RemoveReferences(result.blasKeys.ToSpan());
-            m_pendingBlasKeys.Clear();
+            triangleCache.RemoveReferences(result.meshKeys.ToSpan());
+            m_pendingMeshKeys.Clear();
 
-            if (result.region != m_activeRegion)
-            {
-                m_activeRegion = result.region;
-                swapped = true;
-            }
+            m_activeRegion = result.region;
         }
         else
         {
@@ -869,14 +739,11 @@ bool GlimmerTLAS::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& 
 
             Upload(frame, result);
 
-            blasCache.RemoveReferences(m_activeBlasKeys.ToSpan());
+            triangleCache.RemoveReferences(m_activeMeshKeys.ToSpan());
 
-            m_activeBlasKeys = std::move(result.blasKeys);
-            m_pendingBlasKeys.Clear();
+            m_activeMeshKeys = std::move(result.meshKeys);
+            m_pendingMeshKeys.Clear();
 
-            m_stats.numInstances = uint32(result.instances.Size());
-            m_stats.numNodes = uint32(result.nodes.Size());
-            m_stats.depth = result.depth;
             m_stats.lastBuildMs = result.buildMs;
             m_stats.numSpanInstances = uint32(result.spanInstances.Size());
             m_stats.numSpanTriangles = result.numSpanTriangles;
@@ -909,25 +776,23 @@ bool GlimmerTLAS::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& 
             m_changeJournal.PushBack(std::move(changeSet));
 
             m_instanceRecords = std::move(result.instanceRecords);
-
-            swapped = true;
         }
     }
 
     if (!m_dirty || m_buildTask.IsValid())
     {
-        return swapped;
+        return;
     }
 
     if (IsReady() && m_lastBuildStartTime != 0 && PerformanceClock::TimeSince(m_lastBuildStartTime) < RebuildDebounceMs)
     {
-        return swapped;
+        return;
     }
 
     BuildInput input;
-    uint32 numWaitingForBLAS = 0;
+    uint32 numWaitingForTriangles = 0;
 
-    Gather(rpl, region, tracedRegion, viewerPosition, blasCache, input, numWaitingForBLAS);
+    Gather(rpl, region, viewerPosition, triangleCache, input, numWaitingForTriangles);
 
     input.region = region;
     input.regionCenter = region.GetCenter();
@@ -935,29 +800,25 @@ bool GlimmerTLAS::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& 
     input.previousInstanceRecords = m_instanceRecords;
     input.hasPrevious = IsReady() || !m_spanKeys.Empty();
 
-    blasCache.AddReferences(input.blasKeys.ToSpan());
-    m_pendingBlasKeys = input.blasKeys;
+    triangleCache.AddReferences(input.meshKeys.ToSpan());
+    m_pendingMeshKeys = input.meshKeys;
 
-    m_blasGenerationAtGather = blasCache.GetResidentGeneration();
-    m_blasEvictionGenerationAtGather = blasCache.GetEvictionGeneration();
+    m_triangleGenerationAtGather = triangleCache.GetResidentGeneration();
+    m_triangleEvictionGenerationAtGather = triangleCache.GetEvictionGeneration();
     m_viewerPositionAtGather = viewerPosition;
-    m_waitingForBLAS = numWaitingForBLAS != 0;
-    m_buildWaitsForTraced = m_numTracedWaitingForBLAS != 0;
-    m_stats.numWaitingForBLAS = numWaitingForBLAS;
+    m_waitingForTriangles = numWaitingForTriangles != 0;
+    m_stats.numWaitingForTriangles = numWaitingForTriangles;
 
     m_lastRegion = region;
-    m_lastTracedRegion = tracedRegion;
     m_lastBuildStartTime = PerformanceClock::Now();
     m_dirty = false;
 
-    m_buildTask = blasCache.GetBuildPool().Enqueue(
+    m_buildTask = triangleCache.GetBuildPool().Enqueue(
         [input = std::move(input)]() mutable -> BuildResult
         {
             return Build(std::move(input));
         });
-
-    return swapped;
 }
-#pragma endregion GlimmerTLAS
+#pragma endregion GlimmerSceneInstances
 
 } // namespace Hyperion

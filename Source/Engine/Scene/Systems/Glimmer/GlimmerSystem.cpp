@@ -16,8 +16,8 @@
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
 #include <Rendering/Glimmer/GlimmerTechnique.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTProbeVolume.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTCVars.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeVolume.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeCVars.hpp>
 
 #include <Rendering/DebugDrawer.hpp>
 #include <Rendering/Vertex.hpp>
@@ -59,7 +59,7 @@ float EvaluateL1(const Vec4f& sh, const Vec3f& N)
 }
 
 //// @TODO: Refactor debug drawing stuff into a new GlimmerDebugDraw
-Color GetGlimmerProbeDebugColor(GlimmerSWRTDebugProbes mode, const GlimmerProbeDebugRecord& record, const Vec3f& viewerPosition, float exposure)
+Color GetGlimmerProbeDebugColor(GlimmerProbeDebugMode mode, const GlimmerProbeDebugRecord& record, const Vec3f& viewerPosition, float exposure)
 {
     const uint32 probeState = record.info.x & 0xFFu;
 
@@ -84,7 +84,7 @@ Color GetGlimmerProbeDebugColor(GlimmerSWRTDebugProbes mode, const GlimmerProbeD
         return Color(0.35f, 0.35f, 0.35f);
     }
 
-    if (mode == GlimmerSWRTDebugProbes::Status)
+    if (mode == GlimmerProbeDebugMode::Status)
     {
         const float spacing = GetGlimmerProbeLevelSpacing(uint32(record.position.w));
         const Vec3f position = record.position.GetXYZ();
@@ -111,7 +111,7 @@ Color GetGlimmerProbeDebugColor(GlimmerSWRTDebugProbes mode, const GlimmerProbeD
 
     Vec3f irradiance = Vec3f(record.sh[0].x, record.sh[1].x, record.sh[2].x);
 
-    if (mode == GlimmerSWRTDebugProbes::IrradianceTowardViewer)
+    if (mode == GlimmerProbeDebugMode::IrradianceTowardViewer)
     {
         const Vec3f toViewer = viewerPosition - record.position.GetXYZ();
         const float distance = toViewer.Length();
@@ -370,9 +370,9 @@ void GlimmerSystem::UpdateProbeDebugRecords(float delta)
 
     static constexpr float ProbeStatsLogInterval = 1.0f;
 
-    const int mode = g_cvGlimmerSWRTDebugProbes.Get();
-    const bool isDrawingProbes = mode > int(GlimmerSWRTDebugProbes::None) && mode < int(GlimmerSWRTDebugProbes::Max);
-    const bool isLoggingStats = g_cvGlimmerSWRTProbesLogStats.Get();
+    const int mode = g_cvGlimmerProbesDebug.Get();
+    const bool isDrawingProbes = mode > int(GlimmerProbeDebugMode::None) && mode < int(GlimmerProbeDebugMode::Max);
+    const bool isLoggingStats = g_cvGlimmerProbesLogStats.Get();
 
     if (!isDrawingProbes && !isLoggingStats)
     {
@@ -473,9 +473,9 @@ void GlimmerSystem::DebugDrawProbes(const Vec3f& viewerPosition)
     HYP_SCOPE;
     AssertOnThread(g_simThread);
 
-    const int mode = g_cvGlimmerSWRTDebugProbes.Get();
+    const int mode = g_cvGlimmerProbesDebug.Get();
 
-    if (mode <= int(GlimmerSWRTDebugProbes::None) || mode >= int(GlimmerSWRTDebugProbes::Max))
+    if (mode <= int(GlimmerProbeDebugMode::None) || mode >= int(GlimmerProbeDebugMode::Max))
     {
         return;
     }
@@ -485,9 +485,9 @@ void GlimmerSystem::DebugDrawProbes(const Vec3f& viewerPosition)
         return;
     }
 
-    const int levelFilter = g_cvGlimmerSWRTDebugProbesLevel.Get();
-    const float radius = g_cvGlimmerSWRTDebugProbesRadius.Get();
-    const float exposure = g_cvGlimmerSWRTDebugProbesExposure.Get();
+    const int levelFilter = g_cvGlimmerProbesDebugLevel.Get();
+    const float radius = g_cvGlimmerProbesDebugRadius.Get();
+    const float exposure = g_cvGlimmerProbesDebugExposure.Get();
 
     static const RenderableAttributeSet s_blockAttributes = MakeProbeBlockDebugAttributes();
 
@@ -537,12 +537,12 @@ void GlimmerSystem::DebugDrawProbes(const Vec3f& viewerPosition)
             }
 
             // idle probes hold nothing to show but where they are
-            if ((record.info.x & 0xFFu) == GPS_IDLE && GlimmerSWRTDebugProbes(mode) != GlimmerSWRTDebugProbes::Status)
+            if ((record.info.x & 0xFFu) == GPS_IDLE && GlimmerProbeDebugMode(mode) != GlimmerProbeDebugMode::Status)
             {
                 continue;
             }
 
-            dbg.sphere(position, 0.1f * spacing, GetGlimmerProbeDebugColor(GlimmerSWRTDebugProbes(mode), record, viewerPosition, exposure));
+            dbg.sphere(position, 0.1f * spacing, GetGlimmerProbeDebugColor(GlimmerProbeDebugMode(mode), record, viewerPosition, exposure));
         }
     }
 }

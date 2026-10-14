@@ -196,11 +196,8 @@ ShaderDefinitions "ShaderDefinitions" {
         ShaderDefinition "GenerateMipmap" {
             CS = "GenerateMipmap.hlsl"
         }
-        ShaderDefinition "GlimmerSWRTFootprintMask" {
-            CS = "Glimmer/SWRT/GlimmerSWRTFootprintMask.hlsl"
-        }
-        ShaderDefinition "GlimmerSWRTDebug" {
-            CS = "Glimmer/SWRT/GlimmerSWRTDebug.hlsl"
+        ShaderDefinition "GlimmerHeightfieldDebug" {
+            CS = "Glimmer/GlimmerHeightfieldDebug.hlsl"
         }
         ShaderDefinition "GlimmerGroundUpload" {
             CS = "Glimmer/GlimmerGroundUpload.hlsl"
@@ -211,17 +208,17 @@ ShaderDefinitions "ShaderDefinitions" {
         ShaderDefinition "GlimmerGroundCover" {
             CS = "Glimmer/GlimmerGroundCover.hlsl"
         }
-        ShaderDefinition "GlimmerSWRTProbeAlloc" {
-            CS = "Glimmer/SWRT/GlimmerSWRTProbeAlloc.hlsl"
+        ShaderDefinition "GlimmerProbeAlloc" {
+            CS = "Glimmer/Probes/GlimmerProbeAlloc.hlsl"
         }
-        ShaderDefinition "GlimmerSWRTProbeTrace" {
-            CS = "Glimmer/SWRT/GlimmerSWRTProbeTrace.hlsl"
+        ShaderDefinition "GlimmerProbeTrace" {
+            CS = "Glimmer/Probes/GlimmerProbeTrace.hlsl"
         }
-        ShaderDefinition "GlimmerSWRTProbeBlend" {
-            CS = "Glimmer/SWRT/GlimmerSWRTProbeBlend.hlsl"
+        ShaderDefinition "GlimmerProbeBlend" {
+            CS = "Glimmer/Probes/GlimmerProbeBlend.hlsl"
         }
-        ShaderDefinition "GlimmerSWRTProbeDebug" {
-            CS = "Glimmer/SWRT/GlimmerSWRTProbeDebug.hlsl"
+        ShaderDefinition "GlimmerProbeDebug" {
+            CS = "Glimmer/Probes/GlimmerProbeDebug.hlsl"
         }
         ShaderDefinition "GlimmerSpanSplat" {
             CS = "Glimmer/GlimmerSpanSplat.hlsl"
@@ -234,6 +231,21 @@ ShaderDefinitions "ShaderDefinitions" {
         }
         ShaderDefinition "GlimmerSHOccupancySplat" {
             CS = "Glimmer/SH/GlimmerSHOccupancySplat.hlsl"
+        }
+        ShaderDefinition "GlimmerBrickBuild" {
+            CS = "Glimmer/Bricks/GlimmerBrickBuild.hlsl"
+        }
+        ShaderDefinition "GlimmerBrickLight" {
+            CS = "Glimmer/Bricks/GlimmerBrickLight.hlsl"
+        }
+        ShaderDefinition "GlimmerBrickReflections" {
+            CS = "Glimmer/Bricks/GlimmerBrickReflections.hlsl"
+        }
+        ShaderDefinition "GlimmerBrickReflectionsHeightfield" {
+            CS = "Glimmer/Bricks/GlimmerBrickReflectionsHeightfield.hlsl"
+        }
+        ShaderDefinition "GlimmerBrickDebug" {
+            CS = "Glimmer/Bricks/GlimmerBrickDebug.hlsl"
         }
         ShaderDefinition "GlimmerIrradiance" {
             VS = "Glimmer/GlimmerIrradiance.hlsl"

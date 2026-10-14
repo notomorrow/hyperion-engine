@@ -9,15 +9,18 @@
 #include <Rendering/FullScreenPass.hpp>
 #include <Rendering/RenderTypes.hpp>
 
+#include <Core/Memory/UniquePtr.hpp>
+
 #include <Core/Math/Vector4.hpp>
 
 namespace Hyperion {
 
 class GBuffer;
+class GlimmerBrickReflections;
 
 struct GlimmerIrradianceShaderData
 {
-    Vec4u params; // x = 1 when the target holds Glimmer this frame, y = 1 when it holds a debug view in place of the irradiance, z = 1 when sky reflections use its specular visibility
+    Vec4u params; // x = 1 when the target holds Glimmer this frame, y = 1 when it holds a debug view in place of the irradiance, z = 1 when sky reflections use its specular visibility, w = 1 when the bricks have reflections
 };
 
 class GlimmerIrradiancePass final : public FullScreenPass
@@ -33,6 +36,7 @@ public:
 
     const GpuImageViewRef& GetSpecularImageView() const;
     const GpuImageViewRef& GetReflectionImageView() const;
+    const GpuImageViewRef& GetBrickReflectionImageView() const;
 
     virtual void CreateFramebuffer() override;
 
@@ -40,6 +44,7 @@ public:
 
 private:
     FramebufferRef m_halfFramebuffer;
+    UniquePtr<GlimmerBrickReflections> m_brickReflections;
     GlimmerIrradianceShaderData m_shaderData;
     uint32 m_frameIndex;
 };

@@ -9,7 +9,7 @@
 #include <Rendering/RenderTypes.hpp>
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
-#include <Rendering/Glimmer/SWRT/GlimmerSWRTProbeVolume.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeVolume.hpp>
 
 #include <Core/Containers/Array.hpp>
 #include <Core/Containers/FixedArray.hpp>

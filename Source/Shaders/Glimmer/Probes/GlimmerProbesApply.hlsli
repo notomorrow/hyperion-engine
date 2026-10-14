@@ -1,12 +1,12 @@
-#ifndef GLIMMER_SWRT_APPLY_HLSLI
-#define GLIMMER_SWRT_APPLY_HLSLI
+#ifndef GLIMMER_PROBES_APPLY_HLSLI
+#define GLIMMER_PROBES_APPLY_HLSLI
 
 #include "GlimmerProbeTypes.hlsli"
 
 #endif
 
-#if defined(GLIMMER_APPLY_WITH_SAMPLING) && !defined(GLIMMER_SWRT_APPLY_SAMPLING_HLSLI)
-#define GLIMMER_SWRT_APPLY_SAMPLING_HLSLI
+#if defined(GLIMMER_APPLY_WITH_SAMPLING) && !defined(GLIMMER_PROBES_APPLY_SAMPLING_HLSLI)
+#define GLIMMER_PROBES_APPLY_SAMPLING_HLSLI
 
 DECLARE_SRV(DeferredPass, GlimmerProbeBlockTableBuffer) StructuredBuffer<uint> glimmerProbeBlockTable;
 DECLARE_SRV(DeferredPass, GlimmerProbeSHBuffer) StructuredBuffer<float4> glimmerProbeSH;

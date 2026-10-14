@@ -9,8 +9,8 @@
 #include <Rendering/Glimmer/GlimmerPass.hpp>
 #include <Rendering/Glimmer/GlimmerTechnique.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
-#include <Rendering/Glimmer/GlimmerBLASCache.hpp>
-#include <Rendering/Glimmer/GlimmerTLAS.hpp>
+#include <Rendering/Glimmer/GlimmerTriangleCache.hpp>
+#include <Rendering/Glimmer/GlimmerSceneInstances.hpp>
 #include <Rendering/Glimmer/GlimmerSpanCache.hpp>
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
@@ -58,18 +58,16 @@ HYP_DECLARE_LOG_CHANNEL(Rendering);
 static EngineStatGpuTimer s_statGlimmerScene("Rendering/GPU/Glimmer/Scene");
 
 static EngineStatCounter<uint32> s_statGlimmerTerrainPatches("Rendering/Glimmer/TerrainPatches", false);
-static EngineStatCounter<uint32> s_statGlimmerInstances("Rendering/Glimmer/Instances", false);
 static EngineStatCounter<uint32> s_statGlimmerSpanInstances("Rendering/Glimmer/SpanInstances", false);
-static EngineStatCounter<uint32> s_statGlimmerResidentBLASes("Rendering/Glimmer/ResidentBLASes", false);
-static EngineStatCounter<uint32> s_statGlimmerBuildingBLASes("Rendering/Glimmer/BuildingBLASes", false);
-static EngineStatCounter<uint32> s_statGlimmerBLASesWaitingForRoom("Rendering/Glimmer/BLASesWaitingForRoom", false);
-static EngineStatCounter<uint32> s_statGlimmerBLASPoolTriangles("Rendering/Glimmer/BLASPoolTriangles", false);
-static EngineStatCounter<uint32> s_statGlimmerBLASPoolNodes("Rendering/Glimmer/BLASPoolNodes", false);
+static EngineStatCounter<uint32> s_statGlimmerResidentMeshes("Rendering/Glimmer/ResidentMeshes", false);
+static EngineStatCounter<uint32> s_statGlimmerBuildingMeshes("Rendering/Glimmer/BuildingMeshes", false);
+static EngineStatCounter<uint32> s_statGlimmerMeshesWaitingForRoom("Rendering/Glimmer/MeshesWaitingForRoom", false);
+static EngineStatCounter<uint32> s_statGlimmerPoolTriangles("Rendering/Glimmer/PoolTriangles", false);
 static EngineStatCounter<uint32> s_statGlimmerLodErrorScalePercent("Rendering/Glimmer/LodErrorScalePercent", false);
-static EngineStatCounter<uint32> s_statGlimmerTLASBuilds("Rendering/Glimmer/TLASBuilds", false);
-static EngineStatCounter<uint32> s_statGlimmerTLASEverywhereBuilds("Rendering/Glimmer/TLASEverywhereBuilds", false);
-static EngineStatCounter<uint32> s_statGlimmerTLASChanges("Rendering/Glimmer/TLASChanges", false);
-static EngineStatCounter<uint32> s_statGlimmerTLASLodOnlyChanges("Rendering/Glimmer/TLASLodOnlyChanges", false);
+static EngineStatCounter<uint32> s_statGlimmerSceneInstancesBuilds("Rendering/Glimmer/InstanceBuilds", false);
+static EngineStatCounter<uint32> s_statGlimmerSceneInstancesEverywhereBuilds("Rendering/Glimmer/InstanceEverywhereBuilds", false);
+static EngineStatCounter<uint32> s_statGlimmerSceneInstancesChanges("Rendering/Glimmer/InstanceChanges", false);
+static EngineStatCounter<uint32> s_statGlimmerSceneInstancesLodOnlyChanges("Rendering/Glimmer/InstanceLodOnlyChanges", false);
 
 #pragma region GlimmerScenePassData
 
@@ -81,9 +79,9 @@ GlimmerScenePassData::~GlimmerScenePassData()
 {
     technique.Reset();
 
-    if (tlas && blasCache)
+    if (sceneInstances && triangleCache)
     {
-        tlas->Release(*blasCache);
+        sceneInstances->Release(*triangleCache);
     }
 }
 
@@ -121,7 +119,7 @@ PassData* GlimmerPass::CreateViewPassData(View* view, PassDataExt&)
     {
         GlimmerScenePassData* passData = new GlimmerScenePassData();
         passData->view = MakeWeakRef(view);
-        passData->tlas = MakeUnique<GlimmerTLAS>();
+        passData->sceneInstances = MakeUnique<GlimmerSceneInstances>();
         passData->surfaceCache = MakeUnique<GlimmerSurfaceCache>();
         passData->spanCache = MakeUnique<GlimmerSpanCache>();
         passData->technique = MakeUnique<GlimmerTechnique>();
@@ -203,12 +201,12 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
     scene->region = region;
 
-    if (!scene->blasCache)
+    if (!scene->triangleCache)
     {
-        scene->blasCache = GlimmerBLASCache::AcquireShared();
+        scene->triangleCache = GlimmerTriangleCache::AcquireShared();
     }
 
-    scene->blasCache->UpdateOncePerFrame(frame);
+    scene->triangleCache->UpdateOncePerFrame(frame);
 
     GlimmerChannelState channelState;
     Array<GlimmerGroundUpload, GlimmerAllocator> groundUploads;
@@ -222,7 +220,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
     const Vec3f viewerPosition = channelState.hasViewer ? channelState.viewerPosition : region.GetCenter();
 
-    const bool tlasSwapped = scene->tlas->Update(frame, rpl, region, scene->technique->GetTracedRegion(region), viewerPosition, *scene->blasCache);
+    scene->sceneInstances->Update(frame, rpl, region, viewerPosition, *scene->triangleCache);
 
     GlimmerTechniqueUpdateContext context;
     context.frame = frame;
@@ -230,9 +228,8 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     context.skyProbe = renderSetup.envProbe;
     context.sceneProxies = &rpl;
     context.region = region;
-    context.blasCache = scene->blasCache.Get();
-    context.tlas = scene->tlas.Get();
-    context.tlasSwapped = tlasSwapped;
+    context.triangleCache = scene->triangleCache.Get();
+    context.sceneInstances = scene->sceneInstances.Get();
 
     if (const DeferredPassData* cloudsPassData = DynamicCast<DeferredPassData>(renderSetup.passData))
     {
@@ -262,7 +259,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         s_statGlimmerTerrainPatches = uint32(terrainPatches.Size());
 
         scene->surfaceCache->Update(frame, channelState, groundUploads.ToSpan(), terrainPatches.ToSpan());
-        scene->spanCache->Update(frame, channelState, *scene->tlas, *scene->blasCache, *scene->surfaceCache);
+        scene->spanCache->Update(frame, channelState, *scene->sceneInstances, *scene->triangleCache, *scene->surfaceCache);
 
         context.channelState = &channelState;
         context.channel = channel.Get();
@@ -273,23 +270,21 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
     scene->technique->Update(context);
 
-    const GlimmerBLASCacheStats blasStats = scene->blasCache->GetStats();
+    const GlimmerTriangleCacheStats triangleStats = scene->triangleCache->GetStats();
 
-    s_statGlimmerInstances = scene->tlas->GetNumInstances();
-    s_statGlimmerSpanInstances = scene->tlas->GetNumSpanInstances();
-    s_statGlimmerResidentBLASes = blasStats.numResident;
-    s_statGlimmerBuildingBLASes = blasStats.numBuilding + blasStats.numPendingUpload;
-    s_statGlimmerBLASesWaitingForRoom = blasStats.numWaitingForRoom;
-    s_statGlimmerBLASPoolTriangles = blasStats.trianglesUsed;
-    s_statGlimmerBLASPoolNodes = blasStats.nodesUsed;
-    s_statGlimmerLodErrorScalePercent = uint32(scene->blasCache->GetLodErrorScale() * 100.0f + 0.5f);
+    s_statGlimmerSpanInstances = scene->sceneInstances->GetNumSpanInstances();
+    s_statGlimmerResidentMeshes = triangleStats.numResident;
+    s_statGlimmerBuildingMeshes = triangleStats.numBuilding + triangleStats.numPendingUpload;
+    s_statGlimmerMeshesWaitingForRoom = triangleStats.numWaitingForRoom;
+    s_statGlimmerPoolTriangles = triangleStats.trianglesUsed;
+    s_statGlimmerLodErrorScalePercent = uint32(scene->triangleCache->GetLodErrorScale() * 100.0f + 0.5f);
 
-    const GlimmerTLASStats& tlasStats = scene->tlas->GetStats();
+    const GlimmerSceneInstancesStats& instancesStats = scene->sceneInstances->GetStats();
 
-    s_statGlimmerTLASBuilds = tlasStats.numBuilds;
-    s_statGlimmerTLASEverywhereBuilds = tlasStats.numEverywhereBuilds;
-    s_statGlimmerTLASChanges = tlasStats.numChanges;
-    s_statGlimmerTLASLodOnlyChanges = tlasStats.numLodOnlyChanges;
+    s_statGlimmerSceneInstancesBuilds = instancesStats.numBuilds;
+    s_statGlimmerSceneInstancesEverywhereBuilds = instancesStats.numEverywhereBuilds;
+    s_statGlimmerSceneInstancesChanges = instancesStats.numChanges;
+    s_statGlimmerSceneInstancesLodOnlyChanges = instancesStats.numLodOnlyChanges;
 }
 
 bool GlimmerPass::RenderDebugView(Frame* frame, const RenderSetup& renderSetup, Framebuffer* gbufferFramebuffer, GpuImageViewRef& outImageView)
@@ -313,7 +308,7 @@ bool GlimmerPass::RenderDebugView(Frame* frame, const RenderSetup& renderSetup, 
 
     GlimmerScenePassData* scene = GetSceneForWorld(renderSetup.world);
 
-    if (!scene || !scene->blasCache)
+    if (!scene || !scene->triangleCache)
     {
         return false;
     }
@@ -348,8 +343,8 @@ bool GlimmerPass::RenderDebugView(Frame* frame, const RenderSetup& renderSetup, 
     context.frame = frame;
     context.view = view;
     context.gbufferFramebuffer = gbufferFramebuffer;
-    context.blasCache = scene->blasCache.Get();
-    context.tlas = scene->tlas.Get();
+    context.triangleCache = scene->triangleCache.Get();
+    context.sceneInstances = scene->sceneInstances.Get();
     context.surfaceCache = scene->surfaceCache.Get();
     context.spanCache = scene->spanCache->GetSpansBuffer().IsValid() ? scene->spanCache.Get() : nullptr;
     context.outputImageView = RI.textureViewCache->GetOrCreate(viewData->debugTexture);
