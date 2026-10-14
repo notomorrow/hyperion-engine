@@ -64,7 +64,14 @@ DECLARE_SAMPLER(GlimmerBrickBuild, SamplerLinearMipmap) SamplerState glimmerMate
 #define COUNTER_DROPPED_NODES 5
 #define COUNTER_FREE_PAGES 6
 #define COUNTER_FREE_CARDS 7
-#define NUM_COUNTERS 8
+// the chunk being built, from its clear on: what it couldn't get, and what it holds
+#define COUNTER_CHUNK_FAILED_BRICKS 8
+#define COUNTER_CHUNK_FAILED_PAGES 9
+#define COUNTER_CHUNK_FAILED_CARDS 10
+#define COUNTER_CHUNK_BRICKS 11
+#define COUNTER_CHUNK_PAGES 12
+#define COUNTER_CHUNK_CARDS 13
+#define NUM_COUNTERS 16
 
 #define LIST_NODE_WORDS 3u
 #define MAX_LIST_STEPS 65536u
@@ -503,6 +510,11 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     {
         glimmerBrickCounters[COUNTER_LIST_NODES] = 0u;
         glimmerBrickCounters[COUNTER_BUILD_BRICKS] = 0u;
+
+        for (uint chunkCounter = COUNTER_CHUNK_FAILED_BRICKS; chunkCounter <= COUNTER_CHUNK_CARDS; chunkCounter++)
+        {
+            glimmerBrickCounters[chunkCounter] = 0u;
+        }
     }
 
     if (threadIndex >= BoxCells() * 3u)
@@ -625,9 +637,13 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         uint previous;
         InterlockedAdd(glimmerBrickCounters[COUNTER_FREE_BRICKS], 1u, previous);
         InterlockedAdd(glimmerBrickCounters[COUNTER_FAILED_BRICKS], 1u, previous);
+        InterlockedAdd(glimmerBrickCounters[COUNTER_CHUNK_FAILED_BRICKS], 1u, previous);
 
         return;
     }
+
+    uint chunkBricks;
+    InterlockedAdd(glimmerBrickCounters[COUNTER_CHUNK_BRICKS], 1u, chunkBricks);
 
     const uint brick = glimmerBrickFreeList[numFree - 1u];
 
@@ -698,6 +714,8 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         glimmerBrickTable[tableIndex] = GLIMMER_BRICK_NONE;
         glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_AXIS)] = GLIMMER_BRICK_NONE;
 
+        InterlockedAdd(glimmerBrickCounters[COUNTER_CHUNK_BRICKS], 0xFFFFFFFFu, freeSlot);
+
         return;
     }
 
@@ -708,12 +726,18 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     {
         InterlockedAdd(glimmerBrickCounters[COUNTER_FREE_PAGES], 0u - numPages, numFreePages);
 
+        uint previous;
+
         if (int(numFreePages) < int(numPages))
         {
-            uint previous;
             InterlockedAdd(glimmerBrickCounters[COUNTER_FREE_PAGES], numPages, previous);
+            InterlockedAdd(glimmerBrickCounters[COUNTER_CHUNK_FAILED_PAGES], numPages, previous);
 
             numFreePages = 0u;
+        }
+        else
+        {
+            InterlockedAdd(glimmerBrickCounters[COUNTER_CHUNK_PAGES], numPages, previous);
         }
     }
 
@@ -828,9 +852,13 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
                 uint previous;
                 InterlockedAdd(glimmerBrickCounters[COUNTER_FREE_CARDS], 1u, previous);
                 InterlockedAdd(glimmerBrickCounters[COUNTER_FAILED_BRICKS], 1u, previous);
+                InterlockedAdd(glimmerBrickCounters[COUNTER_CHUNK_FAILED_CARDS], 1u, previous);
 
                 continue;
             }
+
+            uint chunkCards;
+            InterlockedAdd(glimmerBrickCounters[COUNTER_CHUNK_CARDS], 1u, chunkCards);
 
             glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_CARDS) + cardSlot] = glimmerBrickCardFreeList[numFreeCards - 1u];
         }

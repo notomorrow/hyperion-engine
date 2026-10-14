@@ -38,6 +38,8 @@ static constexpr uint32 GlimmerBrickIndexStride = 1 + GlimmerBrickMaxPages + Gli
 
 static constexpr float GlimmerBrickCellSize = 2.0f;
 
+static constexpr uint32 GlimmerBrickMaxChunkBuildsPerFrame = 64;
+
 static constexpr uint32 GlimmerBrickChunksXZ = GlimmerBrickGridXZ / GlimmerBrickChunkCells;
 static constexpr uint32 GlimmerBrickChunksY = GlimmerBrickGridY / GlimmerBrickChunkCells;
 static constexpr uint32 GlimmerBrickChunks = GlimmerBrickChunksXZ * GlimmerBrickChunksY * GlimmerBrickChunksXZ;
@@ -77,7 +79,7 @@ public:
 
     bool RenderDebugView(const GlimmerDebugViewContext& context, GlimmerBrickDebugView debugView);
 
-    // a bit per chunk of the window, by its place in it, set while it is being built; origin.w is 0 without bricks, 1 with, 2 before any are built
+    // a bit per chunk of the window, by its place in it, set while it waits to be built (not while starved); origin.w is 0 without bricks, 1 with, 2 before any are built
     void GetBuildingChunks(Vec4i& outOrigin, Vec4u (&outBits)[16]) const;
 
     HYP_FORCE_INLINE bool IsReady() const
@@ -139,6 +141,17 @@ private:
         bool isDirty = false;
         bool hasGeometry = false;
         bool hasBricks = false;
+        bool isStarved = false; // failed for want of room nothing farther could give up; tried again once the window moves
+        uint32 buildSerial = 0;
+        uint32 numBricks = 0;
+        uint32 numPages = 0;
+        uint32 numCards = 0;
+    };
+
+    struct ChunkBuild
+    {
+        Vec3i coord;
+        uint32 buildSerial;
     };
 
     struct Box
@@ -167,6 +180,10 @@ private:
     void LightBricks(Frame* frame, const GlimmerTechnique* technique, uint32 firstBrick, uint32 numBricks, const Box* buildListBox);
     void Dispatch(Frame* frame, BuildPass pass, const Box& box, uint32 numThreads, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
     void InsertBarriers(Frame* frame, bool isForWriting);
+    void CopyBuildCounters(Frame* frame, const Chunk& chunk);
+    bool ReadBuildCounters(Frame* frame, const Vec3f& viewerPosition, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
+    bool MakeRoom(Frame* frame, const Chunk& requester, const Vec3f& viewerPosition, const Vec3u& needed, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
+    void ClearChunk(Frame* frame, Chunk& chunk, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache);
 
     static uint32 ChunkSlot(const Vec3i& coord);
 
@@ -184,6 +201,10 @@ private:
     GpuBufferRef m_listNodesBuffer;
     GpuBufferRef m_buildListBuffer;
 
+    FixedArray<GpuBufferRef, NumFramesInFlight> m_readbackBuffers;
+    FixedArray<FixedArray<ChunkBuild, GlimmerBrickMaxChunkBuildsPerFrame>, NumFramesInFlight> m_pendingBuilds;
+    FixedArray<uint32, NumFramesInFlight> m_numPendingBuilds;
+
     FixedArray<Chunk, GlimmerBrickChunks> m_chunks;
 
     Vec3i m_originChunk;
@@ -195,6 +216,9 @@ private:
     uint32 m_occupancyGeneration;
     uint32 m_numDirtyChunks;
     uint32 m_framesUnsettled;
+    uint32 m_numEvictions;
+    uint32 m_numStarved;
+    uint32 m_framesSincePoolLog;
     bool m_hasWindow;
 
     GlimmerBrickShaderData m_shaderData;

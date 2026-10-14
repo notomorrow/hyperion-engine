@@ -42,6 +42,8 @@
 
 #include <Core/Logging/Logger.hpp>
 
+#include <algorithm>
+
 namespace Hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Rendering);
@@ -66,13 +68,22 @@ static constexpr uint32 BrickGroupSize = 64;
 static constexpr uint32 BrickTableSize = GlimmerBrickGridXZ * GlimmerBrickGridY * GlimmerBrickGridXZ * 3;
 static constexpr uint32 BrickListNodeCapacity = 1u << 20;
 static constexpr uint32 BrickListNodeWords = 3;
-static constexpr uint32 BrickNumCounters = 8;
+// NOTE must match GlimmerBrickBuild.hlsl
+static constexpr uint32 BrickNumCounters = 16;
+static constexpr uint32 BrickCounterChunkFailedBricks = 8;
+static constexpr uint32 BrickCounterChunkFailedPages = 9;
+static constexpr uint32 BrickCounterChunkFailedCards = 10;
+static constexpr uint32 BrickCounterChunkBricks = 11;
+static constexpr uint32 BrickCounterChunkPages = 12;
+static constexpr uint32 BrickCounterChunkCards = 13;
+static constexpr uint32 BrickCountersBytes = BrickNumCounters * sizeof(uint32);
 static constexpr uint32 BrickColumnsPerBrick = GlimmerBrickSide * GlimmerBrickSide;
 static constexpr uint32 BrickTilesPerBrick = (GlimmerBrickSide / GlimmerBrickTile) * (GlimmerBrickSide / GlimmerBrickTile);
 static constexpr uint32 BrickChunkBricks = GlimmerBrickChunkCells * GlimmerBrickChunkCells * GlimmerBrickChunkCells * 3;
 
 static constexpr int32 WindowRecenterChunks = 2;
 static constexpr uint32 MaxEmptyChunkClearsPerFrame = 32;
+static constexpr uint32 PoolLogIntervalFrames = 300;
 static constexpr float ChunkSize = GlimmerBrickCellSize * float(GlimmerBrickChunkCells);
 static constexpr float ChangeMargin = 0.25f;
 static constexpr float ShadowBiasColumns = 0.5f;
@@ -117,12 +128,20 @@ GlimmerBrickWorld::GlimmerBrickWorld()
       m_occupancyGeneration(~0u),
       m_numDirtyChunks(0),
       m_framesUnsettled(0),
+      m_numEvictions(0),
+      m_numStarved(0),
+      m_framesSincePoolLog(0),
       m_hasWindow(false),
       m_shaderData {}
 {
     const float columnWidth = GlimmerBrickCellSize / float(GlimmerBrickSide);
 
     m_shaderData.params = Vec4f(GlimmerBrickCellSize, 1.0f / GlimmerBrickCellSize, columnWidth, 1.0f / columnWidth);
+
+    for (uint32& numPendingBuilds : m_numPendingBuilds)
+    {
+        numPendingBuilds = 0;
+    }
 }
 
 GlimmerBrickWorld::~GlimmerBrickWorld()
@@ -140,6 +159,11 @@ GlimmerBrickWorld::~GlimmerBrickWorld()
     EnqueueDeletion(std::move(m_listHeadsBuffer));
     EnqueueDeletion(std::move(m_listNodesBuffer));
     EnqueueDeletion(std::move(m_buildListBuffer));
+
+    for (GpuBufferRef& readbackBuffer : m_readbackBuffers)
+    {
+        EnqueueDeletion(std::move(readbackBuffer));
+    }
 }
 
 uint32 GlimmerBrickWorld::ChunkSlot(const Vec3i& coord)
@@ -356,6 +380,9 @@ void GlimmerBrickWorld::MoveWindow(Frame* frame, const Vec3i& originChunk, const
 
                 Chunk& chunk = m_chunks[ChunkSlot(coord)];
 
+                // what was starved may fit now that a slab has left
+                chunk.isStarved = false;
+
                 if (overlapsOld && chunk.coord == coord)
                 {
                     continue;
@@ -365,6 +392,10 @@ void GlimmerBrickWorld::MoveWindow(Frame* frame, const Vec3i& originChunk, const
                 chunk.isBuilt = false;
                 chunk.hasBricks = false;
                 chunk.isDirty = true;
+                chunk.buildSerial++;
+                chunk.numBricks = 0;
+                chunk.numPages = 0;
+                chunk.numCards = 0;
             }
         }
     }
@@ -393,6 +424,7 @@ void GlimmerBrickWorld::MarkSceneChanges(const GlimmerTLAS& tlas)
         if (isEverywhere)
         {
             chunk.isDirty = true;
+            chunk.isStarved = false;
 
             continue;
         }
@@ -402,12 +434,16 @@ void GlimmerBrickWorld::MarkSceneChanges(const GlimmerTLAS& tlas)
 
         for (const GlimmerSceneChange& change : changes)
         {
-            if (chunk.isDirty || (change.isLodOnly && skipLodOnlyChanges))
+            if ((chunk.isDirty && !chunk.isStarved) || (change.isLodOnly && skipLodOnlyChanges))
             {
                 continue;
             }
 
-            chunk.isDirty = change.bounds.Overlaps(BoundingBox(chunkMin, chunkMax));
+            if (change.bounds.Overlaps(BoundingBox(chunkMin, chunkMax)))
+            {
+                chunk.isDirty = true;
+                chunk.isStarved = false;
+            }
         }
     }
 }
@@ -474,6 +510,191 @@ void GlimmerBrickWorld::BuildChunk(Frame* frame, Chunk& chunk, const GlimmerTLAS
     chunk.isBuilt = true;
     chunk.isDirty = false;
     chunk.hasBricks = true;
+    chunk.buildSerial++;
+
+    CopyBuildCounters(frame, chunk);
+}
+
+void GlimmerBrickWorld::ClearChunk(Frame* frame, Chunk& chunk, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache)
+{
+    const int32 chunkCells = int32(GlimmerBrickChunkCells);
+
+    Box box;
+    box.min = Vec3i(chunk.coord.x * chunkCells, chunk.coord.y * chunkCells, chunk.coord.z * chunkCells);
+    box.extent = Vec3i(chunkCells, chunkCells, chunkCells);
+
+    Dispatch(frame, BuildPass::Clear, box, BrickChunkBricks, tlas, blasCache);
+
+    chunk.hasBricks = false;
+    chunk.numBricks = 0;
+    chunk.numPages = 0;
+    chunk.numCards = 0;
+}
+
+void GlimmerBrickWorld::CopyBuildCounters(Frame* frame, const Chunk& chunk)
+{
+    const uint32 slot = frame->GetFrameIndex() % NumFramesInFlight;
+
+    uint32& numPending = m_numPendingBuilds[slot];
+
+    if (numPending == GlimmerBrickMaxChunkBuildsPerFrame)
+    {
+        return;
+    }
+
+    if (!m_readbackBuffers[slot].IsValid())
+    {
+        m_readbackBuffers[slot] = RI.MakeGpuBuffer(GpuBufferType::ReadbackBuffer, GlimmerBrickMaxChunkBuildsPerFrame * BrickCountersBytes);
+        m_readbackBuffers[slot]->SetIsCpuAccessible(true);
+        Check(m_readbackBuffers[slot]->Create());
+    }
+
+    CommandRecorder& cr = frame->cr;
+
+    cr << InsertBarrier(m_countersBuffer.Get(), ResourceState::CopySrc, ShaderModuleType::Compute);
+    cr << InsertBarrier(m_readbackBuffers[slot].Get(), ResourceState::CopyDst, ShaderModuleType::Compute);
+    cr << CopyBuffer(m_countersBuffer.Get(), m_readbackBuffers[slot].Get(), 0, numPending * BrickCountersBytes, BrickCountersBytes);
+    cr << InsertBarrier(m_countersBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+
+    m_pendingBuilds[slot][numPending++] = ChunkBuild { chunk.coord, chunk.buildSerial };
+}
+
+bool GlimmerBrickWorld::ReadBuildCounters(Frame* frame, const Vec3f& viewerPosition, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache)
+{
+    const uint32 slot = frame->GetFrameIndex() % NumFramesInFlight;
+    const uint32 numPending = m_numPendingBuilds[slot];
+
+    m_numPendingBuilds[slot] = 0;
+
+    // this frame slot's last submission has finished by now, so what it copied can be read
+    if (numPending == 0)
+    {
+        return false;
+    }
+
+    FixedArray<uint32, GlimmerBrickMaxChunkBuildsPerFrame * BrickNumCounters> counters;
+
+    m_readbackBuffers[slot]->Invalidate();
+    m_readbackBuffers[slot]->Read(numPending * BrickCountersBytes, counters.Data());
+
+    bool hasWritten = false;
+
+    for (uint32 buildIndex = 0; buildIndex < numPending; buildIndex++)
+    {
+        const ChunkBuild& build = m_pendingBuilds[slot][buildIndex];
+        Chunk& chunk = m_chunks[ChunkSlot(build.coord)];
+
+        // built again, cleared or gone from the window since
+        if (chunk.coord != build.coord || chunk.buildSerial != build.buildSerial || chunk.isDirty)
+        {
+            continue;
+        }
+
+        const uint32* record = counters.Data() + size_t(buildIndex) * BrickNumCounters;
+
+        chunk.numBricks = record[BrickCounterChunkBricks];
+        chunk.numPages = record[BrickCounterChunkPages];
+        chunk.numCards = record[BrickCounterChunkCards];
+
+        const Vec3u needed = Vec3u(record[BrickCounterChunkFailedBricks], record[BrickCounterChunkFailedPages], record[BrickCounterChunkFailedCards]);
+
+        if (needed.x == 0 && needed.y == 0 && needed.z == 0)
+        {
+            continue;
+        }
+
+        // it keeps what it got until it's built again
+        chunk.isDirty = true;
+
+        if (MakeRoom(frame, chunk, viewerPosition, needed, tlas, blasCache))
+        {
+            hasWritten = true;
+        }
+        else
+        {
+            chunk.isStarved = true;
+            m_numStarved++;
+        }
+    }
+
+    return hasWritten;
+}
+
+static float ChunkDistance(const Vec3i& coord, const Vec3f& viewerPosition)
+{
+    const Vec3f center = (Vec3f(float(coord.x), float(coord.y), float(coord.z)) + Vec3f(0.5f)) * ChunkSize;
+
+    return center.Distance(viewerPosition);
+}
+
+bool GlimmerBrickWorld::MakeRoom(Frame* frame, const Chunk& requester, const Vec3f& viewerPosition, const Vec3u& needed, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache)
+{
+    struct Candidate
+    {
+        Chunk* chunk;
+        float distance;
+    };
+
+    // only from chunks a chunk farther, so two at about the same distance don't take turns
+    const float minDistance = ChunkDistance(requester.coord, viewerPosition) + ChunkSize;
+
+    Array<Candidate, GlimmerTempAllocator> candidates;
+    candidates.Reserve(m_chunks.Size());
+
+    for (Chunk& chunk : m_chunks)
+    {
+        if (!chunk.hasBricks || (chunk.numBricks == 0 && chunk.numPages == 0 && chunk.numCards == 0))
+        {
+            continue;
+        }
+
+        const float distance = ChunkDistance(chunk.coord, viewerPosition);
+
+        if (distance > minDistance)
+        {
+            candidates.PushBack(Candidate { &chunk, distance });
+        }
+    }
+
+    std::sort(candidates.Begin(), candidates.End(), [](const Candidate& lhs, const Candidate& rhs)
+        {
+            return lhs.distance > rhs.distance;
+        });
+
+    Vec3u freed = Vec3u::Zero();
+    size_t numVictims = 0;
+
+    const auto isEnough = [&]()
+    {
+        return freed.x >= needed.x && freed.y >= needed.y && freed.z >= needed.z;
+    };
+
+    while (numVictims < candidates.Size() && !isEnough())
+    {
+        const Chunk& victim = *candidates[numVictims++].chunk;
+
+        freed += Vec3u(victim.numBricks, victim.numPages, victim.numCards);
+    }
+
+    if (!isEnough())
+    {
+        return false;
+    }
+
+    // given up until the window moves, rather than built again to push out the next one along
+    for (size_t victimIndex = 0; victimIndex < numVictims; victimIndex++)
+    {
+        Chunk& victim = *candidates[victimIndex].chunk;
+
+        ClearChunk(frame, victim, tlas, blasCache);
+
+        victim.isDirty = true;
+        victim.isStarved = true;
+    }
+
+    m_numEvictions += uint32(numVictims);
+
+    return true;
 }
 
 void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerTLAS& tlas, const GlimmerBLASCache& blasCache, const GlimmerTechnique* technique)
@@ -522,6 +743,12 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
         m_occupancyGeneration = tlas.GetGeneration();
     }
 
+    // a chunk that ran out of room gets it from chunks farther away, or waits
+    if (ReadBuildCounters(frame, viewerPosition, tlas, blasCache))
+    {
+        hasWritten = true;
+    }
+
     // a chunk no span instance reaches is done without a build, and only cleared when it had bricks
     uint32 numClears = 0;
 
@@ -539,13 +766,7 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
                 continue;
             }
 
-            const int32 chunkCells = int32(GlimmerBrickChunkCells);
-
-            Box box;
-            box.min = Vec3i(chunk.coord.x * chunkCells, chunk.coord.y * chunkCells, chunk.coord.z * chunkCells);
-            box.extent = Vec3i(chunkCells, chunkCells, chunkCells);
-
-            Dispatch(frame, BuildPass::Clear, box, BrickChunkBricks, tlas, blasCache);
+            ClearChunk(frame, chunk, tlas, blasCache);
 
             numClears++;
             hasWritten = true;
@@ -553,10 +774,10 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
 
         chunk.isBuilt = true;
         chunk.isDirty = false;
-        chunk.hasBricks = false;
+        chunk.isStarved = false;
     }
 
-    const int32 numBuilds = MathUtil::Clamp(g_cvGlimmerBricksChunksPerFrame.Get(), 1, 64);
+    const int32 numBuilds = MathUtil::Clamp(g_cvGlimmerBricksChunksPerFrame.Get(), 1, int32(GlimmerBrickMaxChunkBuildsPerFrame));
 
     for (int32 buildIndex = 0; buildIndex < numBuilds; buildIndex++)
     {
@@ -565,7 +786,7 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
 
         for (Chunk& chunk : m_chunks)
         {
-            if (!chunk.isDirty || !chunk.hasGeometry)
+            if (!chunk.isDirty || !chunk.hasGeometry || chunk.isStarved)
             {
                 continue;
             }
@@ -596,7 +817,7 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
 
     for (const Chunk& chunk : m_chunks)
     {
-        m_numDirtyChunks += chunk.isDirty ? 1 : 0;
+        m_numDirtyChunks += chunk.isDirty && !chunk.isStarved ? 1 : 0;
     }
 
     if (IsSettled() && !wasSettled)
@@ -605,6 +826,17 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
     }
 
     m_framesUnsettled = IsSettled() ? 0 : m_framesUnsettled + 1;
+
+    m_framesSincePoolLog++;
+
+    if ((m_numEvictions != 0 || m_numStarved != 0) && m_framesSincePoolLog >= PoolLogIntervalFrames)
+    {
+        HYP_LOG(Rendering, Warning, "Glimmer: brick pools full; {} chunks given up for nearer ones, {} left without room", m_numEvictions, m_numStarved);
+
+        m_numEvictions = 0;
+        m_numStarved = 0;
+        m_framesSincePoolLog = 0;
+    }
 
     if (hasWritten)
     {
@@ -725,7 +957,7 @@ void GlimmerBrickWorld::GetBuildingChunks(Vec4i& outOrigin, Vec4u (&outBits)[16]
 
     for (const Chunk& chunk : m_chunks)
     {
-        if (chunk.isBuilt && !chunk.isDirty)
+        if ((chunk.isBuilt && !chunk.isDirty) || chunk.isStarved)
         {
             continue;
         }

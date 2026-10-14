@@ -100,3 +100,4 @@ Tools/*/build/**/*
 Data/**/*
 
 .vscode/c_cpp_properties.json
+.opencode
