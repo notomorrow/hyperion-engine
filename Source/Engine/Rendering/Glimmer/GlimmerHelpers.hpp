@@ -38,6 +38,8 @@ static constexpr float GlimmerSkyMaxLuminance = 64.0f;
 // how far the probe and SH voxel rays look before taking the sky
 static constexpr float GlimmerMaxRayDistance = 2000.0f;
 
+static constexpr float GlimmerDefaultGroundAlbedo = 0.25f;
+
 static constexpr uint32 GlimmerMaxLightmapPages = 4;
 
 static constexpr uint32 GlimmerLightTerms = 9;

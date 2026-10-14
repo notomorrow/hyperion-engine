@@ -98,6 +98,21 @@ static constexpr uint32 MaxRelocations = 2;
 
 static constexpr float NearFieldReachSpacings = 8.0f;
 
+static constexpr float BlockMarginSpacings = 1.0f;  // how far around a block solids make it wanted
+static constexpr float MinHeightAboveGround = 0.5f; // solids lower than this on the ground (roads, rocks) want no probes
+static constexpr uint32 BlockReleaseFrames = 60;    // frames an unwanted block keeps its probes
+static constexpr uint32 InsideRetryInterval = 64;   // updates between checks on probes stuck inside solids
+static constexpr uint32 ClassifyPeriod = 8;         // frames between looks at the solids around a block
+static constexpr float RelocateMargin = 0.3f;       // how far past a back face a probe inside a solid moves (m)
+
+static constexpr float HistorySeconds = 1.0f;
+static constexpr float HistorySecondsChanging = 0.25f;
+static constexpr uint32 MinHistory = 16;
+static constexpr uint32 MinHistoryChanging = 4;
+
+static constexpr uint32 SleepMaxInterval = 3;
+static constexpr uint32 SafetyRefreshSeconds = 0;
+
 struct GlimmerProbeAllocConstants
 {
     GlimmerProbeVolumeShaderData volume;
@@ -409,9 +424,7 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
 
     const uint32 probesPerFrame = MathUtil::Clamp(uint32(MathUtil::Max(g_cvGlimmerProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays, 1u, m_maxProbesPerFrame);
 
-    const uint32 sleepMaxInterval = g_cvGlimmerProbesSleep.Get()
-        ? uint32(MathUtil::Clamp(g_cvGlimmerProbesSleepMaxInterval.Get(), 0, 3))
-        : 0u;
+    const uint32 sleepMaxInterval = g_cvGlimmerProbesSleep.Get() ? SleepMaxInterval : 0u;
 
     m_shaderData.info = Vec4u(GlimmerProbeLevels, GlimmerProbeRays, m_frameIndex, m_shaderData.info.w);
     m_shaderData.params = Vec4f(
@@ -423,7 +436,7 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
         float(MathUtil::Clamp(g_cvGlimmerProbesNearFieldCascades.Get(), 0, int(GlimmerProbeLevels))),
         NearFieldReachSpacings,
         hasBricks ? 1.0f : 0.0f,
-        MathUtil::Clamp(g_cvGlimmerGroundAlbedo.Get(), 0.0f, 1.0f));
+        GlimmerDefaultGroundAlbedo);
 
     const GlimmerGroundShaderData& groundShaderData = inputs.surfaceCache->GetGroundShaderData();
     const GpuImageViewRef& groundImageView = inputs.surfaceCache->GetGroundImageView();
@@ -437,13 +450,13 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
         constants.occupancy = *inputs.occupancy;
         constants.budget = Vec4u(
             probesPerFrame,
-            uint32(MathUtil::Max(g_cvGlimmerProbesBlockReleaseFrames.Get(), 0)),
-            uint32(MathUtil::Max(g_cvGlimmerProbesInsideRetryInterval.Get(), 1)),
+            BlockReleaseFrames,
+            InsideRetryInterval,
             uint32(MathUtil::Clamp(g_cvGlimmerProbesPoolBlocks.Get(), 1, int(m_poolBlocks))));
         constants.params = Vec4f(
-            MathUtil::Clamp(g_cvGlimmerProbesBlockMargin.Get(), 0.0f, 2.0f),
-            g_cvGlimmerProbesMinHeightAboveGround.Get(),
-            float(MathUtil::Max(g_cvGlimmerProbesClassifyPeriod.Get(), 1)),
+            BlockMarginSpacings,
+            MinHeightAboveGround,
+            float(ClassifyPeriod),
             0.0f);
         constants.viewer = Vec4f(inputs.viewerPosition.x, inputs.viewerPosition.y, inputs.viewerPosition.z, 0.0f);
 
@@ -461,20 +474,17 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
             }
             else
             {
-                if (g_cvGlimmerSkipLodOnlyChanges.Get())
+                GlimmerSceneChanges worldChanges;
+
+                for (const GlimmerSceneChange& change : changes)
                 {
-                    GlimmerSceneChanges worldChanges;
-
-                    for (const GlimmerSceneChange& change : changes)
+                    if (!change.isLodOnly)
                     {
-                        if (!change.isLodOnly)
-                        {
-                            worldChanges.Add(change);
-                        }
+                        worldChanges.Add(change);
                     }
-
-                    changes = std::move(worldChanges);
                 }
+
+                changes = std::move(worldChanges);
 
                 changes.Quantize(MaxInstanceBoxes);
 
@@ -515,7 +525,7 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
             wakeEverything ? 1u : 0u,
             numChangedBoxes,
             sleepMaxInterval,
-            uint32(MathUtil::Max(g_cvGlimmerProbesSafetyRefreshSeconds.Get(), 0)));
+            SafetyRefreshSeconds);
 
         // a probe whose rays could reach bricks still being built keeps what it has until they are
         if (inputs.brickWorld)
@@ -759,20 +769,16 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
         GlimmerProbeBlendConstants constants {};
         constants.volume = m_shaderData;
 
-        const uint32 minHistory = uint32(MathUtil::Clamp(g_cvGlimmerProbesMinHistory.Get(), 1, 255));
-
         constants.dispatch = Vec4u(
             probesPerFrame,
             MaxRelocations,
-            minHistory,
-            uint32(MathUtil::Clamp(g_cvGlimmerProbesMinHistoryChanging.Get(), 0, int(minHistory))));
-
-        const float historySeconds = MathUtil::Max(g_cvGlimmerProbesHistorySeconds.Get(), 0.0f);
+            MinHistory,
+            MinHistoryChanging);
 
         constants.params = Vec4f(
-            historySeconds,
-            MathUtil::Clamp(g_cvGlimmerProbesHistorySecondsChanging.Get(), 0.0f, historySeconds),
-            MathUtil::Max(g_cvGlimmerProbesRelocateMargin.Get(), 0.0f),
+            HistorySeconds,
+            HistorySecondsChanging,
+            RelocateMargin,
             float(sleepMaxInterval));
         constants.light = inputs.light;
 

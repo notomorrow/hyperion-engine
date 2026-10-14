@@ -70,6 +70,14 @@ static constexpr uint32 BrickGroupSize = 64;
 static constexpr uint32 BrickTableSize = GlimmerBrickGridXZ * GlimmerBrickGridY * GlimmerBrickGridXZ * 3;
 static constexpr uint32 BrickListNodeCapacity = 1u << 20;
 static constexpr uint32 BrickListNodeWords = 3;
+
+static constexpr uint32 InitialPoolBricks = 4096;
+static constexpr uint32 InitialPoolPages = 16384;
+static constexpr uint32 InitialPoolCards = 16384;
+static constexpr uint32 RelightBricksPerFrame = 128;
+
+static_assert(InitialPoolBricks <= GlimmerBrickMaxPoolBricks && InitialPoolPages <= GlimmerBrickMaxPoolPages && InitialPoolCards <= GlimmerBrickMaxPoolCards);
+
 // NOTE must match GlimmerBrickBuild.hlsl
 static constexpr uint32 BrickNumCounters = 16;
 static constexpr uint32 BrickCounterChunkFailedBricks = 8;
@@ -213,10 +221,7 @@ void GlimmerBrickWorld::CreateResources()
     m_listNodesBuffer = CreateBrickBuffer(size_t(BrickListNodeCapacity) * BrickListNodeWords, NAME("GlimmerBrickListNodes"));
     m_buildListBuffer = CreateBrickBuffer(BrickChunkBricks, NAME("GlimmerBrickBuildList"));
 
-    CreatePoolResources(
-        uint32(MathUtil::Clamp(g_cvGlimmerBricksPoolBricks.Get(), 64, int32(GlimmerBrickMaxPoolBricks))),
-        uint32(MathUtil::Clamp(g_cvGlimmerBricksPoolPages.Get(), 256, int32(GlimmerBrickMaxPoolPages))),
-        uint32(MathUtil::Clamp(g_cvGlimmerBricksPoolCards.Get(), 64, int32(GlimmerBrickMaxPoolCards))));
+    CreatePoolResources(InitialPoolBricks, InitialPoolPages, InitialPoolCards);
 }
 
 void GlimmerBrickWorld::CreatePoolResources(uint32 poolBricks, uint32 poolPages, uint32 poolCards)
@@ -623,8 +628,6 @@ void GlimmerBrickWorld::MarkSceneChanges(const GlimmerSceneInstances& sceneInsta
     GlimmerSceneChanges changes;
 
     const bool isEverywhere = m_seenGeneration == ~0u || !sceneInstances.GetChangesSince(m_seenGeneration, changes);
-    const bool skipLodOnlyChanges = g_cvGlimmerSkipLodOnlyChanges.Get();
-
     m_seenGeneration = generation;
 
     for (Chunk& chunk : m_chunks)
@@ -642,7 +645,7 @@ void GlimmerBrickWorld::MarkSceneChanges(const GlimmerSceneInstances& sceneInsta
 
         for (const GlimmerSceneChange& change : changes)
         {
-            if ((chunk.isDirty && !chunk.isStarved) || (change.isLodOnly && skipLodOnlyChanges))
+            if ((chunk.isDirty && !chunk.isStarved) || change.isLodOnly)
             {
                 continue;
             }
@@ -1087,7 +1090,7 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
     const bool isCardLightRead = g_cvGlimmerBricksReflections.Get() || m_framesSinceLightView < LightViewFrames;
 
     const uint32 numRelightBricks = isCardLightRead
-        ? MathUtil::Min(uint32(MathUtil::Clamp(g_cvGlimmerBricksRelightBricks.Get(), 0, 4096)), m_poolBricks)
+        ? MathUtil::Min(RelightBricksPerFrame, m_poolBricks)
         : 0;
 
     if (numRelightBricks != 0)

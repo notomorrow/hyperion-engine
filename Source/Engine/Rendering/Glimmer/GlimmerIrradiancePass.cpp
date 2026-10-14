@@ -179,7 +179,7 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
 
     const bool isActive = technique && technique->IsReady();
 
-    m_shaderData.params = Vec4u(isActive ? 1u : 0u, isActive && isDebugView ? 1u : 0u, g_cvGlimmerSpecularOcclusion.Get() ? 1u : 0u, 0);
+    m_shaderData.params = Vec4u(isActive ? 1u : 0u, isActive && isDebugView ? 1u : 0u, 1u, 0);
 
     const GlimmerScenePassData* brickScene = g_cvGlimmerBricksEnabled.Get() && glimmerPass ? glimmerPass->GetSceneForWorld(renderSetup.world) : nullptr;
 

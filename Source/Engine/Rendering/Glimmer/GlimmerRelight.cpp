@@ -9,7 +9,6 @@
 #include <Rendering/Glimmer/GlimmerRelight.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/GlimmerSpanCache.hpp>
-#include <Rendering/Glimmer/GlimmerCVars.hpp>
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/Texture.hpp>
@@ -24,6 +23,7 @@
 namespace Hyperion {
 
 static constexpr uint32 RelightTexelsPerFrame = 4096;
+static constexpr int32 IdleRefreshTexelsPerFrame = 512;
 static constexpr size_t MaxPendingRects = 16;
 
 static constexpr uint32 EchoFrames[] = { 32, 128 };
@@ -337,19 +337,13 @@ void GlimmerRelight::Schedule(
         }
     }
 
-    const bool runOnChange = g_cvGlimmerRunOnChange.Get();
     const int32 rowTexels = int32(GlimmerGroundResolution);
 
-    if (runOnChange)
-    {
-        const int32 rate = MathUtil::Max(g_cvGlimmerRelightTexels.Get(), 0);
+    m_refreshBudget = MathUtil::Min(m_refreshBudget + IdleRefreshTexelsPerFrame, MathUtil::Max(IdleRefreshTexelsPerFrame, rowTexels) * 2);
 
-        m_refreshBudget = MathUtil::Min(m_refreshBudget + rate, MathUtil::Max(rate, rowTexels) * 2);
-
-        budget = m_refreshBudget >= rowTexels
-            ? m_refreshBudget
-            : 0;
-    }
+    budget = m_refreshBudget >= rowTexels
+        ? m_refreshBudget
+        : 0;
 
     const int32 refreshBudget = budget;
 
@@ -396,10 +390,7 @@ void GlimmerRelight::Schedule(
         attempt = 0;
     }
 
-    if (runOnChange)
-    {
-        m_refreshBudget -= refreshBudget - budget;
-    }
+    m_refreshBudget -= refreshBudget - budget;
 }
 
 void GlimmerRelight::OnDispatched()

@@ -104,7 +104,7 @@ void GetGlimmerScrolledRects(const GlimmerTexelRect& oldWindow, const GlimmerTex
 
 float GetGlimmerRegionMinRadius()
 {
-    return MathUtil::Max(g_cvGlimmerRegionMinRadius.Get(), 8.0f);
+    return 96.0f;
 }
 
 float GetGlimmerSHCascadeSpacing(uint32 cascadeIndex)
@@ -313,19 +313,18 @@ void GetGlimmerLightShaderData(EnvProbe* skyProbe, GlimmerLightShaderData& outLi
 
     constexpr float WindowOfTerm[9] = { 1.0f, 0.5f, 0.5f, 0.5f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
 
-    const float window = MathUtil::Clamp(g_cvGlimmerSunSHWindow.Get(), 0.0f, 1.0f);
-
     for (uint32 term = 0; term < GlimmerLightTerms; term++)
     {
-        const float damping = MathUtil::Lerp(1.0f, WindowOfTerm[term], window);
-
-        outLight.bounceWeights[term] = outLight.directWeights[term] + Vec4f(sunIrradiance * (sunBasis[term] * damping), 0.0f);
+        outLight.bounceWeights[term] = outLight.directWeights[term] + Vec4f(sunIrradiance * (sunBasis[term] * WindowOfTerm[term]), 0.0f);
     }
 }
 
 float GetGlimmerFoliageExtinction()
 {
-    return MathUtil::Max(g_cvGlimmerFoliageExtinction.Get() * MathUtil::Clamp(g_cvGlimmerFoliageClumping.Get(), 0.0f, 1.0f), 0.0f);
+    // leaves bunch up in crowns with gaps between them, so a texel's leaf area blocks less than if it were spread evenly
+    constexpr float FoliageClumping = 0.7f;
+
+    return MathUtil::Max(g_cvGlimmerFoliageExtinction.Get() * FoliageClumping, 0.0f);
 }
 
 void CollectGlimmerLightmapPages(RenderProxyList& rpl, GlimmerLightmapPages& outPages)

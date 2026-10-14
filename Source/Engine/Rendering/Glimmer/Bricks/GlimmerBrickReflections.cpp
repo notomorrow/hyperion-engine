@@ -360,7 +360,7 @@ void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer,
 
     const Vec2u halfExtent = Vec2u((extent.x + 1) / 2, (extent.y + 1) / 2);
     const bool isDebugView = g_cvGlimmerBricksReflectionsView.Get() != 0;
-    const bool addsUp = g_cvGlimmerBricksReflectionsTemporal.Get() && !isDebugView;
+    const bool addsUp = !isDebugView;
     const bool counts = g_cvGlimmerBricksReflectionsStats.Get();
 
     ReadCounts(frame);
@@ -370,7 +370,7 @@ void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer,
     constants.dimensions = Vec4u(extent.x, extent.y, halfExtent.x, halfExtent.y);
     constants.params = Vec4f(RayBiasColumns, LobeAlphas, RayDistance, MatteRoughness);
     constants.aim = Vec4f(AimAlphas, Fireflies, DitherReachColumns, 0.0f);
-    constants.frame = Vec4u(m_frame, g_cvGlimmerBricksReflectionsSlots.Get() ? 1u : 0u, addsUp ? SlotFrames : 0u, addsUp ? RayFrames : 0u);
+    constants.frame = Vec4u(m_frame, 1u, addsUp ? SlotFrames : 0u, addsUp ? RayFrames : 0u);
     constants.limits = Vec4u(m_numCrossings, NumBlocks, RequestBudget, m_hasHistory && addsUp ? 0u : 1u);
     constants.debug = Vec4u(isDebugView ? 1u : 0u, counts ? 1u : 0u, 0, 0);
 
@@ -546,7 +546,6 @@ void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer,
     GlimmerRelight* relight = technique ? technique->GetRelight() : nullptr;
 
     const bool tracesHeightfield = !isDebugView
-        && g_cvGlimmerBricksReflectionsHeightfield.Get()
         && technique && technique->IsReady()
         && scene->surfaceCache && scene->spanCache && relight
         && scene->surfaceCache->GetGroundImageView().IsValid()
