@@ -112,6 +112,11 @@ public:
 
     bool RenderDebugView(const GlimmerDebugViewContext& context);
 
+    HYP_FORCE_INLINE const GlimmerBrickWorld* GetBrickWorld() const
+    {
+        return m_brickWorld.Get();
+    }
+
 private:
     UniquePtr<GlimmerFootprintMask> m_footprintMask;
     UniquePtr<GlimmerSWRTProbeVolume> m_probeVolume;

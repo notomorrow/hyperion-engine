@@ -241,6 +241,9 @@ ShaderDefinitions "ShaderDefinitions" {
         ShaderDefinition "GlimmerBrickLight" {
             CS = "Glimmer/Bricks/GlimmerBrickLight.hlsl"
         }
+        ShaderDefinition "GlimmerBrickReflections" {
+            CS = "Glimmer/Bricks/GlimmerBrickReflections.hlsl"
+        }
         ShaderDefinition "GlimmerBrickDebug" {
             CS = "Glimmer/Bricks/GlimmerBrickDebug.hlsl"
         }

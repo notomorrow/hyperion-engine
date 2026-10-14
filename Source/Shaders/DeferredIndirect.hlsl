@@ -132,12 +132,13 @@ DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
     Camera camera;
     EnvProbe skyProbe;
     SkyVisibilityCapture skyVisibilityCapture;
-    uint4 glimmerParams; // GlimmerIrradianceShaderData: x = 1 when GlimmerIrradianceTexture holds Glimmer, y = 1 when it holds a debug view, z = 1 when sky reflections use GlimmerSpecularTexture
+    uint4 glimmerParams; // GlimmerIrradianceShaderData: x = 1 when GlimmerIrradianceTexture holds Glimmer, y = 1 when it holds a debug view, z = 1 when sky reflections use GlimmerSpecularTexture, w = 1 when GlimmerBrickReflectionTexture holds reflections
 };
 
 DECLARE_SRV(DeferredPass, GlimmerIrradianceTexture) Texture2D GlimmerIrradianceTexture;
 DECLARE_SRV(DeferredPass, GlimmerSpecularTexture) Texture2D GlimmerSpecularTexture;
 DECLARE_SRV(DeferredPass, GlimmerReflectionTexture) Texture2D GlimmerReflectionTexture;
+DECLARE_SRV(DeferredPass, GlimmerBrickReflectionTexture) Texture2D GlimmerBrickReflectionTexture; // rgb = radiance times a, a = how much of the reflection is the bricks'
 
 // top-down depth capture of everything that blocks the sky, from DynamicSkySystem
 DECLARE_SRV(DeferredPass, SkyVisibilityTexture) Texture2D SkyVisibilityTexture;
@@ -253,6 +254,14 @@ PSOutput PSMain(PSInput input)
         /* inout */ irradiance);
 
     reflections.a = saturate(reflections.a);
+
+    if (glimmerParams.w != 0u)
+    {
+        const float4 brickReflection = GlimmerBrickReflectionTexture.Load(int3(pixelCoord, 0));
+        const float coverage = brickReflection.a + reflections.a * (1.0 - brickReflection.a);
+
+        reflections = float4((brickReflection.rgb + reflections.rgb * reflections.a * (1.0 - brickReflection.a)) / max(coverage, HYP_FMATH_EPSILON), coverage);
+    }
 
 #ifdef RT_REFLECTIONS
     CalculateRayTracingReflection(texcoord, reflections);

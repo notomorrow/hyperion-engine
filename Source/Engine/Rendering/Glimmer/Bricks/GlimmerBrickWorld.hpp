@@ -103,6 +103,21 @@ public:
         return m_crossingsBuffer;
     }
 
+    HYP_FORCE_INLINE uint32 GetNumCrossings() const
+    {
+        return m_poolPages * GlimmerBrickPageCrossings;
+    }
+
+    HYP_FORCE_INLINE const GpuBufferRef& GetRadianceBuffer() const
+    {
+        return m_radianceBuffer;
+    }
+
+    HYP_FORCE_INLINE const GpuBufferRef& GetCrossingLightBuffer() const
+    {
+        return m_crossingLightBuffer;
+    }
+
     HYP_FORCE_INLINE const GpuBufferRef& GetMaterialBuffer() const
     {
         return m_materialBuffer;
