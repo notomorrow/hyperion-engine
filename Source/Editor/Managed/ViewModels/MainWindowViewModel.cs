@@ -3522,6 +3522,26 @@ namespace Hyperion.Editor.ViewModels
             });
         }
 
+        public void ImportModelsOnViewport(IReadOnlyList<string> paths, float nx, float ny)
+        {
+            if (!_isReady || paths.Count == 0)
+                return;
+
+            string args = FormattableString.Invariant($"{nx} {ny} {string.Join('|', paths)}");
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                try
+                {
+                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandImportAndPlace"), args);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"Failed to import dropped models: {ex.Message}");
+                }
+            });
+        }
+
         private sealed record AssetDropHover(uint BucketIndex, Name AssetName, float ScreenX, float ScreenY, Node? TargetNode);
 
         private readonly object _assetDropHoverLock = new object();

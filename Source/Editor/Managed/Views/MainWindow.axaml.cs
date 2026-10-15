@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Dock.Model;
@@ -1898,7 +1899,15 @@ namespace Hyperion.Editor
         private void OnViewportDragOver(object? sender, DragEventArgs e)
         {
             if (!e.DataTransfer.Contains(AssetDragFormat))
+            {
+                if (e.DataTransfer.Contains(DataFormat.File))
+                {
+                    e.DragEffects = GetDroppedModelFiles(e).Count > 0 ? DragDropEffects.Copy : DragDropEffects.None;
+                    e.Handled = true;
+                }
+
                 return;
+            }
 
             e.DragEffects = DragDropEffects.Copy;
             e.Handled = true;
@@ -1923,12 +1932,24 @@ namespace Hyperion.Editor
 
         private void OnViewportDrop(object? sender, DragEventArgs e)
         {
+            var vm = DataContext as MainWindowViewModel;
+
             if (!TryGetDraggedAsset(e, out uint bucketIndex, out Name assetName))
+            {
+                var modelFiles = GetDroppedModelFiles(e);
+
+                if (modelFiles.Count > 0)
+                {
+                    var (fx, fy) = GetNormalizedViewportPosition(e);
+                    vm?.ImportModelsOnViewport(modelFiles, fx, fy);
+                    e.Handled = true;
+                }
+
                 return;
+            }
 
             var (nx, ny) = GetNormalizedViewportPosition(e);
 
-            var vm = DataContext as MainWindowViewModel;
             vm?.DropAssetOnViewport(bucketIndex, assetName, nx, ny, placeAsInstance: (e.KeyModifiers & KeyModifiers.Alt) != 0);
 
             e.Handled = true;
@@ -1944,6 +1965,32 @@ namespace Hyperion.Editor
             double ny = Math.Clamp(pos.Y / _viewportDropTarget.Bounds.Height, 0.0, 1.0);
 
             return ((float)nx, (float)ny);
+        }
+
+        private static readonly string[] ModelFileExtensions = { ".obj", ".fbx", ".gltf", ".glb" };
+
+        private static List<string> GetDroppedModelFiles(DragEventArgs e)
+        {
+            var paths = new List<string>();
+
+            var items = e.DataTransfer.TryGetFiles();
+            if (items == null)
+                return paths;
+
+            foreach (var item in items)
+            {
+                string? path = item.TryGetLocalPath();
+                if (string.IsNullOrEmpty(path) || path.Contains('|'))
+                    continue;
+
+                if (ModelFileExtensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
+                    || path.EndsWith(".mesh.xml", StringComparison.OrdinalIgnoreCase))
+                {
+                    paths.Add(path);
+                }
+            }
+
+            return paths;
         }
 
         private static bool TryGetDraggedAsset(DragEventArgs e, out uint bucketIndex, out Name assetName)
