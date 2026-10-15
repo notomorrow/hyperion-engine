@@ -1188,7 +1188,7 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
 
     if (IsSettled() && !wasSettled)
     {
-        HYP_LOG(Rendering, Info, "Glimmer: bricks settled after {} frames", m_framesUnsettled);
+        HYP_LOG(Rendering, Debug, "Glimmer: bricks settled after {} frames", m_framesUnsettled);
     }
 
     m_framesUnsettled = IsSettled() ? 0 : m_framesUnsettled + 1;
@@ -1197,7 +1197,7 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
 
     if ((m_numEvictions != 0 || m_numStarved != 0) && m_framesSincePoolLog >= PoolLogIntervalFrames)
     {
-        HYP_LOG(Rendering, Warning, "Glimmer: brick pools full; {} chunks given up for nearer ones, {} left without room", m_numEvictions, m_numStarved);
+        HYP_LOG(Rendering, Debug, "Glimmer: brick pools full; {} chunks given up for nearer ones, {} left without room", m_numEvictions, m_numStarved);
 
         m_numEvictions = 0;
         m_numStarved = 0;
@@ -1218,7 +1218,8 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
         return;
     }
 
-    // a change of sun or sky relights every brick in turn; otherwise a trickle follows the bounce, and the sky's small drift, as they settle
+    // a change of sun or sky relights every brick in turn.
+    // otherwise a trickle follows the bounce, and the sky's small drift, as they settle
     const float intensity = g_cvGlimmerIntensity.Get();
 
     if (!m_hasRelitLight || intensity != m_relitIntensity || LightChange(m_relitLight, light) > RelightBurstChange)

@@ -47,6 +47,7 @@ static CVar<bool> s_cvGTAOTemporal("Rendering.GTAO.Temporal", true);
 static CVar<int> s_cvGTAOTemporalFrames("Rendering.GTAO.TemporalFrames", 16);
 
 static constexpr uint32 NumDepthMips = 5;
+static constexpr uint32 DepthPrefilterTileSize = 1u << (NumDepthMips - 1);
 
 static constexpr float FalloffRange = 0.615f;
 static constexpr float SampleDistributionPower = 2.0f;
@@ -93,6 +94,7 @@ struct GTAOConstants
     Vec4f params0;
     Vec4f params1;
     Vec4f params2;
+    Vec4f viewDepthScale;
 };
 
 static Handle<Texture> CreateGTAOTexture(TextureFormat format, const Vec2u& extent, bool hasMips, Name name)
@@ -112,6 +114,13 @@ static Handle<Texture> CreateGTAOTexture(TextureFormat format, const Vec2u& exte
     Check(texture->Create());
 
     return texture;
+}
+
+static Vec2u GetViewDepthExtent(const Vec2u& extent)
+{
+    return Vec2u(
+        (extent.x + DepthPrefilterTileSize - 1) / DepthPrefilterTileSize * DepthPrefilterTileSize,
+        (extent.y + DepthPrefilterTileSize - 1) / DepthPrefilterTileSize * DepthPrefilterTileSize);
 }
 
 GTAOPass::GTAOPass(Vec2u extent, GBuffer* gbuffer)
@@ -135,24 +144,24 @@ void GTAOPass::Create()
 
 void GTAOPass::CreateTextures(const Vec2u& extent)
 {
-    const auto createTexture = [&extent](Handle<Texture>& texture, TextureFormat format, bool hasMips, Name name)
+    const auto createTexture = [](Handle<Texture>& texture, TextureFormat format, const Vec2u& textureExtent, bool hasMips, Name name)
     {
         if (texture.IsValid())
         {
             EnqueueDeletion(std::move(texture));
         }
 
-        texture = CreateGTAOTexture(format, extent, hasMips, name);
+        texture = CreateGTAOTexture(format, textureExtent, hasMips, name);
     };
 
-    createTexture(m_viewDepthTexture, TextureFormat::R32F, true, NAME("GTAOViewDepth"));
+    createTexture(m_viewDepthTexture, TextureFormat::R32F, GetViewDepthExtent(extent), true, NAME("GTAOViewDepth"));
 
-    createTexture(m_aoTextures[0], TextureFormat::R16F, false, NAME("GTAOWorking0"));
-    createTexture(m_aoTextures[1], TextureFormat::R16F, false, NAME("GTAOWorking1"));
-    createTexture(m_edgesTexture, TextureFormat::RGBA8, false, NAME("GTAOEdges"));
+    createTexture(m_aoTextures[0], TextureFormat::R16F, extent, false, NAME("GTAOWorking0"));
+    createTexture(m_aoTextures[1], TextureFormat::R16F, extent, false, NAME("GTAOWorking1"));
+    createTexture(m_edgesTexture, TextureFormat::RGBA8, extent, false, NAME("GTAOEdges"));
 
-    createTexture(m_historyTextures[0], TextureFormat::RGBA16F, false, NAME("GTAOHistory0"));
-    createTexture(m_historyTextures[1], TextureFormat::RGBA16F, false, NAME("GTAOHistory1"));
+    createTexture(m_historyTextures[0], TextureFormat::RGBA16F, extent, false, NAME("GTAOHistory0"));
+    createTexture(m_historyTextures[1], TextureFormat::RGBA16F, extent, false, NAME("GTAOHistory1"));
 
     m_extent = extent;
     m_finalTexture = nullptr;
@@ -257,6 +266,9 @@ void GTAOPass::Render(Frame* frame, const RenderSetup& renderSetup)
         float(MathUtil::Clamp(s_cvGTAOTemporalFrames.Get(), 1, 64)),
         0.0f);
 
+    const Vec2u viewDepthExtent = GetViewDepthExtent(extent);
+    constants.viewDepthScale = Vec4f(float(extent.x) / float(viewDepthExtent.x), float(extent.y) / float(viewDepthExtent.y), 0.0f, 0.0f);
+
     const auto commitConstants = [&constants](GpuBuffer*& outCbuffer, size_t& outOffset, size_t& outSize)
     {
         RI.cbufferAllocator->Write(&constants);
@@ -297,7 +309,7 @@ void GTAOPass::Render(Frame* frame, const RenderSetup& renderSetup)
         cr << SetShaderUniform(GTAOSlot_OutDepthMip3, "OutDepthMip3"_sh, RI.textureViewCache->GetOrCreate(m_viewDepthTexture, 3, 1));
         cr << SetShaderUniform(GTAOSlot_OutDepthMip4, "OutDepthMip4"_sh, RI.textureViewCache->GetOrCreate(m_viewDepthTexture, 4, 1));
 
-        cr << DispatchCompute(Vec3u((extent.x + 15) / 16, (extent.y + 15) / 16, 1));
+        cr << DispatchCompute(Vec3u(viewDepthExtent.x / DepthPrefilterTileSize, viewDepthExtent.y / DepthPrefilterTileSize, 1));
 
         cr << InsertBarrier(m_viewDepthTexture->GetGpuImage(), ResourceState::ShaderResource, ShaderModuleType::Compute);
     }

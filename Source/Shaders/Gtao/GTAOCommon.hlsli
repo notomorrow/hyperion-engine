@@ -15,6 +15,7 @@ struct GTAOConstants
     float4 params0;     // x = radius, y = falloff range, z = sample distribution power, w = thin occluder compensation
     float4 params1;     // x = final value power, y = depth mip sampling offset, z = slices, w = steps per slice side
     float4 params2;     // x = denoise blur beta, y = screen radius in pixels at most, z = frames the history adds up at most, w = 1 on the last denoise pass
+    float4 viewDepthScale; // xy = screen uv to view depth texture uv, which is padded to whole prefilter groups
 };
 
 DECLARE_BUFFER_DYNAMIC(GTAO, CBuffer) cbuffer CBuffer
