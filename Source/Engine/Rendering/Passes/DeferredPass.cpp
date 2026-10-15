@@ -34,7 +34,7 @@
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/Passes/SSRPass.hpp>
 #include <Rendering/SSGI.hpp>
-#include <Rendering/Passes/HBAOPass.hpp>
+#include <Rendering/Passes/GTAOPass.hpp>
 #include <Rendering/Passes/BloomPass.hpp>
 #include <Rendering/DepthOfField.hpp>
 #include <Rendering/Frame.hpp>
@@ -163,7 +163,7 @@ CVar<float> g_cvTAAFeedback { "Rendering.TAA.Feedback", 0.85f };
 CVar<float> g_cvTAACutoutFeedback { "Rendering.TAA.CutoutFeedback", 0.95f };
 // 1 dithers alpha cutouts per pixel, 0 gives each triangle one random threshold instead
 CVar<float> g_cvCutoutDitherAmount { "Rendering.Cutout.DitherAmount", 0.5f };
-CVar<bool> g_cvHBAO { "Rendering.HBAO", true, "Rendering.HBAO.Enabled" };
+CVar<bool> g_cvGTAO { "Rendering.GTAO", true, "Rendering.GTAO.Enabled" };
 CVar<bool> g_cvBloom { "Rendering.Bloom", true, "Rendering.Bloom.Enabled" };
 CVar<bool> g_cvLightmapVolumes { "Rendering.LightmapVolumes", true };
 CVar<bool> g_cvDecals { "Rendering.Decals", true };
@@ -346,7 +346,7 @@ DeferredPassData::~DeferredPassData()
 
     depthPyramidRenderer.Reset();
 
-    hbao.Reset();
+    gtao.Reset();
 
     glimmerIrradiancePass.Reset();
 
@@ -1102,8 +1102,8 @@ PassData* DeferredPass::CreateViewPassData(View* view, PassDataExt&)
             }
         }
 
-        passData.hbao = MakeUnique<HBAO>(gbuffer->GetExtent(), gbuffer);
-        passData.hbao->Create();
+        passData.gtao = MakeUnique<GTAOPass>(gbuffer->GetExtent(), gbuffer);
+        passData.gtao->Create();
 
         passData.glimmerIrradiancePass = MakeUnique<GlimmerIrradiancePass>(gbuffer->GetExtent(), gbuffer);
         passData.glimmerIrradiancePass->Create();
@@ -1330,8 +1330,8 @@ void DeferredPass::ResizeView(Viewport viewport, View* view, DeferredPassData& p
         }
     }
 
-    passData.hbao = MakeUnique<HBAO>(newSize, gbuffer);
-    passData.hbao->Create();
+    passData.gtao = MakeUnique<GTAOPass>(newSize, gbuffer);
+    passData.gtao->Create();
 
     passData.glimmerIrradiancePass = MakeUnique<GlimmerIrradiancePass>(newSize, gbuffer);
     passData.glimmerIrradiancePass->Create();
@@ -1911,9 +1911,9 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
     frame->cr << SetAsyncShaderLoadingEnabled(false);
 
-    if (g_cvHBAO.Get())
+    if (g_cvGTAO.Get())
     {
-        passData.hbao->Render(frame, rs);
+        passData.gtao->Render(frame, rs);
     }
 
     if (g_cvSSGI.Get())
@@ -2045,9 +2045,9 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
         frame->cr << SetShaderUniform(uniformIndex++, "GBufferMaterialTexture"_sh, opaquePassFramebuffer->GetAttachment(GBufferTarget::MatData)->GetImageView());
         frame->cr << SetShaderUniform(uniformIndex++, "GBufferDepthTexture"_sh, opaquePassFramebuffer->GetAttachment(GBufferTarget::Depth)->GetImageView());
 
-        if (passData.hbao != nullptr && g_cvHBAO.Get())
+        if (passData.gtao != nullptr && g_cvGTAO.Get())
         {
-            frame->cr << SetShaderUniform(uniformIndex++, "SSAOResultTexture"_sh, passData.hbao->GetFinalImageView());
+            frame->cr << SetShaderUniform(uniformIndex++, "SSAOResultTexture"_sh, passData.gtao->GetFinalImageView());
         }
         else
         {
