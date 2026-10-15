@@ -28,7 +28,8 @@ struct TerrainPatchComponent
 
     float lodMorphStart = 0.0f;
     float lodMorphEnd = 0.0f;
-    float lodRangeMultiplier = 1.0f;
+    /// index into WorldShaderData::terrainLodViewpoints, or -1 when the morph is measured from lodMorphOrigin
+    int32 lodMorphViewpointIndex = -1;
     Vec3f lodMorphOrigin;
 };
 

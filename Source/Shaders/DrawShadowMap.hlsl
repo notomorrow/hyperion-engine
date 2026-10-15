@@ -84,9 +84,12 @@ DECLARE_SRV_DYNAMIC(Default, SkeletonsBuffer) StructuredBuffer<float4x4> Skeleto
 #include "Include/Skinning.hlsli"
 #endif // SKINNING
 
-#if defined(VT_Tree) || defined(VT_Foliage)
+#if defined(VT_Tree) || defined(VT_Foliage) || defined(TERRAIN_MORPH)
 DECLARE_SRV(Default, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
 #define world_shader_data _worlds_buffer[0]
+#endif // VT_Tree || VT_Foliage || TERRAIN_MORPH
+
+#if defined(VT_Tree) || defined(VT_Foliage)
 #include "Include/Wind.hlsli"
 #endif // VT_Tree || VT_Foliage
 
@@ -113,7 +116,7 @@ VSOutput VSMain(VSInput input, uint instanceId : SV_InstanceID, uint vertexId : 
 #endif
     
 #if defined(TERRAIN_MORPH) && defined(VT_UV1)
-    const float3 local_position = ApplyTerrainMorph(entity, model_matrix, input.a_position, input.a_texcoord1);
+    const float3 local_position = ApplyTerrainMorph(entity, world_shader_data, model_matrix, input.a_position, input.a_texcoord1);
 #else
     const float3 local_position = input.a_position;
 #endif

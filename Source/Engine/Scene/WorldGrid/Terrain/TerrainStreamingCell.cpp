@@ -34,6 +34,7 @@
 #include <Rendering/Texture.hpp>
 #include <Rendering/Vertex.hpp>
 #include <Rendering/InstancedMeshData.hpp>
+#include <Rendering/RenderProxy.hpp>
 
 #include <Core/IO/ByteWriter.hpp>
 
@@ -1067,15 +1068,18 @@ void TerrainStreamingCell::UpdateLodSelection(Span<const Vec3f> viewpoints)
 
         float nearestDistance = MathUtil::Infinity<float>();
         patch.lodMorphOrigin = patchWorldBounds.GetCenter();
+        patch.lodMorphViewpointIndex = -1;
 
-        for (const Vec3f& viewpoint : viewpoints)
+        for (uint32 viewpointIndex = 0; viewpointIndex < uint32(viewpoints.Size()); viewpointIndex++)
         {
+            const Vec3f& viewpoint = viewpoints[viewpointIndex];
             const float distance = DistanceToBounds(viewpoint, patchWorldBounds);
 
             if (distance < nearestDistance)
             {
                 nearestDistance = distance;
                 patch.lodMorphOrigin = viewpoint;
+                patch.lodMorphViewpointIndex = int32(viewpointIndex);
             }
         }
     }
@@ -1157,27 +1161,26 @@ bool TerrainStreamingCell::ApplyPatchLod(
         return outDrawnMeshChanged;
     }
 
-    const Vec3f& nearestViewpoint = m_patches[patchIndex].lodMorphOrigin;
+    const TerrainPatch& patch = m_patches[patchIndex];
 
     const float morphStart = GetLodMorphStart(patchComponent.level);
     const float morphEnd = GetLodRange(patchComponent.level);
-    const float rangeMultiplier = TerrainWorldGridLayer::GetLodRangeMultiplier();
 
-    // the origin moves with the camera even when nothing else changes, and the shader only sees it once the render
-    // proxy is refreshed
+    const int32 viewpointIndex = patch.lodMorphViewpointIndex < int32(MaxTerrainLodViewpoints) ? patch.lodMorphViewpointIndex : -1;
+
     constexpr float OriginEpsilonSquared = 0.01f;
 
     const bool morphChanged = patchComponent.lodMorphStart != morphStart
         || patchComponent.lodMorphEnd != morphEnd
-        || patchComponent.lodRangeMultiplier != rangeMultiplier
-        || patchComponent.lodMorphOrigin.DistanceSquared(nearestViewpoint) > OriginEpsilonSquared;
+        || patchComponent.lodMorphViewpointIndex != viewpointIndex
+        || (viewpointIndex < 0 && patchComponent.lodMorphOrigin.DistanceSquared(patch.lodMorphOrigin) > OriginEpsilonSquared);
 
     if (morphChanged)
     {
         patchComponent.lodMorphStart = morphStart;
         patchComponent.lodMorphEnd = morphEnd;
-        patchComponent.lodRangeMultiplier = rangeMultiplier;
-        patchComponent.lodMorphOrigin = nearestViewpoint;
+        patchComponent.lodMorphViewpointIndex = viewpointIndex;
+        patchComponent.lodMorphOrigin = patch.lodMorphOrigin;
     }
 
     return outDrawnMeshChanged || morphChanged;
@@ -2043,8 +2046,6 @@ void TerrainStreamingCell::ApplyGrassBuilds(Array<GrassTileBuild>&& tileBuilds, 
     const Array<TerrainCoverLayer>& coverLayers = coverResources.GetLayers();
     const uint32 numSlots = coverResources.GetNumSlots();
 
-    bool anyChanged = false;
-
     for (GrassTileBuild& tileBuild : tileBuilds)
     {
         if (tileBuild.tileIndex >= m_grassTiles.Size())
@@ -2096,8 +2097,6 @@ void TerrainStreamingCell::ApplyGrassBuilds(Array<GrassTileBuild>&& tileBuilds, 
 
                     const uint32 numInstances = uint32(instances.transforms.Size());
 
-                    anyChanged = true;
-
                     if (numInstances == 0)
                     {
                         ReleaseGrassTileSlot(slot);
@@ -2128,7 +2127,9 @@ void TerrainStreamingCell::ApplyGrassBuilds(Array<GrassTileBuild>&& tileBuilds, 
                         entityInitInfo.bvhDepth = 0;
 
                         slot.entity = MakeHandle<Entity>(NAME_FMT("TerrainGrass_{}_{}_{}", m_cellInfo.coord, tileBuild.tileIndex, slotIndex), entityInitInfo);
-                        slot.entity->SetIsStatic(true);
+                        // grass is replanted and released as the camera moves - as static geometry every tile change would force
+                        // a full redraw of the cached static shadow maps and invalidate bakes and probes
+                        slot.entity->SetIsStatic(false);
 
                         // not part of the node hierarchy, so it's never saved or listed, but it draws and culls like any entity of the scene
                         entityManager->AddExistingEntity(slot.entity);
@@ -2152,11 +2153,6 @@ void TerrainStreamingCell::ApplyGrassBuilds(Array<GrassTileBuild>&& tileBuilds, 
         }
     }
 
-    if (anyChanged)
-    {
-        m_scene->MarkStaticRenderResourcesChanged();
-    }
-
     if (g_cvTerrainGrassLogTimings.Get())
     {
         HYP_LOG(WorldGrid, Info, "Grass for cell {}: {} tiles, generated in {} ms, applied in {} ms, {} ms from queued to applied",
@@ -2174,8 +2170,6 @@ void TerrainStreamingCell::ReleaseUnwantedGrassTiles(Array<uint32>&& tileIndices
         return;
     }
 
-    bool anyReleased = false;
-
     for (uint32 tileIndex : tileIndices)
     {
         if (tileIndex >= m_grassTiles.Size() || m_grassTiles[tileIndex].isBuilt)
@@ -2184,13 +2178,6 @@ void TerrainStreamingCell::ReleaseUnwantedGrassTiles(Array<uint32>&& tileIndices
         }
 
         ReleaseGrassTile(tileIndex);
-
-        anyReleased = true;
-    }
-
-    if (anyReleased)
-    {
-        m_scene->MarkStaticRenderResourcesChanged();
     }
 }
 

@@ -9,6 +9,7 @@
 /// morphing is a function of distance only, so a cell and its coarser replacement agree wherever both can represent the surface
 float3 ApplyTerrainMorph(
     Entity terrain_entity,
+    WorldShaderData world,
     float4x4 model_matrix,
     float3 local_position,
     float2 morph_target_heights)
@@ -22,9 +23,18 @@ float3 ApplyTerrainMorph(
     }
 
     const float3 world_position = mul(model_matrix, float4(local_position, 1.0)).xyz;
-    const float morph_distance = distance(terrain_entity.lod_morph_origin_multiplier.xyz, world_position);
+    const int viewpoint_index = int(terrain_entity.lod_morph_origin.w);
 
-    const float range_multiplier = terrain_entity.lod_morph_origin_multiplier.w;
+    float3 morph_origin = terrain_entity.lod_morph_origin.xyz;
+
+    if (viewpoint_index >= 0)
+    {
+        morph_origin = world.terrain_lod_viewpoints[viewpoint_index].xyz;
+    }
+
+    const float morph_distance = distance(morph_origin, world_position);
+
+    const float range_multiplier = world.terrain_lod_params.x;
 
     const float next_lod_morph = saturate((morph_distance - morph_start) / (morph_end - morph_start));
     const float second_lod_morph = saturate((morph_distance - morph_start * range_multiplier) / ((morph_end - morph_start) * range_multiplier));

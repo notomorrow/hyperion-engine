@@ -175,7 +175,7 @@ void DynamicSkySystem::InitializeSky()
 
             skyVisibilityViewDesc.flags = ViewFlags::SKY_VISIBILITY_VIEW
                 | ViewFlags::ALL_FOREGROUND_SCENES
-                | ViewFlags::COLLECT_ALL_ENTITIES
+                | ViewFlags::COLLECT_STATIC_ENTITIES
                 | ViewFlags::SKIP_LIGHTS
                 | ViewFlags::SKIP_CAMERAS
                 | ViewFlags::SKIP_ENV_PROBES

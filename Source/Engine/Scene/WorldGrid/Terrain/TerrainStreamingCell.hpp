@@ -115,11 +115,18 @@ private:
 
         bool isBuildQueued = false;
 
-        /// set by UpdateLodSelection() - never set without a mesh
+        /// all below set by UpdateLodSelection() ///
+
+        /// never set without a mesh
         bool isDrawn = false;
 
-        /// set by UpdateLodSelection() - the viewpoint the patch's morph is measured from
+        /// the viewpoint the patch's morph is measured from
         Vec3f lodMorphOrigin;
+
+        /// which viewpoint lodMorphOrigin is, or -1 if it is fixed (the patch's center)
+        int32 lodMorphViewpointIndex = -1;
+
+        /////////////////////////////////////////////
     };
 
     struct TerrainPatchBuild
