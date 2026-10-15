@@ -211,6 +211,9 @@ if(DOTNET_EXECUTABLE)
                   COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     "${CMAKE_SOURCE_DIR}/../Config/DeviceTiers.hmf"
                     "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Config/DeviceTiers.hmf"
+                  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_SOURCE_DIR}/../Config/Shaders.hmf"
+                    "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Config/Shaders.hmf"
                   DEPENDS hyperion Hyperion.NET.Shared Hyperion.NET.Runtime Hyperion.NET.Interop
                   WORKING_DIRECTORY ${EDITOR_PROJECT_DIR}
               )
@@ -225,6 +228,9 @@ if(DOTNET_EXECUTABLE)
                   COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     "${CMAKE_SOURCE_DIR}/../Config/DeviceTiers.hmf"
                     "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Config/DeviceTiers.hmf"
+                  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_SOURCE_DIR}/../Config/Shaders.hmf"
+                    "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Config/Shaders.hmf"
                   DEPENDS hyperion Hyperion.NET.Shared Hyperion.NET.Runtime Hyperion.NET.Interop
                   WORKING_DIRECTORY ${EDITOR_PROJECT_DIR}
               )
