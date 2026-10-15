@@ -387,7 +387,6 @@ void AppContextBase::AddPresentWindow(const Handle<ApplicationWindow>& window)
     }
 
     window->SetAllowVSync(false);
-    window->SetHasFocus(false);
 
     {
         Mutex::Guard guard(m_presentWindowsMutex);

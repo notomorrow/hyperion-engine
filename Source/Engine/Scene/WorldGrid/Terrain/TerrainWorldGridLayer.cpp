@@ -134,7 +134,7 @@ static void LoadTerrainMaterialTextures(MaterialTextures& textures)
 
 static Handle<Scene> MakeTerrainScene()
 {
-    Handle<Scene> scene = MakeHandle<Scene>(s_terrainSceneName, SceneFlags::FOREGROUND | SceneFlags::HAS_OCTREE);
+    Handle<Scene> scene = MakeHandle<Scene>(s_terrainSceneName, SceneFlags::FOREGROUND | SceneFlags::HAS_OCTREE | SceneFlags::NO_EDITOR_WIREFRAME);
 
     // don't save; it's generated at runtime by the terrain layer
     scene->SetIsTransient(true);

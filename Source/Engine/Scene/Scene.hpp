@@ -56,6 +56,8 @@ enum class SceneFlags : uint32
 
     AUDIO_LISTENER = 0x80,  //!< @title="Is primary audio listener" @description="Scene has an audio listener (only one scene in a world should have this flag set)"
 
+    NO_EDITOR_WIREFRAME = 0x100, //!< @editor=false -- Left out of the editor's ortho (wireframe) viewports; for dense generated content like terrain and grass.
+
     DEFAULT = FOREGROUND | STREAMED | HAS_OCTREE    //!< @editor=false
 };
 

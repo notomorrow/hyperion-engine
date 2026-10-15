@@ -623,16 +623,7 @@ void Win32ApplicationWindow::Initialize(WindowOptions windowOptions)
 
     UpdateWindow(m_hwnd);
 
-    RAWINPUTDEVICE rawInputDevice {};
-    rawInputDevice.usUsagePage = HID_USAGE_PAGE_GENERIC;
-    rawInputDevice.usUsage = HID_USAGE_GENERIC_MOUSE;
-    rawInputDevice.dwFlags = 0;
-    rawInputDevice.hwndTarget = m_hwnd;
-
-    if (!RegisterRawInputDevices(&rawInputDevice, 1, sizeof(rawInputDevice)))
-    {
-        HYP_LOG(Core, Warning, "Failed to register raw input device for mouse! Win32 Error: {}", GetLastError());
-    }
+    RegisterRawMouseInput();
 
     m_isOpen = true;
 
@@ -765,6 +756,20 @@ Vec2i Win32ApplicationWindow::GetDimensions() const
     return { rc.right - rc.left, rc.bottom - rc.top };
 }
 
+void Win32ApplicationWindow::RegisterRawMouseInput()
+{
+    RAWINPUTDEVICE rawInputDevice {};
+    rawInputDevice.usUsagePage = HID_USAGE_PAGE_GENERIC;
+    rawInputDevice.usUsage = HID_USAGE_GENERIC_MOUSE;
+    rawInputDevice.dwFlags = 0;
+    rawInputDevice.hwndTarget = m_hwnd;
+
+    if (!RegisterRawInputDevices(&rawInputDevice, 1, sizeof(rawInputDevice)))
+    {
+        HYP_LOG(Core, Warning, "Failed to register raw input device for mouse! Win32 Error: {}", GetLastError());
+    }
+}
+
 void Win32ApplicationWindow::SetIsMouseLocked(bool locked)
 {
     if (m_mouseLocked == locked)
@@ -778,6 +783,9 @@ void Win32ApplicationWindow::SetIsMouseLocked(bool locked)
     {
         while (::ShowCursor(FALSE) >= 0)
             ;
+
+        // raw mouse input has one target per process; motion while locked comes only through it
+        RegisterRawMouseInput();
 
         SetCapture(m_hwnd);
 

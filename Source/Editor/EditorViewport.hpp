@@ -102,6 +102,9 @@ public:
      *  or when a new project is opened. */
     void OnAdded(EditorSubsystem* editorSubsystem);
 
+    /*! \brief Ortho viewports start centered on the perspective camera, once there is one. */
+    void TryCenterOnMainViewport(EditorSubsystem* editorSubsystem);
+
     /*! \brief Called when the viewport is removed from the editor subsystem
      *  or when the current project is closed. */
     void OnRemoved(EditorSubsystem* editorSubsystem);
@@ -116,6 +119,8 @@ public:
     void SetIsolatedScenes(EditorSubsystem* editorSubsystem, const Array<Handle<Scene>>& scenes);
 
 protected:
+    bool ShowsWorldScene(const Scene* scene) const;
+
     void SetWindow(const Handle<ApplicationWindow>& window, bool isMainWindow);
     void UpdateCameraDimensions();
 
