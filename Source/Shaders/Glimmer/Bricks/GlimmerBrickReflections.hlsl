@@ -641,7 +641,7 @@ void Resolve(int2 pixel, uint2 texel, uint index)
         return;
     }
 
-    OutGuide[texel] = float4(surface.P, surface.roughness);
+    OutGuide[texel] = float4(surface.P - camera.position.xyz, surface.roughness);
 
     const float matte = MatteShare(surface.roughness);
 
@@ -680,7 +680,7 @@ void Resolve(int2 pixel, uint2 texel, uint index)
         const uint2 stepped = uint2(own, PcgHash(own)) + constants.frame.x * uint2(3242174889u, 2447445414u);
         const float2 shift = float2(UnitFloat(stepped.x), UnitFloat(stepped.y)) - 0.5;
 
-        OutGuide[texel] = float4(surface.P, surface.roughness + GUIDE_DITHERED);
+        OutGuide[texel] = float4(surface.P - camera.position.xyz, surface.roughness + GUIDE_DITHERED);
 
         between = BetweenMips(PcgHash(own ^ 0x9E3779B9u));
 
@@ -975,7 +975,7 @@ void Finish(int2 pixel, uint2 texel, uint index)
         const ReflectionSurface surface = LoadSurface(pixel);
         const bool isSampled = constants.frame.w != 0u && surface.roughness >= SAMPLED_FROM;
 
-        OutGuide[texel] = float4(surface.P, surface.roughness + (isSampled ? GUIDE_SAMPLED : 0.0));
+        OutGuide[texel] = float4(surface.P - camera.position.xyz, surface.roughness + (isSampled ? GUIDE_SAMPLED : 0.0));
 
         // every other one, in a checker that changes sides each frame, where a history holds the rest as they were
         if (isSampled && ((texel.x + texel.y + constants.frame.x) & 1u) != 0u)
@@ -1183,6 +1183,20 @@ void TraceWhole(uint listed)
 
 #if defined(MODE_HISTORY)
 
+// guide positions are half floats, so they are stored relative to their frame's camera; last frame's camera is where clip x, y and w are all 0
+float3 PreviousCameraPosition()
+{
+    const float4x4 m = camera.prevViewProjMat;
+
+    const float3 a = m[0].xyz;
+    const float3 b = m[1].xyz;
+    const float3 c = m[3].xyz;
+
+    const float3 bc = cross(b, c);
+
+    return -(m[0].w * bc + m[1].w * cross(c, a) + m[3].w * cross(a, b)) / dot(a, bc);
+}
+
 bool PreviousScreen(float3 position, out float2 outScreen)
 {
     const float4 clip = mul(camera.prevViewProjMat, float4(position, 1.0));
@@ -1320,6 +1334,8 @@ void AddUp(uint2 texel)
     float2 screen = (float2)0.0;
     const bool isOnScreen = PreviousScreen(surface.P, screen);
 
+    const float3 fromPreviousCamera = surface.P - PreviousCameraPosition();
+
     const float slack = SAME_SURFACE * distance(camera.position.xyz, surface.P) + 1e-3;
     const bool isDithered = here.a >= 1.5 * GUIDE_SAMPLED;
     const float roughness = here.a - (isDithered ? GUIDE_DITHERED : GUIDE_SAMPLED);
@@ -1362,7 +1378,7 @@ void AddUp(uint2 texel)
 
     if (reflected > 0.0)
     {
-        sum = AddedAt(image, isImageOnScreen, surface.P, slack, true, plane, roughness, frames, total);
+        sum = AddedAt(image, isImageOnScreen, fromPreviousCamera, slack, true, plane, roughness, frames, total);
         bySurface = total > 0.0 ? 1.0 - reflected : 1.0;
     }
 
@@ -1370,7 +1386,7 @@ void AddUp(uint2 texel)
     {
         float ownFrames = 0.0;
         float found = 0.0;
-        const float4 ownSum = AddedAt(screen, isOnScreen, surface.P, slack, false, plane, roughness, ownFrames, found);
+        const float4 ownSum = AddedAt(screen, isOnScreen, fromPreviousCamera, slack, false, plane, roughness, ownFrames, found);
 
         if (total == 0.0)
         {
