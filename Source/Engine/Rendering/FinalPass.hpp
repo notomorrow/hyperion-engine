@@ -22,6 +22,7 @@ class FullScreenPass;
 class Mesh;
 class SwapchainBase;
 struct RenderSetup;
+struct PresentTarget;
 
 class FinalPass final
 {
@@ -37,6 +38,12 @@ public:
     void Render(Frame* frame, const RenderSetup& rs);
 
 private:
+    void RenderTarget(
+        Frame* frame,
+        const RenderSetup& rs,
+        const PresentTarget& target,
+        bool isMainTarget);
+
     Handle<Mesh> m_quadMesh;
     GpuImageViewRef m_uiLayerImageView;
 };

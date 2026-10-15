@@ -123,6 +123,10 @@ public:
     HYP_FIELD()
     ScriptableDelegate<void> OnBuildNativeGameRequested;
 
+    /*! \brief Fired by EditorCommandSetViewportLayout; 0 = single, 1 = four viewports, 2 = perspective + three. */
+    HYP_FIELD()
+    ScriptableDelegate<void, uint32> OnViewportLayoutRequested;
+
     HYP_FIELD()
     ScriptableDelegate<void> OnClipboardChanged;
 

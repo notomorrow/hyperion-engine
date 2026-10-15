@@ -292,5 +292,13 @@ ShaderDefinitions "ShaderDefinitions" {
             VS = "Editor/EditorGrid.hlsl"
             PS = "Editor/EditorGrid.hlsl"
         }
+        ShaderDefinition "EditorOrthoGrid" {
+            VS = "Editor/EditorOrthoGrid.hlsl"
+            PS = "Editor/EditorOrthoGrid.hlsl"
+        }
+        ShaderDefinition "EditorWireframe" {
+            VS = "Editor/EditorWireframe.hlsl"
+            PS = "Editor/EditorWireframe.hlsl"
+        }
     ]
 }

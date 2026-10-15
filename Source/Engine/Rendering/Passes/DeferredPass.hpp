@@ -32,6 +32,7 @@ class View;
 class DeferredPass;
 class GBuffer;
 class EnvProbe;
+class EditorWireframePass;
 class TAAPass;
 class PostProcessing;
 class GTAOPass;
@@ -145,6 +146,7 @@ public:
         View* view = nullptr;
         GpuImageViewRef finalImageView;
         int priority = 0;
+        bool isUpdated = true;
     };
 
     struct RenderedViewOutputs
@@ -164,6 +166,9 @@ public:
     {
         return m_renderedViewOutputs;
     }
+
+    /*! rief True if a view composited into p windowId produced a new image this frame. */
+    bool HasUpdatedOutputForWindow(uint32 windowId) const;
 
     virtual void Initialize() override;
     virtual void Shutdown() override;
@@ -186,11 +191,18 @@ private:
     void ExecuteDrawCalls(Frame* frame, const RenderSetup& rs, RenderCollector& renderCollector, uint32 bucketMask);
     void GenerateMipChain(Frame* frame, const RenderSetup& rs, RenderCollector& renderCollector, GpuImage* srcImage);
 
+    void BeginRenderedViewOutputs();
+    void AddRenderedViewOutput(View* view, GpuImageViewRef&& imageView, int priority, bool isUpdated = true);
+
     RenderedViewOutputs m_renderedViewOutputs;
 
     Handle<Mesh> m_quadMesh;
 
     UniquePtr<TileProcessor> m_tileProcessor;
+
+#ifdef HYP_EDITOR
+    UniquePtr<EditorWireframePass> m_editorWireframePass;
+#endif
 };
 
 } // namespace Hyperion

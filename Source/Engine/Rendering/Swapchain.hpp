@@ -65,6 +65,16 @@ public:
         return m_isPqHdr;
     }
 
+    HYP_FORCE_INLINE bool AllowsVSync() const
+    {
+        return m_allowVSync;
+    }
+
+    HYP_FORCE_INLINE void SetAllowVSync(bool allowVSync)
+    {
+        m_allowVSync = allowVSync;
+    }
+
     HYP_FORCE_INLINE uint32 GetAcquiredImageIndex() const
     {
         return m_acquiredImageIndex;
@@ -84,7 +94,8 @@ protected:
           m_acquiredImageIndex(0),
           m_imageFormat(InvalidTextureFormat),
           m_needsRecreate(false),
-          m_isPqHdr(false)
+          m_isPqHdr(false),
+          m_allowVSync(true)
     {
     }
 
@@ -97,6 +108,7 @@ protected:
 
     bool m_needsRecreate;
     bool m_isPqHdr;
+    bool m_allowVSync;
 };
 
 } // namespace Hyperion

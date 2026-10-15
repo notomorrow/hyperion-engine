@@ -32,6 +32,7 @@ namespace Hyperion.Editor
         private static DelegateHandler? _onTaskEndedHandler;
         private static DelegateHandler? _onTaskProgressUpdatedHandler;
         private static DelegateHandler? _onBuildNativeGameRequestedHandler;
+        private static DelegateHandler? _onViewportLayoutRequestedHandler;
 
         public static event Action<World, Scene>? SceneAdded;
         public static event Action<World, Scene>? SceneRemoved;
@@ -39,6 +40,9 @@ namespace Hyperion.Editor
         public static event Action<EditorTaskBase, bool>? TaskStarted;
         public static event Action<ObjIdBase>? TaskEnded;
         public static event Action<ObjIdBase, float>? TaskProgressUpdated;
+
+        // raised on the sim thread
+        public static event Action<uint>? ViewportLayoutRequested;
 
         private static bool _editorViewportsEnabled = false;
 
@@ -162,6 +166,12 @@ namespace Hyperion.Editor
                 }
 
                 _ = System.Threading.Tasks.Task.Run(() => Services.NativeGameBuildService.Instance.BuildAsync(projectFilePath));
+            });
+
+            _onViewportLayoutRequestedHandler?.Remove();
+            _onViewportLayoutRequestedHandler = editorState.GetOnViewportLayoutRequestedDelegate().Bind((uint layout) =>
+            {
+                ViewportLayoutRequested?.Invoke(layout);
             });
         }
 
@@ -409,6 +419,11 @@ namespace Hyperion.Editor
             {
                 _ = EngineManager.PostToSimThread(() =>
                 {
+                    if (!_editorViewportsEnabled)
+                    {
+                        return;
+                    }
+
                     _lockViewports.Enter();
 
                     try
@@ -438,9 +453,12 @@ namespace Hyperion.Editor
                 return;
             }
 
-            WeakHandle<EditorViewport> viewportWeak = new WeakHandle<EditorViewport>(viewport);
+            if (_gameLaunchedHandler != null)
+            {
+                return;
+            }
 
-            // not launched; add handler for after launch
+            // not launched; add every viewport registered by then once it is
             _gameLaunchedHandler = EditorGame.GetOnLaunchedDelegate().Bind(() =>
             {
                 _ = EngineManager.PostToSimThread(() =>
@@ -448,7 +466,6 @@ namespace Hyperion.Editor
                     // if set to disabled in the time between
                     if (!_editorViewportsEnabled)
                     {
-                        viewportWeak.Dispose();
                         return;
                     }
 
@@ -462,20 +479,14 @@ namespace Hyperion.Editor
                             throw new InvalidOperationException("EditorSubsystem is not initialized!");
                         }
 
-                        EditorViewport? registeredViewport = _registeredViewports.Find(v => v.Id == viewportWeak.Id);
-                        if (registeredViewport == null)
+                        foreach (EditorViewport registeredViewport in _registeredViewports)
                         {
-                            Logger.Log(LogLevel.Warning, $"EditorViewport {viewportWeak.Id} is no longer registered - skipping addition to EditorSubsystem.");
-                            return;
+                            editorSubsystem.AddViewport(registeredViewport);
                         }
-
-                        editorSubsystem.AddViewport(registeredViewport);
                     }
                     finally
                     {
                         _lockViewports.Exit();
-
-                        viewportWeak.Dispose();
                     }
                 });
             });

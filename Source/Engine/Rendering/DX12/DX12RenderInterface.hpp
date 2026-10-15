@@ -77,7 +77,7 @@ public:
     DX12SwapchainRef CreateSwapchain(ApplicationWindow* window, const Vec2u& extent) override;
 
     void PrepareSwapchain(DX12Swapchain* swapchain) override;
-    void PresentToSwapchain(DX12Swapchain* swapchain) override;
+    void PresentToSwapchains(Span<DX12Swapchain* const> swapchains) override;
 
     DX12CommandBuffer* GetCurrentCommandBuffer() const override
     {

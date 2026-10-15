@@ -297,4 +297,199 @@ void EditorCameraController::UpdateLogic(double delta)
 
 #pragma endregion EditorCameraController
 
+
+#pragma region EditorOrthoCameraInputHandler
+
+static constexpr float OrthoCameraDistance = 5000.0f;
+static constexpr float OrthoMinHalfHeight = 0.05f;
+static constexpr float OrthoMaxHalfHeight = 4000.0f;
+
+EditorOrthoCameraInputHandler::EditorOrthoCameraInputHandler()
+    : m_controller(nullptr)
+{
+}
+
+EditorOrthoCameraInputHandler::EditorOrthoCameraInputHandler(EditorOrthoCameraController* controller)
+    : m_controller(controller)
+{
+}
+
+bool EditorOrthoCameraInputHandler::OnMouseDrag(const MouseEvent& evt)
+{
+    if (!m_controller || evt.mouseButtons == MouseButtonState::NONE)
+    {
+        return false;
+    }
+
+    m_controller->Pan(evt.relativePos - evt.relativePrevPos);
+
+    return true;
+}
+
+bool EditorOrthoCameraInputHandler::OnMouseScroll(const MouseEvent& evt)
+{
+    if (!m_controller || evt.wheel.y == 0)
+    {
+        return false;
+    }
+
+    m_controller->Zoom(float(evt.wheel.y), evt.relativePos);
+
+    return true;
+}
+
+#pragma endregion EditorOrthoCameraInputHandler
+
+#pragma region EditorOrthoCameraController
+
+EditorOrthoCameraController::EditorOrthoCameraController()
+    : EditorOrthoCameraController(EditorViewportType::Top)
+{
+}
+
+EditorOrthoCameraController::EditorOrthoCameraController(EditorViewportType viewportType)
+    : CameraController(CameraProjectionMode::ORTHOGRAPHIC),
+      m_viewportType(viewportType),
+      m_halfHeight(20.0f)
+{
+    m_inputHandler = MakeHandle<EditorOrthoCameraInputHandler>(this);
+    InitObject(m_inputHandler);
+}
+
+Vec3f EditorOrthoCameraController::GetViewDirection(EditorViewportType viewportType)
+{
+    switch (viewportType)
+    {
+    case EditorViewportType::Top:
+        return -Vec3f::UnitY();
+    case EditorViewportType::Front:
+        return -Vec3f::UnitZ();
+    case EditorViewportType::Side:
+        return -Vec3f::UnitX();
+    default:
+        return Vec3f::UnitZ();
+    }
+}
+
+Vec3f EditorOrthoCameraController::GetViewUp(EditorViewportType viewportType)
+{
+    return viewportType == EditorViewportType::Top ? -Vec3f::UnitZ() : Vec3f::UnitY();
+}
+
+Vec3f EditorOrthoCameraController::GetViewSide(EditorViewportType viewportType)
+{
+    return GetViewUp(viewportType).Cross(GetViewDirection(viewportType));
+}
+
+void EditorOrthoCameraController::OnActivated()
+{
+    CameraController::OnActivated();
+
+    const Vec3f direction = GetViewDirection(m_viewportType);
+
+    m_camera->SetWorldRotation(Quat4f::LookAt(direction, GetViewUp(m_viewportType)).Inverse());
+
+    Vec3f translation = m_camera->GetWorldTranslation();
+    translation -= direction * translation.Dot(direction);
+    translation -= direction * OrthoCameraDistance;
+
+    m_camera->SetWorldTranslation(translation);
+
+    m_camera->SetNearClip(1.0f);
+    m_camera->SetFarClip(OrthoCameraDistance * 2.0f);
+}
+
+void EditorOrthoCameraController::SetHalfHeight(float halfHeight)
+{
+    m_halfHeight = MathUtil::Clamp(halfHeight, OrthoMinHalfHeight, OrthoMaxHalfHeight);
+
+    UpdateProjectionMatrix();
+}
+
+Vec2f EditorOrthoCameraController::GetWorldSize() const
+{
+    const Vec2i dimensions = m_camera ? m_camera->GetDimensions() : Vec2i::One();
+    const float aspect = dimensions.y > 0 ? float(dimensions.x) / float(dimensions.y) : 1.0f;
+
+    return Vec2f(m_halfHeight * 2.0f * aspect, m_halfHeight * 2.0f);
+}
+
+void EditorOrthoCameraController::Pan(Vec2f screenDelta)
+{
+    if (!m_camera)
+    {
+        return;
+    }
+
+    const Vec2f worldSize = GetWorldSize();
+
+    const Vec3f offset = (GetViewSide(m_viewportType) * (-screenDelta.x * worldSize.x))
+        + (GetViewUp(m_viewportType) * (screenDelta.y * worldSize.y));
+
+    m_camera->SetWorldTranslation(m_camera->GetWorldTranslation() + offset);
+}
+
+void EditorOrthoCameraController::Zoom(float wheelSteps, Vec2f screenPosition)
+{
+    if (!m_camera)
+    {
+        return;
+    }
+
+    const Vec2f worldSizeBefore = GetWorldSize();
+
+    SetHalfHeight(m_halfHeight * MathUtil::Pow(0.85f, wheelSteps));
+
+    const Vec2f worldSizeAfter = GetWorldSize();
+
+    // keep the point under the cursor fixed
+    const Vec2f cursorFromCenter = screenPosition - Vec2f(0.5f, 0.5f);
+    const Vec2f shift = cursorFromCenter * (worldSizeBefore - worldSizeAfter);
+
+    const Vec3f offset = (GetViewSide(m_viewportType) * shift.x) - (GetViewUp(m_viewportType) * shift.y);
+
+    m_camera->SetWorldTranslation(m_camera->GetWorldTranslation() + offset);
+}
+
+void EditorOrthoCameraController::CenterOn(const Vec3f& point)
+{
+    if (!m_camera)
+    {
+        return;
+    }
+
+    const Vec3f direction = GetViewDirection(m_viewportType);
+
+    m_camera->SetWorldTranslation(point - direction * (point.Dot(direction) + OrthoCameraDistance));
+}
+
+void EditorOrthoCameraController::UpdateLogic(double delta)
+{
+}
+
+void EditorOrthoCameraController::UpdateViewMatrix()
+{
+    m_camera->m_viewMat = Mat4f::LookAt(
+        m_camera->GetWorldTranslation(),
+        m_camera->GetTarget(),
+        GetViewUp(m_viewportType));
+}
+
+void EditorOrthoCameraController::UpdateProjectionMatrix()
+{
+    if (!m_camera)
+    {
+        return;
+    }
+
+    const Vec2f halfSize = GetWorldSize() * 0.5f;
+
+    m_camera->SetToOrthographicProjection(
+        -halfSize.x, halfSize.x,
+        -halfSize.y, halfSize.y,
+        m_camera->GetNearClip(), m_camera->GetFarClip());
+}
+
+#pragma endregion EditorOrthoCameraController
+
 } // namespace Hyperion

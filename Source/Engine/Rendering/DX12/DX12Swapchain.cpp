@@ -372,7 +372,7 @@ void DX12Swapchain::PrepareForFrame(DX12Frame* frame)
     }
 
 #ifdef HYP_DX12_USE_FRAME_LATENCY_WAITABLE
-    if (g_cvEnableVSync.Get() && m_frameLatencyWaitableObject != nullptr)
+    if (g_cvEnableVSync.Get() && m_allowVSync && m_frameLatencyWaitableObject != nullptr)
     {
         WaitForSingleObject(m_frameLatencyWaitableObject, INFINITE);
     }
@@ -391,7 +391,7 @@ void DX12Swapchain::PresentFrame(DX12Frame* frame)
         return;
     }
 
-    const bool vsync = g_cvEnableVSync.Get();
+    const bool vsync = g_cvEnableVSync.Get() && m_allowVSync;
     UINT syncInterval = vsync ? 1 : 0;
     UINT flags = 0;
 

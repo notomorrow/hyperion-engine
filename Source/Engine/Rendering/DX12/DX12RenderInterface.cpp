@@ -730,6 +730,8 @@ DX12SwapchainRef DX12RenderInterface::CreateSwapchain(ApplicationWindow* window,
     Assert(window != nullptr);
 
     DX12SwapchainRef swapchain = MakeHandle<DX12Swapchain>(window->GetHWND(), extent);
+    swapchain->SetAllowVSync(window->AllowsVSync());
+
     RendererResult result = swapchain->Create();
 
     if (!result)
@@ -745,7 +747,7 @@ void DX12RenderInterface::PrepareSwapchain(DX12Swapchain* swapchain)
     swapchain->PrepareForFrame(GetCurrentFrame());
 }
 
-void DX12RenderInterface::PresentToSwapchain(DX12Swapchain* swapchain)
+void DX12RenderInterface::PresentToSwapchains(Span<DX12Swapchain* const> swapchains)
 {
     DX12CommandBuffer* commandBuffer = GetCurrentCommandBuffer();
     AssertDebug(commandBuffer != nullptr);
@@ -765,9 +767,12 @@ void DX12RenderInterface::PresentToSwapchain(DX12Swapchain* swapchain)
 
     m_submissionFrames[frameIndex] = int64(frameCounter);
 
-    if (swapchain != nullptr)
+    for (DX12Swapchain* swapchain : swapchains)
     {
-        swapchain->PresentFrame(frame);
+        if (swapchain != nullptr)
+        {
+            swapchain->PresentFrame(frame);
+        }
     }
 }
 

@@ -727,7 +727,7 @@ RendererResult VulkanRenderInterface::Initialize()
 
     m_renderConfig->Initialize(this);
 
-    // frame command buffers are submitted to the graphics queue (see PresentToSwapchain), so they must come from its pool
+    // frame command buffers are submitted to the graphics queue (see PresentToSwapchains), so they must come from its pool
     VulkanDeviceQueue* deviceQueue = GetDevice()->GetGraphicsQueue();
     Assert(deviceQueue != nullptr);
 
@@ -1063,6 +1063,8 @@ VulkanSwapchainRef VulkanRenderInterface::CreateSwapchain(ApplicationWindow* win
     Assert(surface != VK_NULL_HANDLE);
 
     VulkanSwapchainRef swapchain = MakeHandle<VulkanSwapchain>(surface, extent);
+    swapchain->SetAllowVSync(window->AllowsVSync());
+
     RendererResult result = swapchain->Create();
 
     if (!result)
@@ -1078,17 +1080,17 @@ void VulkanRenderInterface::PrepareSwapchain(VulkanSwapchain* swapchain)
     swapchain->PrepareForFrame(GetCurrentFrame());
 }
 
-void VulkanRenderInterface::PresentToSwapchain(VulkanSwapchain* swapchain)
+void VulkanRenderInterface::PresentToSwapchains(Span<VulkanSwapchain* const> swapchains)
 {
     // The frame is submitted to the graphics queue - the same queue transient command buffers use - so any transient
     // submitted before this point is guaranteed to execute first (a single queue executes submissions in order).
-    // Only the present itself goes to the present queue.
+    // Only the presents themselves go to the present queue.
     VulkanDeviceQueue* graphicsQueue = m_instance->GetDevice()->GetGraphicsQueue();
     Assert(graphicsQueue != nullptr);
 
     VulkanDeviceQueue* presentQueue = m_instance->GetDevice()->GetPresentQueue();
 
-    if (swapchain != nullptr)
+    if (swapchains.Size() != 0)
     {
         AssertDebug(presentQueue != nullptr); // should never be null when presenting, not used in headless mode
     }
@@ -1098,20 +1100,42 @@ void VulkanRenderInterface::PresentToSwapchain(VulkanSwapchain* swapchain)
 
     VulkanFrame* frame = GetCurrentFrame();
 
-    VulkanSemaphore* waitSemaphore = nullptr;
-    VulkanSemaphore* signalSemaphore = nullptr;
+    static constexpr uint32 MaxPresentSwapchains = 8;
 
-    if (swapchain != nullptr && swapchain->HasAcquiredImage())
+    FixedArray<VulkanSemaphore*, MaxPresentSwapchains + 1> waitSemaphores;
+    FixedArray<VulkanSemaphore*, MaxPresentSwapchains + 1> signalSemaphores;
+    FixedArray<uint64, MaxPresentSwapchains + 1> signalValues;
+    FixedArray<VkPipelineStageFlags, MaxPresentSwapchains + 1> waitStages;
+    FixedArray<VulkanSwapchain*, MaxPresentSwapchains> presentSwapchains;
+
+    uint32 numWaitSemaphores = 0;
+    uint32 numSignalSemaphores = 0;
+
+    for (VulkanSwapchain* swapchain : swapchains)
     {
-        waitSemaphore = frame->GetImageAvailableSemaphore(swapchain, /* createIfNotExist */ true);
-        signalSemaphore = swapchain->GetCurrentPresentSemaphore();
+        if (swapchain == nullptr || !swapchain->HasAcquiredImage())
+        {
+            continue;
+        }
+
+        if (numWaitSemaphores == MaxPresentSwapchains)
+        {
+            HYP_LOG_ONCE(RenderingBackend, Warning, "More than {} swapchains to present, the rest are skipped", MaxPresentSwapchains);
+            break;
+        }
+
+        VulkanSemaphore* waitSemaphore = frame->GetImageAvailableSemaphore(swapchain, /* createIfNotExist */ true);
+        VulkanSemaphore* signalSemaphore = swapchain->GetCurrentPresentSemaphore();
 
         AssertDebug(waitSemaphore != nullptr && signalSemaphore != nullptr);
+
+        presentSwapchains[numWaitSemaphores] = swapchain;
+        waitStages[numWaitSemaphores] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        waitSemaphores[numWaitSemaphores++] = waitSemaphore;
+
+        signalValues[numSignalSemaphores] = 0;
+        signalSemaphores[numSignalSemaphores++] = signalSemaphore;
     }
-
-    VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-    const uint32 numWaitSemaphores = waitSemaphore != nullptr ? 1 : 0;
 
     const bool useTimeline = frame->IsUsingTimelineSemaphore();
     VulkanFence* submitFence = useTimeline ? nullptr : frame->GetFence();
@@ -1120,38 +1144,26 @@ void VulkanRenderInterface::PresentToSwapchain(VulkanSwapchain* swapchain)
 
     if (useTimeline && frame->GetFrameCompleteValue() > 0)
     {
-        VulkanSemaphore* signalSemaphores[2] = { nullptr, nullptr };
-        uint64 signalValues[2] = { 0, 0 };
-        uint32 signalCount = 0;
-
-        if (signalSemaphore != nullptr)
-        {
-            signalSemaphores[signalCount] = signalSemaphore;
-            signalValues[signalCount] = 0;
-            signalCount++;
-        }
-
-        signalSemaphores[signalCount] = frame->GetFrameCompleteSemaphore();
-        signalValues[signalCount] = frame->GetFrameCompleteValue();
-        signalCount++;
+        signalValues[numSignalSemaphores] = frame->GetFrameCompleteValue();
+        signalSemaphores[numSignalSemaphores++] = frame->GetFrameCompleteSemaphore();
 
         submitResult = commandBuffer->Submit(
             graphicsQueue,
             submitFence,
-            Span<VulkanSemaphore*>(&waitSemaphore, numWaitSemaphores),
-            Span<VulkanSemaphore*>(signalSemaphores, signalCount),
+            Span<VulkanSemaphore*>(waitSemaphores.Data(), numWaitSemaphores),
+            Span<VulkanSemaphore*>(signalSemaphores.Data(), numSignalSemaphores),
             nullptr,
-            signalValues,
-            Span<VkPipelineStageFlags>(&waitStage, numWaitSemaphores));
+            signalValues.Data(),
+            Span<VkPipelineStageFlags>(waitStages.Data(), numWaitSemaphores));
     }
     else
     {
         submitResult = commandBuffer->Submit(
             graphicsQueue,
             submitFence,
-            Span<VulkanSemaphore*>(&waitSemaphore, numWaitSemaphores),
-            Span<VulkanSemaphore*>(&signalSemaphore, signalSemaphore ? 1 : 0),
-            Span<VkPipelineStageFlags>(&waitStage, numWaitSemaphores));
+            Span<VulkanSemaphore*>(waitSemaphores.Data(), numWaitSemaphores),
+            Span<VulkanSemaphore*>(signalSemaphores.Data(), numSignalSemaphores),
+            Span<VkPipelineStageFlags>(waitStages.Data(), numWaitSemaphores));
     }
 
     if (!submitResult)
@@ -1162,11 +1174,11 @@ void VulkanRenderInterface::PresentToSwapchain(VulkanSwapchain* swapchain)
         frame->ClearFrameCompleteValue();
     }
 
-    if (swapchain != nullptr)
+    for (uint32 index = 0; index < numWaitSemaphores; index++)
     {
-        swapchain->PresentFrame(frame, presentQueue);
+        presentSwapchains[index]->PresentFrame(frame, presentQueue);
     }
-    
+
     // Next frame in flight
     m_currentFrameIndex = (m_currentFrameIndex + 1) % NumFramesInFlight;
 }

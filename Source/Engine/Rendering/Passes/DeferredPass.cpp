@@ -24,6 +24,7 @@
 
 #ifdef HYP_EDITOR
 #include <Rendering/Passes/EditorGridPass.hpp>
+#include <Rendering/Passes/EditorWireframePass.hpp>
 #endif // HYP_EDITOR
 
 #include <Rendering/RenderGroup.hpp>
@@ -392,6 +393,17 @@ static Viewport GetViewportForView(View* view, const RenderSetup& rs)
 {
     if (!(view->GetFlags() & ViewFlags::THUMBNAIL_VIEW))
     {
+        if (const uint32 windowId = view->GetOutputWindowId(); windowId != 0)
+        {
+            for (const PresentTarget& target : rs.presentTargets)
+            {
+                if (target.windowId == windowId)
+                {
+                    return target.viewport;
+                }
+            }
+        }
+
         return rs.viewport;
     }
 
@@ -1633,6 +1645,31 @@ void DeferredPass::RenderFrame(Frame* frame, const RenderSetup& rs)
 
     for (View* view : rs.world->GetViews())
     {
+#ifdef HYP_EDITOR
+        if (view->GetFlags() & ViewFlags::EDITOR_WIREFRAME_VIEW)
+        {
+            if (!m_editorWireframePass)
+            {
+                m_editorWireframePass = MakeUnique<EditorWireframePass>();
+            }
+
+            RenderSetup wireframeRS = rs.Fork();
+            wireframeRS.view = view;
+            wireframeRS.viewport = GetViewportForView(view, rs);
+
+            BeginRenderedViewOutputs();
+
+            EditorWireframePass::RenderResult result = m_editorWireframePass->Render(frame, wireframeRS);
+
+            if (result.imageView.IsValid())
+            {
+                AddRenderedViewOutput(view, std::move(result.imageView), view->GetPriority(), result.isUpdated);
+            }
+
+            continue;
+        }
+#endif // HYP_EDITOR
+
         if (!(view->GetFlags() & ViewFlags::GBUFFER))
         {
             continue;
@@ -1695,13 +1732,7 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
     DeferredPassData& passData = *passDataCasted;
 
-    const uint32 frameCounter = GetFrameCounter();
-
-    if (m_renderedViewOutputs.frameIndex != frameCounter)
-    {
-        m_renderedViewOutputs.frameIndex = frameCounter;
-        m_renderedViewOutputs.items.Resize(0);
-    }
+    BeginRenderedViewOutputs();
 
     if ((g_cvSkipRendering.Get() != 0) || rs.viewport.extent.Volume() == 0)
     {
@@ -2287,17 +2318,51 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
         return;
     }
 
+    AddRenderedViewOutput(view, std::move(finalImageView), passData.priority);
+}
+
+void DeferredPass::BeginRenderedViewOutputs()
+{
+    const uint32 frameCounter = GetFrameCounter();
+
+    if (m_renderedViewOutputs.frameIndex != frameCounter)
+    {
+        m_renderedViewOutputs.frameIndex = frameCounter;
+        m_renderedViewOutputs.items.Resize(0);
+    }
+}
+
+void DeferredPass::AddRenderedViewOutput(View* view, GpuImageViewRef&& imageView, int priority, bool isUpdated)
+{
     // Ordered by View priority
     auto outputsIt = std::lower_bound(
         m_renderedViewOutputs.items.Begin(),
         m_renderedViewOutputs.items.End(),
-        passData.priority,
+        priority,
         [](const RenderedViewOutput& a, int priority)
         {
             return a.priority < priority;
         });
 
-    m_renderedViewOutputs.items.Insert(outputsIt, RenderedViewOutput { view, std::move(finalImageView), passData.priority });
+    m_renderedViewOutputs.items.Insert(outputsIt, RenderedViewOutput { view, std::move(imageView), priority, isUpdated });
+}
+
+bool DeferredPass::HasUpdatedOutputForWindow(uint32 windowId) const
+{
+    if (m_renderedViewOutputs.frameIndex != GetFrameCounter())
+    {
+        return false;
+    }
+
+    for (const RenderedViewOutput& output : m_renderedViewOutputs.items)
+    {
+        if (output.isUpdated && output.view != nullptr && output.view->GetOutputWindowId() == windowId)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void DeferredPass::UpdateRayTracingView(Frame* frame, const RenderSetup& rs)

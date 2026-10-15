@@ -111,7 +111,12 @@ void TranslateEditorGizmo::OnDragStart(const Handle<Camera>& camera, const Mouse
     {
         dragData.axisDirection[axis] = 1.0f;
 
-        if (axis == 1) // +Y, -Y
+        if (camera->GetProjectionMatrix()[3][3] != 0.0f)
+        {
+            // ortho: drag on the view plane, the move is projected onto the axis
+            dragData.planeNormal = -camera->GetDirection();
+        }
+        else if (axis == 1) // +Y, -Y
         {
             dragData.planeNormal = dragData.axisDirection.Cross(camera->GetSideVector()).Normalize();
         }

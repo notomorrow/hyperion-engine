@@ -3552,9 +3552,11 @@ void EditorSubsystem::Update(float delta)
 
     m_editorDelegates->Update();
 
-    if (g_appContext.IsValid() && g_appContext->GetMainWindow() != nullptr)
+    PollViewportWindowInput();
+
+    if (InputManager* activeInputManager = GetActiveInputManager())
     {
-        const EnumFlags<MouseButtonState> buttonStates = g_appContext->GetMainWindow()->GetInputManager()->GetButtonStates();
+        const EnumFlags<MouseButtonState> buttonStates = activeInputManager->GetButtonStates();
 
         if (!(buttonStates & (MouseButtonState::LEFT | MouseButtonState::RIGHT)))
         {
@@ -4264,6 +4266,8 @@ void EditorSubsystem::InitViewport()
     backdropPanel->SetBackgroundColor(Color::Transparent());
     uiSubsystem->GetUIStage()->AddChildUIObject(backdropPanel);
 
+    m_backdropPanel = backdropPanel.ToWeak();
+
     uiSubsystem->GetUIStage()->UpdateSize(true);
 
     backdropPanel->OnClick.RemoveAllFromSet(m_delegateHandlers);
@@ -4276,7 +4280,7 @@ void EditorSubsystem::InitViewport()
                 return UIEventHandlerResult::STOP_BUBBLING;
             }
 
-            EditorViewport* activeViewport = GetActiveViewport();
+            EditorViewport* activeViewport = AcquireInputViewport();
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
@@ -4351,7 +4355,7 @@ void EditorSubsystem::InitViewport()
 
                         bool shouldMutateSelection = false;
 
-                        InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+                        InputManager* inputManager = GetActiveInputManager();
 
                         // If CTRL key is down, add/remove from current selection.
                         if (inputManager->IsCtrlDown())
@@ -4396,7 +4400,7 @@ void EditorSubsystem::InitViewport()
         backdropPanel.Get(),
         [this](const MouseEvent& event)
         {
-            EditorViewport* activeViewport = GetActiveViewport();
+            EditorViewport* activeViewport = AcquireInputViewport();
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
@@ -4430,7 +4434,7 @@ void EditorSubsystem::InitViewport()
             // prevent click being triggered on release once mouse has been dragged
             m_shouldCancelNextClick = true;
 
-            EditorViewport* activeViewport = GetActiveViewport();
+            EditorViewport* activeViewport = AcquireInputViewport();
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
@@ -4438,7 +4442,7 @@ void EditorSubsystem::InitViewport()
 
             if (GetTerrainState()->IsEnabled() && event.mouseButtons[MouseButtonState::LEFT])
             {
-                InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+                InputManager* inputManager = GetActiveInputManager();
 
                 GetTerrainState()->UpdateStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
 
@@ -4447,7 +4451,7 @@ void EditorSubsystem::InitViewport()
 
             if (EditorSurfacePainterState* painter = GetActiveSurfacePainter(); painter && event.mouseButtons[MouseButtonState::LEFT])
             {
-                InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+                InputManager* inputManager = GetActiveInputManager();
 
                 painter->UpdateStroke(event.relativePos, /* erase */ inputManager->IsShiftDown());
 
@@ -4510,7 +4514,7 @@ void EditorSubsystem::InitViewport()
         backdropPanel.Get(),
         [this, uiStage = uiSubsystem->GetUIStage().Get()](const MouseEvent& event)
         {
-            EditorViewport* activeViewport = GetActiveViewport();
+            EditorViewport* activeViewport = AcquireInputViewport();
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
@@ -4531,7 +4535,7 @@ void EditorSubsystem::InitViewport()
 
                 if (painter->IsStroking() && event.mouseButtons[MouseButtonState::LEFT])
                 {
-                    InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+                    InputManager* inputManager = GetActiveInputManager();
 
                     painter->UpdateStroke(event.relativePos, /* erase */ inputManager->IsShiftDown());
 
@@ -4550,7 +4554,7 @@ void EditorSubsystem::InitViewport()
 
                 if (GetTerrainState()->IsStroking() && event.mouseButtons[MouseButtonState::LEFT])
                 {
-                    InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+                    InputManager* inputManager = GetActiveInputManager();
 
                     GetTerrainState()->UpdateStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
 
@@ -4638,7 +4642,7 @@ void EditorSubsystem::InitViewport()
         {
             m_shouldCancelNextClick = false;
 
-            EditorViewport* activeViewport = GetActiveViewport();
+            EditorViewport* activeViewport = AcquireInputViewport();
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
@@ -4646,7 +4650,7 @@ void EditorSubsystem::InitViewport()
 
             if (GetTerrainState()->IsEnabled())
             {
-                InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+                InputManager* inputManager = GetActiveInputManager();
 
                 GetTerrainState()->BeginStroke(event.relativePos, /* invert */ inputManager->IsShiftDown());
 
@@ -4655,7 +4659,7 @@ void EditorSubsystem::InitViewport()
 
             if (EditorSurfacePainterState* painter = GetActiveSurfacePainter())
             {
-                InputManager* inputManager = g_appContext->GetMainWindow()->GetInputManager();
+                InputManager* inputManager = GetActiveInputManager();
 
                 painter->BeginStroke(event.relativePos, /* erase */ inputManager->IsShiftDown());
 
@@ -4724,7 +4728,7 @@ void EditorSubsystem::InitViewport()
         {
             m_shouldCancelNextClick = false;
 
-            EditorViewport* activeViewport = GetActiveViewport();
+            EditorViewport* activeViewport = AcquireInputViewport();
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
@@ -4772,7 +4776,7 @@ void EditorSubsystem::InitViewport()
         backdropPanel.Get(),
         [this](const KeyboardEvent& event)
         {
-            EditorViewport* activeViewport = GetActiveViewport();
+            EditorViewport* activeViewport = AcquireInputViewport();
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
@@ -4809,13 +4813,14 @@ void EditorSubsystem::InitViewport()
             }
 
             ///Keyboard shortcuts
-            if (g_appContext.IsValid()
-                && g_appContext->GetMainWindow() != nullptr
-                && g_appContext->GetMainWindow()->GetInputManager()->IsCtrlDown()
+            InputManager* shortcutInputManager = GetActiveInputManager();
+
+            if (shortcutInputManager != nullptr
+                && shortcutInputManager->IsCtrlDown()
                 && !IsSimulating()
                 && !IsMeshEditDragActive())
             {
-                const bool isShiftDown = g_appContext->GetMainWindow()->GetInputManager()->IsShiftDown();
+                const bool isShiftDown = shortcutInputManager->IsShiftDown();
 
                 Name commandName;
 
@@ -4898,7 +4903,7 @@ void EditorSubsystem::InitViewport()
         backdropPanel.Get(),
         [this](const KeyboardEvent& event)
         {
-            EditorViewport* activeViewport = GetActiveViewport();
+            EditorViewport* activeViewport = AcquireInputViewport();
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
@@ -4926,7 +4931,7 @@ void EditorSubsystem::InitViewport()
         {
             m_editorCameraEnabled = true;
 
-            EditorViewport* activeViewport = GetActiveViewport();
+            EditorViewport* activeViewport = AcquireInputViewport();
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
@@ -4957,7 +4962,7 @@ void EditorSubsystem::InitViewport()
         {
             m_editorCameraEnabled = false;
 
-            EditorViewport* activeViewport = GetActiveViewport();
+            EditorViewport* activeViewport = AcquireInputViewport();
             if (!activeViewport)
             {
                 return UIEventHandlerResult::OK;
@@ -5492,9 +5497,9 @@ void EditorSubsystem::OpenProject(const Handle<EditorProject>& project)
     {
         Camera* editorCamera = nullptr;
 
-        if (EditorViewport* activeViewport = GetActiveViewport())
+        if (EditorViewport* mainViewport = GetMainWindowViewport(); mainViewport && !mainViewport->IsOrthographic())
         {
-            editorCamera = activeViewport->GetCamera();
+            editorCamera = mainViewport->GetCamera();
         }
 
         if (!editorCamera)
@@ -5812,6 +5817,14 @@ Vec3f EditorSubsystem::CalculateSceneInsertionPoint(float desiredDistance, float
 
     const Vec3f cameraPosition = activeViewport->GetCamera()->GetWorldTranslation();
     const Vec3f cameraDirection = activeViewport->GetCamera()->GetDirection();
+
+    if (activeViewport->IsOrthographic())
+    {
+        // ortho cameras sit far back along the view axis; place on the plane through the origin instead
+        const Vec3f planePoint = cameraPosition - cameraDirection * cameraPosition.Dot(cameraDirection);
+
+        desiredDistance = (planePoint - cameraPosition).Length();
+    }
 
     Vec3f insertionPoint = cameraPosition + cameraDirection * desiredDistance;
 
@@ -6180,16 +6193,13 @@ void EditorSubsystem::SetActiveViewport(EditorViewport* viewport)
     }
 
     auto it = m_editorViewports.Find(viewport);
-    if (it != m_editorViewports.End())
+
+    if (it == m_editorViewports.End())
     {
-        Handle<EditorViewport> viewportStrong = MakeStrongRef(viewport);
-        m_editorViewports.PushFront(viewportStrong);
-        OnActiveViewportChanged(viewportStrong);
         return;
     }
 
     const size_t idx = m_editorViewports.IndexOf(it);
-    AssertDebug(idx != -1);
 
     if (idx == 0)
     {
@@ -6198,7 +6208,283 @@ void EditorSubsystem::SetActiveViewport(EditorViewport* viewport)
 
     std::swap(m_editorViewports[0], m_editorViewports[idx]);
 
+    if (IsHoveringGizmo())
+    {
+        SetHoveredGizmo(MouseEvent {}, nullptr, Handle<Node>::Null());
+    }
+
     OnActiveViewportChanged(MakeStrongRef(viewport));
+}
+
+EditorViewport* EditorSubsystem::GetMainWindowViewport() const
+{
+    AssertOnThread(g_simThread);
+
+    ApplicationWindow* mainWindow = g_appContext.IsValid() ? g_appContext->GetMainWindow() : nullptr;
+
+    for (const Handle<EditorViewport>& viewport : m_editorViewports)
+    {
+        if (viewport->GetWindow() == mainWindow)
+        {
+            return viewport.Get();
+        }
+    }
+
+    return GetActiveViewport();
+}
+
+EditorViewport* EditorSubsystem::FindViewport(const String& typeName) const
+{
+    AssertOnThread(g_simThread);
+
+    const String lowerName = typeName.ToLower();
+
+    for (const Handle<EditorViewport>& viewport : m_editorViewports)
+    {
+        const char* name = nullptr;
+
+        switch (viewport->GetViewportType())
+        {
+        case EditorViewportType::Top:
+            name = "top";
+            break;
+        case EditorViewportType::Front:
+            name = "front";
+            break;
+        case EditorViewportType::Side:
+            name = "side";
+            break;
+        default:
+            name = "perspective";
+            break;
+        }
+
+        if (lowerName == name)
+        {
+            return viewport.Get();
+        }
+    }
+
+    return nullptr;
+}
+
+InputManager* EditorSubsystem::GetActiveInputManager() const
+{
+    if (EditorViewport* activeViewport = GetActiveViewport(); activeViewport && activeViewport->GetWindow())
+    {
+        return activeViewport->GetWindow()->GetInputManager();
+    }
+
+    if (g_appContext.IsValid() && g_appContext->GetMainWindow() != nullptr)
+    {
+        return g_appContext->GetMainWindow()->GetInputManager();
+    }
+
+    return nullptr;
+}
+
+EditorViewport* EditorSubsystem::AcquireInputViewport()
+{
+    EditorViewport* viewport = m_routedInputViewport != nullptr ? m_routedInputViewport : GetMainWindowViewport();
+
+    SetActiveViewport(viewport);
+
+    return GetActiveViewport();
+}
+
+void EditorSubsystem::PollViewportWindowInput()
+{
+    AssertOnThread(g_simThread);
+
+    if (m_editorViewports.Empty())
+    {
+        return;
+    }
+
+    ApplicationWindow* mainWindow = g_appContext.IsValid() ? g_appContext->GetMainWindow() : nullptr;
+
+    // routing can reorder m_editorViewports
+    const Array<Handle<EditorViewport>, EditorAllocator> viewports = m_editorViewports;
+
+    for (const Handle<EditorViewport>& viewport : viewports)
+    {
+        ApplicationWindow* window = viewport->GetWindow();
+
+        if (window == nullptr || window == mainWindow)
+        {
+            continue;
+        }
+
+        Event event;
+
+        while (window->GetInputManager()->PollEvent(event))
+        {
+            RouteViewportWindowEvent(viewport.Get(), event);
+        }
+    }
+}
+
+void EditorSubsystem::RouteViewportWindowEvent(EditorViewport* viewport, const Event& event)
+{
+    Handle<UIObject> backdropPanel = m_backdropPanel.Lock();
+    ApplicationWindow* window = viewport->GetWindow();
+
+    if (!backdropPanel.IsValid() || window == nullptr)
+    {
+        return;
+    }
+
+    InputManager* inputManager = window->GetInputManager();
+    EditorViewportInputState& inputState = viewport->GetInputState();
+
+    const Vec2f windowSize = Vec2f(MathUtil::Max(window->GetSize(), Vec2i::One()));
+
+    const auto makeMouseEvent = [&](Vec2f position, Vec2f previousPosition, EnumFlags<MouseButtonState> buttons)
+    {
+        return MouseEvent {
+            .baseEvent = &event,
+            .relativePos = position / windowSize,
+            .relativePrevPos = previousPosition / windowSize,
+            .absolutePos = position,
+            .absolutePrevPos = previousPosition,
+            .mouseButtons = buttons
+        };
+    };
+
+    m_routedInputViewport = viewport;
+    HYP_DEFER({ m_routedInputViewport = nullptr; });
+
+    viewport->RequestRedraw();
+
+    switch (event.GetType())
+    {
+    case EventType::MOUSEMOTION:
+    {
+        const Vec2f position = event.IsAbsoluteMousePosition()
+            ? event.GetMousePosition()
+            : inputState.mousePosition + event.GetMousePositionDeltas();
+
+        const Vec2f previousPosition = inputState.hovered ? inputState.mousePosition : position;
+
+        inputState.mousePosition = position;
+        inputState.hovered = true;
+
+        const EnumFlags<MouseButtonState> buttons = inputManager->GetButtonStates();
+
+        if (buttons != MouseButtonState::NONE && inputState.heldButtons != MouseButtonState::NONE)
+        {
+            if (inputState.dragged || (position - inputState.mouseDownPosition).Length() >= 1.0f)
+            {
+                inputState.dragged = true;
+
+                UIObject::OnMouseDrag.Fire(backdropPanel.Get(), makeMouseEvent(position, previousPosition, buttons));
+            }
+        }
+
+        UIObject::OnMouseMove.Fire(backdropPanel.Get(), makeMouseEvent(position, previousPosition, buttons));
+
+        break;
+    }
+    case EventType::MOUSEBUTTON_DOWN:
+    {
+        const Vec2f position = Vec2f(inputManager->GetMousePosition());
+
+        if (inputState.heldButtons == MouseButtonState::NONE)
+        {
+            inputState.mouseDownPosition = position;
+            inputState.dragged = false;
+        }
+
+        inputState.mousePosition = position;
+        inputState.heldButtons |= event.GetMouseButtons();
+
+        UIObject::OnMouseDown.Fire(backdropPanel.Get(), makeMouseEvent(position, position, inputState.heldButtons));
+
+        break;
+    }
+    case EventType::MOUSEBUTTON_UP:
+    {
+        const Vec2f position = Vec2f(inputManager->GetMousePosition());
+        const EnumFlags<MouseButtonState> releasedButtons = event.GetMouseButtons() & inputState.heldButtons;
+
+        if (releasedButtons == MouseButtonState::NONE)
+        {
+            break;
+        }
+
+        if (releasedButtons == MouseButtonState::LEFT && inputState.heldButtons == MouseButtonState::LEFT)
+        {
+            UIObject::OnClick.Fire(backdropPanel.Get(), makeMouseEvent(position, inputState.mousePosition, releasedButtons));
+        }
+
+        UIObject::OnMouseUp.Fire(backdropPanel.Get(), makeMouseEvent(position, inputState.mousePosition, releasedButtons));
+
+        inputState.heldButtons &= ~releasedButtons;
+        inputState.mousePosition = position;
+
+        break;
+    }
+    case EventType::MOUSESCROLL:
+    {
+        SetActiveViewport(viewport);
+
+        MouseEvent mouseEvent = makeMouseEvent(inputState.mousePosition, inputState.mousePosition, inputManager->GetButtonStates());
+        mouseEvent.wheel = event.GetMouseWheel();
+
+        if (CameraController* controller = viewport->GetCamera()->GetCameraController())
+        {
+            if (InputHandlerBase* inputHandler = controller->GetInputHandler())
+            {
+                inputHandler->OnMouseScroll(mouseEvent);
+            }
+        }
+
+        break;
+    }
+    case EventType::KEYDOWN:
+    case EventType::KEYUP:
+    {
+        const KeyboardEvent keyboardEvent {
+            .baseEvent = &event,
+            .inputManager = inputManager,
+            .keyCode = event.GetKeyCode()
+        };
+
+        if (event.GetType() == EventType::KEYDOWN)
+        {
+            UIObject::OnKeyDown.Fire(backdropPanel.Get(), keyboardEvent);
+        }
+        else
+        {
+            UIObject::OnKeyUp.Fire(backdropPanel.Get(), keyboardEvent);
+        }
+
+        break;
+    }
+    case EventType::WINDOW_FOCUS_GAINED:
+    {
+        UIObject::OnGainFocus.Fire(backdropPanel.Get(), MouseEvent { .baseEvent = &event });
+
+        break;
+    }
+    case EventType::WINDOW_FOCUS_LOST:
+    {
+        if (inputState.heldButtons != MouseButtonState::NONE)
+        {
+            UIObject::OnMouseUp.Fire(backdropPanel.Get(), makeMouseEvent(inputState.mousePosition, inputState.mousePosition, inputState.heldButtons));
+
+            inputState.heldButtons = MouseButtonState::NONE;
+        }
+
+        inputState.hovered = false;
+
+        UIObject::OnLoseFocus.Fire(backdropPanel.Get(), MouseEvent { .baseEvent = &event });
+
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 void EditorSubsystem::AddViewport(const Handle<EditorViewport>& viewport)
@@ -6207,7 +6493,7 @@ void EditorSubsystem::AddViewport(const Handle<EditorViewport>& viewport)
 
     Assert(viewport != nullptr);
 
-    if (!viewport)
+    if (!viewport || m_editorViewports.Contains(viewport))
     {
         return;
     }

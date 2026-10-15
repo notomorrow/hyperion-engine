@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform;
@@ -11,6 +12,18 @@ namespace Hyperion.Editor
     {
         private const int DefaultWidth = 800;
         private const int DefaultHeight = 600;
+
+        public static readonly StyledProperty<EditorViewportType> ViewportTypeProperty =
+            AvaloniaProperty.Register<EditorViewportControl, EditorViewportType>(nameof(ViewportType), EditorViewportType.Perspective);
+
+        public EditorViewportType ViewportType
+        {
+            get => GetValue(ViewportTypeProperty);
+            set => SetValue(ViewportTypeProperty, value);
+        }
+
+        // the perspective viewport owns the app's main window; the others are presented alongside it
+        public bool IsMainViewport => ViewportType == EditorViewportType.Perspective;
 
         public ApplicationWindow? Window { get; private set; } = null;
         public AppContextBase? AppContext { get; private set; } = null;
@@ -68,6 +81,8 @@ namespace Hyperion.Editor
                 height = DefaultHeight;
             }
 
+            Viewport.SetViewportType(ViewportType);
+
             InitEditorViewport(Viewport);
 
             WindowOptions windowOptions = new WindowOptions();
@@ -76,13 +91,9 @@ namespace Hyperion.Editor
             windowOptions.flags = WindowFlags.None;
             windowOptions.parentHwnd = parent.Handle;
 
-            Window = Viewport.CreateViewportWindow(windowOptions);
+            Window = Viewport.CreateViewportWindow(windowOptions, IsMainViewport);
 
-            if (Window != null)
-            {
-                AppContext.SetMainWindow(Window);
-            }
-            else
+            if (Window == null)
             {
                 Logger.Log(LogLevel.Error, "Failed to create the editor viewport window.");
             }
@@ -139,6 +150,19 @@ namespace Hyperion.Editor
                 {
                     AppContext.SetMainWindow(null);
                 }
+                else
+                {
+                    AppContext.RemovePresentWindow(Window);
+                }
+
+                Window = null;
+            }
+
+            if (Viewport != null)
+            {
+                Viewport.ReleaseViewportWindow();
+
+                EngineManager.UnregisterViewport(Viewport);
             }
 
             base.DestroyNativeControlCore(control);
