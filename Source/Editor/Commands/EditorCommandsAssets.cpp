@@ -1,6 +1,7 @@
 #include <Editor/Commands/EditorCommandsCommon.hpp>
 #include <Editor/EditorAssetDrop.hpp>
 #include <Editor/EditorTemplateLibrary.hpp>
+#include <Editor/EditorImport.hpp>
 
 #include <Scene/Components/ScriptComponent.hpp>
 
@@ -64,6 +65,113 @@ Optional<Vec2f> ParseViewportPositionArguments(const EditorCommandBase& command)
     StringUtil::Parse(command.GetArgument(3), &ny);
 
     return Vec2f(nx, ny);
+}
+
+void AddAssetToScene(EditorSubsystem& subsystem, const Handle<Scene>& scene, const Handle<AssetObject>& asset, const Vec3f& insertionPoint)
+{
+    Handle<Node> clonedNode;
+
+    Handle<Mesh> mesh = DynamicCast<Mesh>(asset);
+    Handle<Material> meshMaterial;
+
+    if (Handle<Prefab> prefab = DynamicCast<Prefab>(asset))
+    {
+        if (subsystem.IsEditingPrefab() && subsystem.GetPrefabEditState()->GetPrefab() == prefab)
+        {
+            HYP_LOG(Editor, Warning, "Cannot add prefab '{}' to itself", asset->GetName());
+            return;
+        }
+
+        clonedNode = prefab->Spawn();
+    }
+    else if (mesh.IsValid())
+    {
+        MaterialAttributes attributes;
+        attributes.shaderName = NAME("GeometryPass");
+
+        meshMaterial = MakeHandle<Material>(NAME_FMT("Material_{}", mesh->GetName()), attributes);
+        meshMaterial->SetIsDynamic(true);
+        InitObject(meshMaterial);
+
+        Handle<Entity> meshEntity = MakeHandle<Entity>();
+        meshEntity->SetName(mesh->GetName());
+
+        clonedNode = meshEntity;
+    }
+    else
+    {
+        HYP_LOG(Editor, Warning, "Expected prefab or mesh, got {}", asset->InstanceClass()->GetName());
+        return;
+    }
+
+    if (!clonedNode.IsValid())
+    {
+        HYP_LOG(Editor, Error, "Failed to spawn asset '{}'", asset->GetName());
+        return;
+    }
+
+    Handle<Node> parentNode = scene->GetRoot();
+    Assert(parentNode.IsValid());
+
+    if (!parentNode.IsValid())
+    {
+        HYP_LOG(Editor, Error, "No root on Scene {}!", scene->GetName());
+        return;
+    }
+
+    clonedNode->SetWorldTranslation(insertionPoint);
+
+    WeakHandle<Node> previousFocusedNode = subsystem.GetFocusedNode();
+
+    Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+        HYP_FORMAT("Add {}", asset->GetName()),
+        Proc<EditorActionFunctions()>(
+            [clonedNode, parentNode, previousFocusedNode, mesh, meshMaterial]() -> EditorActionFunctions
+            {
+                return EditorActionFunctions {
+                    .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
+                        [clonedNode, parentNode, mesh, meshMaterial](EditorSubsystem* editorSubsystem, EditorProject*)
+                        {
+                            parentNode->AddChild(clonedNode);
+
+                            if (meshMaterial.IsValid())
+                            {
+                                GetCurrentAssetRegistry()->PutAssetUnique(meshMaterial);
+                                editorSubsystem->OnAssetsChanged(AssetBuckets::Materials.GetIndex());
+
+                                Handle<Entity> meshEntity = DynamicCast<Entity>(clonedNode);
+
+                                if (!meshEntity->HasComponent<MeshComponent>())
+                                {
+                                    meshEntity->AddComponent<MeshComponent>(MeshComponent { mesh, meshMaterial });
+                                }
+
+                                meshEntity->SetLocalBounds(mesh->GetAABB());
+                            }
+
+                            editorSubsystem->SetFocusedNode(clonedNode, true);
+                        }),
+                    .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
+                        [clonedNode, previousFocusedNode, meshMaterial](EditorSubsystem* editorSubsystem, EditorProject*)
+                        {
+                            clonedNode->Remove();
+
+                            if (meshMaterial.IsValid())
+                            {
+                                GetCurrentAssetRegistry()->RemoveAsset(meshMaterial);
+                                editorSubsystem->OnAssetsChanged(AssetBuckets::Materials.GetIndex());
+                            }
+
+                            if (Handle<Node> focusedNode = previousFocusedNode.Lock(); focusedNode.IsValid())
+                            {
+                                editorSubsystem->SetFocusedNode(focusedNode, true);
+                            }
+                        })
+                };
+            }));
+
+    InitObject(action);
+    subsystem.GetSceneActionStack()->PushAction(action);
 }
 
 } // namespace
@@ -515,117 +623,114 @@ public:
             return;
         }
 
-        Handle<Node> clonedNode;
-
-        Handle<Mesh> mesh = DynamicCast<Mesh>(asset);
-        Handle<Material> meshMaterial;
-
-        if (Handle<Prefab> prefab = DynamicCast<Prefab>(asset))
-        {
-            if (subsystem->IsEditingPrefab() && subsystem->GetPrefabEditState()->GetPrefab() == prefab)
-            {
-                HYP_LOG(Editor, Warning, "EditorCommandAddAsset: cannot add prefab '{}' to itself", assetName);
-                return;
-            }
-
-            clonedNode = prefab->Spawn();
-        }
-        else if (mesh.IsValid())
-        {
-            MaterialAttributes attributes;
-            attributes.shaderName = NAME("GeometryPass");
-
-            meshMaterial = MakeHandle<Material>(NAME_FMT("Material_{}", mesh->GetName()), attributes);
-            meshMaterial->SetIsDynamic(true);
-            InitObject(meshMaterial);
-
-            Handle<Entity> meshEntity = MakeHandle<Entity>();
-            meshEntity->SetName(mesh->GetName());
-
-            clonedNode = meshEntity;
-        }
-        else
-        {
-            HYP_LOG(Editor, Warning, "EditorCommandAddAsset: Expected prefab or mesh, got {}", asset->InstanceClass()->GetName());
-            return;
-        }
-
-        if (!clonedNode.IsValid())
-        {
-            HYP_LOG(Editor, Error, "EditorCommandAddAsset: failed to spawn asset '{}'", assetName);
-            return;
-        }
-
-        Handle<Node> parentNode = activeScene->GetRoot();
-        Assert(parentNode.IsValid());
-
-        if (!parentNode.IsValid())
-        {
-            HYP_LOG(Editor, Error, "EditorCommandAddAsset: no root on Scene {}!", activeScene->GetName());
-            return;
-        }
-
-        const Vec3f insertionPoint = CalculateAssetInsertionPoint(*subsystem, *activeScene, ParseViewportPositionArguments(*this));
-
-        clonedNode->SetWorldTranslation(insertionPoint);
-
-        WeakHandle<Node> previousFocusedNode = subsystem->GetFocusedNode();
-
-        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
-            HYP_FORMAT("Add {}", assetName),
-            Proc<EditorActionFunctions()>(
-                [clonedNode, parentNode, previousFocusedNode, mesh, meshMaterial]() -> EditorActionFunctions
-                {
-                    return EditorActionFunctions {
-                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [clonedNode, parentNode, mesh, meshMaterial](EditorSubsystem* editorSubsystem, EditorProject*)
-                            {
-                                parentNode->AddChild(clonedNode);
-
-                                if (meshMaterial.IsValid())
-                                {
-                                    GetCurrentAssetRegistry()->PutAssetUnique(meshMaterial);
-                                    editorSubsystem->OnAssetsChanged(AssetBuckets::Materials.GetIndex());
-
-                                    Handle<Entity> meshEntity = DynamicCast<Entity>(clonedNode);
-
-                                    if (!meshEntity->HasComponent<MeshComponent>())
-                                    {
-                                        meshEntity->AddComponent<MeshComponent>(MeshComponent { mesh, meshMaterial });
-                                    }
-
-                                    meshEntity->SetLocalBounds(mesh->GetAABB());
-                                }
-
-                                editorSubsystem->SetFocusedNode(clonedNode, true);
-                            }),
-                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [clonedNode, previousFocusedNode, meshMaterial](EditorSubsystem* editorSubsystem, EditorProject*)
-                            {
-                                clonedNode->Remove();
-
-                                if (meshMaterial.IsValid())
-                                {
-                                    GetCurrentAssetRegistry()->RemoveAsset(meshMaterial);
-                                    editorSubsystem->OnAssetsChanged(AssetBuckets::Materials.GetIndex());
-                                }
-
-                                if (Handle<Node> focusedNode = previousFocusedNode.Lock(); focusedNode.IsValid())
-                                {
-                                    editorSubsystem->SetFocusedNode(focusedNode, true);
-                                }
-                            })
-                    };
-                }));
-
-        InitObject(action);
-        subsystem->GetSceneActionStack()->PushAction(action);
+        AddAssetToScene(*subsystem, activeScene, asset, CalculateAssetInsertionPoint(*subsystem, *activeScene, ParseViewportPositionArguments(*this)));
     }
 };
 
 DEFINE_EDITOR_COMMAND(AddAsset);
 
 #pragma endregion AddAsset
+
+#pragma region ImportAndPlace
+
+/// Arguments: normalized viewport x, y, then the model file paths separated by '|' (paths may contain spaces).
+class EditorCommandImportAndPlace final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandImportAndPlace);
+
+public:
+    virtual ~EditorCommandImportAndPlace() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Import and Place";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        if (NumArguments() < 3)
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandImportAndPlace requires viewport x, y and file paths");
+            return;
+        }
+
+        float nx = 0.5f;
+        float ny = 0.5f;
+        StringUtil::Parse(GetArgument(0), &nx);
+        StringUtil::Parse(GetArgument(1), &ny);
+
+        String joinedPaths = GetArgument(2);
+
+        for (int i = 3; i < NumArguments(); i++)
+        {
+            joinedPaths += ' ';
+            joinedPaths += GetArgument(i);
+        }
+
+        Array<FilePath> files;
+
+        for (String& path : joinedPaths.Split('|'))
+        {
+            FilePath filePath(std::move(path));
+
+            if (!IsEditorImportModelFile(filePath) || !filePath.Exists())
+            {
+                HYP_LOG(Editor, Warning, "EditorCommandImportAndPlace: skipping '{}'", filePath);
+                continue;
+            }
+
+            files.PushBack(std::move(filePath));
+        }
+
+        if (files.Empty())
+        {
+            return;
+        }
+
+        if (!subsystem->GetCurrentProject().IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandImportAndPlace: no project loaded");
+            return;
+        }
+
+        Handle<Scene> activeScene = subsystem->GetActiveScene();
+        if (!activeScene.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandImportAndPlace: no active scene");
+            return;
+        }
+
+        const Vec3f insertionPoint = CalculateAssetInsertionPoint(*subsystem, *activeScene, Vec2f(nx, ny));
+
+        ImportEditorContent(
+            subsystem,
+            files,
+            [weakScene = WeakHandle<Scene>(activeScene), insertionPoint](EditorSubsystem& editorSubsystem, const Array<Handle<AssetObject>>& assets)
+            {
+                Handle<Scene> scene = editorSubsystem.GetActiveScene();
+
+                if (!scene.IsValid() || scene != weakScene.Lock())
+                {
+                    HYP_LOG(Editor, Warning, "Active scene changed during import; imported models were not placed");
+                    return;
+                }
+
+                for (const Handle<AssetObject>& asset : assets)
+                {
+                    if (asset.IsValid() && asset->IsA<Prefab>())
+                    {
+                        AddAssetToScene(editorSubsystem, scene, asset, insertionPoint);
+                    }
+                }
+            });
+    }
+};
+
+DEFINE_EDITOR_COMMAND(ImportAndPlace);
+
+#pragma endregion ImportAndPlace
 
 #pragma region PlaceAsInstance
 

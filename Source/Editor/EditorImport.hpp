@@ -11,8 +11,35 @@
 #include <Core/FileSystem/FilePath.hpp>
 #include <Core/Containers/String.hpp>
 #include <Core/Utilities/StringUtil.hpp>
+#include <Core/Containers/Array.hpp>
+#include <Core/Functional/Proc.hpp>
+#include <Core/Reflection/Handle.hpp>
 
 namespace Hyperion {
+
+class EditorSubsystem;
+class AssetObject;
+
+using EditorImportCallback = Proc<void(EditorSubsystem&, const Array<Handle<AssetObject>>&)>;
+
+void ImportEditorContent(EditorSubsystem* subsystem, const Array<FilePath>& files, EditorImportCallback&& onImported = {});
+
+static inline bool IsEditorImportModelFile(const FilePath& filepath)
+{
+    static const char* const modelExtensions[] = { "obj", "fbx", "gltf", "glb" };
+
+    const String extension = filepath.GetExtension().ToLower();
+
+    for (const char* modelExtension : modelExtensions)
+    {
+        if (extension == modelExtension)
+        {
+            return true;
+        }
+    }
+
+    return String(filepath.Basename()).ToLower().EndsWith(".mesh.xml");
+}
 
 static inline EnumFlags<AssetLoadHint> GetEditorImportLoadHint(const FilePath& filepath)
 {
