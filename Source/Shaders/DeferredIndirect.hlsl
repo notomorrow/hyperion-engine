@@ -4,7 +4,7 @@ PERMUTE(SSGI_ENABLED);
 PERMUTE(SSR_ENABLED);
 PERMUTE(RT_GI);
 PERMUTE(RT_REFLECTIONS);
-PERMUTE(HBAO_ENABLED);
+PERMUTE(GTAO_ENABLED);
 PERMUTE(REFLECTIONS_ONLY);
 
 STATIC(TILE_Z_BINS, 16);
@@ -221,7 +221,7 @@ PSOutput PSMain(PSInput input)
     float4 irradiance = (float4)0.0;
     float4 reflections = (float4)0.0;
 
-#if HBAO_ENABLED || SSAO_ENABLED
+#if GTAO_ENABLED || SSAO_ENABLED
     const float4 ssao_data = SAMPLE_TEXTURE_2D_LOD(sampler_linear, SSAOResultTexture, texcoord, 0);
     ao *= ssao_data.r;
 #endif
@@ -300,7 +300,7 @@ PSOutput PSMain(PSInput input)
     const float3 F0 = CalculateF0(albedo.rgb, metalness);
     const float3 dfg = CalculateDFG(perceptualRoughness, NdotV);
     const float3 E = CalculateE(F0, dfg);
-    float3 Fd = diffuse_color.rgb * irradiance.rgb * (1.0 - E) * ao;
+    float3 Fd = diffuse_color.rgb * irradiance.rgb * (1.0 - E) * GTAOMultiBounce(ao, diffuse_color.rgb);
 
 #ifdef SSR_ENABLED
     result = Fd;
