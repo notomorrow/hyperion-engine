@@ -92,9 +92,12 @@ DECLARE_SRV(GlimmerBrickReflections, HistoryGuideTexture) Texture2D HistoryGuide
 #define WANT_NOTHING 0xFFFFFFFFu
 #define WANT_RAY 0xFFFFFFFEu
 #define WANT_FILL 0xFFFFFFFDu
+
+#define WANT_RAY_SAMPLED 0xFFFFFFFCu
 #define WANT_BLANK (1u << 27u)
 
 #define LIST_SINGLE 0x80000000u
+#define LIST_SAMPLED 0x40000000u
 
 #define REACH_HOLE -2.0
 #define GUIDE_SAMPLED 2.0
@@ -113,6 +116,11 @@ DECLARE_SRV(GlimmerBrickReflections, HistoryGuideTexture) Texture2D HistoryGuide
 // the roughness from which a pixel that traces for itself places its ray by chance
 #define SAMPLED_FROM 0.2
 #define SPREAD_DISC 2.0
+// close to something flat and polished the way a crossing's middle reflects the eye moves on by a bin or more a column, and which pixels
+// stray from its bins goes by where they fall: a pattern of diamonds. Past NEAR_FROM of a bin a column a pixel traces for itself, all of
+// them by NEAR_TO, its ray placed over the lobe as from SAMPLED_FROM up
+#define NEAR_FROM 0.6
+#define NEAR_TO 0.8
 // the least of a pixel's view worth a read, and the least of it the cards its slots name have to cover for those to be its picture
 #define LAYER_LEAST 0.02
 #define LAYER_ENOUGH 0.5
@@ -283,14 +291,20 @@ bool UnpackSlotCard(uint packed, out uint outCard)
         && BrickSerial(brick) == (packed >> GLIMMER_BRICK_CARD_BITS);
 }
 
-// what a card sends on around a point over a patch footprint metres across: rgb = radiance times how much of the patch is surface, a = that share
-float4 CardLight(int3 cell, uint axis, uint cardSlot, float3 position, float footprint)
+//' 'rgb = radiance times how much of the patch is surface, a = that share
+float4 CardLight(
+    int3 cell,
+    uint axis,
+    uint cardSlot,
+    float3 position,
+    float3 normal,
+    float footprint)
 {
     const float width = constants.bricks.params.z;
 
     if (footprint >= float(1u << uint(GLIMMER_BRICK_CARD_FIRST_MIP)) * width * 0.75)
     {
-        const float4 light = GlimmerSampleBrickLight(constants.bricks, cell, axis, cardSlot, position, footprint);
+        const float4 light = GlimmerSampleBrickLight(constants.bricks, cell, axis, cardSlot, position, normal, footprint);
 
         return light.a < 1e-3 ? (float4)0.0 : light;
     }
@@ -356,7 +370,7 @@ float4 HitLight(GlimmerBrickHit hit, float3 position, float footprint)
         return (float4)0.0;
     }
 
-    return CardLight(cell, axis, GlimmerBrickCardSlot(constants.bricks, axis, hit.normal, hit.depth), position, footprint);
+    return CardLight(cell, axis, GlimmerBrickCardSlot(constants.bricks, axis, hit.normal, hit.depth), position, hit.normal, footprint);
 }
 
 // the half vector of a view's visible normals (Heitz 2018), in the frame of the normal
@@ -762,6 +776,24 @@ void Resolve(int2 pixel, uint2 texel, uint index)
     const int2 base = clamp(int2(floor(middlePlace - 0.5)), int2(0, 0), int2(bins - 2, bins - 2));
     const float2 ownPlace = place - 0.5 - float2(base);
 
+    {
+        const float3 stepU = GlimmerBrickPoint(receiverAxis, float2(width, 0.0), 0.0);
+        const float3 stepV = GlimmerBrickPoint(receiverAxis, float2(0.0, width), 0.0);
+
+        const float2 movedU = DirectionPlace(reflect(-normalize(camera.position.xyz - receiverPosition - stepU), receiver.normal)) * float(bins) - middlePlace;
+        const float2 movedV = DirectionPlace(reflect(-normalize(camera.position.xyz - receiverPosition - stepV), receiver.normal)) * float(bins) - middlePlace;
+
+        const float jump = max(max(abs(movedU.x), abs(movedU.y)), max(abs(movedV.x), abs(movedV.y)));
+        const float nearness = saturate((jump - NEAR_FROM) / (NEAR_TO - NEAR_FROM));
+
+        if (nearness > InterleavedGradientNoise(float2(texel) + 0.5))
+        {
+            SetWant(index, WANT_RAY_SAMPLED, 0u, 0u, 0u);
+
+            return;
+        }
+    }
+
     if (any(ownPlace < -STRAY) || any(ownPlace > 1.0 + STRAY))
     {
         SetWant(index, WANT_RAY, 0u, 0u, 0u);
@@ -898,7 +930,7 @@ void Resolve(int2 pixel, uint2 texel, uint index)
             continue;
         }
 
-        const float4 arriving = CardLight(cardCell, cardAxis, card % uint(GLIMMER_BRICK_CARDS), readAt[layer], angle * layerT[layer] * between);
+        const float4 arriving = CardLight(cardCell, cardAxis, card % uint(GLIMMER_BRICK_CARDS), readAt[layer], (float3)0.0, angle * layerT[layer] * between);
 
         if (arriving.a == 0.0)
         {
@@ -968,12 +1000,14 @@ void Finish(int2 pixel, uint2 texel, uint index)
         return;
     }
 
-    if (want == WANT_RAY)
+    if (want == WANT_RAY || want == WANT_RAY_SAMPLED)
     {
         Note(COUNT_RAY_PIXELS);
 
+        const bool isSampledAnyway = (want == WANT_RAY_SAMPLED);
+
         const ReflectionSurface surface = LoadSurface(pixel);
-        const bool isSampled = constants.frame.w != 0u && surface.roughness >= SAMPLED_FROM;
+        const bool isSampled = constants.frame.w != 0u && (surface.roughness >= SAMPLED_FROM || isSampledAnyway);
 
         OutGuide[texel] = float4(surface.P - camera.position.xyz, surface.roughness + (isSampled ? GUIDE_SAMPLED : 0.0));
 
@@ -985,7 +1019,7 @@ void Finish(int2 pixel, uint2 texel, uint index)
             return;
         }
 
-        ListPixel(index, 0u);
+        ListPixel(index, isSampledAnyway ? LIST_SAMPLED : 0u);
 
         return;
     }
@@ -1004,7 +1038,7 @@ void Finish(int2 pixel, uint2 texel, uint index)
     }
 
     // a crossing is asked after once a frame however many pixels are on it
-    const uint stamp = want ^ (constants.frame.x * 2654435769u);
+    const uint stamp = (want ^ (constants.frame.x * 2654435769u));
 
     uint was;
     InterlockedExchange(slotClaims[PcgHash(want) & 0xFFFFFu], stamp, was);
@@ -1040,7 +1074,7 @@ void TraceListed(uint listed)
     }
 
     const uint entry = slotList[listed];
-    const uint place = entry & ~LIST_SINGLE;
+    const uint place = entry & ~(LIST_SINGLE | LIST_SAMPLED);
     const uint2 texel = uint2(place % constants.dimensions.z, place / constants.dimensions.z);
     const int2 pixel = min(int2(texel) * 2, int2(constants.dimensions.xy) - 1);
 
@@ -1072,7 +1106,7 @@ void TraceListed(uint listed)
             angle = constants.aim.x * surface.alpha * max(dot(surface.N, ViewOf(surface)), 0.1);
         }
     }
-    else if (constants.frame.w != 0u && surface.roughness >= SAMPLED_FROM)
+    else if (constants.frame.w != 0u && (surface.roughness >= SAMPLED_FROM || (entry & LIST_SAMPLED) != 0u))
     {
         // somewhere on a disc of the lobe: a place of the pixel's own, and from there a step on every frame it traces in
         const uint own = PixelSeed(texel);

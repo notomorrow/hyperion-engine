@@ -582,7 +582,8 @@ GlimmerBrickReceiver GlimmerFindBrickReceiver(GlimmerBrickParams bricks, float3 
 
 // the light a card sends on over a patch footprint metres across: rgb = radiance times how much of the patch is surface, a = that share. expects glimmerBrickRadiance
 // read across the same card of the cells beside as well, so that neither a texel's edge nor a card's shows
-float4 GlimmerSampleBrickLight(GlimmerBrickParams bricks, int3 cell, uint axis, uint cardSlot, float3 position, float footprint)
+// a surface sloping across a brick spreads over the cards of the layers its plane passes through: with its normal, every one of them is read; a zero normal reads the card alone
+float4 GlimmerSampleBrickLight(GlimmerBrickParams bricks, int3 cell, uint axis, uint cardSlot, float3 position, float3 normal, float footprint)
 {
     const float width = bricks.params.z;
 
@@ -596,6 +597,19 @@ float4 GlimmerSampleBrickLight(GlimmerBrickParams bricks, int3 cell, uint axis, 
 
     const uint mipOffset = GlimmerBrickCardMipOffset(level);
 
+    // layers counted along the axis from the world's origin, four to a cell
+    const uint facing = cardSlot / uint(GLIMMER_BRICK_LAYERS);
+    const int cellAlong = int(GlimmerBrickAlong(axis, float3(cell)));
+    const int ownLayer = cellAlong * int(GLIMMER_BRICK_LAYERS) + int(cardSlot % uint(GLIMMER_BRICK_LAYERS));
+    const float layerSize = bricks.params.x / float(GLIMMER_BRICK_LAYERS);
+    const float texelSize = width * float(1u << level);
+
+    const bool hasPlane = dot(normal, normal) > 0.0;
+    const float normalAlong = GlimmerBrickAlong(axis, normal);
+    const float2 slope = hasPlane ? GlimmerBrickAcross(axis, normal) / max(abs(normalAlong), 0.5) * sign(normalAlong) : (float2)0.0;
+    const float rise = (abs(slope.x) + abs(slope.y)) * 0.5 * texelSize;
+    const float depth = GlimmerBrickAlong(axis, position);
+
     float4 sum = (float4)0.0;
 
     [unroll]
@@ -604,32 +618,56 @@ float4 GlimmerSampleBrickLight(GlimmerBrickParams bricks, int3 cell, uint axis, 
         const int2 offset = int2(tap & 1u, tap >> 1u);
         const int2 texel = corner + offset;
         const int2 beside = int2(floor(float2(texel) / float(side)));
-
-        const int3 otherCell = cell + int3(GlimmerBrickPoint(axis, float2(beside), 0.0));
-
-        if (!GlimmerBrickCellInWindow(bricks, otherCell))
-        {
-            continue;
-        }
-
-        const uint brick = glimmerBrickTable[GlimmerBrickTableIndex(otherCell, axis)];
-
-        if (brick == GLIMMER_BRICK_NONE)
-        {
-            continue;
-        }
-
-        const uint card = glimmerBrickIndex[brick * uint(GLIMMER_BRICK_INDEX_STRIDE) + uint(GLIMMER_BRICK_INDEX_CARDS) + cardSlot];
-
-        if (card == GLIMMER_BRICK_NONE)
-        {
-            continue;
-        }
-
         const int2 within = texel - beside * side;
         const float2 weights = lerp(1.0 - fraction, fraction, float2(offset));
 
-        sum += GlimmerBrickUnpackLight(glimmerBrickRadiance[card * uint(GLIMMER_BRICK_CARD_TEXELS) + mipOffset + uint(within.y * side + within.x)]) * (weights.x * weights.y);
+        // the layers the plane is in across the texel, at most three, besides the card's own
+        int low = ownLayer;
+        int high = ownLayer - 1;
+
+        if (hasPlane)
+        {
+            const float2 middle = (float2(texel) + 0.5) * texelSize - across * width;
+            const float there = depth - dot(slope, middle);
+
+            low = int(floor((there - rise) / layerSize));
+            high = min(int(floor((there + rise) / layerSize)), low + 2);
+        }
+
+        for (int k = -1; k <= high - low; k++)
+        {
+            const int layer = k < 0 ? ownLayer : low + k;
+
+            if (k >= 0 && layer == ownLayer)
+            {
+                continue;
+            }
+
+            const int layerCell = int(floor(float(layer) / float(GLIMMER_BRICK_LAYERS)));
+            const int3 otherCell = cell + int3(GlimmerBrickPoint(axis, float2(beside), float(layerCell - cellAlong)));
+
+            if (!GlimmerBrickCellInWindow(bricks, otherCell))
+            {
+                continue;
+            }
+
+            const uint brick = glimmerBrickTable[GlimmerBrickTableIndex(otherCell, axis)];
+
+            if (brick == GLIMMER_BRICK_NONE)
+            {
+                continue;
+            }
+
+            const uint slot = facing * uint(GLIMMER_BRICK_LAYERS) + uint(layer - layerCell * int(GLIMMER_BRICK_LAYERS));
+            const uint card = glimmerBrickIndex[brick * uint(GLIMMER_BRICK_INDEX_STRIDE) + uint(GLIMMER_BRICK_INDEX_CARDS) + slot];
+
+            if (card == GLIMMER_BRICK_NONE)
+            {
+                continue;
+            }
+
+            sum += GlimmerBrickUnpackLight(glimmerBrickRadiance[card * uint(GLIMMER_BRICK_CARD_TEXELS) + mipOffset + uint(within.y * side + within.x)]) * (weights.x * weights.y);
+        }
     }
 
     return float4(sum.rgb, sum.a);

@@ -136,7 +136,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
             // the crossing's own light, or its card's at the tiles
             const float4 light = mode == DEBUG_VIEW_LIGHT
                 ? GlimmerBrickUnpackLight(glimmerBrickCrossingLight[brickHit.crossing])
-                : GlimmerSampleBrickLight(constants.bricks, cell, brickHit.axis, cardSlot, cameraPosition + direction * brickHit.t, 4.0 * width);
+                : GlimmerSampleBrickLight(constants.bricks, cell, brickHit.axis, cardSlot, cameraPosition + direction * brickHit.t, (float3)0.0, 4.0 * width);
 
             // magenta: the card has nothing there
             result = light.a > 1e-3 ? light.rgb / light.a : float3(1.0, 0.0, 1.0);
