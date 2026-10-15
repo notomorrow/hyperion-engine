@@ -1,6 +1,6 @@
 {
   "Rendering": {
-    "HBAO": {
+    "GTAO": {
       "Enabled": true
     },
     "SSGI": false,

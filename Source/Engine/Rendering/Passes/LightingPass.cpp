@@ -8,7 +8,7 @@
 
 #include <Rendering/Passes/LightingPass.hpp>
 #include <Rendering/Passes/DeferredPass.hpp>
-#include <Rendering/Passes/HBAOPass.hpp>
+#include <Rendering/Passes/GTAOPass.hpp>
 #include <Rendering/Passes/ReflectionsPass.hpp>
 #include <Rendering/Passes/SSRPass.hpp>
 #include <Rendering/Passes/SkyVisibilityPass.hpp>
@@ -77,7 +77,7 @@ static StaticShaderPropertyId s_deferredLightTypeProperties[NumLightTypes] = {
     StaticShaderPropertyId { ShaderProperty(NAME("LIGHT_TYPE"), NAME("AREA_RECT")) }
 };
 
-static StaticShaderPropertyId s_propHBAOEnabled { ShaderProperty(NAME("HBAO_ENABLED")) };
+static StaticShaderPropertyId s_propGTAOEnabled { ShaderProperty(NAME("GTAO_ENABLED")) };
 static StaticShaderPropertyId s_propSSGIEnabled { ShaderProperty(NAME("SSGI_ENABLED")) };
 static StaticShaderPropertyId s_propSSREnabled { ShaderProperty(NAME("SSR_ENABLED")) };
 static StaticShaderPropertyId s_propReflectionsOnly { ShaderProperty(NAME("REFLECTIONS_ONLY")) };
@@ -94,7 +94,7 @@ static StaticShaderPropertyId s_propDebugVelocity { ShaderProperty(NAME("DEBUG_V
 
 static StaticShaderPropertyId s_propLightTypeClustered { ShaderProperty(NAME("LIGHT_TYPE"), NAME("CLUSTERED")) };
 
-extern CVar<bool> g_cvHBAO;
+extern CVar<bool> g_cvGTAO;
 extern CVar<bool> g_cvSSGI;
 extern CVar<bool> g_cvSSR;
 extern CVar<bool> g_cvClusteredShading;
@@ -125,9 +125,9 @@ void GetDeferredShaderProperties(
         return;
     }
 
-    if (g_cvHBAO.Get())
+    if (g_cvGTAO.Get())
     {
-        outShaderProperties.Add(s_propHBAOEnabled);
+        outShaderProperties.Add(s_propGTAOEnabled);
     }
 
     if (mode == DPM_INDIRECT_LIGHTING)
@@ -341,9 +341,9 @@ void LightingPass::RenderToFramebuffer_Internal(Frame* frame, const RenderSetup&
 
     cr << SetShaderUniform(numShaderUniforms++, "GBufferMipChain"_sh, RI.textureViewCache->GetOrCreate(dpd->mipChain));
 
-    if (dpd->hbao != nullptr && g_cvHBAO.Get())
+    if (dpd->gtao != nullptr && g_cvGTAO.Get())
     {
-        cr << SetShaderUniform(numShaderUniforms++, "SSAOResultTexture"_sh, dpd->hbao->GetFinalImageView());
+        cr << SetShaderUniform(numShaderUniforms++, "SSAOResultTexture"_sh, dpd->gtao->GetFinalImageView());
     }
     else
     {

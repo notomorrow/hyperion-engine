@@ -503,6 +503,37 @@ float4 TemporalResolve(in texture2D color_texture, in texture2D previous_color_t
     return ADJUST_COLOR_GAMMA_OUT(TemporalLuminanceResolve(ADJUST_COLOR_OUT(current_color), ADJUST_COLOR_OUT(previous_color_constrained), FEEDBACK));
 }
 
+float4 SampleTextureCatmullRom(in Texture2D tex, float2 uv, float2 texel_size)
+{
+    const float2 sample_position = uv / texel_size;
+    const float2 tex_pos1 = floor(sample_position - 0.5) + 0.5;
+    const float2 f = sample_position - tex_pos1;
+
+    const float2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
+    const float2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+    const float2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
+    const float2 w3 = f * f * (-0.5 + 0.5 * f);
+
+    const float2 w12 = w1 + w2;
+    const float2 tex_pos0 = (tex_pos1 - 1.0) * texel_size;
+    const float2 tex_pos3 = (tex_pos1 + 2.0) * texel_size;
+    const float2 tex_pos12 = (tex_pos1 + w2 / w12) * texel_size;
+
+    const float weight_top = w12.x * w0.y;
+    const float weight_left = w0.x * w12.y;
+    const float weight_center = w12.x * w12.y;
+    const float weight_right = w3.x * w12.y;
+    const float weight_bottom = w12.x * w3.y;
+
+    float4 result = SAMPLE_TEXTURE_2D_LOD(sampler_linear, tex, float2(tex_pos12.x, tex_pos0.y), 0.0) * weight_top
+        + SAMPLE_TEXTURE_2D_LOD(sampler_linear, tex, float2(tex_pos0.x, tex_pos12.y), 0.0) * weight_left
+        + SAMPLE_TEXTURE_2D_LOD(sampler_linear, tex, tex_pos12, 0.0) * weight_center
+        + SAMPLE_TEXTURE_2D_LOD(sampler_linear, tex, float2(tex_pos3.x, tex_pos12.y), 0.0) * weight_right
+        + SAMPLE_TEXTURE_2D_LOD(sampler_linear, tex, float2(tex_pos12.x, tex_pos3.y), 0.0) * weight_bottom;
+
+    return max(result / (weight_top + weight_left + weight_center + weight_right + weight_bottom), 0.0);
+}
+
 void InitTemporalParams(
     in texture2D depth_texture,
     in texture2D velocity_texture,
@@ -594,8 +625,12 @@ float4 TemporalBlendVarying(
     float view_space_depth)
 {
     // Read and prepare current and previous pixels: gamma -> HDR/log -> YCoCg
+    const float2 history_uv = uv - velocity;
+    const bool is_history_on_screen = all(history_uv >= 0.0) && all(history_uv <= 1.0);
+
     float4 color_rgb = ADJUST_COLOR_GAMMA_IN(SAMPLE_TEXTURE_2D(sampler_linear, input_texture, uv));
-    float4 previous_rgb = ADJUST_COLOR_GAMMA_IN(SAMPLE_TEXTURE_2D(sampler_linear, prev_input_texture, uv - velocity));
+    const float4 history_sample = SampleTextureCatmullRom(prev_input_texture, history_uv, texel_size);
+    float4 previous_rgb = ADJUST_COLOR_GAMMA_IN(history_sample);
 
     float4 color_adj = ADJUST_COLOR_IN(color_rgb);
     float4 previous_adj = ADJUST_COLOR_IN(previous_rgb);
@@ -635,10 +670,8 @@ float4 TemporalBlendVarying(
     const float4 clipped = ClipAABB(cmin, cmax, clamp(cavg, cmin, cmax), previous_color);
 
     float4 resolved_yc = TemporalLuminanceResolveYCoCg(color, clipped, FEEDBACK);
-
-    const float pixel_velocity = length(texel_vel);
-    const float velocity_factor = saturate(pixel_velocity / 1.5);
-    resolved_yc = lerp(resolved_yc, color, velocity_factor);
+    
+    resolved_yc = is_history_on_screen ? resolved_yc : color;
 
     float4 resolved_rgb = YCoCgToRGB(resolved_yc);
     float4 out_rgb = ADJUST_COLOR_OUT(resolved_rgb);

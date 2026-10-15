@@ -8,7 +8,7 @@
 
 #include <Rendering/Passes/LightmapPass.hpp>
 #include <Rendering/Passes/DeferredPass.hpp>
-#include <Rendering/Passes/HBAOPass.hpp>
+#include <Rendering/Passes/GTAOPass.hpp>
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/GBuffer.hpp>
@@ -40,10 +40,10 @@
 
 namespace Hyperion {
 
-extern CVar<bool> g_cvHBAO;
+extern CVar<bool> g_cvGTAO;
 extern CVar<int> g_cvDeferredDebugVis;
 
-static StaticShaderPropertyId s_propHBAOEnabled { ShaderProperty(NAME("HBAO_ENABLED")) };
+static StaticShaderPropertyId s_propGTAOEnabled { ShaderProperty(NAME("GTAO_ENABLED")) };
 static StaticShaderPropertyId s_propDebugIrradiance { ShaderProperty(NAME("DEBUG_IRRADIANCE")) };
 
 struct LightmapVolumeUniforms
@@ -112,9 +112,9 @@ void LightmapPass::RenderToFramebuffer_Internal(Frame* frame, const RenderSetup&
 
     ShaderPropertySet shaderProperties;
 
-    if (g_cvHBAO.Get())
+    if (g_cvGTAO.Get())
     {
-        shaderProperties.Add(s_propHBAOEnabled);
+        shaderProperties.Add(s_propGTAOEnabled);
     }
 
     if (g_cvDeferredDebugVis.Get() == 2)
@@ -180,9 +180,9 @@ void LightmapPass::RenderToFramebuffer_Internal(Frame* frame, const RenderSetup&
         cr << SetShaderUniform(numShaderUniforms++, "CurrentEnvProbe"_sh, RI.namedBuffers[NamedBuffer::EnvProbes], 0);
     }
 
-    if (dpd->hbao != nullptr && g_cvHBAO.Get())
+    if (dpd->gtao != nullptr && g_cvGTAO.Get())
     {
-        cr << SetShaderUniform(numShaderUniforms++, "SSAOResultTexture"_sh, dpd->hbao->GetFinalImageView());
+        cr << SetShaderUniform(numShaderUniforms++, "SSAOResultTexture"_sh, dpd->gtao->GetFinalImageView());
     }
     else
     {

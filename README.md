@@ -56,7 +56,7 @@ Click a section to expand it.
 - Indirect draws, Hi-Z occlusion culling, bindless textures, mesh LODs
 - Lights: directional, point, spot, and textured rectangular area lights. Cascaded and omnidirectional shadow maps with static/dynamic caching.
 - PBR materials with parallax mapping, transmission, emissives, and foliage shading.
-- Post: TAA, HBAO, bloom, AgX / ACES / PBR Neutral tonemapping, color grading.
+- Post: TAA, GTAO, bloom, AgX / ACES / PBR Neutral tonemapping, color grading.
 - GPU particles, simulated in compute with depth-buffer collision.
 - Backends: DirectX 12 (the default on Windows) and Vulkan (macOS via MoltenVK, Android, and Linux in future). DirectX 12 is a fully supported, mainline backend.
 - Shader compiler system with built in permutations support, and live reload in editor to see changes as you make them.

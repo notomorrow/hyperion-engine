@@ -1,6 +1,6 @@
 #include "../include/Defines.hlsli"
 
-PERMUTE(HBAO_ENABLED);
+PERMUTE(GTAO_ENABLED);
 
 #ifdef VERTEX_SHADER
 
@@ -176,7 +176,7 @@ PSOutput PSMain(PSInput input)
     const float3 V = normalize(camera.position.xyz - P);
     // const float3 R = normalize(reflect(-V, N));
 
-#ifdef HBAO_ENABLED
+#ifdef GTAO_ENABLED
     ao = SAMPLE_TEXTURE_2D_LOD(SamplerLinear, SSAOResultTexture, texcoord, 0).r;
 #endif
 
@@ -197,7 +197,7 @@ PSOutput PSMain(PSInput input)
     const float3 dfg = CalculateDFG(perceptualRoughness, NdotV);
     const float3 E = CalculateE(F0, dfg);
 
-    float3 diffuseIndirect = diffuse_color.rgb * irradiance.rgb * (1.0 - E) * ao;
+    float3 diffuseIndirect = diffuse_color.rgb * irradiance.rgb * (1.0 - E) * GTAOMultiBounce(ao, diffuse_color.rgb);
 
     output.color_output = float4(diffuseIndirect, 1.0);
 

@@ -119,9 +119,17 @@ ShaderDefinitions "ShaderDefinitions" {
             VS = "DefaultVertex.hlsl"
             PS = "Terrain.hlsl"
         }
-        ShaderDefinition "HBAO" {
-            VS = "Hbao/HBAO.hlsl"
-            PS = "Hbao/HBAO.hlsl"
+        ShaderDefinition "GTAOPrefilterDepth" {
+            CS = "Gtao/GTAOPrefilterDepth.hlsl"
+        }
+        ShaderDefinition "GTAOMain" {
+            CS = "Gtao/GTAOMain.hlsl"
+        }
+        ShaderDefinition "GTAODenoise" {
+            CS = "Gtao/GTAODenoise.hlsl"
+        }
+        ShaderDefinition "GTAOTemporal" {
+            CS = "Gtao/GTAOTemporal.hlsl"
         }
         ShaderDefinition "Particle" {
             VS = "Particles/Particle.hlsl"

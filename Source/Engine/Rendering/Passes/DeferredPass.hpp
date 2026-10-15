@@ -34,7 +34,7 @@ class GBuffer;
 class EnvProbe;
 class TAAPass;
 class PostProcessing;
-class HBAO;
+class GTAOPass;
 class BloomPass;
 class SSAO;
 class DOFBlur;
@@ -100,7 +100,7 @@ public:
 
     UniquePtr<TonemapPass> tonemapPass;
 
-    UniquePtr<HBAO> hbao;
+    UniquePtr<GTAOPass> gtao;
     UniquePtr<GlimmerIrradiancePass> glimmerIrradiancePass;
     // UniquePtr<SSAO> ssao;
 
