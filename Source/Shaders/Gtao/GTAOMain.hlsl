@@ -143,11 +143,11 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
             sampleOffset = round(sampleOffset) * pixelSize;
 
             const float2 sampleScreenPos0 = uv + sampleOffset;
-            const float sampleZ0 = ViewDepthTexture.SampleLevel(SamplerPoint, sampleScreenPos0, mipLevel);
+            const float sampleZ0 = ViewDepthTexture.SampleLevel(SamplerPoint, sampleScreenPos0 * gtao.viewDepthScale.xy, mipLevel);
             const float3 samplePos0 = GTAOViewPosition(sampleScreenPos0, sampleZ0);
 
             const float2 sampleScreenPos1 = uv - sampleOffset;
-            const float sampleZ1 = ViewDepthTexture.SampleLevel(SamplerPoint, sampleScreenPos1, mipLevel);
+            const float sampleZ1 = ViewDepthTexture.SampleLevel(SamplerPoint, sampleScreenPos1 * gtao.viewDepthScale.xy, mipLevel);
             const float3 samplePos1 = GTAOViewPosition(sampleScreenPos1, sampleZ1);
 
             const float3 sampleDelta0 = samplePos0 - pixCenterPos;

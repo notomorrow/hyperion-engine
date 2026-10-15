@@ -43,13 +43,6 @@ float LoadViewDepth(uint2 coord)
     return GTAOViewDepth(GBufferDepthTexture.Load(int3(min(coord, gtao.dimensions.xy - 1u), 0)).r);
 }
 
-bool IsInMip(uint mipLevel, uint2 coord)
-{
-    const uint2 mipDimensions = max(gtao.dimensions.xy >> mipLevel, uint2(1u, 1u));
-
-    return all(coord < mipDimensions);
-}
-
 [numthreads(8, 8, 1)]
 void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID, uint3 groupThreadId : SV_GroupThreadID)
 {
@@ -61,53 +54,32 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID, uint3 groupThreadId : 
     const float depth2 = LoadViewDepth(pixCoord + uint2(0u, 1u));
     const float depth3 = LoadViewDepth(pixCoord + uint2(1u, 1u));
 
-    if (IsInMip(0u, pixCoord + uint2(0u, 0u)))
-    {
-        OutDepthMip0[pixCoord + uint2(0u, 0u)] = depth0;
-    }
-
-    if (IsInMip(0u, pixCoord + uint2(1u, 0u)))
-    {
-        OutDepthMip0[pixCoord + uint2(1u, 0u)] = depth1;
-    }
-
-    if (IsInMip(0u, pixCoord + uint2(0u, 1u)))
-    {
-        OutDepthMip0[pixCoord + uint2(0u, 1u)] = depth2;
-    }
-
-    if (IsInMip(0u, pixCoord + uint2(1u, 1u)))
-    {
-        OutDepthMip0[pixCoord + uint2(1u, 1u)] = depth3;
-    }
+    OutDepthMip0[pixCoord + uint2(0u, 0u)] = depth0;
+    OutDepthMip0[pixCoord + uint2(1u, 0u)] = depth1;
+    OutDepthMip0[pixCoord + uint2(0u, 1u)] = depth2;
+    OutDepthMip0[pixCoord + uint2(1u, 1u)] = depth3;
 
     const float depthMip1 = GTAODepthMipFilter(depth0, depth1, depth2, depth3);
 
-    if (IsInMip(1u, baseCoord))
-    {
-        OutDepthMip1[baseCoord] = depthMip1;
-    }
+    OutDepthMip1[baseCoord] = depthMip1;
 
-    g_scratchDepths[groupThreadId.x][groupThreadId.y] = depthMip1;
+    g_scratchDepths[groupThreadId.y][groupThreadId.x] = depthMip1;
 
     GroupMemoryBarrierWithGroupSync();
 
     [branch]
     if (all((groupThreadId.xy % 2u) == 0u))
     {
-        const float inTL = g_scratchDepths[groupThreadId.x + 0][groupThreadId.y + 0];
-        const float inTR = g_scratchDepths[groupThreadId.x + 1][groupThreadId.y + 0];
-        const float inBL = g_scratchDepths[groupThreadId.x + 0][groupThreadId.y + 1];
-        const float inBR = g_scratchDepths[groupThreadId.x + 1][groupThreadId.y + 1];
+        const float inTL = g_scratchDepths[groupThreadId.y + 0][groupThreadId.x + 0];
+        const float inTR = g_scratchDepths[groupThreadId.y + 0][groupThreadId.x + 1];
+        const float inBL = g_scratchDepths[groupThreadId.y + 1][groupThreadId.x + 0];
+        const float inBR = g_scratchDepths[groupThreadId.y + 1][groupThreadId.x + 1];
 
         const float depthMip2 = GTAODepthMipFilter(inTL, inTR, inBL, inBR);
 
-        if (IsInMip(2u, baseCoord / 2u))
-        {
-            OutDepthMip2[baseCoord / 2u] = depthMip2;
-        }
+        OutDepthMip2[baseCoord / 2u] = depthMip2;
 
-        g_scratchDepths[groupThreadId.x][groupThreadId.y] = depthMip2;
+        g_scratchDepths[groupThreadId.y][groupThreadId.x] = depthMip2;
     }
 
     GroupMemoryBarrierWithGroupSync();
@@ -115,19 +87,16 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID, uint3 groupThreadId : 
     [branch]
     if (all((groupThreadId.xy % 4u) == 0u))
     {
-        const float inTL = g_scratchDepths[groupThreadId.x + 0][groupThreadId.y + 0];
-        const float inTR = g_scratchDepths[groupThreadId.x + 2][groupThreadId.y + 0];
-        const float inBL = g_scratchDepths[groupThreadId.x + 0][groupThreadId.y + 2];
-        const float inBR = g_scratchDepths[groupThreadId.x + 2][groupThreadId.y + 2];
+        const float inTL = g_scratchDepths[groupThreadId.y + 0][groupThreadId.x + 0];
+        const float inTR = g_scratchDepths[groupThreadId.y + 0][groupThreadId.x + 2];
+        const float inBL = g_scratchDepths[groupThreadId.y + 2][groupThreadId.x + 0];
+        const float inBR = g_scratchDepths[groupThreadId.y + 2][groupThreadId.x + 2];
 
         const float depthMip3 = GTAODepthMipFilter(inTL, inTR, inBL, inBR);
 
-        if (IsInMip(3u, baseCoord / 4u))
-        {
-            OutDepthMip3[baseCoord / 4u] = depthMip3;
-        }
+        OutDepthMip3[baseCoord / 4u] = depthMip3;
 
-        g_scratchDepths[groupThreadId.x][groupThreadId.y] = depthMip3;
+        g_scratchDepths[groupThreadId.y][groupThreadId.x] = depthMip3;
     }
 
     GroupMemoryBarrierWithGroupSync();
@@ -135,16 +104,13 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID, uint3 groupThreadId : 
     [branch]
     if (all((groupThreadId.xy % 8u) == 0u))
     {
-        const float inTL = g_scratchDepths[groupThreadId.x + 0][groupThreadId.y + 0];
-        const float inTR = g_scratchDepths[groupThreadId.x + 4][groupThreadId.y + 0];
-        const float inBL = g_scratchDepths[groupThreadId.x + 0][groupThreadId.y + 4];
-        const float inBR = g_scratchDepths[groupThreadId.x + 4][groupThreadId.y + 4];
+        const float inTL = g_scratchDepths[groupThreadId.y + 0][groupThreadId.x + 0];
+        const float inTR = g_scratchDepths[groupThreadId.y + 0][groupThreadId.x + 4];
+        const float inBL = g_scratchDepths[groupThreadId.y + 4][groupThreadId.x + 0];
+        const float inBR = g_scratchDepths[groupThreadId.y + 4][groupThreadId.x + 4];
 
         const float depthMip4 = GTAODepthMipFilter(inTL, inTR, inBL, inBR);
 
-        if (IsInMip(4u, baseCoord / 8u))
-        {
-            OutDepthMip4[baseCoord / 8u] = depthMip4;
-        }
+        OutDepthMip4[baseCoord / 8u] = depthMip4;
     }
 }
