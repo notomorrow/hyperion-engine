@@ -241,6 +241,9 @@ void VulkanSwapchain::PresentFrame(VulkanFrame* frame, VulkanDeviceQueue* queue)
         result = vkQueuePresentKHR(queue->queue, &presentInfo);
     }
 
+    // windows that skip a frame mustn't look like they still hold this image
+    m_acquiredImageIndex = ~0u;
+
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         HYP_LOG(RenderingBackend, Verbose, "Got out of date swapchain present result ({}), calling Recreate()", result);
@@ -278,7 +281,7 @@ RendererResult VulkanSwapchain::Create()
     // FIFO is the only mode the spec guarantees, so fall back to it
     m_presentMode = VK_PRESENT_MODE_FIFO_KHR;
 
-    if (!g_cvEnableVSync.Get())
+    if (!g_cvEnableVSync.Get() || !m_allowVSync)
     {
         if (m_supportDetails.presentModes.Contains(VK_PRESENT_MODE_IMMEDIATE_KHR))
         {

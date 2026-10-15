@@ -48,6 +48,7 @@ class AssetObject;
 class EnvProbe;
 class PhysicsShape;
 class InputManager;
+class Event;
 class UIStage;
 class UIObject;
 class UIListView;
@@ -155,6 +156,15 @@ public:
 
     HYP_METHOD()
     void RemoveViewport(EditorViewport* viewport);
+
+    /*! \brief The viewport whose window is the app's main window. */
+    EditorViewport* GetMainWindowViewport() const;
+
+    /*! \brief By type name: perspective, top, front or side. */
+    EditorViewport* FindViewport(const String& typeName) const;
+
+    /*! \brief Input manager of the active viewport's window, falling back to the main window's. */
+    InputManager* GetActiveInputManager() const;
 
     /*! \brief Get the main editor scene used for editor-specific objects (e.g cameras, gizmos, etc). */
     HYP_METHOD()
@@ -780,6 +790,12 @@ public:
 private:
     void InitViewport();
 
+    /*! \brief Makes the viewport the input event came from active and returns it. */
+    EditorViewport* AcquireInputViewport();
+
+    void PollViewportWindowInput();
+    void RouteViewportWindowEvent(EditorViewport* viewport, const Event& event);
+
     Handle<EditorCommandBase> CreateCommandByName(Name name) const;
 
     void LoadPlayNetSettings();
@@ -999,6 +1015,9 @@ private:
     uint32 m_selectedBucketIndex;
 
     Array<Handle<EditorViewport>, EditorAllocator> m_editorViewports;
+
+    WeakHandle<UIObject> m_backdropPanel;
+    EditorViewport* m_routedInputViewport = nullptr;
 
     Handle<View> m_simulationView;
     FilePath m_simulationSnapshotPath;

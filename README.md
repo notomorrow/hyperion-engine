@@ -18,8 +18,8 @@ The engine is built around a set of tightly integrated subsystems that share com
 
 ## Why Hyperion?
 
-- **Dynamic GI without RT hardware.** Glimmer traces probes in software for the near field and falls back to spherical harmonics in a voxel grid for the far field. On low end devices you can skip the tracing entirely and run on the voxel grid alone.
-- **Reflection makes it EZPZ** Mark a class, struct, or field for reflection and our build tools will allow it to be used in serialization, editing, network replication, and script bindings
+- **Dynamic GI without RT hardware.** Glimmer uses a custom data structure ('bricks') for providing realtime reflections and GI of static geometry in the scene.
+- **Reflection gives you functionality for free.** Mark a class, struct, or field for reflection and our build tools will allow it to be used in serialization, editing, network replication, and script bindings
 - **Multiplayer you can test in the editor.** play-in-editor can run as a client, by starting a server others can connect to - or connect to another running server altogether
 - **Write the entire game in C# or C++** Use C# for scripting or write the entire game in it (see CSharpGame sample). Or generate a C++ project that links to Hyperion, then build and package it from the editor.
 
@@ -43,13 +43,13 @@ The engine is built around a set of tightly integrated subsystems that share com
 
 ## Features
 
-Click a section to expand it.
+Click a section header below to expand it:
 
 <details>
 <summary><b>Rendering</b></summary>
 
+- **Glimmer** - realtime global illumination and reflections, no RT hardware required. Static geometry is stored in 'bricks', a sparse structure with good data locality that replaces the usual triangle BVH for software tracing. Diffuse lighting uses precomputed radiance transfer, so the sun and sky can change freely (for dynamic ToD) without re-tracing. Glossy reflections are traced through the same bricks structure.
 - **Clustered deferred shading** supporting a large number of dynamic lights while maintaining good frame times, with forward clustered shading for translucent materials.
-- **Glimmer GI** - our (non-hardware RT required!) global illumination system. Dynamic diffuse lighting from software ray traced probes in the near field and spherical harmonics encoded into a voxel grid for far field (can also opt out of SWRT and just use the fallback for better perf on low end!)
 - **Offline lightmapper** integrated into the editor. Bakes lightmaps into the scene, reflection/irradiance probes supported for dynamic objects, fog volumes, and other static lighting data such as shadow maps.
 - Real time reflections via ray tracing on RT capable hardware, with screen-space reflections everywhere else.
 - **Automatic instancing.** Entities sharing a mesh, material, and LOD can be batched into instanced draw calls automatically

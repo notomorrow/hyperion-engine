@@ -81,6 +81,16 @@ namespace Hyperion.Editor
         private bool _isClosing;
         private bool _suppressPanelSync;
         private readonly Dictionary<string, object?> _dockContents = new Dictionary<string, object?>();
+        private readonly Dictionary<EditorViewportType, Control> _orthoViewportContents = new();
+
+        private enum ViewportLayout
+        {
+            Single,
+            Grid,      // Top / Front over Side / Perspective
+            OneOverThree
+        }
+
+        private ViewportLayout _viewportLayout = ViewportLayout.Single;
 
         private enum ToolbarDensity
         {
@@ -112,6 +122,8 @@ namespace Hyperion.Editor
 
             PanelService.Instance.ActivePanelChanged += OnPanelServiceActivePanelChanged;
             ContentBrowserViewModel.BringToFrontRequested += OnContentBrowserBringToFrontRequested;
+
+            EngineManager.ViewportLayoutRequested += layout => Dispatcher.UIThread.Post(() => ApplyViewportLayout((ViewportLayout)layout));
 
             // Detect a dynamic panel's tab being closed via its own [x] button so the
             // matching view model's OnClosed callback still runs.
@@ -258,6 +270,24 @@ namespace Hyperion.Editor
 
         private void OnResetLayoutClick(object? sender, RoutedEventArgs e)
         {
+            _viewportLayout = ViewportLayout.Single;
+
+            ResetLayout();
+        }
+
+        private void OnViewportLayoutSingleClick(object? sender, RoutedEventArgs e) => ApplyViewportLayout(ViewportLayout.Single);
+        private void OnViewportLayoutGridClick(object? sender, RoutedEventArgs e) => ApplyViewportLayout(ViewportLayout.Grid);
+        private void OnViewportLayoutOneOverThreeClick(object? sender, RoutedEventArgs e) => ApplyViewportLayout(ViewportLayout.OneOverThree);
+
+        private void ApplyViewportLayout(ViewportLayout layout)
+        {
+            if (layout == _viewportLayout)
+            {
+                return;
+            }
+
+            _viewportLayout = layout;
+
             ResetLayout();
         }
 
@@ -649,6 +679,93 @@ namespace Hyperion.Editor
         /// <summary>
         /// Builds the default dock layout, mirroring the layout declared in MainWindow.axaml.
         /// </summary>
+        private Control GetOrCreateOrthoViewportContent(EditorViewportType viewportType)
+        {
+            if (_orthoViewportContents.TryGetValue(viewportType, out Control? content))
+            {
+                return content;
+            }
+
+            var border = new Border
+            {
+                BorderThickness = new Thickness(0),
+                Child = new EditorViewportControl
+                {
+                    ViewportType = viewportType,
+                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch
+                }
+            };
+
+            border.Bind(Border.BackgroundProperty, border.GetResourceObservable("Brush.Background"));
+
+            content = new Grid { Children = { border } };
+
+            _orthoViewportContents[viewportType] = content;
+
+            return content;
+        }
+
+        private DocumentDock CreateOrthoViewportPane(EditorViewportType viewportType)
+        {
+            var document = new Document
+            {
+                Id = $"Viewport.{viewportType}",
+                Title = viewportType.ToString(),
+                Content = GetOrCreateOrthoViewportContent(viewportType),
+                CanFloat = false,
+                CanPin = false,
+                CanClose = false
+            };
+
+            return new DocumentDock { Id = $"ViewportPane.{viewportType}", CanCreateDocument = false, ActiveDockable = document, VisibleDockables = CreateDockList(document) };
+        }
+
+        /// <summary>
+        /// The viewport area of the center column for the current viewport layout. The perspective
+        /// viewport always stays in the "Documents" pane.
+        /// </summary>
+        private IDockable BuildViewportArea(DocumentDock perspectivePane)
+        {
+            switch (_viewportLayout)
+            {
+            case ViewportLayout.Grid:
+            {
+                var topRow = new ProportionalDock
+                {
+                    Orientation = Orientation.Horizontal,
+                    VisibleDockables = CreateDockList(CreateOrthoViewportPane(EditorViewportType.Top), new ProportionalDockSplitter(), CreateOrthoViewportPane(EditorViewportType.Front))
+                };
+
+                var bottomRow = new ProportionalDock
+                {
+                    Orientation = Orientation.Horizontal,
+                    VisibleDockables = CreateDockList(CreateOrthoViewportPane(EditorViewportType.Side), new ProportionalDockSplitter(), perspectivePane)
+                };
+
+                return new ProportionalDock { Id = "Viewports", Orientation = Orientation.Vertical, VisibleDockables = CreateDockList(topRow, new ProportionalDockSplitter(), bottomRow) };
+            }
+            case ViewportLayout.OneOverThree:
+            {
+                perspectivePane.Proportion = 0.65;
+
+                var orthoRow = new ProportionalDock
+                {
+                    Orientation = Orientation.Horizontal,
+                    Proportion = 0.35,
+                    VisibleDockables = CreateDockList(
+                        CreateOrthoViewportPane(EditorViewportType.Top), new ProportionalDockSplitter(),
+                        CreateOrthoViewportPane(EditorViewportType.Front), new ProportionalDockSplitter(),
+                        CreateOrthoViewportPane(EditorViewportType.Side))
+                };
+
+                return new ProportionalDock { Id = "Viewports", Orientation = Orientation.Vertical, VisibleDockables = CreateDockList(perspectivePane, new ProportionalDockSplitter(), orthoRow) };
+            }
+            default:
+                return perspectivePane;
+            }
+        }
+
         private IDock BuildDefaultLayout()
         {
             var hierarchyTool = new Tool { Id = "SceneHierarchy", Title = "Scene", Content = GetDockContent("SceneHierarchy") };
@@ -658,7 +775,7 @@ namespace Hyperion.Editor
             var sceneDocument = new Document
             {
                 Id = "Scene",
-                Title = "Viewport",
+                Title = _viewportLayout == ViewportLayout.Single ? "Viewport" : "Perspective",
                 Content = GetDockContent("Scene"),
                 CanDrag = false,
                 CanFloat = false,
@@ -674,7 +791,7 @@ namespace Hyperion.Editor
             var assetsPane = new ToolDock { Id = "AssetsPane", Alignment = Alignment.Left, ActiveDockable = assetsTool, VisibleDockables = CreateDockList(assetsTool) };
             var consolePane = new ToolDock { Id = "ConsolePane", Alignment = Alignment.Right, ActiveDockable = consoleTool, VisibleDockables = CreateDockList(consoleTool) };
             var bottomDock = new ProportionalDock { Id = "Bottom", Orientation = Orientation.Horizontal, Proportion = 0.3, VisibleDockables = CreateDockList(assetsPane, new ProportionalDockSplitter(), consolePane) };
-            var centerDock = new ProportionalDock { Id = "Center", Orientation = Orientation.Vertical, VisibleDockables = CreateDockList(documentsPane, new ProportionalDockSplitter(), bottomDock) };
+            var centerDock = new ProportionalDock { Id = "Center", Orientation = Orientation.Vertical, VisibleDockables = CreateDockList(BuildViewportArea(documentsPane), new ProportionalDockSplitter(), bottomDock) };
 
             var dynamicPanelsPane = new ToolDock { Id = "DynamicPanelsPane", Alignment = Alignment.Right, Proportion = 0.22, VisibleDockables = CreateDockList() };
 

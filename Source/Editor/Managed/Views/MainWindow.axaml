@@ -1367,6 +1367,10 @@
 
                                     <Separator />
                                     <MenuItem Header="Layout">
+                                        <MenuItem Click="OnViewportLayoutSingleClick" Header="Single Viewport" />
+                                        <MenuItem Click="OnViewportLayoutGridClick" Header="Four Viewports" />
+                                        <MenuItem Click="OnViewportLayoutOneOverThreeClick" Header="Perspective + Three" />
+                                        <Separator />
                                         <MenuItem
                                             Click="OnResetLayoutClick"
                                             Header="Reset Layout"

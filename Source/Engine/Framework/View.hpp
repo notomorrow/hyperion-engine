@@ -22,6 +22,8 @@
 
 #include <Core/Math/Frustum.hpp>
 
+#include <Core/Threading/AtomicVar.hpp>
+
 #include <Rendering/Shared.hpp>
 #include <Rendering/RenderableAttributes.hpp>
 #include <Rendering/RenderTypes.hpp>
@@ -80,6 +82,8 @@ enum class ViewFlags : uint32
     SKIP_DECALS = 0x40000,          //!< If set, the view will not collect DecalProxies.
 
     SKY_VISIBILITY_VIEW = 0x20000,  //!< Top-down depth capture of what blocks the sky. Sets its own matrices, like a shadow view.
+
+    EDITOR_WIREFRAME_VIEW = 0x80000, //!< Editor ortho viewport: scene drawn as lines over a grid by EditorWireframePass. Debug bucket keeps its own attributes.
 
     NOT_MULTI_BUFFERED = 0x2000,    //!< Disables double / triple buffering for the RenderProxyList this View writes to.
                                     //  --- Use ONLY for Views that are not written to every frame, and instead are written to and read once (or infrequently); e.g EnvProbes.
@@ -276,6 +280,28 @@ public:
     HYP_METHOD()
     void SetPriority(int priority);
 
+    /*! \brief id of the window this view is composited into. 0 = main window. */
+    HYP_FORCE_INLINE uint32 GetOutputWindowId() const
+    {
+        return m_outputWindowId.Get(MemoryOrder::RELAXED);
+    }
+
+    HYP_FORCE_INLINE void SetOutputWindowId(uint32 windowId)
+    {
+        m_outputWindowId.Set(windowId, MemoryOrder::RELAXED);
+    }
+
+    /*! \brief For views that only redraw on demand (EDITOR_WIREFRAME_VIEW). */
+    HYP_FORCE_INLINE void RequestRedraw()
+    {
+        m_redrawRequested.Set(true, MemoryOrder::RELEASE);
+    }
+
+    HYP_FORCE_INLINE bool ConsumeRedrawRequest()
+    {
+        return m_redrawRequested.Exchange(false, MemoryOrder::ACQUIRE_RELEASE);
+    }
+
     HYP_FORCE_INLINE const Optional<RenderableAttributeSet>& GetOverrideAttributes() const
     {
         return m_overrideAttributes;
@@ -376,6 +402,9 @@ protected:
     ProcRef<void(RenderProxyList&)> m_overrideCollectFunctor;
 
     TaskBatch* m_collectionTaskBatch;
+
+    AtomicVar<uint32> m_outputWindowId { 0u };
+    AtomicVar<bool> m_redrawRequested { true };
 
     bool m_markAllAsDirty = false;
 };

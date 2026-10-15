@@ -2610,6 +2610,18 @@ void RenderCollector::BuildRenderGroups(View* view, RenderProxyList& renderProxy
 
     const RenderableAttributeSet* overrideAttributes = view->GetOverrideAttributes().TryGet();
 
+    const bool keepDebugBucketAttributes = bool(view->GetFlags() & ViewFlags::EDITOR_WIREFRAME_VIEW);
+
+    const auto getOverrideAttributes = [overrideAttributes, keepDebugBucketAttributes](const RenderProxyMesh& meshProxy) -> const RenderableAttributeSet*
+    {
+        if (keepDebugBucketAttributes && meshProxy.attributes.GetMaterialAttributes().bucket == RenderBucket::Debug)
+        {
+            return nullptr;
+        }
+
+        return overrideAttributes;
+    };
+
     const uint32 currentAttributeInputs = GeometryPass::GetGlobalAttributeInputs();
     const bool attributeInputsChanged = currentAttributeInputs != attributeInputs;
     attributeInputs = currentAttributeInputs;
@@ -2661,7 +2673,7 @@ void RenderCollector::BuildRenderGroups(View* view, RenderProxyList& renderProxy
             AssertDebug(meshProxy != nullptr);
 
             RenderableAttributeSet newAttributes;
-            GeometryPass::BuildAttributes(*meshProxy, newAttributes, overrideAttributes);
+            GeometryPass::BuildAttributes(*meshProxy, newAttributes, getOverrideAttributes(*meshProxy));
 
             AssertDebug(newAttributes.GetMeshAttributes().inputLayout.mask != 0);
 
@@ -2758,7 +2770,7 @@ void RenderCollector::BuildRenderGroups(View* view, RenderProxyList& renderProxy
             AssertDebug(meshProxy != nullptr);
 
             RenderableAttributeSet attributes;
-            GeometryPass::BuildAttributes(*meshProxy, attributes, overrideAttributes);
+            GeometryPass::BuildAttributes(*meshProxy, attributes, getOverrideAttributes(*meshProxy));
 
             const RenderableAttributeHandle handle = attributeRegistry.GetOrCreate(attributes);
 

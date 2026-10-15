@@ -363,7 +363,7 @@ public:
     virtual SwapchainRef CreateSwapchain(ApplicationWindow* window, const Vec2u& extent) = 0;
 
     virtual void PrepareSwapchain(Swapchain* swapchain) = 0;
-    virtual void PresentToSwapchain(Swapchain* swapchain) = 0;
+    virtual void PresentToSwapchains(Span<Swapchain* const> swapchains) = 0;
 
     virtual CommandBuffer* GetCurrentCommandBuffer() const = 0;
 

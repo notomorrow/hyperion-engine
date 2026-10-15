@@ -736,18 +736,26 @@ public:
 
         EditorViewport* activeViewport = subsystem->GetActiveViewport();
 
+        // optional second argument picks a viewport by type: perspective, top, front or side
+        if (NumArguments() >= 2)
+        {
+            activeViewport = subsystem->FindViewport(GetArgument(1));
+        }
+
         if (!activeViewport || !activeViewport->GetView().IsValid())
         {
             HYP_LOG(Editor, Warning, "no active viewport");
             return;
         }
 
+        const Vec2u wireframeExtent = Vec2u(MathUtil::Max(activeViewport->GetCamera()->GetDimensions(), Vec2i::One()));
+
         const FilePath path = NumArguments() >= 1 && !GetArgument(0).Empty()
             ? FilePath(GetArgument(0))
             : CoreApi::GetExecutablePath() / "Screenshots" / "Viewport.png";
 
         GetThreadById(g_renderThread)->GetScheduler().Enqueue(
-            [view = activeViewport->GetView(), path]()
+            [view = activeViewport->GetView(), path, wireframeExtent]()
             {
                 static constexpr uint64 CaptureTimeoutMs = 5000;
                 static ThumbnailCaptureState* s_pendingCapture = nullptr;
@@ -765,15 +773,16 @@ public:
                     view->thumbnailCaptureState = nullptr;
                 }
 
-                const FramebufferRef& framebuffer = view->GetOutputTarget().GetFramebuffer(GBufferPass::Opaque);
+                const bool isWireframeView = bool(view->GetFlags() & ViewFlags::EDITOR_WIREFRAME_VIEW);
+                const FramebufferRef& framebuffer = isWireframeView ? FramebufferRef::Null() : view->GetOutputTarget().GetFramebuffer(GBufferPass::Opaque);
 
-                if (!framebuffer.IsValid())
+                if (!isWireframeView && !framebuffer.IsValid())
                 {
                     HYP_LOG(Editor, Warning, "the viewport hasn't rendered yet");
                     return;
                 }
 
-                ThumbnailCaptureState* captureState = new ThumbnailCaptureState(framebuffer->GetExtent());
+                ThumbnailCaptureState* captureState = new ThumbnailCaptureState(isWireframeView ? wireframeExtent : framebuffer->GetExtent());
                 view->thumbnailCaptureState = captureState;
 
                 s_pendingCapture = captureState;
@@ -842,6 +851,53 @@ public:
 DEFINE_EDITOR_COMMAND(CaptureViewport);
 
 #pragma endregion CaptureViewport
+
+#pragma region SetViewportLayout
+
+// SetViewportLayout single|grid|three
+class EditorCommandSetViewportLayout final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandSetViewportLayout);
+
+public:
+    virtual ~EditorCommandSetViewportLayout() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Set Viewport Layout";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        const String layoutName = NumArguments() >= 1 ? GetArgument(0) : String("single");
+
+        uint32 layout;
+
+        if (layoutName == "single" || layoutName == "0")
+        {
+            layout = 0;
+        }
+        else if (layoutName == "grid" || layoutName == "1")
+        {
+            layout = 1;
+        }
+        else if (layoutName == "three" || layoutName == "2")
+        {
+            layout = 2;
+        }
+        else
+        {
+            HYP_LOG(Editor, Warning, "unknown viewport layout '{}', expected single, grid or three", layoutName);
+            return;
+        }
+
+        g_editorState->OnViewportLayoutRequested(layout);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(SetViewportLayout);
+
+#pragma endregion SetViewportLayout
 
 #pragma region SetEnvironment
 

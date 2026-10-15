@@ -20,6 +20,7 @@
 #include <Rendering/CBufferAllocator.hpp>
 #include <Rendering/RawBufferAllocator.hpp>
 #include <Rendering/RenderProxy.hpp>
+#include <Rendering/RenderSetup.hpp>
 
 #include <Rendering/Passes/DeferredPass.hpp>
 #include <Rendering/Passes/UIPass.hpp>
@@ -76,21 +77,6 @@ void FinalPass::Render(Frame* frame, const RenderSetup& rs)
     HYP_SCOPE;
     AssertOnThread(g_renderThread);
 
-    if (!rs.swapchain)
-    {
-        return;
-    }
-
-    CommandRecorder& cr = frame->cr;
-
-    const uint32 acquiredImageIndex = rs.swapchain->GetAcquiredImageIndex();
-
-    if (acquiredImageIndex >= rs.swapchain->GetFramebuffers().Size())
-    {
-        // invalid, skip the frame
-        return;
-    }
-
     if (!m_quadMesh)
     {
         m_quadMesh = MeshBuilder::Quad();
@@ -100,12 +86,39 @@ void FinalPass::Render(Frame* frame, const RenderSetup& rs)
         m_quadMesh->UploadGpuData();
     }
 
-    const FramebufferRef& framebuffer = rs.swapchain->GetFramebuffers()[acquiredImageIndex];
+    for (const PresentTarget& target : rs.presentTargets)
+    {
+        RenderTarget(frame, rs, target, /* isMainTarget */ target.swapchain == rs.swapchain);
+    }
+}
+
+void FinalPass::RenderTarget(
+    Frame* frame,
+    const RenderSetup& rs,
+    const PresentTarget& target,
+    bool isMainTarget)
+{
+    HYP_SCOPE;
+
+    Swapchain* swapchain = target.swapchain;
+    AssertDebug(swapchain != nullptr);
+
+    CommandRecorder& cr = frame->cr;
+
+    const uint32 acquiredImageIndex = swapchain->GetAcquiredImageIndex();
+
+    if (acquiredImageIndex >= swapchain->GetFramebuffers().Size())
+    {
+        // invalid, skip the frame
+        return;
+    }
+
+    const FramebufferRef& framebuffer = swapchain->GetFramebuffers()[acquiredImageIndex];
     AssertDebug(framebuffer != nullptr);
 
     cr << SetCurrentFramebuffer(framebuffer);
 
-    cr << SetCurrentViewport(Viewport { rs.swapchain->GetExtent() });
+    cr << SetCurrentViewport(Viewport { swapchain->GetExtent() });
 
     cr << SetInputLayout(StaticVertexInputLayout<VT_Simple>);
 
@@ -132,6 +145,13 @@ void FinalPass::Render(Frame* frame, const RenderSetup& rs)
 
     for (const DeferredPass::RenderedViewOutput& output : dr->GetRenderedViewOutputs().items)
     {
+        const uint32 outputWindowId = output.view != nullptr ? output.view->GetOutputWindowId() : 0;
+
+        if (outputWindowId != target.windowId && !(outputWindowId == 0 && isMainTarget))
+        {
+            continue;
+        }
+
         cr << SetShaderUniform(3, "InTexture"_sh, output.finalImageView);
 
         cr << CommitDrawState();
@@ -142,6 +162,7 @@ void FinalPass::Render(Frame* frame, const RenderSetup& rs)
         cr << DrawIndexed(6);
     }
 
+    if (isMainTarget)
     { // draw ui
         UIPass* uiPass = static_cast<UIPass*>(RI.namedPasses[NamedPass::UI][0]);
 

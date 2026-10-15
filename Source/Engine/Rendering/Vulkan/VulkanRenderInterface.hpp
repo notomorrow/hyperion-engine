@@ -113,7 +113,7 @@ public:
     VulkanSwapchainRef CreateSwapchain(ApplicationWindow* window, const Vec2u& extent) override;
 
     void PrepareSwapchain(VulkanSwapchain* swapchain) override;
-    void PresentToSwapchain(VulkanSwapchain* swapchain) override;
+    void PresentToSwapchains(Span<VulkanSwapchain* const> swapchains) override;
 
     void BeginFrame(AtomicFlag* pCancelFlag) override;
     void EndFrame() override;

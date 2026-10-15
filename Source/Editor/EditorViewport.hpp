@@ -13,6 +13,12 @@
 
 #include <Core/Containers/Array.hpp>
 
+#include <Core/Functional/Delegate.hpp>
+
+#include <Input/Mouse.hpp>
+
+#include <Editor/EditorCamera.hpp>
+
 namespace Hyperion {
 
 class Camera;
@@ -22,6 +28,16 @@ class EditorSubsystem;
 class ApplicationWindow;
 struct WindowOptions;
 
+/*! \brief Turns raw window events of a viewport that isn't the main window into the mouse events the UIStage would produce. */
+struct EditorViewportInputState
+{
+    Vec2f mousePosition;
+    Vec2f mouseDownPosition;
+    EnumFlags<MouseButtonState> heldButtons = MouseButtonState::NONE;
+    bool hovered = false;
+    bool dragged = false;
+};
+
 HYP_CLASS()
 class EditorViewport : public ObjectBase
 {
@@ -30,6 +46,22 @@ class EditorViewport : public ObjectBase
 public:
     explicit EditorViewport(const Handle<Camera>& camera = Handle<Camera>::Null());
     ~EditorViewport() override;
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE EditorViewportType GetViewportType() const
+    {
+        return m_viewportType;
+    }
+
+    /*! \brief Must be called before the viewport is initialized. */
+    HYP_METHOD()
+    void SetViewportType(EditorViewportType viewportType);
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE bool IsOrthographic() const
+    {
+        return m_viewportType != EditorViewportType::Perspective;
+    }
 
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<Camera>& GetCamera() const
@@ -43,14 +75,26 @@ public:
         return m_view;
     }
 
+    /*! \brief Sim thread. */
     HYP_METHOD()
-    HYP_FORCE_INLINE ApplicationWindow* GetWindow() const
-    {
-        return m_window;
-    }
+    ApplicationWindow* GetWindow() const;
 
+    /*! \brief Main thread. The main viewport's window becomes the app's main window, the others are presented alongside it. */
     HYP_METHOD()
-    Handle<ApplicationWindow> CreateViewportWindow(const WindowOptions& options);
+    Handle<ApplicationWindow> CreateViewportWindow(const WindowOptions& options, bool isMainWindow);
+
+    /*! \brief Main thread. Stops presenting the window before its native handle goes away. */
+    HYP_METHOD()
+    void ReleaseViewportWindow();
+
+    /*! \brief Ortho viewports only redraw when something changed; this forces the next frame to. */
+    HYP_METHOD()
+    void RequestRedraw();
+
+    HYP_FORCE_INLINE EditorViewportInputState& GetInputState()
+    {
+        return m_inputState;
+    }
 
     void Init() override;
 
@@ -72,9 +116,20 @@ public:
     void SetIsolatedScenes(EditorSubsystem* editorSubsystem, const Array<Handle<Scene>>& scenes);
 
 protected:
+    void SetWindow(const Handle<ApplicationWindow>& window, bool isMainWindow);
+    void UpdateCameraDimensions();
+
+    EditorViewportType m_viewportType;
+
     Handle<Camera> m_camera;
     Handle<View> m_view;
-    ApplicationWindow* m_window;
+
+    Handle<ApplicationWindow> m_window;
+    bool m_isMainWindow;
+    bool m_hasBeenCentered = false;
+    DelegateHandler m_windowSizeChangedHandler;
+
+    EditorViewportInputState m_inputState;
 
     Array<WeakHandle<Scene>> m_isolatedScenes;
 };

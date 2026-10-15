@@ -26,6 +26,8 @@
 #include <Core/Reflection/ObjectBase.hpp>
 #include <Core/Reflection/Handle.hpp>
 
+#include <Core/Threading/Mutex.hpp>
+
 #include <Rendering/RenderTypes.hpp>
 
 #include <Input/Mouse.hpp>
@@ -201,6 +203,16 @@ public:
 
     virtual void CreateSwapchain();
 
+    HYP_FORCE_INLINE bool AllowsVSync() const
+    {
+        return m_allowVSync;
+    }
+
+    HYP_FORCE_INLINE void SetAllowVSync(bool allowVSync)
+    {
+        m_allowVSync = allowVSync;
+    }
+
     HYP_METHOD()
     virtual Vec2i GetDimensions() const = 0;
 
@@ -220,6 +232,7 @@ protected:
     HWND m_hwnd;
     SwapchainRef m_swapchain;
     AtomicVar<bool> m_hasFocus { true };
+    bool m_allowVSync = true;
 
 #if HYP_VULKAN
     VkSurfaceKHR m_vkSurface = VK_NULL_HANDLE;
@@ -257,6 +270,28 @@ public:
     HYP_METHOD()
     void SetMainWindow(const Handle<ApplicationWindow>& window);
 
+    /*! \brief Gives \p window a swapchain that is presented every frame alongside the main window's,
+     *  without making it the main window. Views target it with View::SetOutputWindow. */
+    HYP_METHOD()
+    void AddPresentWindow(const Handle<ApplicationWindow>& window);
+
+    HYP_METHOD()
+    void RemovePresentWindow(ApplicationWindow* window);
+
+    /*! \brief Windows added with AddPresentWindow. Safe to call from the render thread. */
+    template <class Func>
+    void ForEachPresentWindow(Func&& func) const
+    {
+        Mutex::Guard guard(m_presentWindowsMutex);
+
+        for (ApplicationWindow* window : m_presentWindows)
+        {
+            func(window);
+        }
+    }
+
+    bool AnyPresentWindowHasFocus() const;
+
     HYP_METHOD()
     HYP_FORCE_INLINE const Array<Handle<ApplicationWindow>>& GetWindows() const
     {
@@ -287,6 +322,9 @@ public:
 
 protected:
     ApplicationWindow* m_mainWindow;
+    // declared before the windows so a window's destructor can still remove itself
+    Array<ApplicationWindow*> m_presentWindows;
+    mutable Mutex m_presentWindowsMutex;
     Array<Handle<ApplicationWindow>> m_windows;
     Array<Handle<ApplicationWindow>> m_windowsPendingDestruction;
     ANSIString m_name;

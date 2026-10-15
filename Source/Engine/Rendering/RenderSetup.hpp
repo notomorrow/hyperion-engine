@@ -19,6 +19,13 @@ class PassData;
 
 struct Viewport;
 
+struct PresentTarget
+{
+    uint32 windowId = 0;
+    Swapchain* swapchain = nullptr;
+    Viewport viewport;
+};
+
 /*! \brief Describes the setup for rendering a frame.  */
 struct RenderSetup
 {
@@ -31,6 +38,9 @@ struct RenderSetup
     VolumeBase* volume = nullptr;
 
     Swapchain* swapchain = nullptr;
+
+    // main window's target comes first
+    Span<const PresentTarget> presentTargets;
 
     // override render target to use this framebuffer, even if View has an OutputTarget.
     Framebuffer* framebuffer = nullptr;

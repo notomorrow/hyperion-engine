@@ -230,7 +230,7 @@ void VolumeEditorGizmo::OnDragStart(const Handle<Camera>& camera, const MouseEve
         planeNormal = faceNormal.Cross(camera->GetUpVector()).Normalize();
     }
 
-    if (planeNormal.LengthSquared() < MathUtil::epsilonF)
+    if (planeNormal.LengthSquared() < MathUtil::epsilonF || camera->GetProjectionMatrix()[3][3] != 0.0f)
     {
         planeNormal = -camera->GetDirection();
     }

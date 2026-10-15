@@ -121,6 +121,11 @@ ApplicationWindow::ApplicationWindow(ANSIString title, Vec2i size)
 
 ApplicationWindow::~ApplicationWindow()
 {
+    if (g_appContext.IsValid())
+    {
+        g_appContext->RemovePresentWindow(this);
+    }
+
     OnWindowSizeChanged.RemoveAllForTarget(this);
     OnClose.RemoveAllForTarget(this);
 }
@@ -353,6 +358,8 @@ void AppContextBase::RemoveWindow(ApplicationWindow* window)
     {
         // Keep the window alive until PurgeClosedWindows() is called; events referencing
         // this window may still be in flight and would otherwise be dangling pointers.
+        RemovePresentWindow(window);
+
         m_windowsPendingDestruction.PushBack(std::move(*it));
         m_windows.Erase(it);
 
@@ -363,6 +370,58 @@ void AppContextBase::RemoveWindow(ApplicationWindow* window)
             OnCurrentWindowChanged.Fire(this, nullptr);
         }
     }
+}
+
+void AppContextBase::AddPresentWindow(const Handle<ApplicationWindow>& window)
+{
+    AssertOnThread(g_mainThread);
+
+    if (!window.IsValid())
+    {
+        return;
+    }
+
+    if (!m_windows.Contains(window))
+    {
+        m_windows.PushBack(window);
+    }
+
+    window->SetAllowVSync(false);
+    window->SetHasFocus(false);
+
+    {
+        Mutex::Guard guard(m_presentWindowsMutex);
+
+        if (!m_presentWindows.Contains(window.Get()))
+        {
+            m_presentWindows.PushBack(window.Get());
+        }
+    }
+
+    SetupWindowSwapchainAsync setupSwapchainTask(MakeWeakRef(window));
+    setupSwapchainTask();
+}
+
+void AppContextBase::RemovePresentWindow(ApplicationWindow* window)
+{
+    Mutex::Guard guard(m_presentWindowsMutex);
+
+    m_presentWindows.Erase(window);
+}
+
+bool AppContextBase::AnyPresentWindowHasFocus() const
+{
+    Mutex::Guard guard(m_presentWindowsMutex);
+
+    for (ApplicationWindow* window : m_presentWindows)
+    {
+        if (window->HasFocus())
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void AppContextBase::PurgeClosedWindows()

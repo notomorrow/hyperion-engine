@@ -335,6 +335,12 @@ public:
 
     void Render(Frame* frame, const RenderSetup& renderSetup);
 
+    /*! \brief Clears this frame's commands once every view has drawn them. */
+    void EndFrame();
+
+    /*! \brief Changes when this frame's commands differ from another frame's. Render thread callable only. */
+    HashCode GetCommandsHash() const;
+
     DebugDrawCommandList& CreateCommandList();
 
     /*! \brief Discard the sim thread's not-yet-consumed command slot, destructing commands in place.
@@ -353,6 +359,8 @@ private:
     uint32 m_pendingIndex = 0;
     uint32 m_readyIndex = 1;
     uint32 m_renderIndex = 2;
+
+    bool m_renderedThisFrame = false;
 
     // Guards m_readyIndex, which Update() (sim thread) and AcquireRenderCommands() (render thread) both swap
     Mutex m_readyIndexMutex;

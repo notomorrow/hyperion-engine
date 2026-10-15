@@ -237,6 +237,7 @@ public:
     friend class OrthoCameraController;
     friend class FirstPersonCameraController;
     friend class FollowCameraController;
+    friend class EditorOrthoCameraController;
 
     Camera();
     

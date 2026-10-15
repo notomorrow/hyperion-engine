@@ -589,6 +589,14 @@ Ray Camera::GetPickRay(const Vec2f& screen) const
 {
     const Vec2f pixelCenterScreen = screen + (GetPixelSize() * 0.5f);
 
+    if (!MathUtil::ApproxEqual(m_projMat[3][3], 0.0f))
+    {
+        Vec3f nearNdc = TransformScreenToNDC(pixelCenterScreen);
+        nearNdc.z = 0.0f;
+
+        return Ray { TransformNDCToWorld(nearNdc).GetXYZ(), GetDirection().Normalized() };
+    }
+
     const Vec4f mouseWorld = TransformScreenToWorld(pixelCenterScreen);
     const Vec3f rayDirection = (mouseWorld.GetXYZ() - GetWorldTranslation()).Normalized();
 

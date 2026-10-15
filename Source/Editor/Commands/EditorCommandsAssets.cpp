@@ -33,15 +33,17 @@ Vec3f CalculateAssetInsertionPoint(
         return insertionPoint;
     }
 
-    const Vec4f worldPos = camera->TransformScreenToWorld(*viewportPosition);
-    const Vec3f rayDir = worldPos.GetXYZ().Normalize();
-    const Ray ray { camera->GetWorldTranslation(), rayDir };
+    const Ray ray = camera->GetPickRay(*viewportPosition);
 
     RayTestResults results;
 
     if (scene.GetOctree().TestRay(ray, results, RayTestFlags::TestBVH))
     {
         insertionPoint = results.Front().hitpoint;
+    }
+    else if (activeViewport->IsOrthographic())
+    {
+        insertionPoint = ray.position - ray.direction * ray.position.Dot(ray.direction);
     }
 
     return insertionPoint;

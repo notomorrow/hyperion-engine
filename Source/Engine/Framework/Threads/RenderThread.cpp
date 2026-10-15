@@ -19,6 +19,7 @@
 
 #include <Rendering/PostFX.hpp>
 #include <Rendering/RenderInterface.hpp>
+#include <Rendering/RenderSetup.hpp>
 #include <Rendering/Glimmer/GlimmerMemory.hpp>
 #include <Rendering/CrashHandler.hpp>
 #include <Rendering/GBuffer.hpp>
@@ -152,7 +153,9 @@ void RenderThread::Update()
 
     float targetFrameRate = g_cvTargetFrameRate.Get();
 
-    const bool isIdle = (!mainWindow || !mainWindow->HasFocus()) && !IsGlobalContextActive<SuppressIdleThrottlingContext>();
+    const bool anyWindowFocused = (mainWindow && mainWindow->HasFocus()) || (g_appContext.IsValid() && g_appContext->AnyPresentWindowHasFocus());
+
+    const bool isIdle = !anyWindowFocused && !IsGlobalContextActive<SuppressIdleThrottlingContext>();
 
     if (g_cvLimitFrameRateWhenIdle.Get() && isIdle)
     {
@@ -203,31 +206,50 @@ void RenderThread::Update()
     Frame* frame = RI.GetCurrentFrame();
     Assert(frame != nullptr);
 
-    // Check if any swapchains need to be recreated
+    Array<PresentTarget, RenderTempAllocator> presentTargets;
     Array<Swapchain*, RenderTempAllocator> swapchains;
+
+    const auto addPresentTarget = [&presentTargets](ApplicationWindow* window)
+    {
+        Swapchain* swapchain = window->GetSwapchain();
+
+        if (!swapchain || !swapchain->IsCreated())
+        {
+            return;
+        }
+
+        PresentTarget& target = presentTargets.EmplaceBack();
+        target.windowId = window->Id().Value();
+        target.swapchain = swapchain;
+        target.viewport = Viewport { Vec2u(Vec2f(swapchain->GetExtent()) * window->GetRenderTargetScale()) };
+    };
 
     if (mainWindow != nullptr)
     {
-        Swapchain* swapchain = mainWindow->GetSwapchain();
+        addPresentTarget(mainWindow);
+    }
 
-        if (swapchain != nullptr && swapchain->IsCreated())
-        {
-            swapchains.PushBack(swapchain);
-        }
+    if (g_appContext.IsValid())
+    {
+        g_appContext->ForEachPresentWindow([&](ApplicationWindow* window)
+            {
+                if (window != mainWindow)
+                {
+                    addPresentTarget(window);
+                }
+            });
     }
 
     RI.namedBuffers[NamedBuffer::Worlds].Write(0, sizeof(WorldShaderData), GetWorldBufferData());
 
     Swapchain* swapchain = nullptr;
 
-    if (swapchains.Any())
+    if (mainWindow != nullptr && presentTargets.Any() && presentTargets[0].windowId == mainWindow->Id().Value())
     {
-        for (Swapchain* swapchain : swapchains)
-        {
-            RI.PrepareSwapchain(swapchain);
-        }
+        swapchain = presentTargets[0].swapchain;
 
-        swapchain = swapchains[0];
+        RI.PrepareSwapchain(swapchain);
+        swapchains.PushBack(swapchain);
     }
 
     Span<World*> worldsToRender = GetActiveWorlds();
@@ -238,17 +260,12 @@ void RenderThread::Update()
         AssertDebug(mainRenderer != nullptr);
 
         RenderSetup renderSetup {};
+        renderSetup.presentTargets = presentTargets.ToSpan();
 
         if (swapchain != nullptr)
         {
             renderSetup.swapchain = swapchain;
-
-            const Vec2u& swapchainExtent = swapchain->GetExtent();
-
-            const float renderTargetScale = mainWindow->GetRenderTargetScale();
-            const Vec2u renderExtent = Vec2u(Vec2f(swapchainExtent) * renderTargetScale);
-
-            renderSetup.viewport = Viewport { renderExtent };
+            renderSetup.viewport = presentTargets[0].viewport;
         }
 
         for (World* world : worldsToRender)
@@ -264,6 +281,35 @@ void RenderThread::Update()
         }
 
         renderSetup.world = nullptr;
+
+        DebugDrawer::GetInstance().EndFrame();
+
+        // other windows (editor ortho viewports) are only acquired and presented when one of their views drew something new
+        Array<PresentTarget, RenderTempAllocator> compositeTargets;
+
+        DeferredPass* deferredPass = static_cast<DeferredPass*>(mainRenderer);
+
+        for (const PresentTarget& target : presentTargets)
+        {
+            if (target.swapchain == swapchain)
+            {
+                compositeTargets.PushBack(target);
+
+                continue;
+            }
+
+            if (!target.swapchain->NeedsRecreate() && !deferredPass->HasUpdatedOutputForWindow(target.windowId))
+            {
+                continue;
+            }
+
+            RI.PrepareSwapchain(target.swapchain);
+            swapchains.PushBack(target.swapchain);
+
+            compositeTargets.PushBack(target);
+        }
+
+        renderSetup.presentTargets = compositeTargets.ToSpan();
 
         if (!RI.finalPass)
         {
@@ -306,7 +352,7 @@ void RenderThread::Update()
     RI.commandRecorderAllocator.UpdateQueue();
 
     RI.WriteCommandBuffer();
-    RI.PresentToSwapchain(swapchain);
+    RI.PresentToSwapchains(swapchains.ToSpan());
     RI.EndFrame();
 
     g_renderArena->Reset();

@@ -1052,6 +1052,8 @@ void DebugDrawer::Render(Frame* frame, const RenderSetup& renderSetup)
         return;
     }
 
+    m_renderedThisFrame = true;
+
     CommandRecorder& cr = frame->cr;
 
     auto& partitionedShaderData = m_cachedPartitionedShaderData;
@@ -1125,13 +1127,12 @@ void DebugDrawer::Render(Frame* frame, const RenderSetup& renderSetup)
     });
 
     DeferredPassData* dpd = DynamicCast<DeferredPassData>(renderSetup.passData);
-    AssertDebug(dpd != nullptr);
 
     StructuredBuffer& instanceBuffer = RI.bufferAllocator->AcquireStructuredBuffer(m_headers[idx].Size(), sizeof(ImmediateDrawShaderData));
 
     cr << SetShaderUniform(0, "SamplerNearest"_sh, RI.placeholderData->GetSamplerNearest());
     cr << SetShaderUniform(1, "SamplerLinear"_sh, RI.placeholderData->GetSamplerLinearMipmap());
-    cr << SetShaderUniform(2, "GBufferMipChain"_sh, RI.textureViewCache->GetOrCreate(dpd->mipChain));
+    cr << SetShaderUniform(2, "GBufferMipChain"_sh, dpd ? RI.textureViewCache->GetOrCreate(dpd->mipChain) : RI.placeholderData->GetImageView2D1x1R8());
     cr << SetShaderUniform(3, "EnvProbesColorTexture"_sh, RI.textureViewCache->GetOrCreate(RI.envProbesColorTexture));
 
     cr << SetShaderUniform(4, "CamerasBuffer"_sh, RI.namedBuffers[NamedBuffer::Cameras], Resources::GetBinding(renderSetup.view->GetCamera()));
@@ -1257,8 +1258,44 @@ void DebugDrawer::Render(Frame* frame, const RenderSetup& renderSetup)
     }
 
     instanceBuffer.FlushBatched();
+}
 
-    ClearCommands();
+HashCode DebugDrawer::GetCommandsHash() const
+{
+    HYP_SCOPE;
+    AssertOnThread(g_renderThread);
+
+    const uint32 idx = m_renderIndex;
+
+    HashCode hashCode;
+
+    if (!IsEnabled())
+    {
+        return hashCode;
+    }
+
+    for (const DebugDrawCommandHeader& header : m_headers[idx])
+    {
+        const DebugDrawCommand* drawCommand = reinterpret_cast<const DebugDrawCommand*>(m_buffers[idx].Data() + header.offset);
+
+        hashCode.Add(drawCommand->shape != nullptr ? drawCommand->shape->shapeId : -1);
+        hashCode.Add(drawCommand->transformMatrix);
+        hashCode.Add(drawCommand->color);
+    }
+
+    return hashCode;
+}
+
+void DebugDrawer::EndFrame()
+{
+    AssertOnThread(g_renderThread);
+
+    if (m_renderedThisFrame)
+    {
+        m_renderedThisFrame = false;
+
+        ClearCommands();
+    }
 }
 
 void DebugDrawer::ClearCommands()

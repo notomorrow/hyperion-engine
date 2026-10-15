@@ -10,6 +10,7 @@
 #include <Editor/EditorProject.hpp>
 #include <Editor/EditorSubsystem.hpp>
 #include <Editor/EditorConfig.hpp>
+#include <Editor/EditorViewport.hpp>
 
 #include <Framework/Game.hpp>
 
@@ -92,6 +93,11 @@ Camera* EditorState::GetEditorCamera() const
     if (!ess.IsValid())
     {
         return nullptr;
+    }
+
+    if (EditorViewport* mainViewport = ess->GetMainWindowViewport(); mainViewport && !mainViewport->IsOrthographic())
+    {
+        return mainViewport->GetCamera().Get();
     }
 
     const Handle<Scene>& editorScene = ess->GetEditorScene();

@@ -109,6 +109,19 @@ struct LightSorter
     }
 };
 
+// editor ortho views draw everything as lines, and terrain would bury the rest
+static bool IsMaterialExcludedFromView(EnumFlags<ViewFlags> viewFlags, const Material* material)
+{
+    if (!(viewFlags & ViewFlags::EDITOR_WIREFRAME_VIEW))
+    {
+        return false;
+    }
+
+    const StringHash shaderNameHash = material->GetAttributes().shaderName;
+
+    return shaderNameHash == "Terrain"_sh;
+}
+
 #pragma region ViewOutputTarget
 
 ViewOutputTarget::ViewOutputTarget()
@@ -1043,7 +1056,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     }
 
                     if (!meshComponent.mesh || !meshComponent.material
-                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING)))
+                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING))
+                        || IsMaterialExcludedFromView(flags, meshComponent.material.Get()))
                     {
                         continue;
                     }
@@ -1115,7 +1129,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     }
 
                     if (!meshComponent.mesh || !meshComponent.material
-                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING)))
+                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING))
+                        || IsMaterialExcludedFromView(flags, meshComponent.material.Get()))
                     {
                         continue;
                     }
@@ -1169,7 +1184,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     }
 
                     if (!meshComponent.mesh || !meshComponent.material
-                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING)))
+                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING))
+                        || IsMaterialExcludedFromView(flags, meshComponent.material.Get()))
                     {
                         continue;
                     }
@@ -1241,7 +1257,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     }
 
                     if (!meshComponent.mesh || !meshComponent.material
-                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING)))
+                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING))
+                        || IsMaterialExcludedFromView(flags, meshComponent.material.Get()))
                     {
                         continue;
                     }
@@ -1295,7 +1312,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     }
 
                     if (!meshComponent.mesh || !meshComponent.material
-                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING)))
+                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING))
+                        || IsMaterialExcludedFromView(flags, meshComponent.material.Get()))
                     {
                         continue;
                     }
@@ -1367,7 +1385,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     }
 
                     if (!meshComponent.mesh || !meshComponent.material
-                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING)))
+                        || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING))
+                        || IsMaterialExcludedFromView(flags, meshComponent.material.Get()))
                     {
                         continue;
                     }

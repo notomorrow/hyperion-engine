@@ -362,10 +362,18 @@ bool ScaleEditorGizmo::OnMouseMove(const Handle<Camera>& camera, const MouseEven
     }
     else
     {
-        const Vec3f cameraUp = camera->GetUpVector();
+        const Mat4f& projection = camera->GetProjectionMatrix();
+        const bool isPerspective = projection[3][3] == 0.0f;
+
+        // ortho: the screen's own up (top view looks along Y), and the view's half-height stands in for the camera distance
+        const Vec3f cameraUp = isPerspective ? camera->GetUpVector() : camera->GetWorldRotation().RotateVector(Vec3f::UnitY());
 
         const float delta = (planeRayHit.hitpoint - m_dragData->hitpointOrigin).Dot(cameraUp);
-        const float cameraDistance = (camera->GetWorldTranslation() - m_dragData->nodeOrigin).Length();
+
+        const float cameraDistance = isPerspective
+            ? (camera->GetWorldTranslation() - m_dragData->nodeOrigin).Length()
+            : 1.0f / MathUtil::Max(projection[1][1], MathUtil::epsilonF);
+
         const float reference = MathUtil::Max(cameraDistance * 0.5f, 0.001f);
         const float factor = MathUtil::Max(1.0f + delta / reference, 0.0001f);
 
