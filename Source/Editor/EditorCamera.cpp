@@ -333,7 +333,7 @@ bool EditorOrthoCameraInputHandler::OnMouseScroll(const MouseEvent& evt)
         return false;
     }
 
-    m_controller->Zoom(float(evt.wheel.y), evt.relativePos);
+    m_controller->Zoom(float(evt.wheel.y) / 120.0f, evt.relativePos);
 
     return true;
 }

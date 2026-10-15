@@ -83,6 +83,16 @@ ApplicationWindow* EditorViewport::GetWindow() const
     return m_window.Get();
 }
 
+bool EditorViewport::ShowsWorldScene(const Scene* scene) const
+{
+    if (!IsWorldSceneShownInViewport(scene))
+    {
+        return false;
+    }
+
+    return !(IsOrthographic() && (scene->GetSceneFlags() & SceneFlags::NO_EDITOR_WIREFRAME));
+}
+
 void EditorViewport::RequestRedraw()
 {
     if (m_view.IsValid())
@@ -139,7 +149,8 @@ void EditorViewport::Init()
 
     if (IsOrthographic())
     {
-        viewDesc.flags = ViewFlags::DEFAULT
+        // scenes are managed here, so the world doesn't add NO_EDITOR_WIREFRAME scenes back
+        viewDesc.flags = ViewFlags::COLLECT_ALL_ENTITIES
             | ViewFlags::EDITOR_WIREFRAME_VIEW
             | ViewFlags::EXTERNAL_RENDERTARGET
             | ViewFlags::NO_SHADOW_VIEWS
@@ -343,7 +354,7 @@ void EditorViewport::OnAdded(EditorSubsystem* editorSubsystem)
         {
             Assert(scene != nullptr);
 
-            if (!IsWorldSceneShownInViewport(scene.Get()))
+            if (!ShowsWorldScene(scene.Get()))
             {
                 continue;
             }
@@ -353,6 +364,24 @@ void EditorViewport::OnAdded(EditorSubsystem* editorSubsystem)
     }
 
     world->AddView(m_view);
+}
+
+void EditorViewport::TryCenterOnMainViewport(EditorSubsystem* editorSubsystem)
+{
+    if (!IsOrthographic() || m_hasBeenCentered)
+    {
+        return;
+    }
+
+    EditorViewport* mainViewport = editorSubsystem->GetMainWindowViewport();
+    EditorOrthoCameraController* orthoController = DynamicCast<EditorOrthoCameraController>(m_camera->GetCameraController().Get());
+
+    if (mainViewport && mainViewport != this && !mainViewport->IsOrthographic() && orthoController)
+    {
+        orthoController->CenterOn(mainViewport->GetCamera()->GetWorldTranslation());
+
+        m_hasBeenCentered = true;
+    }
 }
 
 void EditorViewport::OnRemoved(EditorSubsystem* editorSubsystem)
@@ -391,7 +420,7 @@ void EditorViewport::OnSceneAdded(Scene* scene)
 {
     Assert(scene != nullptr);
 
-    if (m_isolatedScenes.Any() || !IsWorldSceneShownInViewport(scene))
+    if (m_isolatedScenes.Any() || !ShowsWorldScene(scene))
     {
         return;
     }
@@ -422,7 +451,7 @@ void EditorViewport::SetIsolatedScenes(EditorSubsystem* editorSubsystem, const A
     {
         for (const Handle<Scene>& scene : world->GetScenes())
         {
-            if (!scene.IsValid() || !IsWorldSceneShownInViewport(scene.Get()))
+            if (!scene.IsValid() || !ShowsWorldScene(scene.Get()))
             {
                 continue;
             }

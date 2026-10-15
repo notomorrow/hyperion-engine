@@ -376,6 +376,7 @@ public:
     }
 
     void ProcessRawInput(void* rawInput);
+    void RegisterRawMouseInput();
 
 private:
     static LRESULT __stdcall StaticWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

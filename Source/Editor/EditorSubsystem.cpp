@@ -3554,6 +3554,11 @@ void EditorSubsystem::Update(float delta)
 
     PollViewportWindowInput();
 
+    for (const Handle<EditorViewport>& viewport : m_editorViewports)
+    {
+        viewport->TryCenterOnMainViewport(this);
+    }
+
     if (InputManager* activeInputManager = GetActiveInputManager())
     {
         const EnumFlags<MouseButtonState> buttonStates = activeInputManager->GetButtonStates();
@@ -6387,7 +6392,7 @@ void EditorSubsystem::RouteViewportWindowEvent(EditorViewport* viewport, const E
     }
     case EventType::MOUSEBUTTON_DOWN:
     {
-        const Vec2f position = Vec2f(inputManager->GetMousePosition());
+        const Vec2f position = inputState.mousePosition;
 
         if (inputState.heldButtons == MouseButtonState::NONE)
         {
@@ -6404,7 +6409,7 @@ void EditorSubsystem::RouteViewportWindowEvent(EditorViewport* viewport, const E
     }
     case EventType::MOUSEBUTTON_UP:
     {
-        const Vec2f position = Vec2f(inputManager->GetMousePosition());
+        const Vec2f position = inputState.mousePosition;
         const EnumFlags<MouseButtonState> releasedButtons = event.GetMouseButtons() & inputState.heldButtons;
 
         if (releasedButtons == MouseButtonState::NONE)

@@ -19,6 +19,8 @@ namespace Hyperion
 
         AudioListener = 0x80,
 
+        NoEditorWireframe = 0x100,
+
         Default = Foreground | Streamed | HasOctree
     }
 

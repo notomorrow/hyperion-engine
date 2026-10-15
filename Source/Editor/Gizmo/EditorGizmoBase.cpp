@@ -33,8 +33,8 @@ namespace Hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Editor);
 
-// Size of one gizmo-local unit (roughly one axis length) as a fraction of the viewport height
 static CVar<float> s_cvEditorGizmoScreenSize { "Editor.Gizmo.ScreenSize", 0.12f };
+static CVar<float> s_cvEditorGizmoOrthoScreenSize { "Editor.Gizmo.OrthoScreenSize", 0.25f };
 
 EditorGizmoBase::EditorGizmoBase()
     : m_isDragging(false),
@@ -115,7 +115,8 @@ void EditorGizmoBase::UpdateScreenSpaceSize(const Handle<Camera>& camera)
     }
 
     const float viewHeightAtDepth = 2.0f * viewDepth / projection[1][1];
-    const float scale = MathUtil::Max(viewHeightAtDepth * s_cvEditorGizmoScreenSize.Get(), MathUtil::epsilonF);
+    const float screenSize = isPerspective ? s_cvEditorGizmoScreenSize.Get() : s_cvEditorGizmoOrthoScreenSize.Get();
+    const float scale = MathUtil::Max(viewHeightAtDepth * screenSize, MathUtil::epsilonF);
 
     if (m_node->GetWorldScale() == Vec3f(scale))
     {

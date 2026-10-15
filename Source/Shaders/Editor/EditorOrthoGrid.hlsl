@@ -52,7 +52,7 @@ DECLARE_BUFFER_DYNAMIC(EditorOrthoGrid, EditorGridConstants) cbuffer EditorGridC
 static const float3 BackgroundColor = float3(0.012, 0.012, 0.014);
 static const float3 MinorLineColor = float3(0.03, 0.03, 0.035);
 static const float3 MajorLineColor = float3(0.07, 0.07, 0.08);
-static const float MinLineSpacingPixels = 8.0;
+static const float MinLineSpacingPixels = 3.0;
 
 float GridLines(float2 coord, float spacing, float lineWidth)
 {
@@ -109,17 +109,14 @@ PSOutput PSMain(PSInput i)
 
     const float worldPerPixel = max(max(fwidth(coord.x), fwidth(coord.y)), 1e-6);
 
-    float spacing = max(gridOffsetAndSize.w, 1e-4);
+    const float spacing = max(gridOffsetAndSize.w, 1e-4);
 
-    [loop]
-    for (int step = 0; step < 8 && spacing / worldPerPixel < MinLineSpacingPixels; step++)
-    {
-        spacing *= 10.0;
-    }
+    const float minorFade = saturate((spacing / worldPerPixel - MinLineSpacingPixels) / MinLineSpacingPixels);
+    const float majorFade = saturate((spacing * 10.0 / worldPerPixel - MinLineSpacingPixels) / MinLineSpacingPixels);
 
     float3 color = BackgroundColor;
-    color = lerp(color, MinorLineColor, GridLines(coord, spacing, 1.0));
-    color = lerp(color, MajorLineColor, GridLines(coord, spacing * 10.0, 1.0));
+    color = lerp(color, MinorLineColor, GridLines(coord, spacing, 1.0) * minorFade);
+    color = lerp(color, MajorLineColor, GridLines(coord, spacing * 10.0, 1.0) * majorFade);
 
     const float2 axisDerivative = fwidth(axisCoord);
 
