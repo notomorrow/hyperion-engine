@@ -25,7 +25,8 @@ struct Entity
     float lod_morph_start;
     float lod_morph_end;
 
-    float4 lod_morph_origin_multiplier;
+    // w = index into WorldShaderData::terrain_lod_viewpoints, or -1 to measure the morph from xyz
+    float4 lod_morph_origin;
 };
 
 // Map entity's lightmap rect onto uv1 [0,1]

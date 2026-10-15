@@ -45,6 +45,7 @@
 #include <Scene/Components/TerrainCellComponent.hpp>
 
 #include <Scene/WorldGrid/WorldGrid.hpp>
+#include <Scene/WorldGrid/Terrain/TerrainWorldGridLayer.hpp>
 
 #include <Scene/Util/SceneHelpers.hpp>
 
@@ -2447,6 +2448,27 @@ void World::FillWorldShaderData(WorldShaderData& outShaderData) const
     outShaderData.cutoutParams = Vec4f(cutoutDitherAmount, 0.0f, 0.0f, 0.0f);
 
     WriteEnvironmentShaderData(m_environmentSettings, outShaderData);
+
+    outShaderData.terrainLodParams = Vec4f(TerrainWorldGridLayer::GetLodRangeMultiplier(), 0.0f, 0.0f, 0.0f);
+
+    if (m_worldGrid.IsValid())
+    {
+        for (const Handle<WorldGridLayer>& layer : m_worldGrid->GetLayers())
+        {
+            if (const Handle<TerrainWorldGridLayer>& terrainLayer = DynamicCast<TerrainWorldGridLayer>(layer); terrainLayer.IsValid())
+            {
+                // every terrain layer is handed the same viewpoints by TerrainLodSystem
+                const Array<Vec3f> viewpoints = terrainLayer->GetLodViewpoints();
+
+                for (uint32 viewpointIndex = 0; viewpointIndex < MathUtil::Min(uint32(viewpoints.Size()), MaxTerrainLodViewpoints); viewpointIndex++)
+                {
+                    outShaderData.terrainLodViewpoints[viewpointIndex] = Vec4f(viewpoints[viewpointIndex], 1.0f);
+                }
+
+                break;
+            }
+        }
+    }
 
     bool hasSun = false;
 

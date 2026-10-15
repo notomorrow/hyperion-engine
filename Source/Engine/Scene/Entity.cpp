@@ -987,13 +987,13 @@ void Entity::UpdateRenderProxy(RenderProxyMesh* proxy)
     {
         proxy->bufferData.lodMorphStart = terrainPatchComponent->lodMorphStart;
         proxy->bufferData.lodMorphEnd = terrainPatchComponent->lodMorphEnd;
-        proxy->bufferData.lodMorphOrigin = Vec4f(terrainPatchComponent->lodMorphOrigin, terrainPatchComponent->lodRangeMultiplier);
+        proxy->bufferData.lodMorphOrigin = Vec4f(terrainPatchComponent->lodMorphOrigin, float(terrainPatchComponent->lodMorphViewpointIndex));
     }
     else
     {
         proxy->bufferData.lodMorphStart = 0.0f;
         proxy->bufferData.lodMorphEnd = 0.0f;
-        proxy->bufferData.lodMorphOrigin = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+        proxy->bufferData.lodMorphOrigin = Vec4f(0.0f, 0.0f, 0.0f, -1.0f);
     }
 }
 

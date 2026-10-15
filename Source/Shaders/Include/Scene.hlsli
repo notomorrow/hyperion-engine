@@ -34,6 +34,10 @@ struct WorldShaderData
     float4 wind_time_params;
 
     float4 cutout_params;
+
+    // see MaxTerrainLodViewpoints
+    float4 terrain_lod_viewpoints[4];
+    float4 terrain_lod_params;
 };
 
 struct Camera

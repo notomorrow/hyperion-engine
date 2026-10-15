@@ -25,6 +25,10 @@ DECLARE_SRV(Default, InstanceDataBuffer) StructuredBuffer<InstanceTransform> Ins
 
 #include "../Include/Instancing.hlsli"
 
+#ifdef TERRAIN_MORPH
+DECLARE_SRV(Default, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
+#endif // TERRAIN_MORPH
+
 DECLARE_BUFFER_DYNAMIC(Default, CBuffer) cbuffer CBuffer
 {
 #ifndef INSTANCING
@@ -79,7 +83,7 @@ VSOutput VSMain(VSInput input, uint instanceId : SV_InstanceID)
 #endif
 
 #if defined(TERRAIN_MORPH) && defined(VT_UV1)
-    const float3 local_position = ApplyTerrainMorph(entity, model_matrix, input.a_position, input.a_texcoord1);
+    const float3 local_position = ApplyTerrainMorph(entity, _worlds_buffer[0], model_matrix, input.a_position, input.a_texcoord1);
 #else
     const float3 local_position = input.a_position;
 #endif

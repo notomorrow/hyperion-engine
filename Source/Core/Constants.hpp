@@ -89,6 +89,8 @@ static constexpr uint32 MaxAtlasesPerLightmapVolume = 4;
 static constexpr uint32 MaxSwatchesPerWorld = 64;
 static constexpr uint32 MaxLayersPerWorld = 64;
 
+static constexpr uint32 MaxTerrainLodViewpoints = 4;
+
 #if HYP_ANDROID
 static constexpr const char AndroidAssetPathPrefix[] = "$Android";
 #endif

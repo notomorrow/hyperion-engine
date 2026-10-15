@@ -110,9 +110,16 @@ struct WorldShaderData
 
     // x = how much of the alpha cutout test is per-pixel noise rather than a per-triangle threshold. controlled by Rendering.Cutout.DitherAmount
     Vec4f cutoutParams;
+
+    // xyz = viewpoints terrain patches measure their LOD morph from, indexed by EntityShaderData::lodMorphOrigin.w.
+    // they move with the camera every frame, so they live here instead of in each patch's render proxy
+    Vec4f terrainLodViewpoints[MaxTerrainLodViewpoints];
+
+    // x = terrain LOD range multiplier
+    Vec4f terrainLodParams;
 };
 
-static_assert(sizeof(WorldShaderData) == 272);
+static_assert(sizeof(WorldShaderData) == 352);
 
 struct EntityShaderData
 {
@@ -135,7 +142,7 @@ struct EntityShaderData
     float lodMorphStart = 0.0f;
     float lodMorphEnd = 0.0f;
 
-    ///w = LOD range multiplier
+    ///w = index into WorldShaderData::terrainLodViewpoints, or -1 to measure the morph from xyz
     Vec4f lodMorphOrigin;
 };
 
