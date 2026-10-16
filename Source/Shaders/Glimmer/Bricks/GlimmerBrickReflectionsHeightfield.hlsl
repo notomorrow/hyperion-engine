@@ -53,7 +53,6 @@ struct GlimmerBrickReflectionsHeightfieldConstants
     GlimmerSpanParams spans;
     GlimmerRelightParams relight;
     GlimmerLightParams light;
-    uint4 options; // x = 1 counts, by share of the reflection, what each pixel's reflection came from
 };
 
 DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
@@ -74,13 +73,6 @@ DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
 
 // NOTE must match GlimmerBrickReflections.hlsl
 #define COUNT_WHOLE 3
-#define COUNT_SHARE_REFLECTIVE 8
-#define COUNT_SHARE_BRICKS 9
-#define COUNT_SHARE_FAR_SOLIDS 10
-#define COUNT_SHARE_GROUND 11
-#define COUNT_SHARE_CANOPY 12
-#define COUNT_SHARE_SKY 13
-#define SHARE_SCALE 256.0
 #define REACH_HOLE -2.0
 #define TRACE_ROW 256u
 
@@ -107,15 +99,6 @@ GlimmerLight GlimmerCanopyRadiance(float3 P, float3 albedo, float depthBelowTop,
 }
 
 #include "../GlimmerHeightfield.hlsli"
-
-void CountShare(uint counter, float share)
-{
-    if (constants.options.x != 0u && share > 0.0)
-    {
-        uint previous;
-        InterlockedAdd(slotCounts[counter], uint(share * SHARE_SCALE + 0.5), previous);
-    }
-}
 
 // rgb = radiance times a, a = how much of the ray the heightfield covers; outKind is GLIMMER_HEIGHTFIELD_GROUND, _SOLID or _MISS
 float4 TraceHeightfield(float3 origin, float3 direction, out float outT, out uint outKind)
@@ -162,7 +145,7 @@ float4 TraceHeightfield(float3 origin, float3 direction, out float outT, out uin
 }
 
 // adds the heightfield's light for what of the pixel's reflection is uncovered; returns how far its ray went, or 0 where it added nothing
-float AddHeightfield(int2 pixel, inout float4 color, bool isCounted)
+float AddHeightfield(int2 pixel, inout float4 color)
 {
     const ReflectionSurface surface = LoadSurface(pixel);
 
@@ -174,12 +157,6 @@ float AddHeightfield(int2 pixel, inout float4 color, bool isCounted)
     const float reflective = 1.0 - MatteShare(surface.roughness);
     const float missing = reflective - color.a;
 
-    if (isCounted)
-    {
-        CountShare(COUNT_SHARE_REFLECTIVE, reflective);
-        CountShare(COUNT_SHARE_BRICKS, min(color.a, reflective));
-    }
-
     if (missing < LEAST_MISSING)
     {
         return 0.0;
@@ -190,14 +167,6 @@ float AddHeightfield(int2 pixel, inout float4 color, bool isCounted)
     float t;
     uint kind;
     const float4 found = TraceHeightfield(RayStart(surface.P, surfaceNormal), Reflected(surface, surfaceNormal), t, kind);
-
-    if (isCounted)
-    {
-        const float foundShare = missing * saturate(found.a);
-
-        CountShare(kind == GLIMMER_HEIGHTFIELD_SOLID ? COUNT_SHARE_FAR_SOLIDS : (kind == GLIMMER_HEIGHTFIELD_GROUND ? COUNT_SHARE_GROUND : COUNT_SHARE_CANOPY), foundShare);
-        CountShare(COUNT_SHARE_SKY, missing - foundShare);
-    }
 
     if (found.a <= 0.0)
     {
@@ -230,7 +199,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
     float4 color = OutColor[texel];
 
-    const float t = AddHeightfield(FullPixel(int2(texel)), color, true);
+    const float t = AddHeightfield(FullPixel(int2(texel)), color);
 
     if (t > 0.0)
     {
@@ -256,7 +225,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
     float4 color = OutColor[pixel];
 
-    if (AddHeightfield(pixel, color, false) > 0.0)
+    if (AddHeightfield(pixel, color) > 0.0)
     {
         OutColor[pixel] = color;
     }

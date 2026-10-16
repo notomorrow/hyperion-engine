@@ -69,43 +69,44 @@ static constexpr uint32 RequestBudget = 32768;
 static constexpr uint32 RequestWords = 4;
 
 // NOTE must match GlimmerBrickReflections.hlsl and GlimmerBrickReflectionsHeightfield.hlsl
-static constexpr uint32 NumCounts = 14;
-static constexpr uint32 CountShareReflective = 8;
-static constexpr uint32 CountShareBricks = 9;
-static constexpr uint32 CountShareFarSolids = 10;
-static constexpr uint32 CountShareGround = 11;
-static constexpr uint32 CountShareCanopy = 12;
-static constexpr uint32 CountShareSky = 13;
+static constexpr uint32 NumCounts = 4;
 static constexpr uint32 TraceRow = 256;
-
-static EngineStatCounter<uint32> s_statBrickRequests("Rendering/Glimmer/BrickReflectionRequests", false);
-static EngineStatCounter<uint32> s_statBrickListed("Rendering/Glimmer/BrickReflectionListed", false);
-
-// per mille of the glossy share of the pixels, by what it came from: the bricks, span solids past the bricks, the ground, the canopy or nothing
-static EngineStatCounter<uint32> s_statBrickFromBricks("Rendering/Glimmer/BrickReflectionFrom/Bricks", false);
-static EngineStatCounter<uint32> s_statBrickFromFarSolids("Rendering/Glimmer/BrickReflectionFrom/FarSolids", false);
-static EngineStatCounter<uint32> s_statBrickFromGround("Rendering/Glimmer/BrickReflectionFrom/Ground", false);
-static EngineStatCounter<uint32> s_statBrickFromCanopy("Rendering/Glimmer/BrickReflectionFrom/Canopy", false);
-static EngineStatCounter<uint32> s_statBrickFromSky("Rendering/Glimmer/BrickReflectionFrom/Sky", false);
 
 struct GlimmerBrickReflectionsConstants
 {
     GlimmerBrickShaderData bricks;
-    Vec4u dimensions; // xy = the view's, zw = the half resolution picture's
-    Vec4u frame;      // x = frame, y = frames a pixel that reads slots adds up, z = frames one that traces for itself adds up, w = 1 colours each pixel by how it came by its reflection
-    Vec4u limits;     // x = crossings, y = blocks, z = requests a frame at most, w = 1 when there is no last frame to read
+
+    /// xy = the view's dimensions
+    /// zw = the half resolution picture's dimensions
+    Vec4u dimensions;
+
+    /// x = frame
+    /// y = frames a pixel that reads slots adds up
+    /// z = frames one that traces for itself adds up
+    Vec4u frame;
+
+    /// x = crossings
+    /// y = blocks
+    /// z = requests per frame max
+    /// w = 1 when there is no last frame to read.
+    Vec4u limits;
 };
 
 struct GlimmerBrickReflectionsHeightfieldConstants
 {
     GlimmerBrickShaderData bricks;
-    Vec4u dimensions; // xy = the view's, zw = the half resolution picture's
-    Vec4f params;     // x = the foliage's extinction
+
+    /// xy = the view's dimension
+    /// zw = the half resolution picture's dimensions
+    Vec4u dimensions;
+
+    /// x = the foliage's extinction
+    Vec4f params;
+
     GlimmerGroundShaderData ground;
     GlimmerSpanShaderData spans;
     GlimmerRelightShaderData relight;
     GlimmerLightShaderData light;
-    Vec4u options; // x = 1 counts, by share of the reflection, what each pixel's reflection came from
 };
 
 struct ReflectionsPass
@@ -139,11 +140,6 @@ GlimmerBrickReflections::~GlimmerBrickReflections()
     EnqueueDeletion(std::move(m_wantedBuffer));
     EnqueueDeletion(std::move(m_listBuffer));
     EnqueueDeletion(std::move(m_countsBuffer));
-
-    for (GpuBufferRef& readbackBuffer : m_readbackBuffers)
-    {
-        EnqueueDeletion(std::move(readbackBuffer));
-    }
 }
 
 const GpuImageViewRef& GlimmerBrickReflections::GetImageView() const
@@ -204,16 +200,6 @@ void GlimmerBrickReflections::CreateSlotBuffers(uint32 numCrossings)
     EnqueueDeletion(std::move(m_requestsBuffer));
     EnqueueDeletion(std::move(m_countsBuffer));
 
-    for (GpuBufferRef& readbackBuffer : m_readbackBuffers)
-    {
-        EnqueueDeletion(std::move(readbackBuffer));
-    }
-
-    for (bool& isPending : m_isReadbackPending)
-    {
-        isPending = false;
-    }
-
     m_blocksBuffer = CreateWordBuffer(size_t(NumBlocks) * BlockWords, NAME("GlimmerBrickSlotBlocks"));
     m_claimsBuffer = CreateWordBuffer(NumClaims, NAME("GlimmerBrickSlotClaims"));
     m_requestsBuffer = CreateWordBuffer(size_t(RequestBudget) * RequestWords, NAME("GlimmerBrickSlotRequests"));
@@ -221,66 +207,6 @@ void GlimmerBrickReflections::CreateSlotBuffers(uint32 numCrossings)
 
     m_numCrossings = numCrossings;
     m_hasRequests = false;
-}
-
-bool GlimmerBrickReflections::IsDebugView() const
-{
-    return m_isValid && g_cvGlimmerBricksReflectionsView.Get() != 0;
-}
-
-void GlimmerBrickReflections::CopyCounts(Frame* frame)
-{
-    const uint32 slot = frame->GetFrameIndex() % NumFramesInFlight;
-
-    if (!m_readbackBuffers[slot].IsValid())
-    {
-        m_readbackBuffers[slot] = RI.MakeGpuBuffer(GpuBufferType::ReadbackBuffer, NumCounts * sizeof(uint32));
-        m_readbackBuffers[slot]->SetIsCpuAccessible(true);
-        Check(m_readbackBuffers[slot]->Create());
-    }
-
-    CommandRecorder& cr = frame->cr;
-
-    cr << InsertBarrier(m_countsBuffer.Get(), ResourceState::CopySrc, ShaderModuleType::Compute);
-    cr << InsertBarrier(m_readbackBuffers[slot].Get(), ResourceState::CopyDst, ShaderModuleType::Compute);
-    cr << CopyBuffer(m_countsBuffer.Get(), m_readbackBuffers[slot].Get(), uint32(NumCounts * sizeof(uint32)));
-    cr << InsertBarrier(m_countsBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
-
-    m_isReadbackPending[slot] = true;
-}
-
-void GlimmerBrickReflections::ReadCounts(Frame* frame)
-{
-    const uint32 slot = frame->GetFrameIndex() % NumFramesInFlight;
-
-    // this frame slot's last submission has finished by now, so what it copied can be read
-    if (!m_isReadbackPending[slot])
-    {
-        return;
-    }
-
-    uint32 counts[NumCounts] = {};
-
-    m_readbackBuffers[slot]->Invalidate();
-    m_readbackBuffers[slot]->Read(sizeof(counts), counts);
-
-    s_statBrickRequests = counts[0];
-    s_statBrickListed = counts[1];
-
-    const uint64 reflective = MathUtil::Max<uint64>(counts[CountShareReflective], 1);
-
-    const auto perMille = [&](uint32 counter)
-    {
-        return uint32((uint64(counts[counter]) * 1000 + reflective / 2) / reflective);
-    };
-
-    s_statBrickFromBricks = perMille(CountShareBricks);
-    s_statBrickFromFarSolids = perMille(CountShareFarSolids);
-    s_statBrickFromGround = perMille(CountShareGround);
-    s_statBrickFromCanopy = perMille(CountShareCanopy);
-    s_statBrickFromSky = perMille(CountShareSky);
-
-    m_isReadbackPending[slot] = false;
 }
 
 void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer, const Vec2u& extent, const GlimmerScenePassData* scene, EnvProbe* skyProbe)
@@ -318,17 +244,12 @@ void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer,
     ENGINE_STAT_GPU_SCOPE(&s_statGlimmerBrickReflections);
 
     const Vec2u halfExtent = Vec2u((extent.x + 1) / 2, (extent.y + 1) / 2);
-    const bool isDebugView = g_cvGlimmerBricksReflectionsView.Get() != 0;
-    const bool addsUp = !isDebugView;
-    const bool counts = g_cvGlimmerBricksReflectionsStats.Get();
-
-    ReadCounts(frame);
 
     GlimmerBrickReflectionsConstants constants {};
     constants.bricks = brickWorld->GetShaderData();
     constants.dimensions = Vec4u(extent.x, extent.y, halfExtent.x, halfExtent.y);
-    constants.frame = Vec4u(m_frame, addsUp ? SlotFrames : 0u, addsUp ? RayFrames : 0u, isDebugView ? 1u : 0u);
-    constants.limits = Vec4u(m_numCrossings, NumBlocks, RequestBudget, m_hasHistory && addsUp ? 0u : 1u);
+    constants.frame = Vec4u(m_frame, SlotFrames, RayFrames, 0u);
+    constants.limits = Vec4u(m_numCrossings, NumBlocks, RequestBudget, m_hasHistory ? 0u : 1u);
 
     GpuBuffer* cbuffer = nullptr;
     size_t cbufferOffset = 0;
@@ -461,8 +382,7 @@ void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer,
 
     GlimmerRelight* relight = technique ? technique->GetRelight() : nullptr;
 
-    const bool tracesHeightfield = !isDebugView
-        && technique && technique->IsReady()
+    const bool tracesHeightfield = technique && technique->IsReady()
         && scene->surfaceCache && scene->spanCache && relight
         && scene->surfaceCache->GetGroundImageView().IsValid()
         && scene->surfaceCache->GetGroundAlbedoImageView().IsValid()
@@ -485,7 +405,6 @@ void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer,
         heightfieldConstants.spans = scene->spanCache->GetShaderData();
         heightfieldConstants.relight = relight->GetShaderData();
         GetGlimmerLightShaderData(skyProbe, heightfieldConstants.light);
-        heightfieldConstants.options = Vec4u(counts ? 1u : 0u, 0u, 0u, 0u);
 
         GpuBuffer* heightfieldCbuffer = nullptr;
         size_t heightfieldCbufferOffset = 0;
@@ -548,17 +467,14 @@ void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer,
 
     dispatchPass({ .modeProperty = &s_propReflectionsModeSpread, .groups = fullGroups, .outColor = m_fullTexture.Get(), .color = m_keptColorTextures[current].Get() });
 
-    if (addsUp)
+    const Vec3u wholeGroups = rowGroups(extent.x * extent.y / 4 * 3);
+
+    dispatchPass({ .modeProperty = &s_propReflectionsModeWholeList, .groups = fullGroups, .usesSlots = true, .guide = m_guideTextures[current].Get() });
+    dispatchPass({ .modeProperty = &s_propReflectionsModeWholeRays, .groups = wholeGroups, .usesSlots = true, .outColor = m_fullTexture.Get() });
+
+    if (tracesHeightfield)
     {
-        const Vec3u wholeGroups = rowGroups(extent.x * extent.y / 4 * 3);
-
-        dispatchPass({ .modeProperty = &s_propReflectionsModeWholeList, .groups = fullGroups, .usesSlots = true, .guide = m_guideTextures[current].Get() });
-        dispatchPass({ .modeProperty = &s_propReflectionsModeWholeRays, .groups = wholeGroups, .usesSlots = true, .outColor = m_fullTexture.Get() });
-
-        if (tracesHeightfield)
-        {
-            dispatchHeightfield(s_propHeightfieldModeWhole, m_fullTexture.Get(), nullptr, wholeGroups);
-        }
+        dispatchHeightfield(s_propHeightfieldModeWhole, m_fullTexture.Get(), nullptr, wholeGroups);
     }
 
     cr << InsertBarrier(m_fullTexture->GetGpuImage(), ResourceState::ShaderResource, ShaderModuleType::Pixel);
@@ -566,11 +482,6 @@ void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer,
     for (GpuImage* gbufferImage : gbufferImages)
     {
         cr << InsertBarrier(gbufferImage, ResourceState::ShaderResource, ShaderModuleType::Pixel);
-    }
-
-    if (counts)
-    {
-        CopyCounts(frame);
     }
 
     m_frame++;

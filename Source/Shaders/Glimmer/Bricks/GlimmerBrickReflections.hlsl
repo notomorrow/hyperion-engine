@@ -30,9 +30,21 @@ DECLARE_SRV(GlimmerBrickReflections, GlimmerBrickCrossingLightBuffer) Structured
 struct GlimmerBrickReflectionsConstants
 {
     GlimmerBrickParams bricks;
-    uint4 dimensions; // xy = the view's, zw = the half resolution picture's
-    uint4 frame;      // x = frame, y = frames a pixel that reads slots adds up, z = frames one that traces for itself adds up, w = 1 colours each pixel by how it came by its reflection
-    uint4 limits;     // x = crossings, y = blocks, z = requests a frame at most, w = 1 when there is no last frame to read
+
+    /// xy = the view's dimensions
+    /// zw = the half resolution picture's dimensions
+    uint4 dimensions;
+
+    /// x = frame
+    /// y = frames a pixel that reads slots adds up
+    /// z = frames one that traces for itself adds up
+    uint4 frame;
+
+    /// x = crossings
+    /// y = blocks
+    /// z = requests per frame max
+    /// w = 1 when there is no last frame to read.
+    uint4 limits;
 };
 
 DECLARE_BUFFER_DYNAMIC(GlimmerBrickReflections, CBuffer) cbuffer CBuffer
@@ -71,7 +83,7 @@ DECLARE_SRV(GlimmerBrickReflections, HistoryGuideTexture) Texture2D HistoryGuide
 #define COUNT_LISTED 1
 #define COUNT_WHOLE 3
 // NOTE must match GlimmerBrickReflections.cpp
-#define NUM_COUNTS 14
+#define NUM_COUNTS 4
 
 // alphas a bin is wide, and that a card is read over along a drawn direction
 #define LOBE_ALPHAS 3.0
@@ -666,7 +678,7 @@ void Resolve(int2 pixel, uint2 texel, uint index)
 
     if (matte >= 1.0)
     {
-        OutColor[texel] = constants.frame.w != 0u ? float4(0.0, 0.0, 0.0, 1.0) : (float4)0.0;
+        OutColor[texel] = (float4)0.0;
 
         return;
     }
@@ -933,12 +945,6 @@ void Resolve(int2 pixel, uint2 texel, uint index)
 
     OutColor[texel] = float4(light, hits) * ((1.0 - matte) / total);
 
-    if (constants.frame.w != 0u)
-    {
-        // green    == all of it from slots
-        // blue     == some bins still to come
-        OutColor[texel] = missing > 0.0 ? float4(0.0, 0.0, 1.0, 1.0) : float4(0.0, 1.0, 0.0, 1.0);
-    }
     OutInfo[texel] = float4(hits > 0.0 ? reach / hits : -1.0, 0.0, 0.0, 0.0);
 }
 
@@ -1041,17 +1047,6 @@ void TraceListed(uint listed)
 
     const ReflectionSurface surface = LoadSurface(pixel);
     const float3 surfaceNormal = LoadSurfaceNormal(pixel, surface.P, surface.N);
-
-    if (constants.frame.w != 0u)
-    {
-        // red      == a ray of its own
-        // magenta  == one filling in for what its slots lack
-        OutColor[texel] = (entry & LIST_SINGLE) != 0u
-            ? float4(1.0, 0.0, 1.0, 1.0)
-            : float4(1.0, 0.0, 0.0, 1.0);
-
-        return;
-    }
 
     float3 direction = Reflected(surface, surfaceNormal);
     float angle = LOBE_ALPHAS * surface.alpha;

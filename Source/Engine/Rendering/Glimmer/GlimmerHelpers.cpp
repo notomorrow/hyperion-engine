@@ -16,6 +16,7 @@
 #include <Rendering/RenderProxy.hpp>
 #include <Rendering/RenderProxyList.hpp>
 #include <Rendering/GpuBuffer.hpp>
+#include <Rendering/CommandRecorder.hpp>
 #include <Rendering/Texture.hpp>
 #include <Rendering/Material.hpp>
 
@@ -189,6 +190,14 @@ Handle<Texture> CreateGlimmerStorageTexture(TextureType type, TextureFormat form
     texture->SetIsTransient(true);
     texture->SetName(name);
     Check(texture->Create());
+
+    CommandRecorder& cr = RI.commandRecorderAllocator.GetCommandRecorder(CommandRecorderQueue::PreRender);
+
+    cr << InsertBarrier(texture->GetGpuImage(), ResourceState::CopyDst);
+    cr << FillImage(texture->GetGpuImage(), 0.0f, ImageSubResource { .numLayers = numLayers });
+    cr << InsertBarrier(texture->GetGpuImage(), ResourceState::ShaderResource);
+
+    cr.Done();
 
     return texture;
 }
