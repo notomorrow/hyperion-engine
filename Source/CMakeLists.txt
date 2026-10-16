@@ -1421,6 +1421,28 @@ endif()
 
 add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 
+if(HYP_WEB)
+  # how a page is linked: the sample, and a project's page through Sdk/CMake/HyperionWebSdk.cmake
+  set(HYP_WEB_APP_LINK_OPTIONS
+    ${HYP_WEB_LINK_OPTIONS}
+    -sPROXY_TO_PTHREAD=1
+    -sWASMFS=1
+    -sFORCE_FILESYSTEM=1
+    -sALLOW_MEMORY_GROWTH=1
+    -sINITIAL_MEMORY=512MB
+    -sMAXIMUM_MEMORY=4GB
+    -sSTACK_SIZE=4MB
+    -sDEFAULT_PTHREAD_STACK_SIZE=2MB
+    -sPTHREAD_POOL_SIZE=24
+    -sPTHREAD_POOL_DELAY_LOAD=1
+    -sMALLOC=mimalloc
+    -sEXIT_RUNTIME=1
+    -sENVIRONMENT=web,worker,node
+    -sASSERTIONS=1
+    -sEXPORTED_RUNTIME_METHODS=ccall
+    -Wl,--wrap=emscripten_futex_wait)
+endif()
+
 if(NOT HYP_MONOLITHIC)
   add_subdirectory(Sample)
 endif()
@@ -1533,6 +1555,89 @@ set(HYPERION_SDK_RUNTIME_DIR \"$<TARGET_FILE_DIR:${BUILD_NAME}>\")
 set(HYPERION_SDK_BASE_DIR \"${HYP_SDK_DEV_BASE_DIR}\")
 set(HYPERION_SDK_PCH \"${CMAKE_SOURCE_DIR}/Engine/HyperionPch.hpp\")
 " CONDITION "${HYP_SDK_DEV_PATHS_CONDITION}")
+endif()
+
+if(HYP_WEB)
+  # everything static that linking hyperion pulls in, as files or flags; the engine's own targets are all defined by now
+  function(hyp_collect_web_link_items rootTarget outVar)
+    set(items "")
+    set(visited "")
+    set(pending ${rootTarget})
+
+    while(pending)
+      list(POP_FRONT pending current)
+
+      if(current IN_LIST visited)
+        continue()
+      endif()
+
+      list(APPEND visited ${current})
+
+      get_target_property(aliasedTarget ${current} ALIASED_TARGET)
+
+      if(aliasedTarget)
+        list(APPEND pending ${aliasedTarget})
+        continue()
+      endif()
+
+      get_target_property(targetType ${current} TYPE)
+      get_target_property(isImported ${current} IMPORTED)
+
+      if(targetType STREQUAL "STATIC_LIBRARY" OR (isImported AND targetType STREQUAL "UNKNOWN_LIBRARY"))
+        list(APPEND items "$<TARGET_LINKER_FILE:${current}>")
+      endif()
+
+      set(linkProperties INTERFACE_LINK_LIBRARIES)
+
+      if(NOT isImported AND NOT targetType STREQUAL "INTERFACE_LIBRARY")
+        list(APPEND linkProperties LINK_LIBRARIES)
+      endif()
+
+      foreach(linkProperty ${linkProperties})
+        get_target_property(dependencies ${current} ${linkProperty})
+
+        if(NOT dependencies)
+          continue()
+        endif()
+
+        foreach(dependency ${dependencies})
+          string(REGEX REPLACE "^\\$<LINK_ONLY:(.*)>$" "\\1" dependency "${dependency}")
+
+          if(TARGET ${dependency})
+            list(APPEND pending ${dependency})
+          elseif(NOT dependency IN_LIST items)
+            list(APPEND items ${dependency})
+          endif()
+        endforeach()
+      endforeach()
+    endwhile()
+
+    set(${outVar} ${items} PARENT_SCOPE)
+  endfunction()
+
+  hyp_collect_web_link_items(${BUILD_NAME} HYP_WEB_SDK_LIBRARIES)
+
+  get_directory_property(HYP_WEB_SDK_INCLUDE_DIRS INCLUDE_DIRECTORIES)
+  list(APPEND HYP_WEB_SDK_INCLUDE_DIRS "${HYP_GENERATED_DIR}" "${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/Engine")
+  list(REMOVE_DUPLICATES HYP_WEB_SDK_INCLUDE_DIRS)
+
+  get_directory_property(HYP_WEB_SDK_DEFINITIONS COMPILE_DEFINITIONS)
+  list(REMOVE_DUPLICATES HYP_WEB_SDK_DEFINITIONS)
+
+  get_directory_property(HYP_WEB_SDK_LINK_DIRS LINK_DIRECTORIES)
+  list(APPEND HYP_WEB_SDK_LINK_DIRS "${CMAKE_THIRD_PARTY_LIBRARY_DIRECTORY}")
+
+  get_filename_component(HYP_WEB_SDK_BASE_DIR "${CMAKE_SOURCE_DIR}/.." ABSOLUTE)
+
+  file(GENERATE OUTPUT "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Sdk/CMake/HyperionWebSdk.cmake" CONTENT
+"set(HYPERION_WEB_INCLUDE_DIRS [==[${HYP_WEB_SDK_INCLUDE_DIRS}]==])
+set(HYPERION_WEB_COMPILE_DEFINITIONS [==[${HYP_WEB_SDK_DEFINITIONS}]==])
+set(HYPERION_WEB_CXX_FLAGS [==[${CMAKE_CXX_FLAGS}]==])
+set(HYPERION_WEB_LIBRARIES [==[${HYP_WEB_SDK_LIBRARIES}]==])
+set(HYPERION_WEB_LINK_DIRECTORIES [==[${HYP_WEB_SDK_LINK_DIRS}]==])
+set(HYPERION_WEB_LINK_OPTIONS [==[${HYP_WEB_APP_LINK_OPTIONS}]==])
+set(HYPERION_WEB_BASE_DIR [==[${HYP_WEB_SDK_BASE_DIR}]==])
+")
 endif()
 
 if (CMAKE_GENERATOR MATCHES "Ninja")

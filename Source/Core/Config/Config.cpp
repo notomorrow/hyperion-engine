@@ -23,27 +23,32 @@
 #include <Core/Logging/LogChannels.hpp>
 #include <Core/Logging/Logger.hpp>
 
+#include <Core/CLI/CommandLine.hpp>
+
 namespace Hyperion {
 
 namespace CoreApi {
 CORE_API const FilePath& GetExecutablePath();
+CORE_API const CommandLineArguments& GetCommandLineArguments();
 } // namespace CoreApi
 
 namespace config {
 
+namespace /* Helpers */ {
+
 static const ConfigValue s_invalidConfigValue {};
 
-static Map<String, JSON::Value> s_configCache;
-static SharedMutex s_configCacheMutex;
+Map<String, JSON::Value> g_configCache;
+SharedMutex g_configCacheMutex;
 
-static Map<String, SharedPtr<const ConfigOverlay>> s_configOverlays;
-static SharedMutex s_configOverlaysMutex;
+Map<String, SharedPtr<const ConfigOverlay>> g_configOverlays;
+SharedMutex g_configOverlaysMutex;
 
-static SharedPtr<const ConfigOverlay> FindOverlay(const String& configName)
+SharedPtr<const ConfigOverlay> FindOverlay(const String& configName)
 {
-    TSharedLock lock(s_configOverlaysMutex);
+    TSharedLock lock(g_configOverlaysMutex);
 
-    if (auto it = s_configOverlays.Find(configName); it != s_configOverlays.End())
+    if (auto it = g_configOverlays.Find(configName); it != g_configOverlays.End())
     {
         return it->second;
     }
@@ -51,7 +56,7 @@ static SharedPtr<const ConfigOverlay> FindOverlay(const String& configName)
     return {};
 }
 
-static String GetOverlayKey(const Optional<String>& subobjectPath, UTF8StringView key)
+String GetOverlayKey(const Optional<String>& subobjectPath, UTF8StringView key)
 {
     if (subobjectPath.HasValue())
     {
@@ -61,6 +66,34 @@ static String GetOverlayKey(const Optional<String>& subobjectPath, UTF8StringVie
     return String(key);
 }
 
+String GetConfigBaseName(const String& name)
+{
+    if (name.EndsWith(".json"))
+    {
+        return String(name.Substr(0, name.Length() - 5));
+    }
+
+    return name;
+}
+
+/// `configvariant` allows us to use a specific config override
+/// e.g configvariant=Web uses FooConfig.Web.json in place of just FooConfig.json
+FilePath GetConfigVariantFilePath(const String& name)
+{
+    static const String s_variant = CoreApi::GetCommandLineArguments()["configvariant"].ToString();
+
+    if (s_variant.Empty())
+    {
+        return FilePath();
+    }
+
+    const FilePath variantPath = CoreApi::GetExecutablePath() / "Config" / (GetConfigBaseName(name) + "." + s_variant + ".json");
+
+    return variantPath.Exists() ? variantPath : FilePath();
+}
+
+} // namespace
+
 #pragma region ConfigBase
 
 // Set externally for DI
@@ -69,9 +102,9 @@ CORE_API Result (*ConfigBase::s_ObjectToJSON)(const Class* cls, const BoxedValue
 
 void ConfigBase::SetOverlay(const String& configName, SharedPtr<const ConfigOverlay> overlay)
 {
-    TUniqueLock lock(s_configOverlaysMutex);
+    TUniqueLock lock(g_configOverlaysMutex);
 
-    s_configOverlays.Set(configName, std::move(overlay));
+    g_configOverlays.Set(configName, std::move(overlay));
 }
 
 ConfigBase::ConfigBase()
@@ -153,27 +186,23 @@ bool ConfigBase::IsChanged() const
 
 FilePath ConfigBase::GetFilePath() const
 {
-    FilePath configPath = CoreApi::GetExecutablePath() / "Config" / m_name;
-
-    if (!configPath.EndsWith(".json"))
+    if (FilePath variantPath = GetConfigVariantFilePath(m_name); variantPath.Any())
     {
-        configPath = configPath + ".json";
+        return variantPath;
     }
 
-    return configPath;
+    return CoreApi::GetExecutablePath() / "Config" / (GetConfigBaseName(m_name) + ".json");
 }
 
 FilePath ConfigBase::GetPlatformFilePath() const
 {
 #if defined(HYP_PLATFORM_NAME_STR)
-    String name = m_name;
-
-    if (name.EndsWith(".json"))
+    if (FilePath variantPath = GetConfigVariantFilePath(m_name); variantPath.Any())
     {
-        name = name.Substr(0, name.Length() - 5);
+        return variantPath;
     }
 
-    return CoreApi::GetExecutablePath() / "Config" / (name + "." HYP_PLATFORM_NAME_STR ".json");
+    return CoreApi::GetExecutablePath() / "Config" / (GetConfigBaseName(m_name) + "." HYP_PLATFORM_NAME_STR ".json");
 #else
     return GetFilePath();
 #endif
@@ -294,8 +323,8 @@ bool ConfigBase::Save()
 {
     // Update in-memory cache
     {
-        TUniqueLock lock(s_configCacheMutex);
-        s_configCache.Set(m_name, m_rootObject);
+        TUniqueLock lock(g_configCacheMutex);
+        g_configCache.Set(m_name, m_rootObject);
     }
 
 #if !defined(HYP_ANDROID) && !defined(HYP_IOS)
@@ -317,8 +346,8 @@ bool ConfigBase::Load()
 
     // Check cache
     {
-        TSharedLock lock(s_configCacheMutex);
-        if (auto it = s_configCache.Find(m_name); it != s_configCache.End())
+        TSharedLock lock(g_configCacheMutex);
+        if (auto it = g_configCache.Find(m_name); it != g_configCache.End())
         {
             m_rootObject = it->second;
             m_cachedHashCode = GetSubobject().GetHashCode();
@@ -342,8 +371,8 @@ bool ConfigBase::Load()
 
     // Store in cache
     {
-        TUniqueLock lock(s_configCacheMutex);
-        s_configCache.Set(m_name, m_rootObject);
+        TUniqueLock lock(g_configCacheMutex);
+        g_configCache.Set(m_name, m_rootObject);
     }
 
     m_cachedHashCode = GetSubobject().GetHashCode();

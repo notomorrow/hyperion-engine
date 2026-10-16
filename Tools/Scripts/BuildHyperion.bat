@@ -14,6 +14,7 @@ set "HYP_BUILD_TYPE=Release"
 set "HYP_ARM64=0"
 set "HYP_BACKEND="
 set "HYP_DISTRIBUTION=0"
+set "HYP_WEB_RECORDER=0"
 
 :PARSE_ARGS
 IF "%~1"=="" GOTO END_PARSE_ARGS
@@ -34,9 +35,17 @@ IF /I "%~1"=="webgpu" set "HYP_BACKEND=WEBGPU"
 IF /I "%~1"=="regenerate" set "HYP_REGENERATE=1"
 IF /I "%~1"=="nowait" set "HYP_NOWAIT=1"
 IF /I "%~1"=="distribution" set "HYP_DISTRIBUTION=1"
+IF /I "%~1"=="webrecorder" set "HYP_WEB_RECORDER=1"
 SHIFT
 GOTO PARSE_ARGS
 :END_PARSE_ARGS
+
+REM "webrecorder" builds the desktop runtime that web builds record a level with: WebGPU, no editor, beside the main build
+REM in Build\Windows-Runtime\WebRecorder and Binaries\Windows-Runtime\WebRecorder.
+if "%HYP_WEB_RECORDER%"=="1" (
+    set "HYP_RUNTIME=1"
+    set "HYP_BACKEND=WEBGPU"
+)
 
 REM Exported so BuildCodeGen.bat (invoked indirectly via RunCodeGen during CMake
 REM configuration) knows to build the CodeGen tool with the same MinGW toolchain
@@ -46,6 +55,7 @@ set "HYP_MINGW=%HYP_MINGW%"
 set "HYP_BUILD_DIR=%HYP_BUILD_TYPE%"
 if "%HYP_SHIPPING%"=="1" set "HYP_BUILD_DIR=Shipping"
 if "%HYP_DISTRIBUTION%"=="1" if not "%HYP_SHIPPING%"=="1" set "HYP_BUILD_DIR=Distribution"
+if "%HYP_WEB_RECORDER%"=="1" set "HYP_BUILD_DIR=WebRecorder"
 
 set "HYP_SHIPPING_CMAKE="
 if "%HYP_SHIPPING%"=="1" set "HYP_SHIPPING_CMAKE=-DHYP_SHIPPING=1"
@@ -74,6 +84,7 @@ REM but keep the Release build type and third-party libs.
 set "HYP_OUTPUT_SUFFIX_ARG="
 if "%HYP_SHIPPING%"=="1" set "HYP_OUTPUT_SUFFIX_ARG=-DHYP_OUTPUT_DIRECTORY_SUFFIX=Shipping"
 if "%HYP_DISTRIBUTION%"=="1" if not "%HYP_SHIPPING%"=="1" set "HYP_OUTPUT_SUFFIX_ARG=-DHYP_OUTPUT_DIRECTORY_SUFFIX=Distribution"
+if "%HYP_WEB_RECORDER%"=="1" set "HYP_OUTPUT_SUFFIX_ARG=-DHYP_OUTPUT_DIRECTORY_SUFFIX=WebRecorder"
 
 REM "web" builds the WebAssembly + WebGPU sample with Emscripten. EMSDK has to point at an emsdk checkout with a
 REM toolchain installed and activated; its environment is needed for the build as well as for generating.
@@ -148,16 +159,7 @@ if not defined NINJA_EXE (
     exit /b 1
 )
 
-REM HYP_WEB_PACKAGE_DIR: the cooked package whose Config/ and Content/ get preloaded (PackageBuildWeb.bat sets it).
-REM Left alone when unset, so a plain rebuild keeps the package the build directory was last configured with.
-set "HYP_WEB_PACKAGE_CMAKE="
-if defined HYP_WEB_PACKAGE_DIR set "HYP_WEB_PACKAGE_CMAKE=-DHYP_WEB_PACKAGE_DIR=%HYP_WEB_PACKAGE_DIR:\=/%"
-
-REM HYP_WEB_GAME_SOURCE_DIR: a C++ project's Source folder, whose Game/ is built into the page. Passed with every package,
-REM empty for a project without game code, so the last project's code doesn't stay in the build.
-if defined HYP_WEB_PACKAGE_DIR set "HYP_WEB_PACKAGE_CMAKE=%HYP_WEB_PACKAGE_CMAKE% -DHYP_WEB_GAME_SOURCE_DIR=%HYP_WEB_GAME_SOURCE_DIR%"
-
-call emcmake cmake ../../../Source -G Ninja -DCMAKE_BUILD_TYPE="%HYP_BUILD_TYPE%" %HYP_WEB_PACKAGE_CMAKE%
+call emcmake cmake ../../../Source -G Ninja -DCMAKE_BUILD_TYPE="%HYP_BUILD_TYPE%"
 if errorlevel 1 (
     echo CMake generation failed. Aborting build.
     popd

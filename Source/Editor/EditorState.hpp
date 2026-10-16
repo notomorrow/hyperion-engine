@@ -123,6 +123,9 @@ public:
     HYP_FIELD()
     ScriptableDelegate<void> OnBuildNativeGameRequested;
 
+    HYP_FIELD()
+    ScriptableDelegate<void, bool> OnBuildWebGameRequested;
+
     /*! \brief Fired by EditorCommandSetViewportLayout; 0 = single, 1 = four viewports, 2 = perspective + three. */
     HYP_FIELD()
     ScriptableDelegate<void, uint32> OnViewportLayoutRequested;

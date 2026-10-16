@@ -23,31 +23,7 @@ ResolveAssetPathFn g_resolveAssetPath = nullptr;
 
 static const FilePath s_inMemoryFilePath = FilePath("<memory-buffer>");
 
-static Map<ANSIString, ParseSchemaSectionFn> s_parseSchemaSectionFns;
-static Mutex s_parseSchemaSectionFnsMutex;
-
-void SetParseSchemaSectionFn(const ANSIStringView& sectionName, ParseSchemaSectionFn fn)
-{
-    Mutex::Guard guard(s_parseSchemaSectionFnsMutex);
-
-    s_parseSchemaSectionFns[sectionName] = fn;
-}
-
-ParseSchemaSectionFn GetParseSchemaSectionFn(const ANSIStringView& sectionName)
-{
-    Mutex::Guard guard(s_parseSchemaSectionFnsMutex);
-
-    const auto it = s_parseSchemaSectionFns.Find(sectionName);
-
-    if (it == s_parseSchemaSectionFns.End())
-    {
-        return nullptr;
-    }
-
-    return it->second;
-}
-
-namespace {
+namespace /* Helpers */ {
 
 ParseResult RunParse(
     const FilePath& filePath,
@@ -95,7 +71,42 @@ ParseResult RunParse(
     return resultValue;
 }
 
+Map<ANSIString, ParseSchemaSectionFn>& GetParseSchemaSectionFns()
+{
+    static Map<ANSIString, ParseSchemaSectionFn> s_parseSchemaSectionFns;
+    return s_parseSchemaSectionFns;
+}
+
+Mutex& GetParseSchemaSectionFnsMutex()
+{
+    static Mutex s_parseSchemaSectionFnsMutex;
+    return s_parseSchemaSectionFnsMutex;
+}
+
 } // namespace anonymous
+
+ParseSchemaSectionFn GetParseSchemaSectionFn(const ANSIStringView& sectionName)
+{
+    Mutex::Guard guard(GetParseSchemaSectionFnsMutex());
+
+    Map<ANSIString, ParseSchemaSectionFn>& parseSchemaSectionFns = GetParseSchemaSectionFns();
+
+    const auto it = parseSchemaSectionFns.Find(sectionName);
+
+    if (it == parseSchemaSectionFns.End())
+    {
+        return nullptr;
+    }
+
+    return it->second;
+}
+
+void SetParseSchemaSectionFn(const ANSIStringView& sectionName, ParseSchemaSectionFn fn)
+{
+    Mutex::Guard guard(GetParseSchemaSectionFnsMutex());
+
+    GetParseSchemaSectionFns()[sectionName] = fn;
+}
 
 ParseResult Parse(const FilePath& filePath, ByteReader& reader, ErrorList* outErrors, BoxedValue* target)
 {

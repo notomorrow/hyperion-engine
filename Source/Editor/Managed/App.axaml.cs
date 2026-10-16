@@ -1,5 +1,9 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Primitives;
+using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml;
 using Hyperion.Editor.Services;
 using Hyperion.Editor.ViewModels;
@@ -17,6 +21,34 @@ namespace Hyperion.Editor
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
+
+            MenuItem.ClickEvent.AddClassHandler<MenuItem>(CloseFlyoutOnMenuItemClick, handledEventsToo: true);
+        }
+
+        private static void CloseFlyoutOnMenuItemClick(MenuItem item, RoutedEventArgs e)
+        {
+            if (item.HasSubMenu || item.Parent is MenuBase or MenuItem)
+            {
+                return;
+            }
+
+            if (item.FindLogicalAncestorOfType<Popup>() is not { } popup)
+            {
+                return;
+            }
+
+            if (popup.PlacementTarget is Button { Flyout: { } flyout })
+            {
+                flyout.Hide();
+            }
+            else if (popup.PlacementTarget is Control target && FlyoutBase.GetAttachedFlyout(target) is { } attachedFlyout)
+            {
+                attachedFlyout.Hide();
+            }
+            else
+            {
+                popup.Close();
+            }
         }
 
         public override void OnFrameworkInitializationCompleted()

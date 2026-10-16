@@ -1,37 +1,32 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal
 
-REM Serves a packaged web build for local testing.
+REM Serves a project's web build for local testing.
 REM
-REM   ServeWeb.bat [package dir] [port]
+REM   ServeWeb.bat <project or folder> [port]
 REM
-REM Without a package dir, serves the one PackageBuildWeb.bat made last. The port defaults to 8080.
+REM Serves <project>\Binaries\Web, or the folder itself when it holds an index.html. The port defaults to 8080.
+REM HYP_SERVE_WITHOUT_ISOLATION=1 leaves out the COOP / COEP headers, as GitHub Pages does.
 
-for %%i in ("%~dp0..\..") do set "HYP_ROOT_DIR=%%~fi\"
-
-set "PACKAGE_DIR=%~1"
+set "SERVE_DIR=%~1"
 set "PORT=%~2"
 if "%PORT%"=="" set "PORT=8080"
 
-if "%PACKAGE_DIR%"=="" (
-    if exist "%HYP_ROOT_DIR%PackagedBuilds\Web\.hyperion-package" (
-        set /p PACKAGE_DIR=<"%HYP_ROOT_DIR%PackagedBuilds\Web\.hyperion-package"
-    )
-)
-
-if "%PACKAGE_DIR%"=="" (
-    echo ERROR: No package dir given and none recorded. Run PackageBuildWeb.bat first.
+if "%SERVE_DIR%"=="" (
+    echo Usage: ServeWeb.bat ^<project or folder^> [port]
     exit /b 1
 )
 
-if not exist "%PACKAGE_DIR%\index.html" (
-    echo ERROR: "%PACKAGE_DIR%" holds no index.html.
+if exist "%SERVE_DIR%\Binaries\Web\index.html" set "SERVE_DIR=%SERVE_DIR%\Binaries\Web"
+
+if not exist "%SERVE_DIR%\index.html" (
+    echo ERROR: "%SERVE_DIR%" holds no web build. Build one: Tools\Scripts\PackageBuildWeb.bat --project ^<project^>
     exit /b 1
 )
 
-echo Serving %PACKAGE_DIR%
+echo Serving %SERVE_DIR%
 echo Open http://localhost:%PORT%/ in Chrome or Edge. Ctrl+C stops the server.
 
-python "%~dp0ServeWeb.py" "%PACKAGE_DIR%" "%PACKAGE_DIR%" %PORT%
+python "%~dp0ServeWeb.py" "%SERVE_DIR%" "%SERVE_DIR%" %PORT%
 
 endlocal

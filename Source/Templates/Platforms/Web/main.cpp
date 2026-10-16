@@ -227,10 +227,13 @@ int main(int argc, char** argv)
     EngineGlobals::GetBlobStorage()->Lock(EngineGlobals::GetCacheDirectory(), /* readOnly */ true);
 
 #ifdef HYP_WEB_GAME_MODULE
-    Handle<Game> game = Game::CreateGame(StringHash(HypGameModule_GetGameClassName()));
+    // the project's game code names its game class
+    const char* gameClassName = HypGameModule_GetGameClassName();
 #else
-    Handle<Game> game = Game::CreateGame("DefaultGame"_sh);
+    const char* gameClassName = HYP_WEB_GAME_CLASS;
 #endif
+
+    Handle<Game> game = Game::CreateGame(StringHash(gameClassName));
 
     if (!game.IsValid())
     {

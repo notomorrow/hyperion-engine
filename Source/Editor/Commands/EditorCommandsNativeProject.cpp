@@ -184,6 +184,76 @@ DEFINE_EDITOR_COMMAND(BuildNativeGame);
 
 #pragma endregion BuildNativeGame
 
+#pragma region BuildWebGame
+
+class EditorCommandBuildWebGame final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandBuildWebGame);
+
+public:
+    virtual ~EditorCommandBuildWebGame() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Build for Web";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        RequestWebBuild(subsystem, /* run */ false);
+    }
+
+    static void RequestWebBuild(EditorSubsystem* subsystem, bool run)
+    {
+        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
+
+        if (!currentProject.IsValid() || !currentProject->IsSaved())
+        {
+            SystemMessageBox(MessageBoxType::INFO)
+                .Title("Save the project first")
+                .Text("The project needs to be saved before it can be built for the web.")
+                .Button("OK", NoOpFunction<void> {})
+                .Show();
+
+            return;
+        }
+
+        // the build reads the project from disk
+        if (Result saveResult = currentProject->Save(); saveResult.HasError())
+        {
+            HYP_LOG(Editor, Error, "Project could not be saved: {}", saveResult.GetError().GetMessage());
+
+            return;
+        }
+
+        g_editorState->OnBuildWebGameRequested(run);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(BuildWebGame);
+
+class EditorCommandRunWebGame final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandRunWebGame);
+
+public:
+    virtual ~EditorCommandRunWebGame() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Run in Browser";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        EditorCommandBuildWebGame::RequestWebBuild(subsystem, /* run */ true);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(RunWebGame);
+
+#pragma endregion BuildWebGame
+
 #pragma region PackageGame
 
 namespace /* Helpers */ {

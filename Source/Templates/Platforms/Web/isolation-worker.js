@@ -11,7 +11,6 @@ self.addEventListener('fetch', (event) => {
     }
 
     event.respondWith(fetch(request).then((response) => {
-        // an opaque response can't be read, so it can't be given new headers either
         if (response.status === 0)
         {
             return response;
