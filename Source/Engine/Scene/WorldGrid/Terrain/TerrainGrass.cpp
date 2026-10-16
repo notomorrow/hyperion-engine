@@ -16,6 +16,8 @@
 #include <Asset/Assets.hpp>
 #include <Asset/AssetRegistry.hpp>
 
+#include <Framework/EngineDefaults.hpp>
+
 #include <Rendering/Mesh.hpp>
 #include <Rendering/Material.hpp>
 
@@ -642,16 +644,7 @@ void TerrainGroundCoverResources::Resolve()
 
 Handle<GroundCover> TerrainGroundCoverResources::GetDefaultGroundCover()
 {
-    static const Name s_defaultGroundCoverName = NAME("DefaultGroundCover");
-
-    const Handle<AssetRegistry>& engineRegistry = GetEngineAssetRegistry();
-
-    if (!engineRegistry.IsValid())
-    {
-        return Handle<GroundCover>::empty;
-    }
-
-    Handle<GroundCover> groundCover = DynamicCast<GroundCover>(engineRegistry->GetAsset(AssetBuckets::Terrain, s_defaultGroundCoverName));
+    Handle<GroundCover> groundCover = EngineDefaults::LoadAsset<GroundCover>(EngineDefaults::Get().terrain.groundCover);
 
     if (!groundCover.IsValid())
     {

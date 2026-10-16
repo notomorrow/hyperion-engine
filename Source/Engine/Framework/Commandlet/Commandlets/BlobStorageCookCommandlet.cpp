@@ -8,6 +8,7 @@
 
 #include <Framework/Commandlet/Commandlet.hpp>
 #include <Framework/EngineGlobals.hpp>
+#include <Framework/EngineDefaults.hpp>
 
 #include <Core/Reflection/ClassUtils.hpp>
 #include <Core/Reflection/ClassRegistry.hpp>
@@ -21,8 +22,15 @@
 
 #include <Core/Containers/Set.hpp>
 
+#include <Core/Threading/TaskSystem.hpp>
+
 #include <Core/IO/ByteWriter.hpp>
 #include <Core/IO/ByteReader.hpp>
+
+#include <Core/DataProcessing/HMF/HMF.hpp>
+#include <Core/DataProcessing/Shared/CompilerError.hpp>
+#include <Core/DataProcessing/Shared/ErrorList.hpp>
+#include <Core/DataProcessing/JSON/JSON.hpp>
 
 #include <Asset/AssetRegistry.hpp>
 #include <Asset/AssetObject.hpp>
@@ -42,6 +50,10 @@
 #include <System/MessageBox.hpp>
 
 #ifdef HYP_EDITOR
+#include <Scene/World.hpp>
+#include <Scene/WorldGrid/WorldGrid.hpp>
+#include <Scene/WorldGrid/WorldGridLayer.hpp>
+
 #include <Editor/EditorProject.hpp>
 #include <Editor/EditorState.hpp>
 #endif // HYP_EDITOR
@@ -107,6 +119,22 @@ public:
                 "engine-assets",
                 "",
                 "File listing the Engine assets to cook, one Bucket/Name per line, as written by a run with --record-engine-assets (every Engine asset when empty)",
+                CommandLineArgumentFlags::NONE,
+                {},
+                JSON::Value(""));
+
+            s_definitions.Add(
+                "shader-target",
+                "",
+                "Platform to compile shaders for and include them in the cook.",
+                CommandLineArgumentFlags::NONE,
+                {},
+                JSON::Value(""));
+
+            s_definitions.Add(
+                "target-config",
+                "",
+                "The target's EngineConfig json",
                 CommandLineArgumentFlags::NONE,
                 {},
                 JSON::Value(""));
@@ -309,7 +337,19 @@ protected:
         s_maxTextureSize = 0;
         StringUtil::Parse(args["max-texture-size"].ToString(), &s_maxTextureSize);
 
-        Result result = Cook(engineRegistry, gameRegistry, projectDir, worldNames, FilePath(engineAssetListArg), outCacheDir, outContentDir, outEngineContentDir);
+        Array<Handle<AssetObject>> targetShaderAssets;
+
+        if (const String shaderTargetArg = args["shader-target"].ToString(); shaderTargetArg.Any())
+        {
+            SetEngineAssetRegistry(engineRegistry);
+
+            if (Result compileResult = CompileTargetShaders(engineRegistry, shaderTargetArg, FilePath(args["target-config"].ToString()), targetShaderAssets); compileResult.HasError())
+            {
+                return compileResult;
+            }
+        }
+
+        Result result = Cook(engineRegistry, gameRegistry, projectDir, worldNames, FilePath(engineAssetListArg), targetShaderAssets, outCacheDir, outContentDir, outEngineContentDir);
 
         if (result.HasError())
         {
@@ -509,11 +549,142 @@ private:
         return {};
     }
 
-    // Engine assets are referenced from code as well as from content, so what a game needs can't be found by walking
-    // references. The list is what a run of the game actually loaded.
+    static bool IsConditionMet(const JSON::Value& targetConfig, const String& condition)
+    {
+        if (condition.Empty() || !targetConfig.IsObject())
+        {
+            return true;
+        }
+
+        const auto value = targetConfig.Get(condition);
+
+        if (value.IsObject())
+        {
+            const auto enabled = value["Enabled"];
+
+            return enabled.IsNullOrUndefined() || enabled.ToBool();
+        }
+
+        return value.IsNullOrUndefined() || value.ToBool();
+    }
+
+    static Result CompileTargetShaders(
+        const Handle<AssetRegistry>& engineRegistry,
+        const String& target,
+        const FilePath& targetConfigPath,
+        Array<Handle<AssetObject>>& outAssets)
+    {
+        if (target != "web")
+        {
+            return HYP_MAKE_ERROR(Error, "Unknown shader target '{}', expected web", target);
+        }
+
+        JSON::Value targetConfig;
+
+        if (targetConfigPath.Any())
+        {
+            FileByteReader configReader { targetConfigPath };
+
+            if (configReader.Eof())
+            {
+                return HYP_MAKE_ERROR(Error, "Failed to read target config '{}'", targetConfigPath);
+            }
+
+            JSON::ParseResult configParseResult = JSON::Parse(String(configReader.Read().ToByteView()));
+
+            if (!configParseResult.ok)
+            {
+                return HYP_MAKE_ERROR(Error, "Failed to parse target config '{}': {}", targetConfigPath, configParseResult.message);
+            }
+
+            targetConfig = std::move(configParseResult.value);
+        }
+
+        const FilePath shadersPath = EngineGlobals::GetConfigDirectory() / "Shaders.hmf";
+
+        FileByteReader shadersReader { shadersPath };
+
+        HMF::ErrorList errorList;
+        HMF::ParseResult parseResult = HMF::Parse(shadersPath, shadersReader, &errorList);
+
+        if (parseResult.HasError() || !parseResult.GetValue().Is<ShaderDefinitions>())
+        {
+            return HYP_MAKE_ERROR(Error, "Failed to read shader definitions from '{}'", shadersPath);
+        }
+
+        const ShaderDefinitions& definitions = parseResult.GetValue().Get<ShaderDefinitions>();
+
+        Array<String> passShaderNames;
+
+        for (const ShaderDefinition& definition : definitions.definitions)
+        {
+            if (definition.cookKind != ShaderCookKind::Pass || !IsConditionMet(targetConfig, definition.condition))
+            {
+                continue;
+            }
+
+            passShaderNames.PushBack(String(*definition.name));
+        }
+
+        HYP_LOG(Assets, Info, "Compiling {} pass shader(s) of {} for {}", passShaderNames.Size(), definitions.definitions.Size(), target);
+
+        if (!TaskSystem::GetInstance().IsRunning())
+        {
+            TaskSystem::GetInstance().Start();
+        }
+
+        if (!g_shaderCompiler)
+        {
+            g_shaderCompiler = new ShaderCompiler;
+        }
+
+        ShaderCompileParams params;
+        params.SetTargetPlatforms(ShaderCompileTargetPlatform::Web);
+        params.SetTargetBackends(ShaderCompileTargetBackend::WebGPU);
+        params.shaderFilters = passShaderNames;
+        params.exactShaderFilters = true;
+
+        if (!g_shaderCompiler->Initialize(/* precompileShaders */ true, params))
+        {
+            HYP_LOG(Assets, Warning, "Some pass shaders failed to compile for {} (see the errors above); the package goes without them", target);
+        }
+
+        const ShaderPropertyId backendPropertyId = ShaderPropertyDictionary::GetInstance().Intern(ShaderProperty(NAME("BACKEND"), NAME("WEBGPU")));
+        const ShaderPropertyId targetPropertyId = ShaderPropertyDictionary::GetInstance().Intern(ShaderProperty(NAME("TARGET"), NAME("WEB")));
+
+        uint32 numVariants = 0;
+
+        for (const String& shaderName : passShaderNames)
+        {
+            Handle<AssetObject> bundleAsset = engineRegistry->GetAsset(AssetBuckets::ShaderBundles, StringHash(shaderName));
+
+            if (!bundleAsset.IsValid())
+            {
+                HYP_LOG(Assets, Warning, "No shader bundle for '{}' after compiling it for {}", shaderName, target);
+                continue;
+            }
+
+            outAssets.PushBack(bundleAsset);
+
+            for (const Handle<Shader>& shader : static_cast<const ShaderBundle*>(bundleAsset.Get())->compiledShaders)
+            {
+                if (shader.IsValid() && shader->properties.Test(backendPropertyId) && shader->properties.Test(targetPropertyId))
+                {
+                    outAssets.PushBack(shader);
+                    ++numVariants;
+                }
+            }
+        }
+
+        HYP_LOG(Assets, Info, "{} pass shader variant(s) for {}", numVariants, target);
+
+        return {};
+    }
+
     static Result CookListedAssets(
         AssetRegistry* registry,
         const FilePath& assetListPath,
+        const Array<Handle<AssetObject>>& targetShaderAssets,
         const FilePath& outputContentDir,
         Array<TSharedResLock<AssetObject>>& readLocks,
         Array<CollectedBlob>& collectedBlobs,
@@ -521,23 +692,41 @@ private:
         Set<const AssetObject*>& cookedAssets,
         const Set<uint8>& projectMeshLayouts)
     {
-        FILE* listFile = fopen(assetListPath.Data(), "r");
+        FILE* listFile = nullptr;
 
-        if (listFile == nullptr)
+        if (assetListPath.Any())
         {
-            return HYP_MAKE_ERROR(Error, "Failed to open asset list '{}'", assetListPath);
+            listFile = fopen(assetListPath.Data(), "r");
+
+            if (listFile == nullptr)
+            {
+                return HYP_MAKE_ERROR(Error, "Failed to open asset list '{}'", assetListPath);
+            }
         }
 
-        HYP_DEFER({ fclose(listFile); });
+        HYP_DEFER({
+            if (listFile != nullptr)
+            {
+                fclose(listFile);
+            }
+        });
 
         Set<String> seenEntries;
         Array<Handle<AssetObject>> listedAssets;
         Set<const AssetObject*> listedAssetSet;
         uint32 numMissing = 0;
 
+        for (const Handle<AssetObject>& assetObject : targetShaderAssets)
+        {
+            if (assetObject.IsValid() && listedAssetSet.Insert(assetObject.Get()).second)
+            {
+                listedAssets.PushBack(assetObject);
+            }
+        }
+
         char line[1024];
 
-        while (fgets(line, sizeof(line), listFile) != nullptr)
+        while (listFile != nullptr && fgets(line, sizeof(line), listFile) != nullptr)
         {
             const String entry = String(line).Trimmed();
 
@@ -575,8 +764,10 @@ private:
                 continue;
             }
 
-            listedAssetSet.Insert(assetObject.Get());
-            listedAssets.PushBack(std::move(assetObject));
+            if (listedAssetSet.Insert(assetObject.Get()).second)
+            {
+                listedAssets.PushBack(std::move(assetObject));
+            }
         }
 
         // meshes the engine builds at run time (terrain, debug draw, particles, MeshBuilder shapes) are all VT_Simple
@@ -653,8 +844,8 @@ private:
             }
         }
 
-        HYP_LOG(Assets, Info, "Cooked {} listed asset(s) from \"{}\", {} missing, {} shader variant(s) left out for vertex layouts no cooked mesh has",
-            listedAssets.Size() - unusedLayoutShaders.Size(), assetListPath, numMissing, unusedLayoutShaders.Size());
+        HYP_LOG(Assets, Info, "Cooked {} listed asset(s) from \"{}\" and the {} shader asset(s) compiled for the target, {} missing, {} shader variant(s) left out for vertex layouts no cooked mesh has",
+            listedAssets.Size() - unusedLayoutShaders.Size(), assetListPath, targetShaderAssets.Size(), numMissing, unusedLayoutShaders.Size());
 
         return {};
     }
@@ -664,6 +855,7 @@ private:
         const FilePath& projectPath,
         const Array<String>& worldNames,
         const FilePath& engineAssetListPath,
+        const Array<Handle<AssetObject>>& targetShaderAssets,
         const FilePath& outputCacheDir, const FilePath& outputContentDir, const FilePath& outputEngineContentDir)
     {
         Array<TSharedResLock<AssetObject>> readLocks;
@@ -720,6 +912,10 @@ private:
                 Array<AssetDesc> assetDescs;
                 gameRegistry->GetBucketAssetDescs(WorldsBucket.GetIndex(), assetDescs);
 
+                static const Name s_terrainLayerClassName = NAME("TerrainWorldGridLayer");
+
+                bool usesTerrain = false;
+
                 for (const AssetDesc& assetDesc : assetDescs)
                 {
                     if (worldNames.Any() && !worldNames.Contains(String(*assetDesc.name)))
@@ -735,9 +931,71 @@ private:
                     }
 
                     AssetRegistry::WalkAssetDeep(BoxedValue(worldAsset), callback);
+
+                    const Handle<World>& world = DynamicCast<World>(worldAsset);
+
+                    if (world.IsValid() && world->GetWorldGrid().IsValid())
+                    {
+                        for (const Handle<WorldGridLayer>& layer : world->GetWorldGrid()->GetLayers())
+                        {
+                            usesTerrain |= layer.IsValid() && layer->InstanceClass()->GetName() == s_terrainLayerClassName;
+                        }
+                    }
                 }
 
                 HYP_LOG(Assets, Info, "Found {} asset(s) reachable from project at \"{}\"", assetsToCook.Size(), projectPath);
+
+                // the engine assets engine code uses whatever the content is; the terrain ones only for a project with terrain
+                if (engineRegistry)
+                {
+                    GlobalContextScope engineContextScope { AssetRegistryContext { engineRegistry } };
+
+                    EngineDefaults engineDefaults = EngineDefaults::Get();
+
+                    if (!usesTerrain)
+                    {
+                        engineDefaults.terrain = EngineTerrainDefaults {};
+                    }
+
+                    AssetRegistry::WalkAssetDeep(BoxedValue(engineDefaults), callback);
+                }
+
+                for (const String& entry : loadProjectResult.GetValue()->GetPlatformSettings().cook.alwaysCook)
+                {
+                    const Array<String> parts = entry.Split('/');
+                    const AssetBucket& bucket = parts.Any() ? GetAssetBucketByName(StringHash(parts[0])) : AssetBuckets::None;
+
+                    if (bucket == AssetBuckets::None || parts.Size() > 2)
+                    {
+                        HYP_LOG(Assets, Warning, "Skipping AlwaysCook entry '{}', expected Bucket or Bucket/Name", entry);
+                        continue;
+                    }
+
+                    if (parts.Size() == 2)
+                    {
+                        Handle<AssetObject> asset = gameRegistry->GetAsset(bucket, StringHash(parts[1]));
+
+                        if (!asset.IsValid())
+                        {
+                            HYP_LOG(Assets, Warning, "AlwaysCook entry '{}' is not in the project", entry);
+                            continue;
+                        }
+
+                        AssetRegistry::WalkAssetDeep(BoxedValue(asset), callback);
+
+                        continue;
+                    }
+
+                    Array<AssetDesc> bucketAssetDescs;
+                    gameRegistry->GetBucketAssetDescs(bucket.GetIndex(), bucketAssetDescs);
+
+                    for (const AssetDesc& bucketAssetDesc : bucketAssetDescs)
+                    {
+                        AssetRegistry::WalkAssetDeep(BoxedValue(gameRegistry->GetAsset(bucket, bucketAssetDesc.name)), callback);
+                    }
+                }
+
+                HYP_LOG(Assets, Info, "{} asset(s) to cook with the engine defaults{} and AlwaysCook", assetsToCook.Size(), usesTerrain ? " (terrain included)" : "");
             }
             else
             {
@@ -772,9 +1030,9 @@ private:
         {
             GlobalContextScope assetRegistryContextScope { AssetRegistryContext { engineRegistry } };
 
-            if (engineAssetListPath.Any())
+            if (engineAssetListPath.Any() || targetShaderAssets.Any())
             {
-                if (Result result = CookListedAssets(engineRegistry, engineAssetListPath, outputEngineContentDir, readLocks, collectedBlobs, blockSizes, cookedAssets, projectMeshLayouts); result.HasError())
+                if (Result result = CookListedAssets(engineRegistry, engineAssetListPath, targetShaderAssets, outputEngineContentDir, readLocks, collectedBlobs, blockSizes, cookedAssets, projectMeshLayouts); result.HasError())
                 {
                     return result;
                 }

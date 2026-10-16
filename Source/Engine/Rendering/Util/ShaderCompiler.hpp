@@ -121,6 +121,8 @@ struct ShaderCompileParams
     EnumFlags<ShaderCompileTargetPlatform> targetPlatforms = ShaderCompileTargetPlatform::AllPlatforms;
     EnumFlags<ShaderCompileTargetBackend> targetBackends = ShaderCompileTargetBackend::AllBackends;
     Array<String> shaderFilters;
+    
+    bool exactShaderFilters = false;
 
     ShaderCompileParams() = default;
 
@@ -155,7 +157,13 @@ struct ShaderCompileParams
         const String lowerName = shaderName.ToLower();
         for (const String& filter : shaderFilters)
         {
-            if (lowerName.Contains(filter.ToLower()))
+            const String lowerFilter = filter.ToLower();
+
+            const bool cond = exactShaderFilters
+                ? (lowerName.Size() == lowerFilter.Size() && lowerName == lowerFilter)
+                : lowerName.Contains(lowerFilter);
+
+            if (cond)
             {
                 return true;
             }

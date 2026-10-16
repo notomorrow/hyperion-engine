@@ -105,11 +105,12 @@
 #include <Framework/EngineStats.hpp>
 #include <Framework/EngineDriver.hpp>
 #include <Framework/CVarManager.hpp>
+#include <Framework/EngineDefaults.hpp>
+
+#include <Framework/Config/EngineConfig.hpp>
 
 #include <Asset/AssetRegistry.hpp>
 #include <Asset/RawDataAsset.hpp>
-
-#include <Framework/Config/EngineConfig.hpp>
 
 #include <System/AppContext.hpp>
 
@@ -2307,14 +2308,13 @@ void RenderInterface::DeferFlushBuffer(RawBuffer* buffer)
 
 void RenderInterface::CreateBlueNoiseBuffer()
 {
-    Handle<AssetRegistry> registry = GetEngineAssetRegistry();
-    if (!registry.IsValid())
+    if (!GetEngineAssetRegistry().IsValid())
     {
         HYP_FAIL("Engine asset registry not available, cannot load BlueNoise");
         return;
     }
 
-    Handle<RawDataAsset> blueNoiseAsset = registry->GetAsset<RawDataAsset>(AssetBuckets::RawData, NAME("BlueNoise"));
+    Handle<RawDataAsset> blueNoiseAsset = EngineDefaults::LoadAsset<RawDataAsset>(EngineDefaults::Get().blueNoise);
 
     if (!blueNoiseAsset.IsValid())
     {

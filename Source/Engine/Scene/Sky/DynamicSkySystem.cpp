@@ -35,6 +35,7 @@
 #include <Asset/Assets.hpp>
 
 #include <Framework/EngineGlobals.hpp>
+#include <Framework/EngineDefaults.hpp>
 #include <Framework/GameState.hpp>
 #include <Framework/CVarManager.hpp>
 #include <Framework/View.hpp>
@@ -77,7 +78,7 @@ void DynamicSkySystem::InitializeSky()
         m_renderScene->SetOwnerThreadId(g_simThread);
         m_renderScene->Initialize();
 
-        Handle<Prefab> domePrefab = GetEngineAssetRegistry()->GetAsset<Prefab>(AssetBuckets::Prefabs, "InvSphere"_sh);
+        Handle<Prefab> domePrefab = EngineDefaults::LoadAsset<Prefab>(EngineDefaults::Get().skyDome);
 
         Handle<Node> domeNode = domePrefab.IsValid() ? domePrefab->Spawn() : Handle<Node>::Null();
 

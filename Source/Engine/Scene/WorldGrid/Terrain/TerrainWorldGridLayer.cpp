@@ -18,6 +18,7 @@
 
 #include <Asset/Assets.hpp>
 #include <Asset/AssetRegistry.hpp>
+#include <Framework/EngineDefaults.hpp>
 #include <Asset/AssetReference.hpp>
 
 #include <Streaming/StreamingManager.hpp>
@@ -68,11 +69,13 @@ static const WorldGridLayerInfo s_defaultTerrainWorldGridLayerInfo = {
     .seed = 1951233096
 };
 
-static Handle<Texture> LoadTerrainTexture(const char* name)
+static Handle<Texture> LoadTerrainTexture(const AssetPath& defaultPath)
 {
+    const Name name = defaultPath.assetName;
+
     auto tryLoadFromRegistry = [name](AssetRegistry& registry) -> Handle<Texture>
     {
-        return DynamicCast<Texture>(registry.GetAsset(AssetBuckets::Textures, StringHash(name)));
+        return DynamicCast<Texture>(registry.GetAsset(AssetBuckets::Textures, name));
     };
 
     Handle<Texture> texture;
@@ -84,10 +87,7 @@ static Handle<Texture> LoadTerrainTexture(const char* name)
 
     if (!texture.IsValid())
     {
-        if (Handle<AssetRegistry> registry = GetEngineAssetRegistry(); registry.IsValid())
-        {
-            texture = tryLoadFromRegistry(*registry);
-        }
+        texture = EngineDefaults::LoadAsset<Texture>(defaultPath);
     }
 
 #ifdef HYP_EDITOR
@@ -110,25 +110,19 @@ static Handle<Texture> LoadTerrainTexture(const char* name)
 
 static void LoadTerrainMaterialTextures(MaterialTextures& textures)
 {
-    struct PerLayerTextures
-    {
-        MaterialTextureKey albedoKey;
-        MaterialTextureKey normalKey;
-        const char* albedoName;
-        const char* normalName;
+    static constexpr MaterialTextureKey LayerTextureKeys[][2] = {
+        { MaterialTextureKey::TerrainLayer0, MaterialTextureKey::TerrainNormal0 },
+        { MaterialTextureKey::TerrainLayer1, MaterialTextureKey::TerrainNormal1 },
+        { MaterialTextureKey::TerrainLayer2, MaterialTextureKey::TerrainNormal2 },
+        { MaterialTextureKey::TerrainLayer3, MaterialTextureKey::TerrainNormal3 }
     };
 
-    static constexpr PerLayerTextures Layers[] = {
-        { MaterialTextureKey::TerrainLayer0, MaterialTextureKey::TerrainNormal0, "Terrain_Layer0_Albedo", "Terrain_Layer0_Normal" },
-        { MaterialTextureKey::TerrainLayer1, MaterialTextureKey::TerrainNormal1, "Terrain_Layer1_Albedo", "Terrain_Layer1_Normal" },
-        { MaterialTextureKey::TerrainLayer2, MaterialTextureKey::TerrainNormal2, "Terrain_Layer2_Albedo", "Terrain_Layer2_Normal" },
-        { MaterialTextureKey::TerrainLayer3, MaterialTextureKey::TerrainNormal3, "Terrain_Layer3_Albedo", "Terrain_Layer3_Normal" }
-    };
+    const Array<EngineTerrainLayerDefaults>& layers = EngineDefaults::Get().terrain.layers;
 
-    for (const PerLayerTextures& layer : Layers)
+    for (uint32 layerIndex = 0; layerIndex < uint32(GetArrayCount(LayerTextureKeys)) && layerIndex < uint32(layers.Size()); layerIndex++)
     {
-        textures[layer.albedoKey] = LoadTerrainTexture(layer.albedoName);
-        textures[layer.normalKey] = LoadTerrainTexture(layer.normalName);
+        textures[LayerTextureKeys[layerIndex][0]] = LoadTerrainTexture(layers[layerIndex].albedo);
+        textures[LayerTextureKeys[layerIndex][1]] = LoadTerrainTexture(layers[layerIndex].normal);
     }
 }
 

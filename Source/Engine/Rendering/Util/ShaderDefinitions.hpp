@@ -16,6 +16,14 @@
 
 namespace Hyperion {
 
+HYP_ENUM()
+enum class ShaderCookKind : uint8
+{
+    Pass = 0,
+    Material,
+    EditorOnly
+};
+
 HYP_STRUCT()
 struct ShaderDefinition
 {
@@ -23,6 +31,12 @@ struct ShaderDefinition
 
     HYP_FIELD(Property = "Name", Serialize)
     Name name;
+
+    HYP_FIELD(Property = "Cook", Serialize)
+    ShaderCookKind cookKind = ShaderCookKind::Pass;
+
+    HYP_FIELD(Property = "Condition", Serialize)
+    String condition; // a cvar to check
 
     HYP_FIELD(Property = "VS", Serialize)
     String vertexShader;

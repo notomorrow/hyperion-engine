@@ -251,18 +251,24 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
 {
     HYP_SCOPE;
 
+    m_usesLightmaps = g_cvLightmapVolumes.Get();
+
     outNumWaitingForTriangles = 0;
 
     Set<uint64, GlimmerAllocator> meshKeysSeen;
+    Map<uint64, uint8, GlimmerAllocator> instanceLods;
 
     const float lodErrorScale = triangleCache.GetLodErrorScale();
 
-    Map<uint64, uint8, GlimmerAllocator> instanceLods;
-
-    m_usesLightmaps = g_cvLightmapVolumes.Get();
-
     // the rect offset is 0 for a mesh that isn't lit by a lightmap
-    const auto addInstance = [&](const RenderProxyMesh& proxy, const Mat4f& objectToWorld, uint32 flags, uint32 materialIndex, uint32 instanceId, uint32 lightmapRectOffset, uint32 lightmapRectSize)
+    const auto addInstance = [&](
+            const RenderProxyMesh& proxy,
+            const Mat4f& objectToWorld,
+            uint32 flags,
+            uint32 materialIndex,
+            uint32 instanceId,
+            uint32 lightmapRectOffset,
+            uint32 lightmapRectSize)
     {
         const bool isFoliage = (flags & GIF_FOLIAGE) != 0;
 

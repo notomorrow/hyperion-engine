@@ -86,6 +86,33 @@ uint32 GetNumBuildThreads()
     return MathUtil::Clamp(std::thread::hardware_concurrency() / 4u, 1u, 4u);
 }
 
+GlimmerTriangleTexcoords PackTexCoords(const Vec2f* corners)
+{
+    GlimmerTriangleTexcoords packed {};
+
+    Vec2f uvs[3];
+
+    for (uint32 corner = 0; corner < 3; corner++)
+    {
+        uvs[corner] = MathUtil::IsFinite(corners[corner]) ? corners[corner] : Vec2f::Zero();
+    }
+
+    for (int axis = 0; axis < 2; axis++)
+    {
+        const float lowest = MathUtil::Min(uvs[0][axis], MathUtil::Min(uvs[1][axis], uvs[2][axis]));
+        const float base = std::floor(MathUtil::Clamp(lowest, -32768.0f, 32767.0f));
+
+        packed.base[axis] = int16(base);
+
+        for (uint32 corner = 0; corner < 3; corner++)
+        {
+            packed.uvs[corner * 2 + axis] = Float16(uvs[corner][axis] - base).Raw();
+        }
+    }
+
+    return packed;
+}
+
 } // namespace
 
 #pragma region GlimmerPoolAllocator
@@ -289,11 +316,9 @@ uint64 GlimmerTriangleCache::MakeKey(const Mesh* mesh, uint8 lodIndex)
 void GlimmerTriangleCache::CreatePoolBuffers()
 {
     const uint32 triangleCapacity = uint32(PoolBytes / sizeof(GlimmerTriangle));
-
-    m_trianglesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerTriangle), triangleCapacity);
-
     const uint32 lightmapUVCapacity = uint32(LightmapUVPoolBytes / sizeof(GlimmerTriangleLightmapUVs));
 
+    m_trianglesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerTriangle), triangleCapacity);
     m_lightmapUVsBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerTriangleLightmapUVs), lightmapUVCapacity);
 
     // only bindless devices sample the textures for the bricks; the rest take each material's average
@@ -505,7 +530,7 @@ void GlimmerTriangleCache::Requeue(Entry& entry, Mesh* mesh)
     const uint64 key = entry.ref.key;
     const uint8 lodIndex = entry.lodIndex;
 
-    entry = Entry {};
+    entry = {};
     entry.state = EntryState::Queued;
     entry.mesh = MakeStrongRef(mesh);
     entry.meshWeak = MakeWeakRef(mesh);
@@ -522,7 +547,7 @@ bool GlimmerTriangleCache::RequeueForReplacement(Entry& entry)
     }
 
     const Handle<Mesh> replacementMesh = entry.replacementMesh.Expired() ? Handle<Mesh>() : entry.replacementMesh.Lock();
-    entry.replacementMesh = WeakHandle<Mesh>();
+    entry.replacementMesh.Reset();
 
     if (!replacementMesh.IsValid())
     {
@@ -532,33 +557,6 @@ bool GlimmerTriangleCache::RequeueForReplacement(Entry& entry)
     Requeue(entry, replacementMesh.Get());
 
     return true;
-}
-
-static GlimmerTriangleTexcoords PackTexcoords(const Vec2f* corners)
-{
-    GlimmerTriangleTexcoords packed {};
-
-    Vec2f uvs[3];
-
-    for (uint32 corner = 0; corner < 3; corner++)
-    {
-        uvs[corner] = MathUtil::IsFinite(corners[corner]) ? corners[corner] : Vec2f::Zero();
-    }
-
-    for (int axis = 0; axis < 2; axis++)
-    {
-        const float lowest = MathUtil::Min(uvs[0][axis], MathUtil::Min(uvs[1][axis], uvs[2][axis]));
-        const float base = std::floor(MathUtil::Clamp(lowest, -32768.0f, 32767.0f));
-
-        packed.base[axis] = int16(base);
-
-        for (uint32 corner = 0; corner < 3; corner++)
-        {
-            packed.uvs[corner * 2 + axis] = Float16(uvs[corner][axis] - base).Raw();
-        }
-    }
-
-    return packed;
 }
 
 GlimmerTriangleCache::BuildResult GlimmerTriangleCache::BuildMeshTriangles(const Handle<Mesh>& mesh, uint8 lodIndex)
@@ -646,7 +644,9 @@ GlimmerTriangleCache::BuildResult GlimmerTriangleCache::BuildMeshTriangles(const
         Vec3f positions[3];
         Vec2f lightmapUVs[3];
         Vec2f texcoords[3];
+
         Vec3f normalSum = Vec3f::Zero();
+        
         bool isValid = true;
 
         for (uint32 corner = 0; corner < 3; corner++)
@@ -661,6 +661,7 @@ GlimmerTriangleCache::BuildResult GlimmerTriangleCache::BuildMeshTriangles(const
             }
 
             const float* vertex = packedVertices.Data() + size_t(vertexIndex) * packedVertexSizeInFloats;
+            
             positions[corner] = Vec3f(vertex[0], vertex[1], vertex[2]);
             normalSum += Vec3f(vertex[3], vertex[4], vertex[5]);
             texcoords[corner] = Vec2f(vertex[TexcoordOffsetInFloats], vertex[TexcoordOffsetInFloats + 1]);
@@ -785,7 +786,7 @@ GlimmerTriangleCache::BuildResult GlimmerTriangleCache::BuildMeshTriangles(const
 
         if (hasTexcoords)
         {
-            result.texcoords.PushBack(PackTexcoords(&triangleTexcoords[firstPosition]));
+            result.texcoords.PushBack(PackTexCoords(&triangleTexcoords[firstPosition]));
         }
     }
 

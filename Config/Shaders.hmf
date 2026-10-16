@@ -21,17 +21,21 @@ ShaderDefinitions "ShaderDefinitions" {
             PS = "Deferred/ApplyReflections.hlsl"
         }
         ShaderDefinition "ApplyLightmap" {
+            Condition = "Rendering.LightmapVolumes"
             VS = "Deferred/ApplyLightmap.hlsl"
             PS = "Deferred/ApplyLightmap.hlsl"
         }
         ShaderDefinition "ApplyFogVolume" {
+            Condition = "Rendering.FogVolumes"
             VS = "Deferred/ApplyFogVolume.hlsl"
             PS = "Deferred/ApplyFogVolume.hlsl"
         }
         ShaderDefinition "FogVolumeTemporal" {
+            Condition = "Rendering.FogVolumes"
             CS = "Deferred/FogVolumeTemporal.hlsl"
         }
         ShaderDefinition "FogVolumeOcclusionBake" {
+            Condition = "Rendering.FogVolumes"
             CS = "Deferred/FogVolumeOcclusionBake.hlsl"
         }
         ShaderDefinition "Sprite" {
@@ -39,10 +43,12 @@ ShaderDefinitions "ShaderDefinitions" {
             PS = "Sprite/Sprite.hlsl"
         }
         ShaderDefinition "Decal" {
+            Condition = "Rendering.Decals"
             VS = "Decal/Decal.hlsl"
             PS = "Decal/Decal.hlsl"
         }
         ShaderDefinition "DecalResolve" {
+            Condition = "Rendering.Decals"
             VS = "Decal/DecalResolve.hlsl"
             PS = "Decal/DecalResolve.hlsl"
         }
@@ -55,17 +61,21 @@ ShaderDefinitions "ShaderDefinitions" {
             PS = "Tonemap.hlsl"
         }
         ShaderDefinition "BloomExtract" {
+            Condition = "Rendering.Bloom"
             CS = "Bloom/BloomExtract.hlsl"
         }
         ShaderDefinition "BloomBlur" {
+            Condition = "Rendering.Bloom"
             VS = "Bloom/BloomBlur.hlsl"
             PS = "Bloom/BloomBlur.hlsl"
         }
         ShaderDefinition "BloomUpsample" {
+            Condition = "Rendering.Bloom"
             VS = "Bloom/BloomUpsample.hlsl"
             PS = "Bloom/BloomUpsample.hlsl"
         }
         ShaderDefinition "BloomDownsample" {
+            Condition = "Rendering.Bloom"
             VS = "Bloom/BloomDownsample.hlsl"
             PS = "Bloom/BloomDownsample.hlsl"
         }
@@ -91,6 +101,7 @@ ShaderDefinitions "ShaderDefinitions" {
             PS = "MergeCheckerboard.hlsl"
         }
         ShaderDefinition "DrawCubemap" {
+            Cook = Material
             VS = "DrawCubemap.hlsl"
             PS = "DrawCubemap.hlsl"
         }
@@ -108,6 +119,7 @@ ShaderDefinitions "ShaderDefinitions" {
             CS = "EnvProbe/BlurVisibility.hlsl"
         }
         ShaderDefinition "GeometryPass" {
+            Cook = Material
             VS = "DefaultVertex.hlsl"
             PS = "GeometryPass.hlsl"
         }
@@ -116,19 +128,24 @@ ShaderDefinitions "ShaderDefinitions" {
             PS = "Skybox.hlsl"
         }
         ShaderDefinition "Terrain" {
+            Cook = Material
             VS = "DefaultVertex.hlsl"
             PS = "Terrain.hlsl"
         }
         ShaderDefinition "GTAOPrefilterDepth" {
+            Condition = "Rendering.GTAO"
             CS = "Gtao/GTAOPrefilterDepth.hlsl"
         }
         ShaderDefinition "GTAOMain" {
+            Condition = "Rendering.GTAO"
             CS = "Gtao/GTAOMain.hlsl"
         }
         ShaderDefinition "GTAODenoise" {
+            Condition = "Rendering.GTAO"
             CS = "Gtao/GTAODenoise.hlsl"
         }
         ShaderDefinition "GTAOTemporal" {
+            Condition = "Rendering.GTAO"
             CS = "Gtao/GTAOTemporal.hlsl"
         }
         ShaderDefinition "Particle" {
@@ -139,18 +156,22 @@ ShaderDefinitions "ShaderDefinitions" {
             CS = "Particles/UpdateParticles.hlsl"
         }
         ShaderDefinition "DrawShadowMap" {
+            Cook = Material
             VS = "DrawShadowMap.hlsl"
             PS = "DrawShadowMap.hlsl"
         }
         ShaderDefinition "SSRWriteUVs" {
+            Condition = "Rendering.SSR"
             VS = "SSR/SSRWriteUVs.hlsl"
             PS = "SSR/SSRWriteUVs.hlsl"
         }
         ShaderDefinition "SSRSampleGBuffer" {
+            Condition = "Rendering.SSR"
             VS = "SSR/SSRSampleGBuffer.hlsl"
             PS = "SSR/SSRSampleGBuffer.hlsl"
         }
         ShaderDefinition "SSGI" {
+            Condition = "Rendering.SSGI"
             CS = "SSR/SSGI.hlsl"
         }
         ShaderDefinition "Upsample" {
@@ -170,32 +191,39 @@ ShaderDefinitions "ShaderDefinitions" {
             PS = "FinalPass.hlsl"
         }
         ShaderDefinition "RayTracedReflections" {
+            Condition = "Rendering.RayTracingEnabled"
             RGS = "RayTracing/Reflections/RayTracedReflections.hlsl"
             CHS = "RayTracing/Reflections/RayTracedReflections.rchit.hlsl"
             MS = "RayTracing/Reflections/RayTracedReflections.rmiss.hlsl"
         }
         ShaderDefinition "PathTracer" {
+            Condition = "Rendering.PathTracing"
             RGS = "RayTracing/PathTracing/PathTracer.hlsl"
             CHS = "RayTracing/PathTracing/PathTracer.rchit.hlsl"
             MS = "RayTracing/PathTracing/PathTracer.rmiss.hlsl"
         }
         ShaderDefinition "LightmapPathTracer" {
+            Cook = EditorOnly
             RGS = "RayTracing/Lightmapper/LightmapPathTracer.hlsl"
             CHS = "RayTracing/Lightmapper/LightmapPathTracer.rchit.hlsl"
             MS = "RayTracing/Lightmapper/LightmapPathTracer.rmiss.hlsl"
         }
         ShaderDefinition "LightmapPathTracerCompute" {
+            Cook = EditorOnly
             CS = "RayTracing/Lightmapper/LightmapPathTracerCompute.hlsl"
         }
         ShaderDefinition "DDGI" {
+            Condition = "Rendering.DDGI"
             RGS = "RayTracing/GlobalIllumination/DDGI.hlsl"
             CHS = "RayTracing/GlobalIllumination/DDGI.rchit.hlsl"
             MS = "RayTracing/GlobalIllumination/DDGI.rmiss.hlsl"
         }
         ShaderDefinition "UpdateProbeData" {
+            Condition = "Rendering.DDGI"
             CS = "RayTracing/GlobalIllumination/UpdateProbeData.hlsl"
         }
         ShaderDefinition "TAA" {
+            Condition = "Rendering.TAA"
             CS = "TAA.hlsl"
         }
         ShaderDefinition "TemporalBlending" {
@@ -205,76 +233,100 @@ ShaderDefinitions "ShaderDefinitions" {
             CS = "GenerateMipmap.hlsl"
         }
         ShaderDefinition "GlimmerHeightfieldDebug" {
+            Cook = EditorOnly
             CS = "Glimmer/GlimmerHeightfieldDebug.hlsl"
         }
         ShaderDefinition "GlimmerGroundUpload" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/GlimmerGroundUpload.hlsl"
         }
         ShaderDefinition "GlimmerGroundAlbedo" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/GlimmerGroundAlbedo.hlsl"
         }
         ShaderDefinition "GlimmerGroundCover" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/GlimmerGroundCover.hlsl"
         }
         ShaderDefinition "GlimmerProbeAlloc" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/Probes/GlimmerProbeAlloc.hlsl"
         }
         ShaderDefinition "GlimmerProbeTrace" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/Probes/GlimmerProbeTrace.hlsl"
         }
         ShaderDefinition "GlimmerProbeBlend" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/Probes/GlimmerProbeBlend.hlsl"
         }
         ShaderDefinition "GlimmerProbeDebug" {
+            Cook = EditorOnly
             CS = "Glimmer/Probes/GlimmerProbeDebug.hlsl"
         }
         ShaderDefinition "GlimmerSpanSplat" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/GlimmerSpanSplat.hlsl"
         }
         ShaderDefinition "GlimmerHeightBounds" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/GlimmerHeightBounds.hlsl"
         }
         ShaderDefinition "GlimmerSHUpdate" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/SH/GlimmerSHUpdate.hlsl"
         }
         ShaderDefinition "GlimmerSHOccupancySplat" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/SH/GlimmerSHOccupancySplat.hlsl"
         }
         ShaderDefinition "GlimmerBrickBuild" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/Bricks/GlimmerBrickBuild.hlsl"
         }
         ShaderDefinition "GlimmerBrickLight" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/Bricks/GlimmerBrickLight.hlsl"
         }
         ShaderDefinition "GlimmerBrickReflections" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/Bricks/GlimmerBrickReflections.hlsl"
         }
         ShaderDefinition "GlimmerBrickReflectionsHeightfield" {
+            Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/Bricks/GlimmerBrickReflectionsHeightfield.hlsl"
         }
         ShaderDefinition "GlimmerBrickDebug" {
+            Cook = EditorOnly
             CS = "Glimmer/Bricks/GlimmerBrickDebug.hlsl"
         }
         ShaderDefinition "GlimmerIrradiance" {
+            Condition = "Rendering.Glimmer.Enabled"
             VS = "Glimmer/GlimmerIrradiance.hlsl"
             PS = "Glimmer/GlimmerIrradiance.hlsl"
         }
         ShaderDefinition "CloudWeatherMap" {
+            Condition = "Rendering.Clouds"
             CS = "Clouds/CloudWeatherMap.hlsl"
         }
         ShaderDefinition "CloudNoiseGenerate" {
+            Condition = "Rendering.Clouds"
             CS = "Clouds/CloudNoiseGenerate.hlsl"
         }
         ShaderDefinition "CloudNoiseDownsample" {
+            Condition = "Rendering.Clouds"
             CS = "Clouds/CloudNoiseDownsample.hlsl"
         }
         ShaderDefinition "CloudTrace" {
+            Condition = "Rendering.Clouds"
             CS = "Clouds/CloudTrace.hlsl"
         }
         ShaderDefinition "CloudReconstruct" {
+            Condition = "Rendering.Clouds"
             CS = "Clouds/CloudReconstruct.hlsl"
         }
         ShaderDefinition "CloudComposite" {
+            Condition = "Rendering.Clouds"
             VS = "Clouds/CloudComposite.hlsl"
             PS = "Clouds/CloudComposite.hlsl"
         }
@@ -283,20 +335,25 @@ ShaderDefinitions "ShaderDefinitions" {
             PS = "HeightFog.hlsl"
         }
         ShaderDefinition "CloudShadowMap" {
+            Condition = "Rendering.Clouds"
             CS = "Clouds/CloudShadowMap.hlsl"
         }
         ShaderDefinition "CloudSkyProbe" {
+            Condition = "Rendering.Clouds"
             CS = "Clouds/CloudSkyProbe.hlsl"
         }
         ShaderDefinition "EditorGrid" {
+            Cook = EditorOnly
             VS = "Editor/EditorGrid.hlsl"
             PS = "Editor/EditorGrid.hlsl"
         }
         ShaderDefinition "EditorOrthoGrid" {
+            Cook = EditorOnly
             VS = "Editor/EditorOrthoGrid.hlsl"
             PS = "Editor/EditorOrthoGrid.hlsl"
         }
         ShaderDefinition "EditorWireframe" {
+            Cook = EditorOnly
             VS = "Editor/EditorWireframe.hlsl"
             PS = "Editor/EditorWireframe.hlsl"
         }
