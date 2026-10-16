@@ -96,8 +96,16 @@ float2 GetCloudWeatherMapUV(CloudWeatherMap weatherMap, float2 cloudSpaceXZ)
     return (cloudSpaceXZ - weatherMap.origin) / weatherMap.worldExtent;
 }
 
-// Weather (r = coverage, g = cloud type, b = density) crossfaded between the two evolution keyframes
-float4 SampleCloudWeatherMap(Texture2DArray weatherMapTexture, SamplerState weatherMapSampler, CloudWeatherMap weatherMap, float2 uv, float lod)
+/// sample weather crossfaded between two keyframes.
+/// r = coverage
+/// g = cloud type
+/// b = density
+float4 SampleCloudWeatherMap(
+    Texture2DArray weatherMapTexture,
+    SamplerState weatherMapSampler,
+    CloudWeatherMap weatherMap,
+    float2 uv,
+    float lod)
 {
     const float4 previousWeather = weatherMapTexture.SampleLevel(weatherMapSampler, float3(uv, float(weatherMap.previousKeyframeSlice)), lod);
     const float4 nextWeather = weatherMapTexture.SampleLevel(weatherMapSampler, float3(uv, float(weatherMap.nextKeyframeSlice)), lod);

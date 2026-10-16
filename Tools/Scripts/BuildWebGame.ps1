@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Project,
     [switch]$Run,
+    [switch]$FastLink,
     [switch]$Record,
     [switch]$NoRecord,
     [int]$MaxTextureSize = 0,
@@ -16,6 +17,7 @@ param(
 #   -Run       serve Binaries/Web on localhost afterwards and open it in the browser
 #   -Record    record the level's engine assets and shaders again even when the recorded lists look current
 #   -NoRecord  use whatever lists there are
+#   -FastLink  link at -O1: minutes faster, for testing locally; a build to host links at -O3
 
 $ErrorActionPreference = "Stop"
 
@@ -441,10 +443,11 @@ if (Test-Path $pageDir)
 }
 
 $gameDirArgument = if ($hasGameCode) { $gameSourceDir -replace '\\', '/' } else { "" }
+$linkOptimization = if ($FastLink) { "-O1" } else { "-O3" }
 
 Invoke-Cmd ("set `"EMSDK_QUIET=1`" && call `"$env:EMSDK\emsdk_env.bat`" >nul && emcmake cmake -S `"$templateDir`" -B `"$cmakeDir`" -G Ninja -DCMAKE_BUILD_TYPE=Release " + `
     "-DHYPERION_WEB_SDK=`"$($webSdk -replace '\\', '/')`" -DHYP_WEB_PAGE_NAME=$name -DHYP_WEB_PACKAGE=`"$($packageDir -replace '\\', '/')`" " + `
-    "-DHYP_WEB_GAME_DIR=`"$gameDirArgument`" -DHYP_WEB_OUTPUT=`"$($pageDir -replace '\\', '/')`" && cmake --build `"$cmakeDir`"") `
+    "-DHYP_WEB_GAME_DIR=`"$gameDirArgument`" -DHYP_WEB_OUTPUT=`"$($pageDir -replace '\\', '/')`" -DHYP_WEB_LINK_OPTIMIZATION=$linkOptimization && cmake --build `"$cmakeDir`"") `
     "Building the page failed"
 
 # 5. stage everything a host needs into Binaries/Web, leaving anything else the folder holds (a CNAME, say) alone

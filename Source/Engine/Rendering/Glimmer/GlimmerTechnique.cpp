@@ -161,6 +161,15 @@ GlimmerTechnique::~GlimmerTechnique()
     EnqueueDeletion(std::move(m_scratchBuffer));
 }
 
+void GlimmerTechnique::ResetLighting()
+{
+    m_probeVolume = MakeUnique<GlimmerProbeVolume>();
+    m_probeDebug = MakeUnique<GlimmerProbeDebug>();
+    m_shOccupancy = MakeUnique<GlimmerSHOccupancy>();
+    m_shVolume = MakeUnique<GlimmerSHVolume>();
+    m_relight = MakeUnique<GlimmerRelight>();
+}
+
 bool GlimmerTechnique::IsReady() const
 {
     return IsProbesReady() || IsSHReady();

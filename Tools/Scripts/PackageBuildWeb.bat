@@ -4,7 +4,7 @@ setlocal
 REM Builds a project for the browser into <project>\Binaries\Web, a folder any static host can serve as it is.
 REM Intermediates go to <project>\Build\Web. Tools\Scripts\BuildWebGame.ps1 does the work; this keeps the old name.
 REM
-REM   PackageBuildWeb.bat --project <path> [--worlds <names>] [--max-texture-size <size>] [--record] [--no-record] [--run]
+REM   PackageBuildWeb.bat --project <path> [--worlds <names>] [--max-texture-size <size>] [--record] [--no-record] [--run] [--fast-link]
 REM
 REM The recorded engine asset and shader lists the cook needs are made when they are missing or older than the shaders
 REM and the project's content, with the recording runtime (BuildHyperion.bat webrecorder). --record makes them again.
@@ -20,6 +20,7 @@ if /I "%~1"=="--max-texture-size" goto ARG_MAX_TEXTURE_SIZE
 if /I "%~1"=="--record" set "BUILD_ARGS=%BUILD_ARGS% -Record"
 if /I "%~1"=="--no-record" set "BUILD_ARGS=%BUILD_ARGS% -NoRecord"
 if /I "%~1"=="--run" set "BUILD_ARGS=%BUILD_ARGS% -Run"
+if /I "%~1"=="--fast-link" set "BUILD_ARGS=%BUILD_ARGS% -FastLink"
 shift
 goto PARSE_ARGS
 

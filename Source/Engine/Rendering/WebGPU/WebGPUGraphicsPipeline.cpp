@@ -137,7 +137,7 @@ void WebGPUGraphicsPipeline::OnVariantCompiled(WGPUCreatePipelineAsyncStatus sta
 {
     PipelineVariant* variant = static_cast<PipelineVariant*>(userdata1);
 
-    RI.GetPipelineCompiler().OnCompileFinished(variant->compileMode);
+    RI.GetPipelineCompiler().OnCompileFinished(variant->compileMode, variant->shaderName);
 
     if (status != WGPUCreatePipelineAsyncStatus_Success)
     {
@@ -347,11 +347,12 @@ WGPURenderPipeline WebGPUGraphicsPipeline::GetOrCreateVariant(const WGPUBindGrou
 
     PipelineVariant* variant = new PipelineVariant();
     variant->key = key;
+    variant->shaderName = m_shaderInstance->GetShader()->GetName();
     variant->compileMode = pipelineCompiler.GetCompileMode(*m_shaderInstance, /* canStartLate */ false);
 
     m_variants.PushBack(variant);
 
-    pipelineCompiler.OnCompileStarted(variant->compileMode);
+    pipelineCompiler.OnCompileStarted(variant->compileMode, variant->shaderName);
 
     if (variant->compileMode == WebGPUPipelineCompileMode::WithFrame)
     {

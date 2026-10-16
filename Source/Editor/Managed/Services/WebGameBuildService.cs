@@ -165,6 +165,7 @@ namespace Hyperion.Editor.Services
             if (run)
             {
                 startInfo.ArgumentList.Add("-Run");
+                startInfo.ArgumentList.Add("-FastLink");
             }
 
             using Process process = new Process { StartInfo = startInfo };

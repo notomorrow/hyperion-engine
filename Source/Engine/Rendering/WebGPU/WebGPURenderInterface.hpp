@@ -189,9 +189,9 @@ public:
         return m_pipelineManifest;
     }
 
-    uint32 GetNumPipelinesCompilingInBackground() const override
+    BackgroundCompileStatus GetBackgroundCompileStatus(StringHash shaderName) const override
     {
-        return m_pipelineCompiler.GetNumBackgroundCompiles();
+        return m_pipelineCompiler.GetBackgroundCompileStatus(shaderName);
     }
 
     void OnAdapterRequestEnded(WGPUAdapter adapter);

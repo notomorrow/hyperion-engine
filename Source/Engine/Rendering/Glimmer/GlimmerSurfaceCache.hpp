@@ -70,6 +70,11 @@ public:
         Span<const GlimmerGroundUpload> groundUploads,
         Span<const GlimmerTerrainPatchShaderData> terrainPatches);
 
+    HYP_FORCE_INLINE void RefillAlbedo()
+    {
+        m_hasGroundCoverChanged = true;
+    }
+
     HYP_FORCE_INLINE const GlimmerGroundShaderData& GetGroundShaderData() const
     {
         return m_groundShaderData;

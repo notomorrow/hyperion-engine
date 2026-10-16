@@ -182,11 +182,7 @@ PSOutput PSMain(PSInput input)
     if (flags & DECAL_FLAG_HAS_NORMAL_MAP)
     {
         float3 tangentNormal = DecalNormalTexture.Sample(SamplerLinear, uv).xyz * 2.0 - 1.0;
-
-        if (flags & DECAL_FLAG_NORMAL_MAP_FLIP_Y)
-        {
-            tangentNormal.y = -tangentNormal.y;
-        }
+        tangentNormal.y = select((flags & DECAL_FLAG_NORMAL_MAP_FLIP_Y) != 0, -tangentNormal.y, tangentNormal.y);
 
         tangentNormal.xy *= normalStrength;
 

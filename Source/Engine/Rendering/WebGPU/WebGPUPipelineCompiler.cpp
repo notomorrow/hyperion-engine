@@ -55,7 +55,17 @@ void WebGPUPipelineCompiler::EndFramePass()
     m_isFramePassCompiling = false;
 }
 
-void WebGPUPipelineCompiler::OnCompileStarted(WebGPUPipelineCompileMode compileMode)
+BackgroundCompileStatus WebGPUPipelineCompiler::GetBackgroundCompileStatus(StringHash shaderName) const
+{
+    if (const auto* it = m_backgroundCompiles.TryGet(Name(shaderName)))
+    {
+        return it->second;
+    }
+
+    return {};
+}
+
+void WebGPUPipelineCompiler::OnCompileStarted(WebGPUPipelineCompileMode compileMode, Name shaderName)
 {
     switch (compileMode)
     {
@@ -66,7 +76,7 @@ void WebGPUPipelineCompiler::OnCompileStarted(WebGPUPipelineCompileMode compileM
         m_numQuietFrames = 0;
         break;
     case WebGPUPipelineCompileMode::InBackground:
-        ++m_numBackgroundCompiles;
+        ++m_backgroundCompiles[shaderName].numCompiling;
         break;
     default:
         m_numQuietFrames = 0;
@@ -74,7 +84,7 @@ void WebGPUPipelineCompiler::OnCompileStarted(WebGPUPipelineCompileMode compileM
     }
 }
 
-void WebGPUPipelineCompiler::OnCompileFinished(WebGPUPipelineCompileMode compileMode)
+void WebGPUPipelineCompiler::OnCompileFinished(WebGPUPipelineCompileMode compileMode, Name shaderName)
 {
     switch (compileMode)
     {
@@ -83,19 +93,27 @@ void WebGPUPipelineCompiler::OnCompileFinished(WebGPUPipelineCompileMode compile
         --m_numFrameCompilesRunning;
         break;
     case WebGPUPipelineCompileMode::InBackground:
-        AssertDebug(m_numBackgroundCompiles != 0);
-        --m_numBackgroundCompiles;
+    {
+        BackgroundCompileStatus& status = m_backgroundCompiles[shaderName];
+        AssertDebug(status.numCompiling != 0);
+        --status.numCompiling;
 
         m_isBackgroundCompileRunning = false;
         break;
+    }
     default:
         break;
     }
 }
 
-void WebGPUPipelineCompiler::QueueBackgroundCompile(Proc<bool()>&& start)
+void WebGPUPipelineCompiler::OnDispatchSkipped(Name shaderName)
 {
-    m_queuedBackgroundCompiles.PushBack(std::move(start));
+    ++m_backgroundCompiles[shaderName].numSkippedDispatches;
+}
+
+void WebGPUPipelineCompiler::QueueBackgroundCompile(Name shaderName, Proc<bool()>&& start)
+{
+    m_queuedBackgroundCompiles.PushBack(QueuedBackgroundCompile { shaderName, std::move(start) });
 }
 
 void WebGPUPipelineCompiler::Update()
@@ -107,15 +125,15 @@ void WebGPUPipelineCompiler::Update()
         && m_numQuietFrames >= g_numQuietFramesBeforeBackgroundCompile
         && m_queuedBackgroundCompiles.Any())
     {
-        Proc<bool()> start = m_queuedBackgroundCompiles.PopFront();
+        QueuedBackgroundCompile queued = m_queuedBackgroundCompiles.PopFront();
 
-        if (start())
+        if (queued.start())
         {
             m_isBackgroundCompileRunning = true;
         }
         else
         {
-            OnCompileFinished(WebGPUPipelineCompileMode::InBackground);
+            OnCompileFinished(WebGPUPipelineCompileMode::InBackground, queued.shaderName);
         }
     }
 }

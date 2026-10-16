@@ -53,6 +53,18 @@ enum class GlimmerStartupStage : uint32
 
 HYP_MAKE_ENUM_FLAGS(GlimmerStartupStage);
 
+enum class GlimmerRestartParts : uint32
+{
+    None = 0x0,
+    GroundUploads = 0x1,
+    GroundAlbedo = 0x2,
+    SpanCache = 0x4,
+    Bricks = 0x8,
+    Lighting = 0x10
+};
+
+HYP_MAKE_ENUM_FLAGS(GlimmerRestartParts);
+
 HYP_CLASS(NoScriptBindings)
 class GlimmerScenePassData : public PassData
 {
@@ -63,17 +75,23 @@ public:
     virtual ~GlimmerScenePassData() override;
 
     SharedPtr<GlimmerTriangleCache> triangleCache;
-    UniquePtr<GlimmerSceneInstances> sceneInstances;
-    UniquePtr<GlimmerSurfaceCache> surfaceCache;
-    UniquePtr<GlimmerSpanCache> spanCache;
+    
+    UniquePtr<GlimmerSceneInstances, GlimmerAllocator> sceneInstances;
+    UniquePtr<GlimmerSurfaceCache, GlimmerAllocator> surfaceCache;
+    UniquePtr<GlimmerSpanCache, GlimmerAllocator> spanCache;
 
-    UniquePtr<GlimmerTechnique> technique;
+    UniquePtr<GlimmerTechnique, GlimmerAllocator> technique;
 
     World* world = nullptr;
     BoundingBox region;
     uint32 lastUpdatedFrame = ~0u;
 
-    bool isWarmingUp = false;
+    EnumFlags<GlimmerRestartParts> pendingRestart = GlimmerRestartParts::None;
+    
+    Array<uint32, GlimmerAllocator> seenSkippedDispatches;
+
+    uint32 groundGeneration = 0;
+    bool isReplayingGroundUploads = false;
 
     uint64 startTime = 0;
     uint32 startFrame = 0;

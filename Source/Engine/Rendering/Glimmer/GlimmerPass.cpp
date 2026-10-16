@@ -73,9 +73,40 @@ static EngineStatCounter<uint32> s_statGlimmerSceneInstancesEverywhereBuilds("Re
 static EngineStatCounter<uint32> s_statGlimmerSceneInstancesChanges("Rendering/Glimmer/InstanceChanges", false);
 static EngineStatCounter<uint32> s_statGlimmerSceneInstancesLodOnlyChanges("Rendering/Glimmer/InstanceLodOnlyChanges", false);
 
+static constexpr Pair<StringHash, GlimmerRestartParts> StatefulShaders[] = {
+    { "GlimmerGroundCover"_sh, GlimmerRestartParts::GroundAlbedo },
+    { "GlimmerGroundAlbedo"_sh, GlimmerRestartParts::GroundAlbedo },
+    { "GlimmerGroundUpload"_sh, GlimmerRestartParts::GroundUploads },
+    { "GlimmerSpanSplat"_sh, GlimmerRestartParts::SpanCache },
+    { "GlimmerHeightBounds"_sh, GlimmerRestartParts::SpanCache },
+    { "GlimmerBrickBuild"_sh, GlimmerRestartParts::Bricks },
+    { "GlimmerBrickLight"_sh, GlimmerRestartParts::Bricks },
+    { "GlimmerProbeAlloc"_sh, GlimmerRestartParts::Lighting },
+    { "GlimmerProbeTrace"_sh, GlimmerRestartParts::Lighting },
+    { "GlimmerProbeBlend"_sh, GlimmerRestartParts::Lighting },
+    { "GlimmerSHOccupancySplat"_sh, GlimmerRestartParts::Lighting },
+    { "GlimmerSHUpdate"_sh, GlimmerRestartParts::Lighting }
+};
+
+static constexpr uint32 NumStatefulShaders = uint32(GetArrayCount(StatefulShaders));
+
+
 namespace  /* Helpers */ {
 
-void LogStartupStages(GlimmerScenePassData& scene)
+EnumFlags<GlimmerRestartParts> GetPartsToRestart(GlimmerRestartParts part)
+{
+    switch (part)
+    {
+    case GlimmerRestartParts::GroundAlbedo:
+    case GlimmerRestartParts::SpanCache:
+    case GlimmerRestartParts::Bricks:
+        return part | GlimmerRestartParts::Lighting;
+    default:
+        return part;
+    }
+}
+
+void LogStartupStages(GlimmerScenePassData& scene, uint32 numCompiling)
 {
     const auto checkReached = [&scene](GlimmerStartupStage stage, bool isReached) -> bool
     {
@@ -97,9 +128,9 @@ void LogStartupStages(GlimmerScenePassData& scene)
         HYP_LOG(Rendering, Info, "Glimmer start: first update took {} ms", uint32(ms));
     }
 
-    if (checkReached(GlimmerStartupStage::WarmingUp, scene.isWarmingUp))
+    if (checkReached(GlimmerStartupStage::WarmingUp, bool(scene.pendingRestart)))
     {
-        HYP_LOG(Rendering, Info, "Glimmer start: held at {} ms, frame {} while {} pipelines compile", uint32(ms), frames, RI.GetNumPipelinesCompilingInBackground());
+        HYP_LOG(Rendering, Info, "Glimmer start: held at {} ms, frame {} while {} pipelines compile", uint32(ms), frames, numCompiling);
     }
 
     const GlimmerSceneInstances& sceneInstances = *scene.sceneInstances;
@@ -206,10 +237,10 @@ PassData* GlimmerPass::CreateViewPassData(View* view, PassDataExt&)
     {
         GlimmerScenePassData* passData = new GlimmerScenePassData();
         passData->view = MakeWeakRef(view);
-        passData->sceneInstances = MakeUnique<GlimmerSceneInstances>();
-        passData->surfaceCache = MakeUnique<GlimmerSurfaceCache>();
-        passData->spanCache = MakeUnique<GlimmerSpanCache>();
-        passData->technique = MakeUnique<GlimmerTechnique>();
+        passData->sceneInstances = MakeUniqueWithAllocator<GlimmerSceneInstances, GlimmerAllocator>();
+        passData->surfaceCache = MakeUniqueWithAllocator<GlimmerSurfaceCache, GlimmerAllocator>();
+        passData->spanCache = MakeUniqueWithAllocator<GlimmerSpanCache, GlimmerAllocator>();
+        passData->technique = MakeUniqueWithAllocator<GlimmerTechnique, GlimmerAllocator>();
 
         return passData;
     }
@@ -237,7 +268,7 @@ const GlimmerTechnique* GlimmerPass::GetApplyTechnique(World* world) const
 
     GlimmerScenePassData* scene = isEnabled ? GetSceneForWorld(world) : nullptr;
 
-    if (!scene || scene->isWarmingUp)
+    if (!scene || scene->pendingRestart)
     {
         return nullptr;
     }
@@ -268,34 +299,96 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         return;
     }
 
-    bool isRestarting = false;
+    const bool isFirstUpdate = scene->startTime == 0;
 
-    if (RI.GetNumPipelinesCompilingInBackground() != 0)
-    {
-        scene->isWarmingUp = true;
-    }
-    else if (scene->isWarmingUp)
-    {
-        scene->technique.Reset();
-
-        scene->surfaceCache = MakeUnique<GlimmerSurfaceCache>();
-        scene->spanCache = MakeUnique<GlimmerSpanCache>();
-        scene->technique = MakeUnique<GlimmerTechnique>();
-        scene->isWarmingUp = false;
-
-        isRestarting = true;
-
-        HYP_LOG(Rendering, Info, "Glimmer start: restarted at {} ms, frame {}, after pipelines compiled", uint32(PerformanceClock::TimeSince(scene->startTime)), frameCounter - scene->startFrame);
-    }
-
-    if (scene->startTime == 0)
+    if (isFirstUpdate)
     {
         scene->startTime = PerformanceClock::Now();
         scene->startFrame = frameCounter;
+        scene->seenSkippedDispatches.Resize(NumStatefulShaders);
     }
-    else
+
+    BackgroundCompileStatus compileStatus[NumStatefulShaders];
+
+    for (uint32 shaderIndex = 0; shaderIndex < NumStatefulShaders; shaderIndex++)
     {
-        // nothing started compiling since the last update, so the uploads it was given reached the GPU
+        compileStatus[shaderIndex] = RI.GetBackgroundCompileStatus(StatefulShaders[shaderIndex].first);
+
+        uint32& seenSkippedDispatches = scene->seenSkippedDispatches[shaderIndex];
+
+        if (compileStatus[shaderIndex].numSkippedDispatches != seenSkippedDispatches)
+        {
+            if (!isFirstUpdate)
+            {
+                scene->pendingRestart |= GetPartsToRestart(StatefulShaders[shaderIndex].second);
+            }
+
+            seenSkippedDispatches = compileStatus[shaderIndex].numSkippedDispatches;
+        }
+    }
+
+    uint32 numCompiling = 0;
+    bool isGroundUploadCompiling = false;
+
+    for (uint32 shaderIndex = 0; shaderIndex < NumStatefulShaders; shaderIndex++)
+    {
+        const GlimmerRestartParts part = StatefulShaders[shaderIndex].second;
+
+        if (scene->pendingRestart & part)
+        {
+            numCompiling += compileStatus[shaderIndex].numCompiling;
+        }
+
+        if (part == GlimmerRestartParts::GroundUploads && compileStatus[shaderIndex].numCompiling != 0)
+        {
+            isGroundUploadCompiling = true;
+        }
+    }
+
+    const EnumFlags<GlimmerRestartParts> restartedParts = numCompiling == 0 ? scene->pendingRestart : EnumFlags<GlimmerRestartParts>(GlimmerRestartParts::None);
+
+    if (restartedParts)
+    {
+        if (restartedParts & GlimmerRestartParts::Bricks)
+        {
+            scene->technique.Reset();
+            scene->technique = MakeUniqueWithAllocator<GlimmerTechnique, GlimmerAllocator>();
+        }
+        else if (restartedParts & GlimmerRestartParts::Lighting)
+        {
+            scene->technique->ResetLighting();
+        }
+
+        if (restartedParts & GlimmerRestartParts::SpanCache)
+        {
+            scene->spanCache = MakeUniqueWithAllocator<GlimmerSpanCache, GlimmerAllocator>();
+        }
+
+        if (restartedParts & GlimmerRestartParts::GroundAlbedo)
+        {
+            scene->surfaceCache->RefillAlbedo();
+        }
+
+        // writing the heights again marks them changed, which the parts reading them follow
+        if (restartedParts & GlimmerRestartParts::GroundUploads)
+        {
+            scene->isReplayingGroundUploads = true;
+        }
+
+        scene->pendingRestart = GlimmerRestartParts::None;
+
+        HYP_LOG(Rendering, Info, "Glimmer start: restarted at {} ms, frame {}, after pipelines compiled:{}{}{}{}{}",
+            uint32(PerformanceClock::TimeSince(scene->startTime)), frameCounter - scene->startFrame,
+            (restartedParts & GlimmerRestartParts::GroundUploads) ? " ground uploads" : "",
+            (restartedParts & GlimmerRestartParts::GroundAlbedo) ? " ground albedo" : "",
+            (restartedParts & GlimmerRestartParts::SpanCache) ? " spans" : "",
+            (restartedParts & GlimmerRestartParts::Bricks) ? " bricks" : "",
+            (restartedParts & GlimmerRestartParts::Lighting) ? " lighting" : "");
+    }
+
+    // the uploads it was given reached the GPU unless an upload dispatch could still be left out
+    if (!scene->isReplayingGroundUploads && !(scene->pendingRestart & GlimmerRestartParts::GroundUploads) && !isGroundUploadCompiling)
+    {
         scene->groundUploads.Clear();
     }
 
@@ -341,7 +434,13 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         channel->Consume(channelState, groundUploads);
     }
 
-    const size_t numGivenGroundUploads = isRestarting ? 0 : scene->groundUploads.Size();
+    if (channelState.groundGeneration != scene->groundGeneration)
+    {
+        scene->groundGeneration = channelState.groundGeneration;
+        scene->groundUploads.Clear();
+    }
+
+    const size_t numGivenGroundUploads = scene->isReplayingGroundUploads ? 0 : scene->groundUploads.Size();
 
     for (GlimmerGroundUpload& groundUpload : groundUploads)
     {
@@ -391,6 +490,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         s_statGlimmerTerrainPatches = uint32(terrainPatches.Size());
 
         scene->surfaceCache->Update(frame, channelState, newGroundUploads, terrainPatches.ToSpan());
+        scene->isReplayingGroundUploads = false;
         scene->spanCache->Update(frame, channelState, *scene->sceneInstances, *scene->triangleCache, *scene->surfaceCache);
 
         context.channelState = &channelState;
@@ -418,7 +518,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     s_statGlimmerSceneInstancesChanges = instancesStats.numChanges;
     s_statGlimmerSceneInstancesLodOnlyChanges = instancesStats.numLodOnlyChanges;
 
-    LogStartupStages(*scene);
+    LogStartupStages(*scene, numCompiling);
 }
 
 bool GlimmerPass::RenderDebugView(Frame* frame, const RenderSetup& renderSetup, Framebuffer* gbufferFramebuffer, GpuImageViewRef& outImageView)

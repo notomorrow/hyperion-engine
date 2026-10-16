@@ -106,6 +106,8 @@ public:
 
     void Update(const GlimmerTechniqueUpdateContext& context);
 
+    void ResetLighting();
+
     bool RenderDebugView(const GlimmerDebugViewContext& context);
 
     HYP_FORCE_INLINE GlimmerRelight* GetRelight() const
