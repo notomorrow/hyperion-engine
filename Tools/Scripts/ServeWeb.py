@@ -1,6 +1,8 @@
 """Serves a web build for local testing.
 
-   python ServeWeb.py <binaries dir> <package dir> [port]
+   python ServeWeb.py <binaries dir> <package dir> [port] [missing shaders file]
+
+The page posts each shader variant the package is missing; they are kept in the missing shaders file when one is given.
 """
 
 import gzip
@@ -8,10 +10,13 @@ import http.server
 import os
 import re
 import sys
+import threading
 
 binaries_dir = os.path.abspath(sys.argv[1])
 package_dir = os.path.abspath(sys.argv[2])
 port = int(sys.argv[3]) if len(sys.argv) > 3 else 8080
+missing_shaders_path = os.path.abspath(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] else None
+missing_shaders_lock = threading.Lock()
 
 sends_isolation_headers = os.environ.get("HYP_SERVE_WITHOUT_ISOLATION") != "1"
 
@@ -132,6 +137,35 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_HEAD(self):
         self.respond(False)
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", "0"))
+        line = self.rfile.read(length).decode("utf-8", "replace").strip()
+
+        if self.path.split("?", 1)[0] != "/missing-shaders" or missing_shaders_path is None or not line:
+            self.send_response(404)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        with missing_shaders_lock:
+            lines = []
+
+            if os.path.isfile(missing_shaders_path):
+                with open(missing_shaders_path, "r", encoding="utf-8") as file:
+                    lines = file.read().splitlines()
+
+            if line not in lines:
+                print("Missing shader variant: %s" % line, flush=True)
+
+                os.makedirs(os.path.dirname(missing_shaders_path), exist_ok=True)
+
+                with open(missing_shaders_path, "a", encoding="utf-8", newline="\n") as file:
+                    file.write(line + "\n")
+
+        self.send_response(204)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def log_message(self, format, *args):
         pass

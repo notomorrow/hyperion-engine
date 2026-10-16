@@ -26,6 +26,8 @@ class TCommandRecorder;
 
 using CommandRecorder = TCommandRecorder<RenderAllocator>;
 
+class MaterialParameters;
+
 namespace RenderHelpers {
 
 uint32 MipmapSize(uint32 srcSize, int lod);
@@ -67,6 +69,13 @@ constexpr inline bool IsGeometryPassFamily(StringHash shaderNameHash)
 
     return false;
 }
+
+constexpr inline bool IsTerrainShader(StringHash shaderNameHash)
+{
+    return shaderNameHash == "Terrain"_sh;
+}
+
+bool IsEmissive(const MaterialParameters& materialParameters);
 
 constexpr inline bool ShaderSupportsMorph(StringHash shaderNameHash)
 {

@@ -33,6 +33,7 @@
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/Shader.hpp>
 #include <Rendering/Texture.hpp>
+#include <Rendering/Mesh.hpp>
 #include <Rendering/ShaderManager.hpp>
 
 #include <Rendering/Util/ShaderCompiler.hpp>
@@ -517,7 +518,8 @@ private:
         Array<TSharedResLock<AssetObject>>& readLocks,
         Array<CollectedBlob>& collectedBlobs,
         Array<uint64>& blockSizes,
-        Set<const AssetObject*>& cookedAssets)
+        Set<const AssetObject*>& cookedAssets,
+        const Set<uint8>& projectMeshLayouts)
     {
         FILE* listFile = fopen(assetListPath.Data(), "r");
 
@@ -577,24 +579,72 @@ private:
             listedAssets.PushBack(std::move(assetObject));
         }
 
+        // meshes the engine builds at run time (terrain, debug draw, particles, MeshBuilder shapes) are all VT_Simple
+        Set<uint8> meshLayouts = projectMeshLayouts;
+        meshLayouts.Insert(uint8(VT_Simple));
+
         for (const Handle<AssetObject>& assetObject : listedAssets)
         {
-            // a bundle on disk holds its variants for every backend; its cooked manifest should only name the ones cooked with it
-            if (assetObject->GetPath().GetBucket() == AssetBuckets::ShaderBundles)
+            if (assetObject->GetPath().GetBucket() == AssetBuckets::Meshes)
             {
-                ShaderBundle* shaderBundle = static_cast<ShaderBundle*>(assetObject.Get());
+                meshLayouts.Insert(static_cast<const Mesh*>(assetObject.Get())->GetMeshAttributes().inputLayout.mask);
+            }
+        }
 
-                for (auto it = shaderBundle->compiledShaders.Begin(); it != shaderBundle->compiledShaders.End();)
+        Set<const AssetObject*> unusedLayoutShaders;
+
+        for (const Handle<AssetObject>& assetObject : listedAssets)
+        {
+            if (assetObject->GetPath().GetBucket() != AssetBuckets::ShaderBundles)
+            {
+                continue;
+            }
+
+            ShaderBundle* shaderBundle = static_cast<ShaderBundle*>(assetObject.Get());
+
+            for (auto it = shaderBundle->compiledShaders.Begin(); it != shaderBundle->compiledShaders.End();)
+            {
+                if (!listedAssetSet.Contains(static_cast<const AssetObject*>(it->Get())))
                 {
-                    if (!listedAssetSet.Contains(static_cast<const AssetObject*>(it->Get())))
-                    {
-                        it = shaderBundle->compiledShaders.Erase(it);
+                    it = shaderBundle->compiledShaders.Erase(it);
 
-                        continue;
-                    }
-
-                    ++it;
+                    continue;
                 }
+
+                ++it;
+            }
+
+            // a request compiles every layout the bundle's optional attributes allow, but only the cooked meshes' layouts are drawn
+            const bool drawsMeshLayouts = AnyOf(shaderBundle->compiledShaders, [&meshLayouts](const Handle<Shader>& shader)
+                {
+                    return meshLayouts.Contains(shader->inputLayout.mask);
+                });
+
+            if (!drawsMeshLayouts)
+            {
+                continue;
+            }
+
+            for (auto it = shaderBundle->compiledShaders.Begin(); it != shaderBundle->compiledShaders.End();)
+            {
+                if (!meshLayouts.Contains((*it)->inputLayout.mask))
+                {
+                    unusedLayoutShaders.Insert(static_cast<const AssetObject*>(it->Get()));
+
+                    it = shaderBundle->compiledShaders.Erase(it);
+
+                    continue;
+                }
+
+                ++it;
+            }
+        }
+
+        for (const Handle<AssetObject>& assetObject : listedAssets)
+        {
+            if (unusedLayoutShaders.Contains(assetObject.Get()))
+            {
+                continue;
             }
 
             if (Result result = CookAsset(outputContentDir, assetObject, readLocks, collectedBlobs, blockSizes, cookedAssets); result.HasError())
@@ -603,7 +653,8 @@ private:
             }
         }
 
-        HYP_LOG(Assets, Info, "Cooked {} listed asset(s) from \"{}\", {} missing", listedAssets.Size(), assetListPath, numMissing);
+        HYP_LOG(Assets, Info, "Cooked {} listed asset(s) from \"{}\", {} missing, {} shader variant(s) left out for vertex layouts no cooked mesh has",
+            listedAssets.Size() - unusedLayoutShaders.Size(), assetListPath, numMissing, unusedLayoutShaders.Size());
 
         return {};
     }
@@ -623,32 +674,17 @@ private:
 
         Set<const AssetObject*> cookedAssets;
 
-        // Engine content, cook everything in the registry
+        // the project's walk reaches engine assets, so the engine registry has to be ready before it
         if (engineRegistry)
         {
             SetEngineAssetRegistry(engineRegistry);
 
             GlobalContextScope assetRegistryContextScope { AssetRegistryContext { engineRegistry } };
             engineRegistry->LoadAssetDescs();
-
-            if (engineAssetListPath.Any())
-            {
-                if (Result result = CookListedAssets(engineRegistry, engineAssetListPath, outputEngineContentDir, readLocks, collectedBlobs, blockSizes, cookedAssets); result.HasError())
-                {
-                    return result;
-                }
-            }
-            else
-            {
-                for (uint32 bucketIndex = 1; bucketIndex < MaxAssetBuckets; bucketIndex++)
-                {
-                    if (Result result = CookBucketInFull(engineRegistry, bucketIndex, outputEngineContentDir, readLocks, collectedBlobs, blockSizes, cookedAssets); result.HasError())
-                    {
-                        return result;
-                    }
-                }
-            }
         }
+
+        Array<Handle<AssetObject>> assetsToCook;
+        Set<uint8> projectMeshLayouts;
 
 #ifdef HYP_EDITOR
         // Game content: only cook what's actually reachable from the project's own data to strip assets that are unused.
@@ -656,8 +692,6 @@ private:
         {
             GlobalContextScope assetRegistryContextScope { AssetRegistryContext { gameRegistry } };
             gameRegistry->LoadAssetDescs();
-
-            Array<Handle<AssetObject>> assetsToCook;
 
             TResult<Handle<EditorProject>> loadProjectResult = EditorProject::Load(projectPath);
 
@@ -723,6 +757,44 @@ private:
                     }
                 }
             }
+
+            for (const Handle<AssetObject>& assetObject : assetsToCook)
+            {
+                if (assetObject.IsValid() && assetObject->GetPath().GetBucket() == AssetBuckets::Meshes)
+                {
+                    projectMeshLayouts.Insert(static_cast<const Mesh*>(assetObject.Get())->GetMeshAttributes().inputLayout.mask);
+                }
+            }
+        }
+#endif // HYP_EDITOR
+
+        if (engineRegistry)
+        {
+            GlobalContextScope assetRegistryContextScope { AssetRegistryContext { engineRegistry } };
+
+            if (engineAssetListPath.Any())
+            {
+                if (Result result = CookListedAssets(engineRegistry, engineAssetListPath, outputEngineContentDir, readLocks, collectedBlobs, blockSizes, cookedAssets, projectMeshLayouts); result.HasError())
+                {
+                    return result;
+                }
+            }
+            else
+            {
+                for (uint32 bucketIndex = 1; bucketIndex < MaxAssetBuckets; bucketIndex++)
+                {
+                    if (Result result = CookBucketInFull(engineRegistry, bucketIndex, outputEngineContentDir, readLocks, collectedBlobs, blockSizes, cookedAssets); result.HasError())
+                    {
+                        return result;
+                    }
+                }
+            }
+        }
+
+#ifdef HYP_EDITOR
+        if (gameRegistry)
+        {
+            GlobalContextScope assetRegistryContextScope { AssetRegistryContext { gameRegistry } };
 
             uint32 numEngineAssets = 0;
 

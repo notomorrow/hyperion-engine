@@ -36,9 +36,20 @@
 
     let isLogViewPending = false;
 
+    const missingShaderMarker = 'Missing shader variant, its draws are skipped: ';
+    const isLocalServer = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
     function appendLog(text)
     {
         logLines.push('[' + (performance.now() / 1000).toFixed(2).padStart(7) + '] ' + text);
+
+        // the local test server keeps a list of these for the cook to be fixed against
+        const markerIndex = text.indexOf(missingShaderMarker);
+
+        if (isLocalServer && markerIndex >= 0)
+        {
+            fetch('missing-shaders', { method: 'POST', body: text.substring(markerIndex + missingShaderMarker.length) }).catch(() => {});
+        }
 
         if (logLines.length > 20000)
         {

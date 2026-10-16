@@ -75,7 +75,6 @@ auto GenericPipelineCache<PipelineType>::GetOrCreate(Name shaderName, const Shad
     sharedLock.Reset();
 
     PipelineRefType pipeline = MakePipeline(shaderName, properties);
-    Assert(pipeline.IsValid());
 
     if (!pipeline.IsValid())
     {
@@ -261,7 +260,6 @@ template class GenericPipelineCache<RayTracingPipeline>;
 ComputePipelineRef ComputePipelineCache::MakePipeline(Name shaderName, const ShaderPropertySet& properties)
 {
     ShaderInstanceRef shader = g_shaderManager->GetOrCreate(shaderName, properties, {}, /* waitForCompile */ true);
-    Assert(shader.IsValid());
 
     if (!shader.IsValid())
     {
@@ -286,7 +284,6 @@ ComputePipelineRef ComputePipelineCache::MakePipeline(Name shaderName, const Sha
 RayTracingPipelineRef RayTracingPipelineCache::MakePipeline(Name shaderName, const ShaderPropertySet& properties)
 {
     ShaderInstanceRef shader = g_shaderManager->GetOrCreate(shaderName, properties, {}, /* waitForCompile */ true);
-    Assert(shader.IsValid());
 
     if (!shader.IsValid())
     {

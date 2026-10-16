@@ -9,12 +9,13 @@ namespace Hyperion.Editor.ViewModels
     {
         private readonly Node _node;
         private readonly NodeViewModel? _parent;
+        private readonly UUID _uuid;
         private int _actionsRefreshGeneration;
 
         public Node Node => _node;
         public NodeViewModel? Parent => _parent;
 
-        public UUID UUID => _node.UUID;
+        public UUID UUID => _uuid;
 
         public bool IsRootNode => _parent == null;
 
@@ -348,6 +349,7 @@ namespace Hyperion.Editor.ViewModels
             _parent = parent;
             _onChildrenChanged = onChildrenChanged;
             _index = index;
+            _uuid = node.UUID;
             _name = node.Name.ToString();
 
             _sourcePrefabName = EngineManager.EditorGame?.EditorSubsystem?.GetSourcePrefabName(node) ?? string.Empty;

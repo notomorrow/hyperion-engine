@@ -178,6 +178,10 @@ public:
 
     Array<ShaderPreloadEntry, ShaderAllocator> m_preloadCacheEntries;
 
+    Mutex m_missingVariantsMutex;
+    Set<HashCode, ShaderAllocator> m_missingVariantHashes;
+    String m_missingVariantsText;
+
     ShaderManagerImpl()
     {
         const FilePath preloadCachePath = EngineGlobals::GetCacheDirectory() / "shaderpreload.bin";
@@ -299,9 +303,12 @@ public:
             // don't keep trying to preload a shader that can't be loaded
             RemoveFromPreloadCache(shaderName, properties, inputLayout);
 
-            // use fallback shader on fail.
-
-            if (shaderName != s_nameFallbackShader
+            if (!g_shaderCompiler->CanCompileShaders())
+            {
+                // a cooked build is missing the variant: its draws and dispatches are skipped
+                ReportMissingVariant(shaderName, properties, inputLayout);
+            }
+            else if (shaderName != s_nameFallbackShader
                 && g_shaderCompiler->IsGraphicsShaderBundle(shaderName))
             {
                 HYP_LOG(Shader, Verbose,
@@ -335,7 +342,7 @@ public:
             }
             else
             {
-                // not fatal here since preloads and reloads can recover - GetOrCreate() asserts when a real request gets no shader
+                // not fatal here since preloads and reloads can recover - GetOrCreate() hands a real request a null shader, which skips its draws
                 HYP_LOG(Shader, Error, "Failed to compile shader '{}' {}", shaderName, properties.GetDebugString());
             }
         }
@@ -351,7 +358,7 @@ public:
 
         if (RendererResult createResult = si->Create(); createResult.HasError())
         {
-            // not fatal here since preloads and reloads can recover - GetOrCreate() asserts when a real request gets no shader
+            // not fatal here since preloads and reloads can recover - GetOrCreate() hands a real request a null shader, which skips its draws
             HYP_LOG(Shader, Error, "Failed to create shader instance for '{}' {}: {}",
                     shaderName, properties.GetDebugString(), createResult.GetError().GetMessage());
 
@@ -579,6 +586,34 @@ public:
 #endif
     }
 
+    void ReportMissingVariant(
+        const Name name,
+        const ShaderPropertySet& properties,
+        const VertexInputLayoutDesc& inputLayout)
+    {
+        Mutex::Guard guard(m_missingVariantsMutex);
+
+        if (!m_missingVariantHashes.Insert(GetShaderEntryHashCode(name, properties, inputLayout)).second)
+        {
+            return;
+        }
+
+        const String line = HYP_FORMAT("{} | {} | {}", name, properties.GetDebugString(), inputLayout.GetDebugString());
+
+        HYP_LOG(Shader, Error, "Missing shader variant, its draws are skipped: {}", line);
+
+        m_missingVariantsText += line;
+        m_missingVariantsText += '\n';
+
+        FileByteWriter writer { EngineGlobals::GetCacheDirectory() / "missingshaders.txt" };
+
+        if (writer.IsOpen())
+        {
+            writer.Write(m_missingVariantsText.Data(), m_missingVariantsText.Size());
+            writer.Close();
+        }
+    }
+
     ShaderMapEntry* FindOrCreateEntry(
         Name name,
         const ShaderPropertySet& properties,
@@ -727,8 +762,6 @@ public:
                 // replaced by a reload or expired after we found it - look it up again
                 continue;
             }
-
-            Assert(entry->shaderInstance.IsValid(), "Compiled shader '{}' is not a valid compiled shader", name);
 
             if (!entry->shaderInstance.IsValid())
             {

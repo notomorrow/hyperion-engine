@@ -141,18 +141,26 @@ public:
 
     static uint64 MakeKey(const Mesh* mesh, uint8 lodIndex);
 
+    static SharedPtr<GlimmerTriangleCache> AcquireShared();
+
     ///\p priority  how far (m) the nearest instance asking for it is from the viewer.
     ///             nearer meshes are built and given pool space first,
     ///             and push out the triangles of meshes much farther away when the pool is full
-    GlimmerTriangleRequestResult Request(Mesh* mesh, uint8 lodIndex, float priority, GlimmerTriangleRef& outRef);
+    GlimmerTriangleRequestResult Request(
+        Mesh* mesh,
+        uint8 lodIndex,
+        float priority,
+        GlimmerTriangleRef& outRef);
 
     /// Try to get a triangle ref for the given params. Will not create one if none exists.
-    bool TryGetResident(Mesh* mesh, uint8 lodIndex, float priority, GlimmerTriangleRef& outRef);
+    bool TryGetResident(
+        Mesh* mesh,
+        uint8 lodIndex,
+        float priority,
+        GlimmerTriangleRef& outRef);
 
     void AddReferences(Span<const uint64> keys);
     void RemoveReferences(Span<const uint64> keys);
-
-    static SharedPtr<GlimmerTriangleCache> AcquireShared();
 
     void UpdateOncePerFrame(Frame* frame);
     void Update(Frame* frame);
@@ -287,7 +295,7 @@ private:
     void FreeEntryRanges(Entry& entry);
     void UploadEntry(Frame* frame, Entry& entry);
 
-    Map<uint64, UniquePtr<Entry>> m_entries;
+    Map<uint64, UniquePtr<Entry, GlimmerAllocator>, GlimmerAllocator> m_entries;
 
     uint32 m_numBuildThreads;
     UniquePtr<TaskThreadPool> m_buildPool;

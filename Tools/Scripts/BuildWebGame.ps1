@@ -512,7 +512,7 @@ if ($Run)
         }
     }
 
-    $server = Start-Process -FilePath python -ArgumentList @("`"$(Join-Path $PSScriptRoot 'ServeWeb.py')`"", "`"$outputDir`"", "`"$outputDir`"", $Port) -WindowStyle Hidden -PassThru
+    $server = Start-Process -FilePath python -ArgumentList @("`"$(Join-Path $PSScriptRoot 'ServeWeb.py')`"", "`"$outputDir`"", "`"$outputDir`"", $Port, "`"$(Join-Path $buildDir 'MissingShaders.txt')`"") -WindowStyle Hidden -PassThru
     Set-Content $serverPidFile $server.Id -Encoding ascii
 
     Start-Sleep -Milliseconds 800
