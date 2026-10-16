@@ -28,7 +28,9 @@
 
 #include <Rendering/Mesh.hpp>
 #include <Rendering/Material.hpp>
+#include <Rendering/Texture.hpp>
 #include <Rendering/Util/MeshBuilder.hpp>
+#include <Rendering/Util/TextureUtils.hpp>
 
 #include <Asset/AssetRegistry.hpp>
 #include <Asset/AssetBucket.hpp>
@@ -52,6 +54,11 @@ static constexpr float FirstPersonEyeHeight = 1.65f;
 
 static constexpr float GroundHalfExtent = 100.0f;
 static constexpr float GroundHalfThickness = 0.5f;
+
+static constexpr float GroundCheckerTileSize = 2.0f;
+static constexpr uint32 GroundCheckerTextureSize = 64;
+static const Color GroundCheckerLightColor { 0.58f, 0.58f, 0.58f };
+static const Color GroundCheckerDarkColor { 0.27f, 0.27f, 0.27f };
 
 EditorPlayer CreatePlayer(Name playerName, Name cameraName, EnumFlags<NodeFlags> cameraNodeFlags, const Handle<CameraController>& cameraController)
 {
@@ -200,10 +207,18 @@ Handle<Entity> EditorPlayerSetup::AddGround(const Handle<Node>& parent, Name nam
     materialParameters.albedo = Vec4f(1.0f, 1.0f, 1.0f, 1.0f);
     materialParameters.roughness = 0.08f;
     materialParameters.metalness = 0.0f;
+    materialParameters.uvScale = Vec2f(GroundHalfExtent * 2.0f / GroundCheckerTileSize);
+
+    Handle<Texture> groundTexture = TextureUtils::CreateCheckerTexture(
+        NAME_FMT("{}Texture", name),
+        GroundCheckerTextureSize,
+        GroundCheckerLightColor,
+        GroundCheckerDarkColor);
+
+    GetCurrentAssetRegistry()->PutAssetUnique(groundTexture);
 
     MaterialTextures materialTextures;
-    // @TODO Checkerboard texture. But don't get from RI.placeholderData -- if headless, RI will not be initialized.
-    ///materialTextures[MaterialTextureKey::Diffuse] = 
+    materialTextures[MaterialTextureKey::Diffuse] = groundTexture;
 
     Handle<Material> groundMaterial = MakeHandle<Material>(NAME_FMT("{}Material", name), materialAttributes, materialParameters, materialTextures);    
     InitObject(groundMaterial);

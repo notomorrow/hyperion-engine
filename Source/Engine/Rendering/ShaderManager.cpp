@@ -30,6 +30,8 @@
 
 #include <Core/Threading/Util/ThreadId.hpp>
 
+#include <Core/Profiling/PerformanceClock.hpp>
+
 #include <Framework/EngineStats.hpp>
 #include <Framework/EngineGlobals.hpp>
 
@@ -406,10 +408,21 @@ public:
     {
         Assert(entry != nullptr);
 
+        const uint64 enqueueTime = PerformanceClock::Now();
+
         entry->compileTask = TaskSystem::GetInstance().Enqueue(
-            [this, shaderName, properties, inputLayout, entry]() -> ShaderInstanceRef
+            [this, shaderName, properties, inputLayout, entry, enqueueTime]() -> ShaderInstanceRef
             {
-                return CompileShaderWork(shaderName, properties, inputLayout, entry);
+                const double queuedMs = PerformanceClock::ToMilliseconds(PerformanceClock::Now() - enqueueTime);
+
+                PerformanceClock workClock;
+                workClock.Start();
+
+                ShaderInstanceRef result = CompileShaderWork(shaderName, properties, inputLayout, entry);
+
+                HYP_LOG(Shader, Info, "[ShaderTiming] {} queued {} ms, work {} ms", shaderName, uint32(queuedMs), uint32(workClock.ElapsedMs()));
+
+                return result;
             },
             TaskThreadPoolName::THREAD_POOL_BACKGROUND);
     }
@@ -681,14 +694,19 @@ public:
             {
                 const bool isBlockingWait = !entry->compileTask.IsCompleted();
 
-                if (isBlockingWait)
+                PerformanceClock waitClock;
+                waitClock.Start();
+
                 {
-                    HYP_LOG(Shader, Warning, "Blocking wait on shader load for {} {}", name, properties.GetDebugString());
+                    ENGINE_STAT_SCOPE(&s_statShaderCompilation);
+
+                    entry->compileTask.Await();
                 }
 
-                ENGINE_STAT_SCOPE(&s_statShaderCompilation);
-
-                entry->compileTask.Await();
+                if (isBlockingWait)
+                {
+                    HYP_LOG(Shader, Warning, "Blocking wait on shader load for {} {} ({} ms)", name, properties.GetDebugString(), uint32(waitClock.ElapsedMs()));
+                }
 
                 // only recorded once it's known to load, so shaders that fail don't get preloaded next run
                 if (isBlockingWait && !entry->failedToLoad)

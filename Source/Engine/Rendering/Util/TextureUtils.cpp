@@ -7,8 +7,10 @@
 #include <RenderingPch.hpp>
 
 #include <Rendering/Util/TextureUtils.hpp>
+#include <Rendering/Texture.hpp>
 
 #include <Core/Containers/Array.hpp>
+#include <Core/Math/Color.hpp>
 
 #include <Util/Img/Bitmap.hpp>
 
@@ -186,6 +188,47 @@ Vec4f ComputeAverageColor(const TextureDesc& textureDesc, ConstByteView imageDat
     }
 
     return average;
+}
+
+Handle<Texture> CreateCheckerTexture(
+    Name name,
+    uint32 textureSize,
+    const Color& lightColor,
+    const Color& darkColor)
+{
+    Assert(textureSize >= 2);
+
+    const uint32 halfSize = textureSize / 2;
+
+    TextureDesc textureDesc {
+        TextureType::Texture2D,
+        TextureFormat::RGBA8_SRGB,
+        Vec3u { textureSize, textureSize, 1 },
+        TextureFilterMode::LinearMipmap,
+        TextureFilterMode::Linear,
+        TextureWrapMode::Repeat
+    };
+
+    ByteBuffer imageBytes(size_t(textureSize) * size_t(textureSize) * 4);
+
+    for (uint32 y = 0; y < textureSize; y++)
+    {
+        for (uint32 x = 0; x < textureSize; x++)
+        {
+            const bool isLight = (((x / halfSize) ^ (y / halfSize)) & 1) == 0;
+
+            PixelReference<ubyte, 4, /* IsSrgb */ true>(imageBytes.Data() + (size_t(y) * textureSize + x) * 4)
+                .SetRGBA(Vec4f(isLight ? lightColor : darkColor));
+        }
+    }
+
+    Texture::GenerateMipmaps(textureDesc, imageBytes);
+
+    Handle<Texture> texture = MakeHandle<Texture>(textureDesc, imageBytes.ToByteView());
+    texture->SetName(name);
+    InitObject(texture);
+
+    return texture;
 }
 
 } // namespace TextureUtils

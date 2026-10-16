@@ -7,10 +7,15 @@
 #pragma once
 
 #include <Core/Memory/ByteBuffer.hpp>
+#include <Core/Name/Name.hpp>
+#include <Core/Reflection/Handle.hpp>
 
 #include <Rendering/Shared.hpp>
 
 namespace Hyperion {
+
+class Texture;
+class Color;
 
 // format helpers live with TextureDesc in Shared.hpp
 namespace TextureUtils {
@@ -21,6 +26,13 @@ void BuildAlphaCoverageMips(const TextureDesc& desc, ByteBuffer& imageData, floa
 
 /// Linear average of mip 0 of a 2D texture. White where the format can't be read on the CPU.
 Vec4f ComputeAverageColor(const TextureDesc& desc, ConstByteView imageData);
+
+/// Mipmapped square sRGB texture of 2x2 checkerboard
+ENGINE_API Handle<Texture> CreateCheckerTexture(
+    Name name,
+    uint32 textureSize,
+    const Color& lightColor,
+    const Color& darkColor);
 
 } // namespace TextureUtils
 
