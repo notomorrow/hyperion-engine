@@ -1,4 +1,5 @@
 AnimationTrack Run_root {
+    RotationConvention = 1
     BoneName = root
     KeyframeData = {
         Key = "Engine://AnimationTracks/Run_root.KEYF"

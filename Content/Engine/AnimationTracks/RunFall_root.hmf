@@ -1,4 +1,5 @@
 AnimationTrack RunFall_root {
+    RotationConvention = 1
     BoneName = root
     KeyframeData = {
         Key = "Engine://AnimationTracks/RunFall_root.KEYF"

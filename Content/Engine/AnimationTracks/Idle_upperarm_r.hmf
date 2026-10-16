@@ -1,4 +1,5 @@
 AnimationTrack Idle_upperarm_r {
+    RotationConvention = 1
     BoneName = upperarm_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/Idle_upperarm_r.KEYF"

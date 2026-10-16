@@ -1,4 +1,5 @@
 AnimationTrack Roll_ball_l {
+    RotationConvention = 1
     BoneName = ball_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/Roll_ball_l.KEYF"

@@ -1,4 +1,5 @@
 AnimationTrack PistolAimNeutral_pelvis {
+    RotationConvention = 1
     BoneName = pelvis
     KeyframeData = {
         Key = "Engine://AnimationTracks/PistolAimNeutral_pelvis.KEYF"

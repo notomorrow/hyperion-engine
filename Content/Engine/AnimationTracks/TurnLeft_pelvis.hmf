@@ -1,4 +1,5 @@
 AnimationTrack TurnLeft_pelvis {
+    RotationConvention = 1
     BoneName = pelvis
     KeyframeData = {
         Key = "Engine://AnimationTracks/TurnLeft_pelvis.KEYF"

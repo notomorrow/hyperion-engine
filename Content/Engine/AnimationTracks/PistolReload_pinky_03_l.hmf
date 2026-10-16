@@ -1,4 +1,5 @@
 AnimationTrack PistolReload_pinky_03_l {
+    RotationConvention = 1
     BoneName = pinky_03_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/PistolReload_pinky_03_l.KEYF"

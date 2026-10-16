@@ -1,4 +1,5 @@
 AnimationTrack CrouchIdle_head {
+    RotationConvention = 1
     BoneName = head
     KeyframeData = {
         Key = "Engine://AnimationTracks/CrouchIdle_head.KEYF"

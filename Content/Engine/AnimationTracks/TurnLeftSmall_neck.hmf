@@ -1,4 +1,5 @@
 AnimationTrack TurnLeftSmall_neck {
+    RotationConvention = 1
     BoneName = neck
     KeyframeData = {
         Key = "Engine://AnimationTracks/TurnLeftSmall_neck.KEYF"

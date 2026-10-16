@@ -1,4 +1,5 @@
 AnimationTrack Fall_upperarm_r {
+    RotationConvention = 1
     BoneName = upperarm_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/Fall_upperarm_r.KEYF"

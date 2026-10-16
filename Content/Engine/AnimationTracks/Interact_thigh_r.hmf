@@ -1,4 +1,5 @@
 AnimationTrack Interact_thigh_r {
+    RotationConvention = 1
     BoneName = thigh_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/Interact_thigh_r.KEYF"

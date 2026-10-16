@@ -1,4 +1,5 @@
 AnimationTrack TurnLeft_middle_03_l {
+    RotationConvention = 1
     BoneName = middle_03_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/TurnLeft_middle_03_l.KEYF"

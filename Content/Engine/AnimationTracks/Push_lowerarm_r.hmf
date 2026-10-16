@@ -1,4 +1,5 @@
 AnimationTrack Push_lowerarm_r {
+    RotationConvention = 1
     BoneName = lowerarm_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/Push_lowerarm_r.KEYF"

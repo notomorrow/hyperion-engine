@@ -1,4 +1,5 @@
 AnimationTrack RunFall_head {
+    RotationConvention = 1
     BoneName = head
     KeyframeData = {
         Key = "Engine://AnimationTracks/RunFall_head.KEYF"

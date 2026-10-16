@@ -1,4 +1,5 @@
 AnimationTrack Idle_clavicle_l {
+    RotationConvention = 1
     BoneName = clavicle_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/Idle_clavicle_l.KEYF"

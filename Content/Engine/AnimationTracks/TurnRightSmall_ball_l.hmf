@@ -1,4 +1,5 @@
 AnimationTrack TurnRightSmall_ball_l {
+    RotationConvention = 1
     BoneName = ball_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/TurnRightSmall_ball_l.KEYF"

@@ -1,4 +1,5 @@
 AnimationTrack HoldFlamethrower_index_01_r {
+    RotationConvention = 1
     BoneName = index_01_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/HoldFlamethrower_index_01_r.KEYF"

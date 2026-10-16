@@ -1,4 +1,5 @@
 AnimationTrack TurnRight_foot_l {
+    RotationConvention = 1
     BoneName = foot_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/TurnRight_foot_l.KEYF"

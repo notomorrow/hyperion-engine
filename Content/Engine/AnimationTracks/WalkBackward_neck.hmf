@@ -1,4 +1,5 @@
 AnimationTrack WalkBackward_neck {
+    RotationConvention = 1
     BoneName = neck
     KeyframeData = {
         Key = "Engine://AnimationTracks/WalkBackward_neck.KEYF"

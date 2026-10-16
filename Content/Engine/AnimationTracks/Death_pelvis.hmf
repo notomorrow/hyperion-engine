@@ -1,4 +1,5 @@
 AnimationTrack Death_pelvis {
+    RotationConvention = 1
     BoneName = pelvis
     KeyframeData = {
         Key = "Engine://AnimationTracks/Death_pelvis.KEYF"

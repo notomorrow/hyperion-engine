@@ -1,4 +1,5 @@
 AnimationTrack Push_ring_02_l {
+    RotationConvention = 1
     BoneName = ring_02_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/Push_ring_02_l.KEYF"
