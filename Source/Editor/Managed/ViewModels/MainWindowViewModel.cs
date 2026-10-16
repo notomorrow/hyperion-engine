@@ -177,6 +177,8 @@ namespace Hyperion.Editor.ViewModels
             }
         }
         public EditorCommand PackageGame { get; } = new EditorCommand("PackageGame");
+        public EditorCommand BuildWebGame { get; } = new EditorCommand("BuildWebGame");
+        public EditorCommand RunWebGame { get; } = new EditorCommand("RunWebGame");
 
         private string _undoHeader = "Undo";
         public string UndoHeader

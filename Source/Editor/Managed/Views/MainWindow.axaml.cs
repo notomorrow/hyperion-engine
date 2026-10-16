@@ -72,7 +72,6 @@ namespace Hyperion.Editor
         private const double AutoScrollZone = 36;  // px from edge that triggers scroll
         private const double AutoScrollSpeed = 10; // px per timer tick (~50 ms)
 
-        private DropDownButton? _sceneDropDown;
         private EditorViewportControl? _editorViewport;
         private WorldSettingsWindow? _worldSettingsWindow;
         private IDock? _dynamicPanelsDock;
@@ -257,7 +256,6 @@ namespace Hyperion.Editor
         {
             bool complete =
                 InitializeViewportControl()
-                & InitializeSceneFlyout()
                 & SetupSceneHierarchyDragDrop()
                 & SetupContentBrowserDragDrop()
                 & SetupViewportDropTarget();
@@ -924,21 +922,6 @@ namespace Hyperion.Editor
             }
 
             return DockControl.Factory?.IsDockablePinned(active, root) == true;
-        }
-
-        private bool InitializeSceneFlyout()
-        {
-            if (_sceneDropDown != null)
-                return true;
-
-            _sceneDropDown = FindVisualChildByName<DropDownButton>("SceneDropDown");
-            if (_sceneDropDown?.Flyout is Flyout flyout)
-            {
-                flyout.Opened += OnSceneFlyoutOpened;
-                return true;
-            }
-
-            return _sceneDropDown != null;
         }
 
         private static void OnInspectorTextBoxGotFocus(object? sender, FocusChangedEventArgs e)
@@ -2111,32 +2094,6 @@ namespace Hyperion.Editor
 
             var topLevel = GetTopLevel(this);
             topLevel?.RequestAnimationFrame(OnFrame);
-        }
-
-        private bool _flyoutHandlerAttached;
-
-        private void OnSceneFlyoutOpened(object? sender, EventArgs e)
-        {
-            if (_flyoutHandlerAttached
-                || _sceneDropDown is not { } dropDown
-                || dropDown.Flyout is not Flyout flyout
-                || flyout.Content is not StackPanel panel)
-            {
-                return;
-            }
-
-            panel.AddHandler(
-                InputElement.PointerReleasedEvent,
-                OnSceneFlyoutPointerReleased,
-                RoutingStrategies.Bubble,
-                handledEventsToo: true);
-
-            _flyoutHandlerAttached = true;
-        }
-
-        private void OnSceneFlyoutPointerReleased(object? sender, Avalonia.Input.PointerReleasedEventArgs e)
-        {
-            _sceneDropDown?.Flyout?.Hide();
         }
 
         protected override void OnKeyDown(Avalonia.Input.KeyEventArgs e)

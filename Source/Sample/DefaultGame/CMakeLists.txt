@@ -25,6 +25,11 @@ list(FILTER HEADERS EXCLUDE REGEX ".*/Platform/.*")
 
 set(HYP_PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Platform/${HYP_PLATFORM_NAME}")
 
+# the web launch layer is shared with projects' pages
+if(HYP_WEB)
+  set(HYP_PLATFORM_DIR "${CMAKE_SOURCE_DIR}/Templates/Platforms/Web")
+endif()
+
 if(NOT EXISTS "${HYP_PLATFORM_DIR}")
   set(HYP_PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Platform/Default")
 endif()
@@ -37,19 +42,6 @@ if(EXISTS "${HYP_PLATFORM_DIR}")
 
   file(GLOB PLATFORM_HEADERS "${HYP_PLATFORM_DIR}/*.hpp" "${HYP_PLATFORM_DIR}/*.h" "${HYP_PLATFORM_DIR}/*.hh" "${HYP_PLATFORM_DIR}/*.inl")
   list(APPEND HEADERS ${PLATFORM_HEADERS})
-endif()
-
-# the engine is static on the web, so a C++ project's game code is built straight into the page
-if(HYP_WEB)
-  set(HYP_WEB_GAME_SOURCE_DIR "" CACHE PATH "A C++ project's Source folder, whose Game/ is built into the web build")
-
-  if(HYP_WEB_GAME_SOURCE_DIR)
-    file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS "${HYP_WEB_GAME_SOURCE_DIR}/Game/*.cpp")
-    list(APPEND SOURCES ${GAME_SOURCES})
-
-    include_directories(${HYP_WEB_GAME_SOURCE_DIR})
-    add_compile_definitions(HYP_WEB_GAME_MODULE=1)
-  endif()
 endif()
 
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to be used")
@@ -75,11 +67,11 @@ if(HYP_WEB)
   # for test runs under node: a host folder holding Config/, Cache/ and Content/, mounted as /hyperion
   set(HYP_WEB_NODE_PACKAGE_DIR "" CACHE PATH "Host folder to mount as the package when running under node")
 
-  # for the browser: a host folder whose Config/ and Content/ are preloaded; Cache/ is served beside the page
-  set(HYP_WEB_PACKAGE_DIR "" CACHE PATH "Host folder holding the Config/ and Content/ to preload in the browser build")
+  set(HYP_WEB_PAGE_NAME ${BUILD_NAME})
+  configure_file("${HYP_PLATFORM_DIR}/index.html.in" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/index.html" @ONLY)
+  configure_file("${HYP_PLATFORM_DIR}/isolation-worker.js" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/isolation-worker.js" COPYONLY)
 
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Platform/Web/index.html" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/index.html" COPYONLY)
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Platform/Web/isolation-worker.js" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/isolation-worker.js" COPYONLY)
+  target_compile_definitions(${BUILD_NAME} PRIVATE [==[HYP_WEB_GAME_CLASS="DefaultGame"]==])
 
   # DWARF triples the download (60 MB against 21 MB) and holds the link back to limited optimisation.
   # Function names are kept either way, so a stack trace in the browser's console stays readable.
@@ -94,33 +86,9 @@ if(HYP_WEB)
   else()
     # JSPI lets the thread that renders wait on the browser (device requests, readbacks, the next animation frame)
     target_link_options(${BUILD_NAME} PRIVATE -sJSPI=1 -sOFFSCREENCANVAS_SUPPORT=1)
-
-    if(HYP_WEB_PACKAGE_DIR)
-      target_link_options(${BUILD_NAME} PRIVATE
-        "--preload-file=${HYP_WEB_PACKAGE_DIR}/Config@/hyperion/Config"
-        "--preload-file=${HYP_WEB_PACKAGE_DIR}/Content@/hyperion/Content")
-    endif()
   endif()
 
-  target_link_options(${BUILD_NAME} PRIVATE
-    ${HYP_WEB_LINK_OPTIONS}
-    -sPROXY_TO_PTHREAD=1
-    -sWASMFS=1
-    -sFORCE_FILESYSTEM=1
-    -sALLOW_MEMORY_GROWTH=1
-    -sINITIAL_MEMORY=512MB
-    -sMAXIMUM_MEMORY=4GB
-    -sSTACK_SIZE=4MB
-    -sDEFAULT_PTHREAD_STACK_SIZE=2MB
-    -sPTHREAD_POOL_SIZE=24
-    -sPTHREAD_POOL_DELAY_LOAD=1
-    -sMALLOC=mimalloc
-    -sEXIT_RUNTIME=1
-    -sENVIRONMENT=web,worker,node
-    -sASSERTIONS=1
-    -sEXPORTED_RUNTIME_METHODS=ccall
-    -Wl,--wrap=emscripten_futex_wait
-  )
+  target_link_options(${BUILD_NAME} PRIVATE ${HYP_WEB_APP_LINK_OPTIONS})
 endif()
 
 if(MSVC)

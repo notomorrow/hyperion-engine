@@ -110,6 +110,7 @@ static CommandLineArguments s_commandLineArguments;
 
 static CommandLineArgumentRegistration g_argProfile { "profile", {}, "Enable collection of profiling data for functions that opt in using HYP_SCOPE.", CommandLineArgumentFlags::NONE, CommandLineArgumentType::BOOLEAN, false };
 static CommandLineArgumentRegistration g_argBaseDir { "basedir", {}, "Base directory", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING };
+static CommandLineArgumentRegistration g_argConfigVariant { "configvariant", {}, "Read and save Config/<Name>.<variant>.json in place of Config/<Name>.json, where there is one", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING };
 
 CORE_API const CommandLineArgumentDefinitions& DefaultCommandLineArgumentDefinitions()
 {

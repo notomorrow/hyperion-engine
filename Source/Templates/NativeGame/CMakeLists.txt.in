@@ -11,7 +11,7 @@ endif()
 
 include("${HYPERION_SDK_DIR}/CMake/HyperionSdk.cmake")
 
-set(GAME_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../Binaries/${CMAKE_SYSTEM_NAME}")
+set(GAME_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../Binaries/${CMAKE_SYSTEM_NAME}" CACHE PATH "Where the game module and its launcher are built")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${GAME_OUTPUT_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${GAME_OUTPUT_DIR}")
 

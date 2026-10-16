@@ -36,6 +36,45 @@ class EditorSubsystem;
 
 using Baking::BakeLayer;
 
+HYP_STRUCT()
+struct EditorWebSettings
+{
+    HYP_STRUCT_BODY(EditorWebSettings);
+
+    HYP_FIELD(Property = "MaxTextureSize", Serialize)
+    uint32 maxTextureSize = 512;
+
+    HYP_FIELD(Property = "Worlds", Serialize)
+    String worlds;
+
+    HYP_FIELD(Property = "RecordSeconds", Serialize)
+    uint32 recordSeconds = 60;
+
+    HYP_FORCE_INLINE HashCode GetHashCode() const
+    {
+        HashCode hashCode;
+        hashCode.Add(maxTextureSize);
+        hashCode.Add(worlds);
+        hashCode.Add(recordSeconds);
+
+        return hashCode;
+    }
+};
+
+HYP_STRUCT()
+struct EditorPlatformSettings
+{
+    HYP_STRUCT_BODY(EditorPlatformSettings);
+
+    HYP_FIELD(Property = "Web", Serialize)
+    EditorWebSettings web;
+
+    HYP_FORCE_INLINE HashCode GetHashCode() const
+    {
+        return web.GetHashCode();
+    }
+};
+
 HYP_CLASS()
 class EDITOR_API EditorProject final : public ObjectBase
 {
@@ -206,6 +245,9 @@ private:
 
     HYP_FIELD(Property = "EditWorldName", Serialize)
     Name m_editWorldName;
+
+    HYP_FIELD(Property = "PlatformSettings", Serialize)
+    EditorPlatformSettings m_platformSettings;
 
     HYP_FIELD(Transient)
     Handle<EditorActionStack> m_actionStack;

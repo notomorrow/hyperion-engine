@@ -275,7 +275,7 @@
         sessionStorage.removeItem('isolationReload');
 
         const engineScript = document.createElement('script');
-        engineScript.src = 'hyperion-sample.js';
+        engineScript.src = '@HYP_WEB_PAGE_NAME@.js';
         document.body.appendChild(engineScript);
     }
     else if ('serviceWorker' in navigator && isSecureContext && !sessionStorage.getItem('isolationReload'))
