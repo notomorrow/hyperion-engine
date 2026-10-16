@@ -62,6 +62,21 @@ struct EditorWebSettings
 };
 
 HYP_STRUCT()
+struct EditorCookSettings
+{
+    HYP_STRUCT_BODY(EditorCookSettings);
+
+    // what the world walk can't find, such as assets game code loads by name: "Bucket/Name", or "Bucket" for all of one
+    HYP_FIELD(Property = "AlwaysCook", Serialize)
+    Array<String> alwaysCook;
+
+    HYP_FORCE_INLINE HashCode GetHashCode() const
+    {
+        return alwaysCook.GetHashCode();
+    }
+};
+
+HYP_STRUCT()
 struct EditorPlatformSettings
 {
     HYP_STRUCT_BODY(EditorPlatformSettings);
@@ -69,9 +84,15 @@ struct EditorPlatformSettings
     HYP_FIELD(Property = "Web", Serialize)
     EditorWebSettings web;
 
+    HYP_FIELD(Property = "Cook", Serialize)
+    EditorCookSettings cook;
+
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        return web.GetHashCode();
+        HashCode hashCode = web.GetHashCode();
+        hashCode.Add(cook.GetHashCode());
+
+        return hashCode;
     }
 };
 
@@ -123,6 +144,11 @@ public:
     /// Name of the World asset opened for editing
     HYP_METHOD()
     Name GetEditWorldName() const;
+
+    HYP_FORCE_INLINE const EditorPlatformSettings& GetPlatformSettings() const
+    {
+        return m_platformSettings;
+    }
 
     HYP_METHOD(Property = "GameInstance")
     HYP_FORCE_INLINE const Handle<Game>& GetGame() const

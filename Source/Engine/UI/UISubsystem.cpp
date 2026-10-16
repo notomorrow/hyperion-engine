@@ -50,6 +50,7 @@
 #include <UI/Overlays/Overlay.hpp>
 
 #include <Framework/EngineDriver.hpp>
+#include <Framework/EngineDefaults.hpp>
 #include <Framework/CVarManager.hpp>
 #include <Framework/View.hpp>
 
@@ -85,7 +86,7 @@ static TResult<Handle<FontAtlas>> CreateFontAtlas()
 
     GlobalContextScope contextScope { AssetRegistryContext { MakeStrongRef(&registry) } };
 
-    Handle<FontAtlas> fontAtlas = DynamicCast<FontAtlas>(registry.GetAsset(AssetBuckets::FontAtlases, "Roboto_Regular"_sh));
+    Handle<FontAtlas> fontAtlas = EngineDefaults::LoadAsset<FontAtlas>(EngineDefaults::Get().font);
 
     if (fontAtlas.IsValid())
     {

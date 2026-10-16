@@ -207,6 +207,8 @@ function Invoke-Cook([string]$engineAssets, [string]$shaderCache)
     if ($engineAssets -ne "")
     {
         $cookArguments += "--engine-assets=$engineAssets"
+        $cookArguments += "--shader-target=web"
+        $cookArguments += "--target-config=$(Join-Path $rootDir 'Config\EngineConfig.Web.json')"
     }
 
     if ($shaderCache -ne "")
