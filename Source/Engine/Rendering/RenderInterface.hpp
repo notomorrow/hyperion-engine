@@ -345,11 +345,9 @@ public:
 
     virtual const RenderConfig& GetRenderConfig() const = 0;
 
-    /// Pipelines the backend is still compiling in the background. What they would draw or dispatch is left out until
-    /// they are in, so a pass that cannot run with part of itself missing holds off while this is not zero.
-    virtual uint32 GetNumPipelinesCompilingInBackground() const
+    virtual BackgroundCompileStatus GetBackgroundCompileStatus(StringHash shaderName) const
     {
-        return 0;
+        return {};
     }
 
     virtual Frame* GetCurrentFrame() const = 0;

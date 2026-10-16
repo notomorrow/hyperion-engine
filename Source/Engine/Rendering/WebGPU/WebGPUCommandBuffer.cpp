@@ -595,6 +595,8 @@ WGPUComputePassEncoder WebGPUCommandBuffer::PrepareDispatch()
 
     if (computePipeline == nullptr)
     {
+        m_computePipeline->OnDispatchSkipped(layouts, numBindGroups);
+
         return nullptr;
     }
 

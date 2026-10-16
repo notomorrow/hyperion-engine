@@ -58,7 +58,7 @@ void WebGPUComputePipeline::OnVariantCompiled(WGPUCreatePipelineAsyncStatus stat
 {
     PipelineVariant* variant = static_cast<PipelineVariant*>(userdata1);
 
-    RI.GetPipelineCompiler().OnCompileFinished(variant->compileMode);
+    RI.GetPipelineCompiler().OnCompileFinished(variant->compileMode, variant->shaderName);
 
     if (status != WGPUCreatePipelineAsyncStatus_Success)
     {
@@ -105,7 +105,7 @@ RendererResult WebGPUComputePipeline::Create()
     return {};
 }
 
-WGPUComputePipeline WebGPUComputePipeline::GetOrCreateVariant(const WGPUBindGroupLayout* layouts, uint32 numLayouts)
+uint64 WebGPUComputePipeline::GetVariantKey(const WGPUBindGroupLayout* layouts, uint32 numLayouts)
 {
     HashCode hashCode;
 
@@ -114,7 +114,30 @@ WGPUComputePipeline WebGPUComputePipeline::GetOrCreateVariant(const WGPUBindGrou
         hashCode.Add(uintptr_t(layouts[layoutIndex]));
     }
 
-    const uint64 key = hashCode.Value();
+    return hashCode.Value();
+}
+
+void WebGPUComputePipeline::OnDispatchSkipped(const WGPUBindGroupLayout* layouts, uint32 numLayouts) const
+{
+    const uint64 key = GetVariantKey(layouts, numLayouts);
+
+    for (const PipelineVariant* variant : m_variants)
+    {
+        if (variant->key == key)
+        {
+            if (variant->isCompiling && variant->compileMode == WebGPUPipelineCompileMode::InBackground)
+            {
+                RI.GetPipelineCompiler().OnDispatchSkipped(variant->shaderName);
+            }
+
+            return;
+        }
+    }
+}
+
+WGPUComputePipeline WebGPUComputePipeline::GetOrCreateVariant(const WGPUBindGroupLayout* layouts, uint32 numLayouts)
+{
+    const uint64 key = GetVariantKey(layouts, numLayouts);
 
     for (const PipelineVariant* variant : m_variants)
     {
@@ -155,11 +178,12 @@ WGPUComputePipeline WebGPUComputePipeline::GetOrCreateVariant(const WGPUBindGrou
 
     PipelineVariant* variant = new PipelineVariant();
     variant->key = key;
+    variant->shaderName = m_shaderInstance->GetShader()->GetName();
     variant->compileMode = pipelineCompiler.GetCompileMode(*m_shaderInstance, /* canStartLate */ true);
 
     m_variants.PushBack(variant);
 
-    pipelineCompiler.OnCompileStarted(variant->compileMode);
+    pipelineCompiler.OnCompileStarted(variant->compileMode, variant->shaderName);
 
     if (variant->compileMode == WebGPUPipelineCompileMode::Immediate)
     {
@@ -202,7 +226,7 @@ WGPUComputePipeline WebGPUComputePipeline::GetOrCreateVariant(const WGPUBindGrou
     WGPUShaderModule shaderModule = descriptor.compute.module;
     wgpuShaderModuleAddRef(shaderModule);
 
-    pipelineCompiler.QueueBackgroundCompile([variant, pipelineLayout, shaderModule, callbackInfo, queuedEntryPoint = ANSIString(entryPoint)]() -> bool
+    pipelineCompiler.QueueBackgroundCompile(variant->shaderName, [variant, pipelineLayout, shaderModule, callbackInfo, queuedEntryPoint = ANSIString(entryPoint)]() -> bool
         {
             const bool isWanted = !variant->isOrphaned;
 

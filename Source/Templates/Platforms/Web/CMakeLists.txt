@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(HyperionWebPage CXX C)
 
+set(HYP_WEB_LINK_OPTIMIZATION "-O3" CACHE STRING "Optimization level of the link, which sets how much work wasm-opt does; LTO code generation is unaffected")
+
 foreach(requiredVariable HYPERION_WEB_SDK HYP_WEB_PAGE_NAME HYP_WEB_PACKAGE HYP_WEB_OUTPUT)
   if(NOT ${requiredVariable})
     message(FATAL_ERROR "${requiredVariable} is not set")
@@ -37,6 +39,7 @@ endif()
 
 target_link_options(${HYP_WEB_PAGE_NAME} PRIVATE
   ${HYPERION_WEB_LINK_OPTIONS}
+  ${HYP_WEB_LINK_OPTIMIZATION}
   -g0
   --profiling-funcs
   -sJSPI=1

@@ -224,7 +224,7 @@ SharedPtr<GlimmerTriangleCache> GlimmerTriangleCache::AcquireShared()
 
     if (!triangleCache)
     {
-        triangleCache = MakeShared<GlimmerTriangleCache>();
+        triangleCache = MakeSharedWithAllocator<GlimmerTriangleCache, GlimmerAllocator>();
         s_triangleCache = triangleCache;
     }
 

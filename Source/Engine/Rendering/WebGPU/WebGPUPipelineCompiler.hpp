@@ -9,6 +9,7 @@
 #include <Rendering/WebGPU/WebGPUShared.hpp>
 
 #include <Core/Containers/Array.hpp>
+#include <Core/Containers/Map.hpp>
 
 #include <Core/Functional/Proc.hpp>
 
@@ -18,16 +19,16 @@ class WebGPUShaderInstance;
 
 enum class WebGPUPipelineCompileMode : uint8
 {
-    /// Created with the plain call. The browser compiles it when it gets to it, holding up everything queued behind.
+    /// The browser compiles it when it gets to it, holding up everything queued behind.
     Immediate,
 
-    /// Created with the async call while the frame's recorded commands execute, so the browser compiles the frame's new
-    /// pipelines side by side. What the pipeline would have drawn is left out, and WebGPUFrame executes the commands
-    /// again once every one of them is in.
+    /// Created with the async call while the frame's recorded commands execute.
+    /// Draws for pipeline are skipped.
+    /// Replayed once ready.
     WithFrame,
 
-    /// Queued, and created with the async call once nothing else is being compiled. Its draws and dispatches are left
-    /// out until then and nothing is executed again, so whoever uses it has to cope with a late start.
+    /// Queued, and created with the async call once nothing else is being compiled.
+    /// Not replayed.
     InBackground
 };
 
@@ -37,6 +38,7 @@ template <class PipelineType>
 struct WebGPUPipelineVariant
 {
     uint64 key = 0;
+    Name shaderName;
     PipelineType pipeline = nullptr;
     WebGPUPipelineCompileMode compileMode = WebGPUPipelineCompileMode::Immediate;
     bool isCompiling = false;
@@ -64,15 +66,13 @@ public:
     }
 
     /// Queued and running.
-    HYP_FORCE_INLINE uint32 GetNumBackgroundCompiles() const
-    {
-        return m_numBackgroundCompiles;
-    }
+    BackgroundCompileStatus GetBackgroundCompileStatus(StringHash shaderName) const;
 
-    void OnCompileStarted(WebGPUPipelineCompileMode compileMode);
-    void OnCompileFinished(WebGPUPipelineCompileMode compileMode);
+    void OnCompileStarted(WebGPUPipelineCompileMode compileMode, Name shaderName);
+    void OnCompileFinished(WebGPUPipelineCompileMode compileMode, Name shaderName);
+    void OnDispatchSkipped(Name shaderName);
 
-    void QueueBackgroundCompile(Proc<bool()>&& start);
+    void QueueBackgroundCompile(Name shaderName, Proc<bool()>&& start);
 
     void Update();
 
@@ -81,10 +81,16 @@ private:
     uint32 m_numFrameCompilesStarted = 0;
     uint32 m_numFrameCompilesRunning = 0;
 
-    Array<Proc<bool()>, WebGPUAllocator> m_queuedBackgroundCompiles;
+    struct QueuedBackgroundCompile
+    {
+        Name shaderName;
+        Proc<bool()> start;
+    };
 
-    uint32 m_numBackgroundCompiles = 0;
-    
+    Array<QueuedBackgroundCompile, WebGPUAllocator> m_queuedBackgroundCompiles;
+
+    Map<Name, BackgroundCompileStatus, WebGPUAllocator> m_backgroundCompiles;
+
     bool m_isBackgroundCompileRunning = false;
     uint32 m_numQuietFrames = 0;
 };

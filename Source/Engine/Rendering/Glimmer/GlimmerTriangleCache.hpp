@@ -167,14 +167,14 @@ public:
         return m_residentGeneration;
     }
 
-    /// Bumped when the scene instances have to gather again: resident meshes were demoted to make room (they're freed once no gather references
-    /// them), or the LOD error scale changed
+    /// Bumped when the scene instances have to gather again.
     HYP_FORCE_INLINE uint32 GetEvictionGeneration() const
     {
         return m_evictionGeneration;
     }
 
-    /// Scales the geometric error the scene instance gather allows a mesh's LOD; above 1 while the pool can't hold everything in range
+    /// Scales the geometric error the scene instance gather allows a mesh's LOD.
+    /// above 1 while the pool can't hold everything in range.
     HYP_FORCE_INLINE float GetLodErrorScale() const
     {
         return m_lodErrorScale;

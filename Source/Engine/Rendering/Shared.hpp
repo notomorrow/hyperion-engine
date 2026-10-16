@@ -2643,7 +2643,13 @@ static constexpr inline bool IsRayTracingShaderModule(ShaderModuleType type)
         || type == ShaderModuleType::Miss;
 }
 
-struct ShaderBundleDecl // combination of shader files, .frag, .vert etc. in .ini definitions file.
+struct BackgroundCompileStatus
+{
+    uint32 numCompiling = 0;
+    uint32 numSkippedDispatches = 0;
+};
+
+struct ShaderBundleDecl
 {
     Name name;
     FlatMap<ShaderModuleType, String> sources;

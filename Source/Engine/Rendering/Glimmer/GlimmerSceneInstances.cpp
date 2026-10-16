@@ -252,11 +252,11 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
 
     outNumWaitingForTriangles = 0;
 
-    Set<uint64> meshKeysSeen;
+    Set<uint64, GlimmerAllocator> meshKeysSeen;
 
     const float lodErrorScale = triangleCache.GetLodErrorScale();
 
-    Map<uint64, uint8> instanceLods;
+    Map<uint64, uint8, GlimmerAllocator> instanceLods;
 
     m_usesLightmaps = g_cvLightmapVolumes.Get();
 
@@ -380,6 +380,7 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
             outInput.meshKeys.PushBack(triangleRef.key);
         }
 
+        // What we hash
         struct
         {
             uint64 mesh;
@@ -387,11 +388,22 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
             uint32 flags;
             uint32 lightmapRectOffset;
             uint32 lightmapRectSize;
-        } content = { uint64(uintptr_t(proxy.mesh)), materialIndex, instanceFlags, lightmapRectOffset, lightmapRectSize };
+        } content;
+
+        content.mesh = uint64(uintptr_t(proxy.mesh));
+        content.materialIndex = materialIndex;
+        content.flags = instanceFlags;
+        content.lightmapRectOffset = lightmapRectOffset;
+        content.lightmapRectSize = lightmapRectSize;
 
         InstanceRecord& record = outInput.instanceRecords.EmplaceBack();
         record.identity = instanceKey;
-        record.worldHash = FNV1::DoHashWords(objectToWorld.values, sizeof(objectToWorld.values), FNV1::DoHashWords(&content, sizeof(content), 0));
+        
+        record.worldHash = FNV1::DoHashWords(
+            objectToWorld.values,
+            sizeof(objectToWorld.values),
+            FNV1::DoHashWords(&content, sizeof(content), 0));
+
         record.geometryKey = triangleRef.key;
         record.bounds = worldBounds;
     };

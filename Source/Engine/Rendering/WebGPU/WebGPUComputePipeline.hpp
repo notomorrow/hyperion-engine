@@ -41,6 +41,7 @@ public:
     }
 
     WGPUComputePipeline GetOrCreateVariant(const WGPUBindGroupLayout* layouts, uint32 numLayouts);
+    void OnDispatchSkipped(const WGPUBindGroupLayout* layouts, uint32 numLayouts) const;
 
     bool IsCreated() const override;
     RendererResult Create() override;
@@ -60,6 +61,8 @@ public:
 
 private:
     using PipelineVariant = WebGPUPipelineVariant<WGPUComputePipeline>;
+
+    static uint64 GetVariantKey(const WGPUBindGroupLayout* layouts, uint32 numLayouts);
 
     static void OnVariantCompiled(WGPUCreatePipelineAsyncStatus status, WGPUComputePipeline pipeline, WGPUStringView message, void* userdata1, void* userdata2);
 

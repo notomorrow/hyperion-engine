@@ -51,8 +51,6 @@ uint GetLightmapStencilValue(Entity entity)
     return GetLightmapStencilValue(entity.lightmap_rect_offset);
 }
 
-#define MAX_INSTANCES_PER_BATCH 256
-
 // Batches only say which slot of the instance data buffer each entry draws
 struct EntityInstanceBatch
 {
