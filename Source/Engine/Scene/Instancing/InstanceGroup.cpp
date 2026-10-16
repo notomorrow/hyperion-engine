@@ -380,6 +380,20 @@ bool InstanceGroup::GetInstanceTransform(InstanceId id, Transform& outTransform)
     return true;
 }
 
+uint32 InstanceGroup::GetInstanceTransforms(Array<Transform>& outTransforms)
+{
+    EnsureInstancesLoaded();
+
+    outTransforms.Reserve(outTransforms.Size() + m_instances.Size());
+
+    for (const InstanceEntry& entry : m_instances)
+    {
+        outTransforms.PushBack(entry.transform);
+    }
+
+    return uint32(m_instances.Size());
+}
+
 InstanceId InstanceGroup::GetClusterInstanceId(Vec2i cell, uint32 instanceIndex) const
 {
     const auto clusterIt = m_clusters.Find(cell);

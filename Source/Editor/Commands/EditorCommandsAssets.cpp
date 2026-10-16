@@ -7,6 +7,8 @@
 
 #include <Scene/Instancing/InstanceGroup.hpp>
 
+#include <Core/IO/ByteReader.hpp>
+
 #include <Scene/WorldGrid/Terrain/GroundCover.hpp>
 
 namespace Hyperion {
@@ -851,6 +853,192 @@ public:
 DEFINE_EDITOR_COMMAND(PlaceAsInstance);
 
 #pragma endregion PlaceAsInstance
+
+#pragma region PlaceInstances
+
+/// Adds a list of instances of a prefab to the active scene's InstanceGroup for it.
+/// Arguments:
+///     bucket index, asset name, then a text file with one instance per line: tx ty tz qx qy qz qw sx sy sz
+class EditorCommandPlaceInstances final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandPlaceInstances);
+
+public:
+    virtual ~EditorCommandPlaceInstances() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Place Instances";
+    }
+
+    virtual bool AllowedWhileEditingPrefab() const override
+    {
+        return false;
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        if (NumArguments() < 3)
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandPlaceInstances requires bucket index, asset name and a transforms file");
+            return;
+        }
+
+        uint32 bucketIndex = 0;
+        if (!StringUtil::Parse(GetArgument(0), &bucketIndex) || bucketIndex == AssetBuckets::None.GetIndex())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandPlaceInstances: invalid bucket index '{}'", GetArgument(0));
+            return;
+        }
+
+        const ANSIString assetName = GetArgument(1);
+
+        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
+        Handle<Scene> activeScene = subsystem->GetActiveScene();
+
+        if (!currentProject.IsValid() || !activeScene.IsValid() || !activeScene->GetRoot().IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandPlaceInstances: no project or active scene");
+            return;
+        }
+
+        Handle<Prefab> prefab = DynamicCast<Prefab>(GetCurrentAssetRegistry()->GetAsset(*AssetBuckets::AllBuckets[bucketIndex], Name(assetName)));
+        if (!prefab.IsValid())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandPlaceInstances: '{}' is not a prefab", assetName);
+            return;
+        }
+
+        Array<Transform> transforms;
+
+        if (!ReadTransforms(FilePath(GetArgument(2)), transforms))
+        {
+            return;
+        }
+
+        Handle<InstanceGroup> group = InstanceGroup::Find(activeScene.Get(), prefab);
+        const bool createsGroup = !group.IsValid();
+
+        if (createsGroup)
+        {
+            group = InstanceGroup::Create(activeScene.Get(), prefab);
+        }
+
+        if (!group.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandPlaceInstances: failed to create an instance group for '{}'", assetName);
+            return;
+        }
+
+        // the same ids on every redo, so later actions that refer to these instances still find them
+        Array<InstanceId> instanceIds;
+        instanceIds.Reserve(transforms.Size());
+
+        for (size_t index = 0; index < transforms.Size(); index++)
+        {
+            instanceIds.PushBack(group->ReserveInstanceId());
+        }
+
+        Handle<Node> sceneRoot = activeScene->GetRoot();
+
+        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+            HYP_FORMAT("Place {} Instances of {}", transforms.Size(), assetName),
+            Proc<EditorActionFunctions()>(
+                [group, sceneRoot, createsGroup, instanceIds, transforms]() -> EditorActionFunctions
+                {
+                    return EditorActionFunctions {
+                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [group, sceneRoot, createsGroup, instanceIds, transforms](EditorSubsystem*, EditorProject*)
+                            {
+                                if (createsGroup)
+                                {
+                                    sceneRoot->AddChild(group);
+                                }
+
+                                for (size_t index = 0; index < instanceIds.Size(); index++)
+                                {
+                                    group->AddInstanceWithId(instanceIds[index], transforms[index]);
+                                }
+                            }),
+                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [group, createsGroup, instanceIds](EditorSubsystem*, EditorProject*)
+                            {
+                                for (InstanceId instanceId : instanceIds)
+                                {
+                                    group->RemoveInstance(instanceId);
+                                }
+
+                                if (createsGroup)
+                                {
+                                    group->Remove();
+                                }
+                            })
+                    };
+                }));
+
+        InitObject(action);
+        currentProject->GetActionStack()->PushAction(action);
+
+        HYP_LOG(Editor, Info, "EditorCommandPlaceInstances: placed {} instances of {}", transforms.Size(), assetName);
+    }
+
+private:
+    static bool ReadTransforms(const FilePath& path, Array<Transform>& outTransforms)
+    {
+        FileByteReader reader { path };
+
+        if (reader.Eof())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandPlaceInstances: could not read '{}'", path);
+            return false;
+        }
+
+        const ByteBuffer buffer = reader.Read();
+        reader.Close();
+
+        const String text(buffer.ToByteView());
+
+        for (const String& line : text.Split('\n'))
+        {
+            float values[10];
+            uint32 numValues = 0;
+
+            for (const String& token : line.Trimmed().Split(' '))
+            {
+                if (token.Empty() || numValues >= 10 || !StringUtil::Parse(token, &values[numValues]))
+                {
+                    continue;
+                }
+
+                numValues++;
+            }
+
+            if (numValues == 0)
+            {
+                continue;
+            }
+
+            if (numValues != 10)
+            {
+                HYP_LOG(Editor, Warning, "EditorCommandPlaceInstances: skipped a line of '{}' without 10 numbers", path);
+                continue;
+            }
+
+            outTransforms.PushBack(Transform(
+                Vec3f(values[0], values[1], values[2]),
+                Vec3f(values[7], values[8], values[9]),
+                Quat4f(values[3], values[4], values[5], values[6])));
+        }
+
+        return true;
+    }
+};
+
+DEFINE_EDITOR_COMMAND(PlaceInstances);
+
+#pragma endregion PlaceInstances
 
 #pragma region ScatterInstances
 

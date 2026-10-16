@@ -117,6 +117,9 @@ public:
 
     bool GetInstanceTransform(InstanceId id, Transform& outTransform) const;
 
+    /// Every instance's transform, in no particular order. Returns how many were added.
+    uint32 GetInstanceTransforms(Array<Transform>& outTransforms);
+
     /// The instance drawn at \p instanceIndex by the cluster entity for \p cell
     InstanceId GetClusterInstanceId(Vec2i cell, uint32 instanceIndex) const;
 
