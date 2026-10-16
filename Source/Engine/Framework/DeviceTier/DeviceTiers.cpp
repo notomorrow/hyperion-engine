@@ -15,9 +15,40 @@
 namespace Hyperion {
 
 HYP_DEFINE_DEVICE_TIER_AXIS(DeviceType, DeviceTierPhase::PreGpu, "devicetype")
+HYP_DEFINE_DEVICE_TIER_AXIS(DevicePlatform, DeviceTierPhase::PreGpu, "deviceplatform")
 HYP_DEFINE_DEVICE_TIER_AXIS(DeviceGrade, DeviceTierPhase::PostGpu, "devicegrade")
 
 namespace {
+
+template <DevicePlatform Platform, bool IsBuiltFor>
+class PlatformTier final : public DeviceTier<Platform>
+{
+public:
+    bool Decide(const DeviceFacts& facts) const override
+    {
+        return IsBuiltFor;
+    }
+};
+
+#if defined(HYP_WEB)
+static constexpr DevicePlatform g_builtPlatform = DevicePlatform::Web;
+#elif defined(HYP_ANDROID)
+static constexpr DevicePlatform g_builtPlatform = DevicePlatform::Android;
+#elif defined(HYP_IOS)
+static constexpr DevicePlatform g_builtPlatform = DevicePlatform::IOS;
+#elif defined(HYP_MACOS)
+static constexpr DevicePlatform g_builtPlatform = DevicePlatform::MacOS;
+#elif defined(HYP_LINUX)
+static constexpr DevicePlatform g_builtPlatform = DevicePlatform::Linux;
+#else
+static constexpr DevicePlatform g_builtPlatform = DevicePlatform::Windows;
+#endif
+
+using MacOSTier = PlatformTier<DevicePlatform::MacOS, g_builtPlatform == DevicePlatform::MacOS>;
+using LinuxTier = PlatformTier<DevicePlatform::Linux, g_builtPlatform == DevicePlatform::Linux>;
+using AndroidTier = PlatformTier<DevicePlatform::Android, g_builtPlatform == DevicePlatform::Android>;
+using IOSTier = PlatformTier<DevicePlatform::IOS, g_builtPlatform == DevicePlatform::IOS>;
+using WebTier = PlatformTier<DevicePlatform::Web, g_builtPlatform == DevicePlatform::Web>;
 
 class MobileTier final : public DeviceTier<DeviceType::Mobile>
 {
@@ -64,6 +95,11 @@ public:
     }
 };
 
+HYP_REGISTER_DEVICE_TIER(MacOSTier)
+HYP_REGISTER_DEVICE_TIER(LinuxTier)
+HYP_REGISTER_DEVICE_TIER(AndroidTier)
+HYP_REGISTER_DEVICE_TIER(IOSTier)
+HYP_REGISTER_DEVICE_TIER(WebTier)
 HYP_REGISTER_DEVICE_TIER(MobileTier)
 HYP_REGISTER_DEVICE_TIER(LaptopTier)
 HYP_REGISTER_DEVICE_TIER(MediumGradeTier)

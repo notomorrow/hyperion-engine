@@ -134,14 +134,7 @@ namespace Hyperion.Editor
             _onTaskStartedHandler?.Remove();
             _onTaskStartedHandler = editorState.GetOnTaskStartedDelegate().Bind((EditorTaskBase task) =>
             {
-                bool isForegroundTask = false;
-
-                if (task is TickableEditorTask tickableTask)
-                {
-                    isForegroundTask = tickableTask.IsForegroundTask;
-                }
-
-                RaiseTaskStarted(task, isForegroundTask);
+                RaiseTaskStarted(task, task.IsForegroundTask);
             });
 
             _onTaskEndedHandler?.Remove();

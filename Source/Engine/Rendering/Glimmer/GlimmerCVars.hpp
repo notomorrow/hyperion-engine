@@ -49,5 +49,7 @@ extern CVar<int> g_cvGlimmerDebugSH;
 
 extern CVar<float> g_cvGlimmerVisibility;
 extern CVar<bool> g_cvGlimmerLookAhead;
+extern CVar<float> g_cvGlimmerStartupBurstSeconds;
+extern CVar<int> g_cvGlimmerBuildThreads;
 
 } // namespace Hyperion

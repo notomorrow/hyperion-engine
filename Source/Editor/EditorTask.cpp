@@ -31,8 +31,7 @@ extern Handle<EditorState> g_editorState;
 
 TickableEditorTask::TickableEditorTask()
     : isComplete(false),
-      m_timer(),
-      m_isForegroundTask(false)
+      m_timer()
 {
 }
 
@@ -277,6 +276,8 @@ EditorTaskScope::EditorTaskScope(
         Assert(task.IsValid());
 
         task->m_processProc = std::move(proc);
+
+        task->SetIsForegroundTask(isForegroundTask);
 
         m_task = std::move(task);
     }

@@ -402,7 +402,8 @@ private:
         const Handle<AssetObject>& assetObject,
         Array<TSharedResLock<AssetObject>>& readLocks,
         Array<CollectedBlob>& collectedBlobs,
-        Array<uint64>& blockSizes)
+        Array<uint64>& blockSizes,
+        Set<const AssetObject*>& cookedAssets)
     {
         if (!assetObject.IsValid())
         {
@@ -410,6 +411,11 @@ private:
         }
 
         if (assetObject->IsTransient())
+        {
+            return {};
+        }
+
+        if (!cookedAssets.Insert(assetObject.Get()).second)
         {
             return {};
         }
@@ -481,7 +487,8 @@ private:
         const FilePath& outputContentDir,
         Array<TSharedResLock<AssetObject>>& readLocks,
         Array<CollectedBlob>& collectedBlobs,
-        Array<uint64>& blockSizes)
+        Array<uint64>& blockSizes,
+        Set<const AssetObject*>& cookedAssets)
     {
         const AssetBucket& bucket = *AssetBuckets::AllBuckets[bucketIndex];
 
@@ -492,7 +499,7 @@ private:
         {
             Handle<AssetObject> assetObject = registry->GetAsset(bucket, assetDesc.name);
 
-            if (Result result = CookAsset(outputContentDir, assetObject, readLocks, collectedBlobs, blockSizes); result.HasError())
+            if (Result result = CookAsset(outputContentDir, assetObject, readLocks, collectedBlobs, blockSizes, cookedAssets); result.HasError())
             {
                 return result;
             }
@@ -509,7 +516,8 @@ private:
         const FilePath& outputContentDir,
         Array<TSharedResLock<AssetObject>>& readLocks,
         Array<CollectedBlob>& collectedBlobs,
-        Array<uint64>& blockSizes)
+        Array<uint64>& blockSizes,
+        Set<const AssetObject*>& cookedAssets)
     {
         FILE* listFile = fopen(assetListPath.Data(), "r");
 
@@ -589,7 +597,7 @@ private:
                 }
             }
 
-            if (Result result = CookAsset(outputContentDir, assetObject, readLocks, collectedBlobs, blockSizes); result.HasError())
+            if (Result result = CookAsset(outputContentDir, assetObject, readLocks, collectedBlobs, blockSizes, cookedAssets); result.HasError())
             {
                 return result;
             }
@@ -613,6 +621,8 @@ private:
         Array<uint64> blockSizes;
         blockSizes.Resize(MaxAssetBuckets);
 
+        Set<const AssetObject*> cookedAssets;
+
         // Engine content, cook everything in the registry
         if (engineRegistry)
         {
@@ -623,7 +633,7 @@ private:
 
             if (engineAssetListPath.Any())
             {
-                if (Result result = CookListedAssets(engineRegistry, engineAssetListPath, outputEngineContentDir, readLocks, collectedBlobs, blockSizes); result.HasError())
+                if (Result result = CookListedAssets(engineRegistry, engineAssetListPath, outputEngineContentDir, readLocks, collectedBlobs, blockSizes, cookedAssets); result.HasError())
                 {
                     return result;
                 }
@@ -632,7 +642,7 @@ private:
             {
                 for (uint32 bucketIndex = 1; bucketIndex < MaxAssetBuckets; bucketIndex++)
                 {
-                    if (Result result = CookBucketInFull(engineRegistry, bucketIndex, outputEngineContentDir, readLocks, collectedBlobs, blockSizes); result.HasError())
+                    if (Result result = CookBucketInFull(engineRegistry, bucketIndex, outputEngineContentDir, readLocks, collectedBlobs, blockSizes, cookedAssets); result.HasError())
                     {
                         return result;
                     }
@@ -714,13 +724,38 @@ private:
                 }
             }
 
+            uint32 numEngineAssets = 0;
+
             for (const Handle<AssetObject>& assetObject : assetsToCook)
             {
-                if (Result result = CookAsset(outputContentDir, assetObject, readLocks, collectedBlobs, blockSizes); result.HasError())
+                if (!assetObject.IsValid())
+                {
+                    continue;
+                }
+
+                const FilePath* assetOutputContentDir = &outputContentDir;
+
+                switch (assetObject->GetPath().registryId)
+                {
+                case AssetRegistryId::Game:
+                    break;
+                case AssetRegistryId::Engine:
+                    assetOutputContentDir = &outputEngineContentDir;
+                    ++numEngineAssets;
+                    break;
+                default:
+                    HYP_LOG(Assets, Warning, "Skipping \"{}\", reached from the project but owned by the {} registry",
+                        assetObject->GetPath(), GetAssetRegistryName(assetObject->GetPath().registryId));
+                    continue;
+                }
+
+                if (Result result = CookAsset(*assetOutputContentDir, assetObject, readLocks, collectedBlobs, blockSizes, cookedAssets); result.HasError())
                 {
                     return result;
                 }
             }
+
+            HYP_LOG(Assets, Info, "{} of the reachable asset(s) are engine content, cooked to \"{}\"", numEngineAssets, outputEngineContentDir);
         }
 #endif // HYP_EDITOR
 

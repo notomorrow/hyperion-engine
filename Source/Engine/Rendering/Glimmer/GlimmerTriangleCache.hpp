@@ -289,6 +289,7 @@ private:
 
     Map<uint64, UniquePtr<Entry>> m_entries;
 
+    uint32 m_numBuildThreads;
     UniquePtr<TaskThreadPool> m_buildPool;
 
     GpuBufferRef m_trianglesBuffer;

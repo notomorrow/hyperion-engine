@@ -8,6 +8,13 @@ namespace Hyperion
     {
         public float Progress => this.GetProgress();
 
+        public bool IsForegroundTask => this.IsForegroundTask();
+
+        public void SetIsForegroundTask(bool isForeground)
+        {
+            InvokeNativeMethod(new Name("SetIsForegroundTask", weak: true), [isForeground]);
+        }
+
         public string Title
         {
             get => this.GetTitle();
@@ -40,13 +47,6 @@ namespace Hyperion
     {
         public TickableEditorTask()
         {
-        }
-
-        public bool IsForegroundTask => this.IsForegroundTask();
-
-        public void SetIsForegroundTask(bool isForeground)
-        {
-            InvokeNativeMethod(new Name("SetIsForegroundTask", weak: true), [isForeground]);
         }
 
         public override void Cancel()

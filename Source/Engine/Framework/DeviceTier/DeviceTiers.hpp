@@ -20,6 +20,17 @@ enum class DeviceType : uint8
 };
 
 HYP_ENUM()
+enum class DevicePlatform : uint8
+{
+    Windows = 0,
+    MacOS = 1,
+    Linux = 2,
+    Android = 3,
+    IOS = 4,
+    Web = 5
+};
+
+HYP_ENUM()
 enum class DeviceGrade : uint8
 {
     Low = 0,

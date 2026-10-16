@@ -44,6 +44,7 @@ static constexpr float MaxLookAhead = 64.0f;
 static constexpr float VelocityResponse = 3.0f;  // 1/s, smooths out frame to frame jitter in the camera's motion
 static constexpr float TeleportDistance = 100.0f; // a move further than this in one frame is a jump, not motion
 static constexpr float MaxBudgetScale = 4.0f;
+static constexpr float StartupBudgetScale = 8.0f; // past what probes and SH take (they stop at 4): the bricks build twice as fast
 
 bool IsWorldGlimmerEnabled(const World* world)
 {
@@ -382,6 +383,7 @@ void GlimmerSystem::UpdateViewerMotion(const Vec3f& viewerPosition, float delta,
     if (!m_hasLastViewer || delta <= 0.0f || moved.Length() > TeleportDistance)
     {
         m_viewerVelocity = Vec3f::Zero();
+        m_timeSinceStart = 0.0f;
     }
     else
     {
@@ -405,8 +407,12 @@ void GlimmerSystem::UpdateViewerMotion(const Vec3f& viewerPosition, float delta,
         return;
     }
 
+    m_timeSinceStart += MathUtil::Max(delta, 0.0f);
+
+    const bool isBursting = m_timeSinceStart < g_cvGlimmerStartupBurstSeconds.Get();
+
     outState.lookAhead = lookAhead;
-    outState.budgetScale = MathUtil::Clamp(delta * 60.0f, 1.0f, MaxBudgetScale);
+    outState.budgetScale = isBursting ? StartupBudgetScale : MathUtil::Clamp(delta * 60.0f, 1.0f, MaxBudgetScale);
 }
 
 void GlimmerSystem::UpdateProbeDebugRecords(float delta)

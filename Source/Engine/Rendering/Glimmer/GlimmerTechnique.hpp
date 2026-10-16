@@ -118,6 +118,9 @@ public:
         return m_brickWorld.Get();
     }
 
+    bool IsSHReady() const;
+    bool IsProbesReady() const;
+
 private:
     UniquePtr<GlimmerProbeVolume> m_probeVolume;
     UniquePtr<GlimmerProbeDebug> m_probeDebug;

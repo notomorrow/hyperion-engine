@@ -20,6 +20,26 @@ TierProfile "DeviceTiers" {
                 "Rendering.Glimmer.Bricks.Reflections" = false
             }
         }
+        TierRule "Glimmer.BrickPool" {
+            AtMost = { DeviceGrade = Ultra }
+            Set = {
+                "Rendering.Glimmer.Bricks.InitialPoolMB" = 256
+            }
+        }
+        TierRule "Glimmer.BrickPool.Medium" {
+            AtMost = { DeviceGrade = Medium }
+            Set = {
+                "Rendering.Glimmer.Bricks.PoolBudgetMB" = 128
+                "Rendering.Glimmer.Bricks.InitialPoolMB" = 128
+            }
+        }
+        TierRule "Glimmer.BrickPool.Web" {
+            When = { DevicePlatform = Web }
+            Set = {
+                "Rendering.Glimmer.Bricks.PoolBudgetMB" = 128
+                "Rendering.Glimmer.Bricks.InitialPoolMB" = 96
+            }
+        }
         TierRule "Glimmer.LaptopUltraCap" {
             When = { DeviceType = Laptop, DeviceGrade = Ultra }
             Set = {
