@@ -181,7 +181,7 @@ public:
                 }
                 else
                 {
-                    LastKeyframe().rotation = Quat4f(axis, m_keyframeAngles.Top()).Inverse();
+                    LastKeyframe().rotation = Quat4f(axis, m_keyframeAngles.Top());
 
                     m_keyframeAngles.Pop();
                 }
@@ -261,11 +261,10 @@ AssetLoadResult OgreXMLSkeletonLoader::LoadAsset(LoaderState& state) const
     {
         const Name boneName = item.name;
 
-        // Ogre rotations are standard quaternions; Transform stores rotations inverted (see Mat4f::Rotation)
         const Transform bindingTransform = Transform(
             item.bindingTranslation,
             Vec3f::One(),
-            item.bindingRotation.Inverse());
+            item.bindingRotation);
 
         bindingTransformsByBoneName.Set(boneName, bindingTransform);
 
@@ -347,7 +346,7 @@ AssetLoadResult OgreXMLSkeletonLoader::LoadAsset(LoaderState& state) const
                     Transform(
                         trackBindingTransform.GetTranslation() + keyframeIt.translation,
                         trackBindingTransform.GetScale(),
-                        keyframeIt.rotation * trackBindingTransform.GetRotation()));
+                        trackBindingTransform.GetRotation() * keyframeIt.rotation));
             }
 
             animationTrack->SetKeyframes(keyframes);

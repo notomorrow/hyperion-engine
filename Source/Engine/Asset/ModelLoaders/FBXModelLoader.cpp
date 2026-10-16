@@ -1876,7 +1876,7 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
                                 radians.x = MathUtil::DegToRad(degrees.x);
                                 radians.y = MathUtil::DegToRad(degrees.y);
                                 radians.z = MathUtil::DegToRad(degrees.z);
-                                transform.SetRotation(Quat4f(radians).Inverse());
+                                transform.SetRotation(Quat4f(radians));
                             }
                         }
                     }
@@ -2787,7 +2787,7 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
                         rotationCurves[2] ? rotationCurves[2]->Evaluate(timeSeconds, 0.0f) : 0.0f);
 
                     const Vec3f radians(MathUtil::DegToRad(degrees.x), MathUtil::DegToRad(degrees.y), MathUtil::DegToRad(degrees.z));
-                    const Quat4f rotation = Quat4f(radians).Inverse();
+                    const Quat4f rotation = Quat4f(radians);
 
                     keyframes.EmplaceBack(timeSeconds, Transform(translation, scale, rotation));
                 }
@@ -2825,7 +2825,7 @@ AssetLoadResult FBXModelLoader::LoadAsset(LoaderState& state) const
     // align it to the engine's expectations (Y-up) -- only needed if the file is not already Y-up
     if (upAxis != 1)
     {
-        top->SetLocalRotation(Quat4f::AxisAngles(Vec3f(1.0f, 0.0f, 0.0f), MathUtil::DegToRad(90.0f)));
+        top->SetLocalRotation(Quat4f::AxisAngles(Vec3f(1.0f, 0.0f, 0.0f), MathUtil::DegToRad(-90.0f)));
     }
 
     top->Scale(0.01f);

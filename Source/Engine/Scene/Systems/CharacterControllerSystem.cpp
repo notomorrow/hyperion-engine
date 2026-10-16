@@ -262,8 +262,7 @@ static Vec3f GetPlayerViewDirection(const Entity& entity)
 
 static CharacterControllerConfig MakeCharacterControllerConfig(const Entity& entity, const CharacterControllerComponent& component)
 {
-    // Transforms store the inverse rotation
-    const Vec3f entityForward = entity.GetWorldRotation().Inverse().RotateVector(Vec3f::UnitZ());
+    const Vec3f entityForward = entity.GetWorldRotation().RotateVector(Vec3f::UnitZ());
 
     CharacterControllerConfig config;
     config.shape = component.shape;

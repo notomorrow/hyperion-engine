@@ -657,7 +657,7 @@ void SpritePass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
                     // Front face
                     {
-                        const Vec3f charTranslation = worldPos + worldRot.Inverse().RotateVector(Vec3f(
+                        const Vec3f charTranslation = worldPos + worldRot.RotateVector(Vec3f(
                             iter.placement.x * textSize - metrics.size.x * 0.5f,
                             iter.placement.y * textSize + offsetY - metrics.size.y * 0.5f,
                             0.0f
@@ -681,7 +681,7 @@ void SpritePass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                     // Back face - mirror X around text center so glyph order reads correctly from behind.
                     // We mirror the character center, not the left edge, to handle variable-width characters.
                     {
-                        const Vec3f charTranslation = worldPos + worldRot.Inverse().RotateVector(Vec3f(
+                        const Vec3f charTranslation = worldPos + worldRot.RotateVector(Vec3f(
                             -iter.placement.x * textSize + metrics.size.x * 0.5f - scaleX,
                             iter.placement.y * textSize + offsetY - metrics.size.y * 0.5f,
                             0.0f

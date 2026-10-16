@@ -15,6 +15,12 @@ namespace Hyperion {
 enum class InstanceId : uint32;
 static constexpr InstanceId InvalidInstanceId = Invalid<InstanceId>;
 
+enum class InstanceRecordFlags : uint32
+{
+    None = 0x0,
+    StandardRotation = 0x1
+};
+
 ///Serialized
 struct InstanceRecord
 {
@@ -35,7 +41,7 @@ struct InstanceRecord
             { t.x, t.y, t.z },
             { r.x, r.y, r.z, r.w },
             { s.x, s.y, s.z },
-            0
+            uint32(InstanceRecordFlags::StandardRotation)
         };
     }
 
@@ -49,7 +55,9 @@ struct InstanceRecord
         return Transform(
             Vec3f(translation[0], translation[1], translation[2]),
             Vec3f(scale[0], scale[1], scale[2]),
-            Quat4f(rotation[0], rotation[1], rotation[2], rotation[3]));
+            (flags & uint32(InstanceRecordFlags::StandardRotation))
+                ? Quat4f(rotation[0], rotation[1], rotation[2], rotation[3])
+                : Quat4f(rotation[0], rotation[1], rotation[2], rotation[3]).Inverse());
     }
 };
 

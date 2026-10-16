@@ -78,6 +78,8 @@ void AnimationTrack::PageBlobData()
     {
         if (PageBlobDataFromStorage(m_keyframeData))
         {
+            ConvertLegacyKeyframes();
+
             return;
         }
 
@@ -106,6 +108,8 @@ void AnimationTrack::PageBlobData()
                 AllocateBlobData(m_keyframeData, buffer.Data(), buffer.Size(), alignof(Keyframe));
                 m_keyframeData.key = blobKey;
 
+                ConvertLegacyKeyframes();
+
                 return;
             }
         }
@@ -118,6 +122,11 @@ void AnimationTrack::PageBlobData()
 
 void AnimationTrack::UnpageBlobData()
 {
+    if (m_keyframeData.raw != nullptr && m_storedRotationConvention < s_currentRotationConvention)
+    {
+        return;
+    }
+
     AssetObject::UnpageBlobData();
     
     AssertBlobDataPersisted(m_keyframeData);
@@ -152,6 +161,29 @@ void AnimationTrack::SetKeyframes(Span<const Keyframe> keyframes)
 {
     FreeBlobData(m_keyframeData);
     AllocateBlobData(m_keyframeData, keyframes.Data(), sizeof(Keyframe) * keyframes.Size());
+
+    m_storedRotationConvention = s_currentRotationConvention;
+}
+
+void AnimationTrack::ConvertLegacyKeyframes()
+{
+    if (m_storedRotationConvention >= s_currentRotationConvention || m_keyframeData.raw == nullptr)
+    {
+        return;
+    }
+
+    if (m_keyframeData.readOnly)
+    {
+        AllocateBlobData(m_keyframeData, m_keyframeData.raw, m_keyframeData.size, alignof(Keyframe));
+    }
+
+    Keyframe* keyframes = reinterpret_cast<Keyframe*>(m_keyframeData.raw);
+    const uint64 numKeyframes = m_keyframeData.size / sizeof(Keyframe);
+
+    for (uint64 index = 0; index < numKeyframes; index++)
+    {
+        keyframes[index].transform.SetRotation(keyframes[index].transform.GetRotation().Inverse());
+    }
 }
 
 Keyframe AnimationTrack::GetKeyframe(float time) const

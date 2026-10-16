@@ -1396,6 +1396,8 @@ bool Parser::ParseObjectValue(const TypeInfo& typeInfo, BoxedValue& out)
         return false;
     }
 
+    actualClass->PostLoad(out.ToRef().GetPointer());
+
     return true;
 }
 

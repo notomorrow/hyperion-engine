@@ -377,7 +377,7 @@ public:
     HYP_METHOD(Property = "UpVector", Editor = true, Serialize = false)
     Vec3f GetUpVector() const
     {
-        return Vec3f::UnitY();
+        return GetWorldRotation().RotateVector(Vec3f::UnitY());
     }
 
     HYP_METHOD(Property = "UpVector", Editor = true, Serialize = false)
@@ -508,6 +508,7 @@ protected:
     void UnregisterStreamingVolume();
 
     void OnTransformUpdated() override;
+    void ConvertLegacyRotations() override;
 
     void UpdateViewMatrix();
     void UpdateProjectionMatrix();

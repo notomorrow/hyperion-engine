@@ -76,6 +76,7 @@ public:
 
 protected:
     virtual void OnTransformUpdated() override;
+    virtual void ConvertLegacyRotations() override;
 
 private:
     void SetSkeleton(Skeleton* skeleton);

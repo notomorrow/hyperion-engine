@@ -349,11 +349,16 @@ public:
     HYP_DEF_STL_BEGIN_END(Base::Begin(), Base::End())
 };
 
-HYP_CLASS()
+class Node;
+
+extern void Node_OnPostLoad(Node& node);
+
+HYP_CLASS(PostLoad = "Node_OnPostLoad")
 class ENGINE_API Node : public ObjectBase
 {
     friend class Scene;
     friend class Entity;
+    friend void Node_OnPostLoad(Node& node);
 
     HYP_OBJECT_BODY(Node);
 
@@ -956,12 +961,26 @@ protected:
 
     virtual void SetScene_Internal(Scene* scene, bool moveToDetached);
 
+    virtual void ConvertLegacyRotations();
+
     Handle<Node> AddChild_Internal(const Handle<Node>& node, bool keepWorldTransform);
 
     ///Serialization
 
     HYP_METHOD(Property = "Children", NoScriptBindings, Serialize)
     void SetChildren(const NodeList& children); // use setter so we can manage parent pointers
+
+    HYP_METHOD(Property = "RotationConvention", Editor = false, NoScriptBindings, Serialize)
+    uint32 GetRotationConvention_Serialized() const
+    {
+        return s_currentRotationConvention;
+    }
+
+    HYP_METHOD(Property = "RotationConvention", NoScriptBindings)
+    void SetRotationConvention_Serialized(uint32 rotationConvention)
+    {
+        m_rotationConvention = rotationConvention;
+    }
 
     ///Fields
 
@@ -996,6 +1015,9 @@ protected:
 
     HYP_FIELD(Property = "NodeTags", Serialize, Editor = false)
     NodeTagSet m_tags;
+
+    static constexpr uint32 s_currentRotationConvention = 1;
+    uint32 m_rotationConvention = 0;
 
     ///BitFlags
 

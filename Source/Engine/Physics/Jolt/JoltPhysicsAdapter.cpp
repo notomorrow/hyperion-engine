@@ -724,7 +724,7 @@ void JoltPhysicsAdapter::Tick(PhysicsWorldBase* world, double delta)
             bodyInterface.SetPositionAndRotation(
                 internalData->bodyID,
                 ToJPHVec(lastGoodTransform.GetTranslation()),
-                ToJPHQuat(lastGoodTransform.GetRotation().Inverse()),
+                ToJPHQuat(lastGoodTransform.GetRotation()),
                 JPH::EActivation::DontActivate);
 
             bodyInterface.SetLinearAndAngularVelocity(internalData->bodyID, JPH::Vec3::sZero(), JPH::Vec3::sZero());
@@ -737,7 +737,7 @@ void JoltPhysicsAdapter::Tick(PhysicsWorldBase* world, double delta)
 
         Transform rigidBodyTransform = rigidBody->GetTransform();
         rigidBodyTransform.GetTranslation() = FromJPHVec(position);
-        rigidBodyTransform.GetRotation() = FromJPHQuat(rotation).Inverse();
+        rigidBodyTransform.GetRotation() = FromJPHQuat(rotation);
 
         rigidBody->SetTransform(rigidBodyTransform);
 
@@ -779,7 +779,7 @@ void JoltPhysicsAdapter::OnRigidBodyAdded(const Handle<RigidBody>& rigidBody)
     JPH::BodyCreationSettings creationSettings(
         internalData->shape.GetPtr(),
         ToJPHVec(rigidBody->GetTransform().GetTranslation()),
-        ToJPHQuat(rigidBody->GetTransform().GetRotation().Inverse()),
+        ToJPHQuat(rigidBody->GetTransform().GetRotation()),
         motionType,
         objectLayer);
 
@@ -837,7 +837,7 @@ void JoltPhysicsAdapter::SetRigidBodyTransform(const Handle<RigidBody>& rigidBod
     bodyInterface.SetPositionAndRotation(
         internalData->bodyID,
         ToJPHVec(transform.GetTranslation()),
-        ToJPHQuat(transform.GetRotation().Inverse()),
+        ToJPHQuat(transform.GetRotation()),
         JPH::EActivation::DontActivate);
 
     rigidBody->SetTransform(transform);
@@ -870,7 +870,7 @@ void JoltPhysicsAdapter::MoveRigidBodyKinematic(const Handle<RigidBody>& rigidBo
         bodyInterface.MoveKinematic(
             internalData->bodyID,
             ToJPHVec(transform.GetTranslation()),
-            ToJPHQuat(transform.GetRotation().Inverse()),
+            ToJPHQuat(transform.GetRotation()),
             deltaTime);
 
         rigidBody->SetTransform(transform);

@@ -221,6 +221,16 @@ void DecalProxy::UpdateDecalBounds()
     SetNeedsRenderProxyUpdate();
 }
 
+void DecalProxy::ConvertLegacyRotations()
+{
+    for (DecalInstance& instance : m_instances)
+    {
+        instance.transform.SetRotation(instance.transform.GetRotation().Inverse());
+    }
+
+    Entity::ConvertLegacyRotations();
+}
+
 void DecalProxy::Update(float delta)
 {
     Decal* decal = m_decal.Get();

@@ -174,11 +174,9 @@ void RotateEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEvent
         {
             const Quat4f finalRotation = m_dragData->currentRotation;
             const Quat4f originRotation = m_dragData->startRotation;
-            const Quat4f deltaRotation = originRotation.Inverse() * finalRotation;
+            const Quat4f deltaRotation = finalRotation * originRotation.Inverse();
 
-            // Sort nodes by depth (ancestors first) so SetWorldRotation on a parent
-            // happens before its descendants, preventing accumulated parent rotation
-            // from corrupting the descendant's computed local rotation.
+            // Sort nodes by depth (ancestors first) so SetWorldRotation on a parent happens before its descendants
             auto nodeData = m_selectedNodes;
             std::sort(nodeData.Begin(), nodeData.End(),
                       [](const Pair<Handle<Node>, Quat4f>& a, const Pair<Handle<Node>, Quat4f>& b)
@@ -219,7 +217,7 @@ void RotateEditorGizmo::OnDragEnd(const Handle<Camera>& camera, const MouseEvent
                                     continue;
                                 }
 
-                                selectedNode->SetWorldRotation(pair.second * deltaRotation);
+                                selectedNode->SetWorldRotation(deltaRotation * pair.second);
                             }
 
                             ExecuteSwatchOverrideTransformEdits(*overrideEditsPtr);
@@ -368,8 +366,8 @@ bool RotateEditorGizmo::OnMouseMove(const Handle<Camera>& camera, const MouseEve
         angle = subsystem->GetGizmoController()->SnapAngle(angle);
     }
 
-    const Quat4f deltaRotation = Quat4f::AxisAngles(m_dragData->axis, angle).Inverse();
-    const Quat4f newRotation = m_dragData->startRotation * deltaRotation;
+    const Quat4f deltaRotation = Quat4f::AxisAngles(m_dragData->axis, angle);
+    const Quat4f newRotation = deltaRotation * m_dragData->startRotation;
 
     m_dragData->currentRotation = newRotation;
 
@@ -392,7 +390,7 @@ bool RotateEditorGizmo::OnMouseMove(const Handle<Camera>& camera, const MouseEve
             continue;
         }
 
-        selectedNode->SetWorldRotation(pair.second * deltaRotation);
+        selectedNode->SetWorldRotation(deltaRotation * pair.second);
     }
 
     return true;

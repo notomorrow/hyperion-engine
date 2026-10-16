@@ -110,12 +110,29 @@ protected:
         outReferences.EmplaceBack("KEYF", 1, &m_keyframeData);
     }
 
+    HYP_METHOD(Property = "RotationConvention", Editor = false, NoScriptBindings, Serialize)
+    uint32 GetRotationConvention_Serialized() const
+    {
+        return m_keyframeData.raw != nullptr ? s_currentRotationConvention : m_storedRotationConvention;
+    }
+
+    HYP_METHOD(Property = "RotationConvention", NoScriptBindings)
+    void SetRotationConvention_Serialized(uint32 rotationConvention)
+    {
+        m_storedRotationConvention = rotationConvention;
+    }
+
 private:
+    void ConvertLegacyKeyframes();
+
     HYP_FIELD()
     Name m_boneName;
 
     HYP_FIELD()
     BlobDataReference m_keyframeData;
+
+    static constexpr uint32 s_currentRotationConvention = 1;
+    uint32 m_storedRotationConvention = 0;
 };
 
 HYP_CLASS(AssetBucket = "Animations")
