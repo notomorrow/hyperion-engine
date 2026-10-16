@@ -348,8 +348,7 @@ Transform EditorSurfacePainterState::MakePlacementTransform(const SurfaceHit& hi
     const Quat4f rotation = RotationFromUpTo(normal) * twist;
 
     Transform transform;
-    // Transform stores the inverse of the standard quaternion (see Mat4f::Rotation)
-    transform.SetRotation(rotation.Inverse());
+    transform.SetRotation(rotation);
     transform.SetScale(GetPlacementScale());
     transform.SetTranslation(GetPlacementPosition(hit));
 

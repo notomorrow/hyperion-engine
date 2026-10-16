@@ -430,6 +430,10 @@ bool Camera::RemoveCameraController(const Handle<CameraController>& cameraContro
     return true;
 }
 
+void Camera::ConvertLegacyRotations()
+{
+}
+
 void Camera::OnTransformUpdated()
 {
     Entity::OnTransformUpdated();
@@ -464,7 +468,8 @@ void Camera::SetNextTranslation(const Vec3f& translation)
 
 void Camera::SetDirection(const Vec3f& direction)
 {
-    SetWorldRotation(Quat4f::LookAt(direction, GetUpVector()).Inverse(), TransformChangeType::Simulation);
+    // level against world up; SetUpVector rolls it
+    SetWorldRotation(Quat4f::LookAt(direction, Vec3f::UnitY()).Inverse(), TransformChangeType::Simulation);
 
     if (HasActiveCameraController())
     {

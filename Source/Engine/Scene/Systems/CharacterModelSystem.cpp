@@ -959,7 +959,7 @@ void UpdateFacing(Entity& entity, CharacterModelComponent& component, const Vec3
 {
     if (!component.hasFacingYaw)
     {
-        const Vec3f currentForward = entity.GetWorldRotation().Inverse().RotateVector(Vec3f::UnitZ());
+        const Vec3f currentForward = entity.GetWorldRotation().RotateVector(Vec3f::UnitZ());
 
         component.facingYaw = std::atan2(currentForward.x, currentForward.z) - MathUtil::DegToRad(component.forwardYawOffset);
         component.hasFacingYaw = true;
@@ -978,8 +978,7 @@ void ApplyBodyRotation(Entity& entity, const CharacterModelComponent& component)
 {
     const float modelYaw = component.bodyYaw + MathUtil::DegToRad(component.forwardYawOffset);
 
-    // Transforms store the inverse rotation, so negate the yaw to turn +Z toward the facing direction
-    entity.SetWorldRotation(Quat4f(Vec3f::UnitY(), -modelYaw), TransformChangeType::Simulation);
+    entity.SetWorldRotation(Quat4f(Vec3f::UnitY(), modelYaw), TransformChangeType::Simulation);
 }
 
 } // namespace

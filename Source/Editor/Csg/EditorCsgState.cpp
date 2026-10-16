@@ -182,7 +182,7 @@ Quat4f RotationFromUpTo(const Vec3f& direction)
 Transform MakePlacementTransform(const Vec3f& position, const Vec3f& normal, const Vec3f& halfExtent)
 {
     Transform transform;
-    transform.SetRotation(RotationFromUpTo(normal).Inverse());
+    transform.SetRotation(RotationFromUpTo(normal));
     transform.SetScale(halfExtent);
     transform.SetTranslation(position);
 

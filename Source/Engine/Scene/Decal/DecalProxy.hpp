@@ -88,6 +88,8 @@ protected:
 
     void Update(float delta) override;
 
+    void ConvertLegacyRotations() override;
+
 private:
     void OnDecalsChanged();
     void UpdateDecalBounds();

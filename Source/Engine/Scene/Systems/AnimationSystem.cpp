@@ -64,13 +64,13 @@ void ApplyTwist(Skeleton& skeleton, Name rootBoneName, Name endBoneName, float a
     }
 
     // an even share per bone, root first; each bone's children follow it, so every bone only adds its own share
-    const Quat4f shareRotation(Vec3f::UnitY(), -angle / float(chain.Size()));
+    const Quat4f shareRotation(Vec3f::UnitY(), angle / float(chain.Size()));
 
     for (size_t index = chain.Size(); index > 0; --index)
     {
         Bone* bone = chain[index - 1];
 
-        bone->SetWorldRotation(shareRotation * bone->GetWorldRotation());
+        bone->SetWorldRotation(bone->GetWorldRotation() * shareRotation);
     }
 }
 

@@ -111,7 +111,7 @@ void ScaleEditorGizmo::OnDragStart(const Handle<Camera>& camera, const MouseEven
     if (axis >= 0)
     {
         axisDirection[axis] = 1.0f;
-        axisDirection = focusedNode->GetWorldRotation().Inverse().RotateVector(axisDirection).Normalized();
+        axisDirection = focusedNode->GetWorldRotation().RotateVector(axisDirection).Normalized();
 
         const Vec3f cameraFacingNormal = cameraDirection - axisDirection * cameraDirection.Dot(axisDirection);
 

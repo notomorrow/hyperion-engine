@@ -134,9 +134,9 @@ static void BuildTranslateGizmo(Handle<AssetRegistry>& assetRegistry)
     };
 
     static const Quat4f s_axisRotations[3] = {
-        Quat4f::AxisAngles(Vec3f::UnitZ(), MathUtil::pi<float> * 0.5f),
+        Quat4f::AxisAngles(Vec3f::UnitZ(), -MathUtil::pi<float> * 0.5f),
         Quat4f::Identity(),
-        Quat4f::AxisAngles(Vec3f::UnitX(), -MathUtil::pi<float> * 0.5f)
+        Quat4f::AxisAngles(Vec3f::UnitX(), MathUtil::pi<float> * 0.5f)
     };
 
     static const char* s_axisNames[3] = { "TranslateGizmo_AxisX", "TranslateGizmo_AxisY", "TranslateGizmo_AxisZ" };
@@ -175,9 +175,9 @@ static void BuildRotateGizmo(Handle<AssetRegistry>& assetRegistry)
     };
 
     static const Quat4f s_axisRotations[3] = {
-        Quat4f::AxisAngles(Vec3f::UnitZ(), MathUtil::pi<float> * 0.5f),
+        Quat4f::AxisAngles(Vec3f::UnitZ(), -MathUtil::pi<float> * 0.5f),
         Quat4f::Identity(),
-        Quat4f::AxisAngles(Vec3f::UnitX(), MathUtil::pi<float> * 0.5f)
+        Quat4f::AxisAngles(Vec3f::UnitX(), -MathUtil::pi<float> * 0.5f)
     };
 
     static const char* s_axisNames[3] = { "RotateGizmo_AxisX", "RotateGizmo_AxisY", "RotateGizmo_AxisZ" };
@@ -233,9 +233,9 @@ static void BuildScaleGizmo(Handle<AssetRegistry>& assetRegistry)
     };
 
     static const Quat4f s_axisRotations[3] = {
-        Quat4f::AxisAngles(Vec3f::UnitZ(), MathUtil::pi<float> * 0.5f),
+        Quat4f::AxisAngles(Vec3f::UnitZ(), -MathUtil::pi<float> * 0.5f),
         Quat4f::Identity(),
-        Quat4f::AxisAngles(Vec3f::UnitX(), -MathUtil::pi<float> * 0.5f)
+        Quat4f::AxisAngles(Vec3f::UnitX(), MathUtil::pi<float> * 0.5f)
     };
 
     static const char* s_axisNames[3] = { "ScaleGizmo_AxisX", "ScaleGizmo_AxisY", "ScaleGizmo_AxisZ" };
@@ -264,10 +264,10 @@ static void BuildVolumeGizmo(Handle<AssetRegistry>& assetRegistry)
     GlobalContextScope assetRegistryScope { AssetRegistryContext { assetRegistry } };
 
     static const Quat4f s_faceRotations[6] = {
-        Quat4f::AxisAngles(Vec3f::UnitY(), -MathUtil::pi<float> * 0.5f),
         Quat4f::AxisAngles(Vec3f::UnitY(), MathUtil::pi<float> * 0.5f),
-        Quat4f::AxisAngles(Vec3f::UnitX(), MathUtil::pi<float> * 0.5f),
+        Quat4f::AxisAngles(Vec3f::UnitY(), -MathUtil::pi<float> * 0.5f),
         Quat4f::AxisAngles(Vec3f::UnitX(), -MathUtil::pi<float> * 0.5f),
+        Quat4f::AxisAngles(Vec3f::UnitX(), MathUtil::pi<float> * 0.5f),
         Quat4f::AxisAngles(Vec3f::UnitY(), MathUtil::pi<float>),
         Quat4f::Identity()
     };

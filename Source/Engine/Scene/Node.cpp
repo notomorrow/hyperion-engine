@@ -71,6 +71,17 @@ String NodeTag::ToString() const
 
 #pragma endregion NodeTag
 
+void Node_OnPostLoad(Node& node)
+{
+    if (node.m_rotationConvention >= Node::s_currentRotationConvention)
+    {
+        return;
+    }
+
+    node.m_rotationConvention = Node::s_currentRotationConvention;
+    node.ConvertLegacyRotations();
+}
+
 #pragma region Node
 
 Node::Node(Name name, const Transform& localTransform, Scene* scene)
@@ -382,6 +393,13 @@ void Node::SetChildren(const NodeList& children)
     }
 }
 
+void Node::ConvertLegacyRotations()
+{
+    m_localTransform.SetRotation(m_localTransform.GetRotation().Inverse());
+
+    UpdateWorldTransform();
+}
+
 static Transform TransformFromMatrix(const Mat4f& matrix)
 {
     const Vec3f scale = matrix.ExtractScale();
@@ -402,8 +420,7 @@ static Transform TransformFromMatrix(const Mat4f& matrix)
         }
     }
 
-    // Mat4f::Rotation(q) builds the matrix of q's inverse, so the quaternion read back from the matrix is inverted
-    return Transform(matrix.ExtractTranslation(), scale, Quat4f(rotationMatrix).Inverse());
+    return Transform(matrix.ExtractTranslation(), scale, Quat4f(rotationMatrix));
 }
 
 Handle<Node> Node::AddChild(const Handle<Node>& node)
@@ -989,7 +1006,7 @@ void Node::SetWorldScale(const Vec3f& scale, TransformChangeType changeType)
 
 Quat4f Node::GetWorldRotation() const
 {
-    return Quat4f(m_worldMatrix).Inverse();
+    return Quat4f(m_worldMatrix);
 }
 
 void Node::SetWorldRotation(const Quat4f& rotation, TransformChangeType changeType)

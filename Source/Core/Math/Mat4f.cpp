@@ -60,17 +60,17 @@ Mat4f Mat4f::Rotation(const Quat4f& rotation)
                 zw = rotation.z * rotation.w;
 
     mat[0][0] = 1.0f - 2.0f * (yy + zz);
-    mat[0][1] = 2.0f * (xy + zw);
-    mat[0][2] = 2.0f * (xz - yw);
+    mat[0][1] = 2.0f * (xy - zw);
+    mat[0][2] = 2.0f * (xz + yw);
     mat[0][3] = 0.0f;
 
-    mat[1][0] = 2.0f * (xy - zw);
+    mat[1][0] = 2.0f * (xy + zw);
     mat[1][1] = 1.0f - 2.0f * (xx + zz);
-    mat[1][2] = 2.0f * (yz + xw);
+    mat[1][2] = 2.0f * (yz - xw);
     mat[1][3] = 0.0f;
 
-    mat[2][0] = 2.0f * (xz + yw);
-    mat[2][1] = 2.0f * (yz - xw);
+    mat[2][0] = 2.0f * (xz - yw);
+    mat[2][1] = 2.0f * (yz + xw);
     mat[2][2] = 1.0f - 2.0f * (xx + yy);
     mat[2][3] = 0.0f;
 

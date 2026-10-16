@@ -746,9 +746,7 @@ Transform DecomposeMatrix(Mat4f matrix)
         matrix[2][0] *= -1.0f;
     }
 
-    // Mat4f::Rotation builds the transposed rotation matrix, so Transform stores
-    // rotations inverted relative to the standard quaternion convention
-    Quat4f rotation = matrix.ExtractRotation().Inverse();
+    Quat4f rotation = matrix.ExtractRotation();
     rotation.Normalize();
 
     return Transform(translation, scale, rotation);
@@ -783,13 +781,12 @@ Transform BuildTransformFromNode(const cgltf_node& node)
 
     if (node.has_rotation)
     {
-        // mirror - we use LHS; inverted to match the transposed convention of Mat4f::Rotation
+        // mirror - we use LHS
         rotation = Quat4f(
                        -float(node.rotation[0]),
                        -float(node.rotation[1]),
                        float(node.rotation[2]),
-                       float(node.rotation[3]))
-                       .Inverse();
+                       float(node.rotation[3]));
         rotation.Normalize();
     }
 
@@ -1275,8 +1272,8 @@ Handle<Animation> BuildAnimationForSkin(const LoaderState& state, const cgltf_an
             {
                 jointChannels->rotation.Sample(keyTime, value);
 
-                // mirror - we use LHS; inverted to match the transposed convention of Mat4f::Rotation
-                transform.rotation = Quat4f(-value[0], -value[1], value[2], value[3]).Inverse();
+                // mirror - we use LHS
+                transform.rotation = Quat4f(-value[0], -value[1], value[2], value[3]);
                 transform.rotation.Normalize();
             }
 

@@ -104,6 +104,13 @@ void Bone::SetToBindingPose()
     }
 }
 
+void Bone::ConvertLegacyRotations()
+{
+    m_bindingTransform.SetRotation(m_bindingTransform.GetRotation().Inverse());
+
+    Node::ConvertLegacyRotations();
+}
+
 void Bone::OnTransformUpdated()
 {
     UpdateBoneTransform();
