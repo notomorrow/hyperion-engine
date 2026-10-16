@@ -8,11 +8,14 @@
 
 #include <Rendering/Pass.hpp>
 #include <Rendering/RenderTypes.hpp>
+
 #include <Rendering/Glimmer/GlimmerTechnique.hpp>
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
 
 #include <Core/Memory/UniquePtr.hpp>
 #include <Core/Memory/SharedPtr.hpp>
+
+#include <Core/Utilities/EnumFlags.hpp>
 
 #include <Core/Containers/Map.hpp>
 
@@ -33,6 +36,22 @@ struct GlimmerApplyShaderData
     Vec4u params;   // x = 1 to show Glimmer's irradiance on its own, y = 1 when either volume can be sampled
     Vec4f settings; // x = intensity
 };
+
+enum class GlimmerStartupStage : uint32
+{
+    None = 0x0,
+    SceneInstances = 0x1,
+    Triangles = 0x2,
+    Spans = 0x4,
+    Bricks = 0x8,
+    BricksSettled = 0x10,
+    SH = 0x20,
+    Probes = 0x40,
+    WarmingUp = 0x80,
+    FirstUpdate = 0x100
+};
+
+HYP_MAKE_ENUM_FLAGS(GlimmerStartupStage);
 
 HYP_CLASS(NoScriptBindings)
 class GlimmerScenePassData : public PassData
@@ -55,6 +74,10 @@ public:
     uint32 lastUpdatedFrame = ~0u;
 
     bool isWarmingUp = false;
+
+    uint64 startTime = 0;
+    uint32 startFrame = 0;
+    EnumFlags<GlimmerStartupStage> loggedStages = GlimmerStartupStage::None;
 
     Array<GlimmerGroundUpload, GlimmerAllocator> groundUploads;
 };

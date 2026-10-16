@@ -92,6 +92,10 @@ static constexpr uint32 PoolCards = 2;
 static constexpr uint32 InitialPoolBricks = 4096;
 static constexpr uint32 InitialPoolPages = 16384;
 static constexpr uint32 InitialPoolCards = 16384;
+
+static constexpr double IdealPagesPerBrick = 3.0;
+static constexpr double IdealCardsPerBrick = 2.5;
+
 static constexpr uint32 RelightBricksPerFrame = 128;
 static constexpr uint32 RelightTrickleBricks = 16;
 static constexpr float RelightBurstChange = 0.05f;
@@ -160,6 +164,8 @@ struct GlimmerBrickDebugConstants
 };
 
 #pragma region GlimmerBrickWorld
+
+Vec3u GlimmerBrickWorld::s_largestPools = Vec3u::Zero();
 
 const GlimmerBrickWorld::PoolBuffer GlimmerBrickWorld::s_poolBuffers[] = {
     { &GlimmerBrickWorld::m_indexBuffer, PoolBricks, GlimmerBrickIndexStride, false, NAME("GlimmerBrickIndex") },
@@ -259,6 +265,57 @@ uint64 GlimmerBrickWorld::PoolBytes(const Vec3u& pools, bool isLit)
     return numWords * sizeof(uint32);
 }
 
+Vec3u GlimmerBrickWorld::GetInitialPools() const
+{
+    const Vec3u maxima = Vec3u(GlimmerBrickMaxPoolBricks, GlimmerBrickMaxPoolPages, GlimmerBrickMaxPoolCards);
+    const uint64 budgetBytes = uint64(MathUtil::Max(g_cvGlimmerBricksPoolBudgetMB.Get(), 0)) * 1024ull * 1024ull;
+    const uint64 initialBytes = MathUtil::Min(uint64(MathUtil::Max(g_cvGlimmerBricksInitialPoolMB.Get(), 0)) * 1024ull * 1024ull, budgetBytes);
+
+    Vec3u pools = Vec3u(InitialPoolBricks, InitialPoolPages, InitialPoolCards);
+
+    if (initialBytes != 0)
+    {
+        const auto getIdeal = [&](uint32 bricks)
+        {
+            return Vec3u(
+                bricks,
+                uint32(MathUtil::Min(std::ceil(IdealPagesPerBrick * double(bricks)), double(maxima.y))),
+                uint32(MathUtil::Min(std::ceil(IdealCardsPerBrick * double(bricks)), double(maxima.z))));
+        };
+
+        uint32 low = 0;
+        uint32 high = maxima.x;
+
+        while (low < high)
+        {
+            const uint32 middle = low + (high - low + 1) / 2;
+
+            if (PoolBytes(getIdeal(middle), true) <= initialBytes)
+            {
+                low = middle;
+            }
+            else
+            {
+                high = middle - 1;
+            }
+        }
+
+        const Vec3u sized = getIdeal(low);
+
+        for (int pool = 0; pool < 3; pool++)
+        {
+            pools[pool] = MathUtil::Max(pools[pool], sized[pool]);
+        }
+    }
+
+    for (int pool = 0; pool < 3; pool++)
+    {
+        pools[pool] = MathUtil::Min(MathUtil::Max(pools[pool], s_largestPools[pool]), maxima[pool]);
+    }
+
+    return pools;
+}
+
 void GlimmerBrickWorld::CreateResources()
 {
     m_tableBuffer = CreateBrickBuffer(BrickTableSize, NAME("GlimmerBrickTable"));
@@ -273,7 +330,7 @@ void GlimmerBrickWorld::CreateResources()
     m_dispatchArgsBuffer->SetDebugName(NAME("GlimmerBrickDispatchArgs"));
 #endif
 
-    m_pools = Vec3u(InitialPoolBricks, InitialPoolPages, InitialPoolCards);
+    m_pools = GetInitialPools();
 
     CreatePoolBuffers(false);
 
@@ -331,6 +388,11 @@ void GlimmerBrickWorld::GrowPoolResources(Frame* frame, const Vec3u& grown)
     }
 
     m_pools = grown;
+
+    for (int pool = 0; pool < 3; pool++)
+    {
+        s_largestPools[pool] = MathUtil::Max(s_largestPools[pool], grown[pool]);
+    }
 
     const uint32 numAdded = MathUtil::Max(grown.x - old.x, MathUtil::Max(grown.y - old.y, grown.z - old.z));
 
@@ -409,8 +471,9 @@ bool GlimmerBrickWorld::GrowPools(const Vec3u& needed)
             continue;
         }
 
-        // twice the size, or as much more as the budget leaves room for
-        uint32 increase = MathUtil::Min(current[pool] * 2, caps[pool]) - current[pool];
+        // twice the size, or what the batch fell short by and a quarter more if that's bigger, or as much more as the budget leaves room for
+        const uint64 wanted = MathUtil::Max(uint64(current[pool]) * 2, uint64(current[pool]) + uint64(needed[pool]) + uint64(needed[pool]) / 4);
+        uint32 increase = uint32(MathUtil::Min(wanted, uint64(caps[pool]))) - current[pool];
 
         for (; increase >= MinPoolIncrease; increase /= 2)
         {
@@ -876,15 +939,38 @@ bool GlimmerBrickWorld::ReadBuildCounters(Frame* frame, const Vec3f& viewerPosit
         m_numSoloBuilds = MathUtil::Max(m_numSoloBuilds, numPending);
     }
 
+    const auto isCurrent = [&](uint32 buildIndex, const Chunk& chunk)
+    {
+        const ChunkBuild& build = m_pendingBuilds[slot][buildIndex];
+
+        return chunk.coord == build.coord
+            && chunk.buildSerial == build.buildSerial
+            && !chunk.isDirty;
+    };
+
+    Vec3u batchNeeded = Vec3u::Zero();
+
+    for (uint32 buildIndex = 0; buildIndex < numPending && !isOverflowed; buildIndex++)
+    {
+        const Chunk& chunk = m_chunks[ChunkSlot(m_pendingBuilds[slot][buildIndex].coord)];
+
+        if (isCurrent(buildIndex, chunk))
+        {
+            const uint32* record = counters.Data() + BrickNumCounters + size_t(buildIndex) * BrickSlotCounters;
+
+            batchNeeded += Vec3u(record[BrickSlotFailedBricks], record[BrickSlotFailedPages], record[BrickSlotFailedCards]);
+        }
+    }
+
+    const bool isGrowing = batchNeeded != Vec3u::Zero() && GrowPools(batchNeeded);
+
     bool hasWritten = false;
 
     for (uint32 buildIndex = 0; buildIndex < numPending; buildIndex++)
     {
-        const ChunkBuild& build = m_pendingBuilds[slot][buildIndex];
-        Chunk& chunk = m_chunks[ChunkSlot(build.coord)];
+        Chunk& chunk = m_chunks[ChunkSlot(m_pendingBuilds[slot][buildIndex].coord)];
 
-        // built again, cleared or gone from the window since
-        if (chunk.coord != build.coord || chunk.buildSerial != build.buildSerial || chunk.isDirty)
+        if (!isCurrent(buildIndex, chunk))
         {
             continue;
         }
@@ -914,7 +1000,7 @@ bool GlimmerBrickWorld::ReadBuildCounters(Frame* frame, const Vec3f& viewerPosit
         // it keeps what it got until it's built again
         chunk.isDirty = true;
 
-        if (GrowPools(needed))
+        if (isGrowing)
         {
             continue;
         }
@@ -1132,7 +1218,7 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
     // counted per frame, so a low frame rate gets more a frame to keep the same pace
     const uint32 maxBuilds = m_numSoloBuilds != 0
         ? 1u
-        : uint32(MathUtil::Clamp(int32(float(g_cvGlimmerBricksChunksPerFrame.Get()) * MathUtil::Clamp(budgetScale, 1.0f, 4.0f)), 1, int32(GlimmerBrickMaxChunkBuildsPerFrame)));
+        : uint32(MathUtil::Clamp(int32(float(g_cvGlimmerBricksChunksPerFrame.Get()) * MathUtil::Clamp(budgetScale, 1.0f, 8.0f)), 1, int32(GlimmerBrickMaxChunkBuildsPerFrame)));
 
     const Vec3f buildFocus = GetGlimmerWindowCenter(viewerPosition, lookAhead, Vec3f(ChunkDims) * ChunkSize);
 

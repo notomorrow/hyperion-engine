@@ -103,6 +103,20 @@ public:
     }
 
     HYP_METHOD()
+    bool IsForegroundTask() const
+    {
+        Mutex::Guard guard(m_mutex);
+        return m_isForegroundTask;
+    }
+
+    HYP_METHOD()
+    void SetIsForegroundTask(bool isForeground)
+    {
+        Mutex::Guard guard(m_mutex);
+        m_isForegroundTask = isForeground;
+    }
+
+    HYP_METHOD()
     virtual void Start() = 0;
 
     HYP_METHOD()
@@ -127,7 +141,8 @@ protected:
     EditorTaskBase()
         : m_progress(0.0f),
           m_isCancellationRequested(false),
-          m_isCommitted(false)
+          m_isCommitted(false),
+          m_isForegroundTask(false)
     {
     }
 
@@ -136,6 +151,7 @@ protected:
     float m_progress;
     bool m_isCancellationRequested;
     bool m_isCommitted;
+    bool m_isForegroundTask;
     mutable Mutex m_mutex;
 };
 
@@ -182,18 +198,6 @@ public:
     }
 
     HYP_METHOD()
-    HYP_FORCE_INLINE bool IsForegroundTask() const
-    {
-        return m_isForegroundTask;
-    }
-
-    HYP_METHOD()
-    void SetIsForegroundTask(bool isForeground)
-    {
-        m_isForegroundTask = isForeground;
-    }
-
-    HYP_METHOD()
     virtual void Start() override;
 
     HYP_METHOD()
@@ -236,8 +240,6 @@ protected:
     }
 
     ClockTimer m_timer;
-
-    bool m_isForegroundTask;
 
 private:
     Proc<void()> m_tickProc;

@@ -238,8 +238,11 @@ private:
     };
 
     static const PoolBuffer s_poolBuffers[];
+    static Vec3u s_largestPools;
 
     static uint64 PoolBytes(const Vec3u& pools, bool isLit);
+
+    Vec3u GetInitialPools() const;
 
     void CreateResources();
     void CreatePoolBuffers(bool isLitOnly);

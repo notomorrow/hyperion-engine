@@ -163,7 +163,17 @@ GlimmerTechnique::~GlimmerTechnique()
 
 bool GlimmerTechnique::IsReady() const
 {
-    return (m_probeVolume->IsReady() && g_cvGlimmerProbesEnabled.Get()) || m_shVolume->IsReady();
+    return IsProbesReady() || IsSHReady();
+}
+
+bool GlimmerTechnique::IsSHReady() const
+{
+    return m_shVolume->IsReady();
+}
+
+bool GlimmerTechnique::IsProbesReady() const
+{
+    return m_probeVolume->IsReady() && g_cvGlimmerProbesEnabled.Get();
 }
 
 void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)

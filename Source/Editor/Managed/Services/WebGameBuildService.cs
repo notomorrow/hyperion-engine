@@ -16,6 +16,8 @@ namespace Hyperion.Editor.Services
 
         private static readonly Regex ErrorLineRegex = new Regex(@"(^ERROR:|\berror\b|CMake Error)", RegexOptions.Compiled);
 
+        private static readonly Regex StepLineRegex = new Regex(@"^==> \[(\d+)%\] (.*)$", RegexOptions.Compiled);
+
         private int _isBuilding;
 
         private WebGameBuildService()
@@ -64,19 +66,53 @@ namespace Hyperion.Editor.Services
                 return false;
             }
 
+            string projectName = Path.GetFileNameWithoutExtension(projectFilePath) ?? Path.GetFileName(projectDirectory);
+
+            ExternalEditorTask task = new ExternalEditorTask($"Building {projectName} for Web", "Starting");
+            task.SetIsForegroundTask(true);
+            task.Commit();
+
             try
             {
                 Logger.Log(BuildLogChannel, LogLevel.Info, "Building {0} for the web", projectDirectory);
 
                 string? firstError = null;
+                bool isCancelled = false;
 
                 int exitCode = await RunAsync(scriptPath, projectDirectory, run, line =>
                 {
-                    if (firstError == null && ErrorLineRegex.IsMatch(line))
+                    Match stepMatch = StepLineRegex.Match(line);
+
+                    if (stepMatch.Success)
+                    {
+                        task.SetStep(stepMatch.Groups[2].Value, int.Parse(stepMatch.Groups[1].Value) / 100.0f);
+                    }
+                    else if (firstError == null && ErrorLineRegex.IsMatch(line))
                     {
                         firstError = line;
                     }
+                }, process =>
+                {
+                    task.OnCancelAction = () =>
+                    {
+                        isCancelled = true;
+
+                        try
+                        {
+                            process.Kill(entireProcessTree: true);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    };
                 }).ConfigureAwait(false);
+
+                if (isCancelled)
+                {
+                    Logger.Log(BuildLogChannel, LogLevel.Warning, "Web build cancelled");
+
+                    return false;
+                }
 
                 if (exitCode != 0)
                 {
@@ -99,11 +135,14 @@ namespace Hyperion.Editor.Services
             }
             finally
             {
+                task.OnCancelAction = null;
+                task.Complete();
+
                 Interlocked.Exchange(ref _isBuilding, 0);
             }
         }
 
-        private static async Task<int> RunAsync(string scriptPath, string projectDirectory, bool run, Action<string> onOutputLine)
+        private static async Task<int> RunAsync(string scriptPath, string projectDirectory, bool run, Action<string> onOutputLine, Action<Process> onStarted)
         {
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
@@ -146,6 +185,8 @@ namespace Hyperion.Editor.Services
             process.ErrorDataReceived += (_, eventArgs) => OnLine(eventArgs.Data);
 
             process.Start();
+
+            onStarted(process);
 
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();

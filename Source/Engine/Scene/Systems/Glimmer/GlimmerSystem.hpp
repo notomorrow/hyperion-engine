@@ -76,6 +76,7 @@ private:
     Vec3f m_lastViewerPosition;
     Vec3f m_viewerVelocity;
     bool m_hasLastViewer = false;
+    float m_timeSinceStart = 0.0f;
 };
 
 } // namespace Hyperion

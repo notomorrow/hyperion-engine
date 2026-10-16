@@ -21,5 +21,7 @@ CVar<bool> g_cvGlimmerHalfRes("Rendering.Glimmer.HalfRes", true);
 CVar<int> g_cvGlimmerDebugSH("Rendering.Glimmer.DebugSH", 0);
 CVar<float> g_cvGlimmerVisibility("Rendering.Glimmer.Visibility", 1.0f);
 CVar<bool> g_cvGlimmerLookAhead("Rendering.Glimmer.LookAhead", true);
+CVar<float> g_cvGlimmerStartupBurstSeconds("Rendering.Glimmer.StartupBurstSeconds", 8.0f);
+CVar<int> g_cvGlimmerBuildThreads("Rendering.Glimmer.BuildThreads", 0);
 
 } // namespace Hyperion

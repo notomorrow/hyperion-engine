@@ -25,9 +25,9 @@ $webSdk = Join-Path $rootDir "Binaries\Web\Release\Sdk\CMake\HyperionWebSdk.cmak
 $templateDir = Join-Path $rootDir "Source\Templates\Platforms\Web"
 $pinnedEmscriptenVersion = "6.0.11"
 
-function Step([string]$text)
+function Step([int]$percent, [string]$text)
 {
-    Write-Host "==> $text"
+    Write-Host "==> [$percent%] $text"
 }
 
 function Fail([string]$message)
@@ -142,7 +142,7 @@ Write-Host "Building $name for the web: worlds $($worldList -join ', '), texture
 
 # 1. the toolchain
 
-Step "Checking the toolchain"
+Step 0 "Checking the toolchain"
 
 if (-not $env:EMSDK -or -not (Test-Path (Join-Path $env:EMSDK "emsdk_env.bat")))
 {
@@ -255,11 +255,13 @@ if ($NoRecord)
     $needsRecording = $false
 }
 
+$progress = if ($needsRecording) { @{ Narrowing = 44; Cooking = 46; Page = 55 } } else { @{ Narrowing = 2; Cooking = 4; Page = 20 } }
+
 if ($needsRecording)
 {
     if (-not (Test-Path (Join-Path $packageDir "Cache\toc.bin")))
     {
-        Step "Cooking everything once, to record the level from"
+        Step 2 "Cooking everything once, to record the level from"
         Invoke-Cook "" ""
     }
 
@@ -267,7 +269,7 @@ if ($needsRecording)
 
     if ($hasGameCode)
     {
-        Step "Building the game code against the recording runtime"
+        Step 10 "Building the game code against the recording runtime"
 
         $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
         $vsDir = & $vsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
@@ -322,7 +324,7 @@ if ($needsRecording)
 
     $workListPath = Join-Path $workDir "engine-assets.txt"
 
-    function Invoke-RecordingRun([string]$label, [string[]]$extraArguments)
+    function Invoke-RecordingRun([int]$percent, [string]$label, [string[]]$extraArguments)
     {
         $arguments = @("--configvariant=Web", "--basedir=$($rootDir -replace '\\', '/')", "--singleplayer=true", "--cooked=true",
             "--cachedir=$workDir\Cache", "--contentdir=$workDir\Content") + $extraArguments
@@ -332,7 +334,7 @@ if ($needsRecording)
             $arguments += "--startupworld=$($worldList[0])"
         }
 
-        Step "$label, $RecordSeconds seconds"
+        Step $percent "$label, $RecordSeconds seconds"
 
         $process = Start-Process -FilePath $runExe -ArgumentList (Format-Arguments $arguments) -WorkingDirectory $runDir -PassThru `
             -RedirectStandardOutput (Join-Path $workDir "$label.log") -RedirectStandardError (Join-Path $workDir "$label.err.log")
@@ -351,8 +353,8 @@ if ($needsRecording)
     $recordStart = Get-Date
 
     # a shader variant compiled during a run is not in that run's list, so the first run only compiles
-    Invoke-RecordingRun "Recording run 1 of 2 (compiling)" @()
-    Invoke-RecordingRun "Recording run 2 of 2 (recording)" @("--record-engine-assets=$workListPath")
+    Invoke-RecordingRun 20 "Recording run 1 of 2 (compiling)" @()
+    Invoke-RecordingRun 32 "Recording run 2 of 2 (recording)" @("--record-engine-assets=$workListPath")
 
     $recordedFiles = @($workListPath, (Join-Path $workDir "Cache\shaderprops.bin"), (Join-Path $workDir "Cache\shaderpreload.bin"))
 
@@ -386,7 +388,7 @@ $shaderCache = ""
 
 if (Test-Path $listPath)
 {
-    Step "Narrowing the recorded engine assets to the web's shader variants"
+    Step $progress.Narrowing "Narrowing the recorded engine assets to the web's shader variants"
 
     $engineAssets = Join-Path $buildDir "EngineAssets.txt"
 
@@ -425,12 +427,12 @@ else
     Write-Host "WARNING: nothing recorded, so all engine content is cooked"
 }
 
-Step "Cooking"
+Step $progress.Cooking "Cooking"
 Invoke-Cook $engineAssets $shaderCache
 
 # 4. the page: the launch layer and the project's game code, linked against the engine's web build
 
-Step "Building the page"
+Step $progress.Page "Building the page"
 
 if (Test-Path $pageDir)
 {
@@ -447,7 +449,7 @@ Invoke-Cmd ("set `"EMSDK_QUIET=1`" && call `"$env:EMSDK\emsdk_env.bat`" >nul && 
 
 # 5. stage everything a host needs into Binaries/Web, leaving anything else the folder holds (a CNAME, say) alone
 
-Step "Staging into $outputDir"
+Step 97 "Staging into $outputDir"
 
 New-Item -ItemType Directory -Force $outputDir | Out-Null
 

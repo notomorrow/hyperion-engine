@@ -8,6 +8,7 @@
 
 #include <Rendering/Glimmer/GlimmerTriangleCache.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
+#include <Rendering/Glimmer/GlimmerCVars.hpp>
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/CommandRecorder.hpp>
@@ -33,6 +34,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <thread>
 
 namespace Hyperion {
 
@@ -49,7 +51,8 @@ static constexpr uint64 PoolBytes = 160ull * 1024ull * 1024ull;
 static constexpr uint64 LightmapUVPoolBytes = 24ull * 1024ull * 1024ull;
 static constexpr uint64 TexcoordPoolBytes = 32ull * 1024ull * 1024ull;
 
-static constexpr uint32 MaxBuildsInFlight = 4;
+// builds queued a thread, so each has the next to hand
+static constexpr uint32 BuildsInFlightPerThread = 2;
 static constexpr size_t UploadBudgetBytes = 8u * 1024u * 1024u;
 
 // a full pool only gives up a mesh's triangles for one this much nearer, so two meshes at about the same distance don't take turns
@@ -69,6 +72,21 @@ static constexpr float LodErrorScaleStepDown = 1.25f;
 static constexpr float MaxLodErrorScale = 4.0f;
 static constexpr float LodErrorScaleMinUsageDrop = 0.005f;
 static constexpr float LodErrorScaleRelaxUsage = 0.8f;
+
+namespace /* Helpers */ {
+
+// a quarter of the cores to prevent oversubscription of the frame's threads on startup.
+uint32 GetNumBuildThreads()
+{
+    if (g_cvGlimmerBuildThreads.Get() > 0)
+    {
+        return uint32(g_cvGlimmerBuildThreads.Get());
+    }
+
+    return MathUtil::Clamp(std::thread::hardware_concurrency() / 4u, 1u, 4u);
+}
+
+} // namespace
 
 #pragma region GlimmerPoolAllocator
 
@@ -182,7 +200,8 @@ public:
 };
 
 GlimmerTriangleCache::GlimmerTriangleCache()
-    : m_buildPool(MakeUnique<TaskThreadPool>(TypeWrapper<GlimmerBuildThread>(), "GlimmerBuild", 1)),
+    : m_numBuildThreads(GetNumBuildThreads()),
+      m_buildPool(MakeUnique<TaskThreadPool>(TypeWrapper<GlimmerBuildThread>(), "GlimmerBuild", m_numBuildThreads)),
       m_residentGeneration(0),
       m_evictionGeneration(0),
       m_numBuildsInFlight(0),
@@ -1160,7 +1179,7 @@ void GlimmerTriangleCache::Update(Frame* frame)
 
     for (Entry* entryPtr : queued)
     {
-        if (m_numBuildsInFlight >= MaxBuildsInFlight)
+        if (m_numBuildsInFlight >= m_numBuildThreads * BuildsInFlightPerThread)
         {
             break;
         }

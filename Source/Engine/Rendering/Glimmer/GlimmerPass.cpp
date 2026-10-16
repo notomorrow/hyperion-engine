@@ -16,6 +16,8 @@
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
 
+#include <Rendering/Glimmer/Bricks/GlimmerBrickWorld.hpp>
+
 #include <Rendering/Passes/DeferredPass.hpp>
 
 #include <Rendering/RenderInterface.hpp>
@@ -41,11 +43,13 @@
 
 #include <Core/Math/MathUtil.hpp>
 
+#include <Core/Profiling/PerformanceClock.hpp>
+#include <Core/Profiling/ProfileScope.hpp>
+
 #include <Core/Utilities/DeferredScope.hpp>
 
 #include <Core/Threading/Threads.hpp>
 
-#include <Core/Profiling/ProfileScope.hpp>
 
 #include <Core/Logging/Logger.hpp>
 
@@ -68,6 +72,89 @@ static EngineStatCounter<uint32> s_statGlimmerSceneInstancesBuilds("Rendering/Gl
 static EngineStatCounter<uint32> s_statGlimmerSceneInstancesEverywhereBuilds("Rendering/Glimmer/InstanceEverywhereBuilds", false);
 static EngineStatCounter<uint32> s_statGlimmerSceneInstancesChanges("Rendering/Glimmer/InstanceChanges", false);
 static EngineStatCounter<uint32> s_statGlimmerSceneInstancesLodOnlyChanges("Rendering/Glimmer/InstanceLodOnlyChanges", false);
+
+namespace  /* Helpers */ {
+
+void LogStartupStages(GlimmerScenePassData& scene)
+{
+    const auto checkReached = [&scene](GlimmerStartupStage stage, bool isReached) -> bool
+    {
+        if (!isReached || (scene.loggedStages & stage))
+        {
+            return false;
+        }
+
+        scene.loggedStages |= stage;
+
+        return true;
+    };
+
+    const double ms = PerformanceClock::TimeSince(scene.startTime);
+    const uint32 frames = GetFrameCounter() - scene.startFrame;
+
+    if (checkReached(GlimmerStartupStage::FirstUpdate, frames == 0))
+    {
+        HYP_LOG(Rendering, Info, "Glimmer start: first update took {} ms", uint32(ms));
+    }
+
+    if (checkReached(GlimmerStartupStage::WarmingUp, scene.isWarmingUp))
+    {
+        HYP_LOG(Rendering, Info, "Glimmer start: held at {} ms, frame {} while {} pipelines compile", uint32(ms), frames, RI.GetNumPipelinesCompilingInBackground());
+    }
+
+    const GlimmerSceneInstances& sceneInstances = *scene.sceneInstances;
+    const GlimmerSceneInstancesStats& instancesStats = sceneInstances.GetStats();
+
+    if (checkReached(GlimmerStartupStage::SceneInstances, sceneInstances.IsReady()))
+    {
+        const GlimmerTriangleCacheStats triangleStats = scene.triangleCache->GetStats();
+
+        HYP_LOG(Rendering, Info, "Glimmer start: scene instances at {} ms, frame {} ({} span instances, build {} ms, {} builds, {} waiting for triangles; meshes {} resident, {} building, {} to upload)",
+            uint32(ms), frames, instancesStats.numSpanInstances, uint32(instancesStats.lastBuildMs), instancesStats.numBuilds, instancesStats.numWaitingForTriangles,
+            triangleStats.numResident, triangleStats.numBuilding, triangleStats.numPendingUpload);
+    }
+
+    if (checkReached(GlimmerStartupStage::Triangles, sceneInstances.IsReady() && instancesStats.numWaitingForTriangles == 0))
+    {
+        HYP_LOG(Rendering, Info, "Glimmer start: every mesh's triangles at {} ms, frame {} ({} builds)", uint32(ms), frames, instancesStats.numBuilds);
+    }
+
+    if (checkReached(GlimmerStartupStage::Spans, scene.spanCache && scene.spanCache->GetSpansBuffer().IsValid()))
+    {
+        HYP_LOG(Rendering, Info, "Glimmer start: spans at {} ms, frame {}", uint32(ms), frames);
+    }
+
+    if (!scene.technique)
+    {
+        return;
+    }
+
+    const GlimmerBrickWorld* brickWorld = scene.technique->GetBrickWorld();
+
+    const bool hasTriangles = bool(scene.loggedStages & GlimmerStartupStage::Triangles);
+
+    if (checkReached(GlimmerStartupStage::Bricks, hasTriangles && brickWorld && brickWorld->IsReady()))
+    {
+        HYP_LOG(Rendering, Info, "Glimmer start: bricks at {} ms, frame {}", uint32(ms), frames);
+    }
+
+    if (checkReached(GlimmerStartupStage::BricksSettled, hasTriangles && brickWorld && brickWorld->IsSettled()))
+    {
+        HYP_LOG(Rendering, Info, "Glimmer start: bricks settled at {} ms, frame {}", uint32(ms), frames);
+    }
+
+    if (checkReached(GlimmerStartupStage::SH, scene.technique->IsSHReady()))
+    {
+        HYP_LOG(Rendering, Info, "Glimmer start: SH at {} ms, frame {}", uint32(ms), frames);
+    }
+
+    if (checkReached(GlimmerStartupStage::Probes, scene.technique->IsProbesReady()))
+    {
+        HYP_LOG(Rendering, Info, "Glimmer start: probes at {} ms, frame {}", uint32(ms), frames);
+    }
+}
+
+} // namespace
 
 #pragma region GlimmerScenePassData
 
@@ -197,6 +284,14 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         scene->isWarmingUp = false;
 
         isRestarting = true;
+
+        HYP_LOG(Rendering, Info, "Glimmer start: restarted at {} ms, frame {}, after pipelines compiled", uint32(PerformanceClock::TimeSince(scene->startTime)), frameCounter - scene->startFrame);
+    }
+
+    if (scene->startTime == 0)
+    {
+        scene->startTime = PerformanceClock::Now();
+        scene->startFrame = frameCounter;
     }
     else
     {
@@ -322,6 +417,8 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     s_statGlimmerSceneInstancesEverywhereBuilds = instancesStats.numEverywhereBuilds;
     s_statGlimmerSceneInstancesChanges = instancesStats.numChanges;
     s_statGlimmerSceneInstancesLodOnlyChanges = instancesStats.numLodOnlyChanges;
+
+    LogStartupStages(*scene);
 }
 
 bool GlimmerPass::RenderDebugView(Frame* frame, const RenderSetup& renderSetup, Framebuffer* gbufferFramebuffer, GpuImageViewRef& outImageView)
