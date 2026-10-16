@@ -453,7 +453,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     // WGSL wants every thread to reach them, and can't tell these are per-group decisions
     const bool isListed = listIndex < min(glimmerProbeCounters[0], constants.dispatch.x);
 
-    const uint probeIndex = isListed ? glimmerProbeUpdateList[listIndex] : 0u;
+    const uint probeIndex = isListed ? glimmerProbeCounters[GLIMMER_PROBE_COUNTERS + listIndex] : 0u;
     const int4 slot = glimmerProbeSlots[probeIndex / GLIMMER_PROBES_PER_BLOCK];
 
     const uint4 state = OutStates[probeIndex];

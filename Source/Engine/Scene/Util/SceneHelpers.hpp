@@ -26,7 +26,7 @@ enum class NetConnectionId : uint32;
 
 namespace SceneHelpers {
 
-Camera* FindMainCamera(const World& world);
+ENGINE_API Camera* FindMainCamera(const World& world);
 
 #ifdef HYP_EDITOR
 Camera* GetEditorCamera(const World& world);

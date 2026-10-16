@@ -17,6 +17,7 @@
 #include <Scene/Components/MeshComponent.hpp>
 
 #include <Scene/Camera/FirstPersonCamera.hpp>
+#include <Scene/Util/SceneHelpers.hpp>
 
 #include <Scene/WorldGrid/Terrain/TerrainWorldGridLayer.hpp>
 #include <Scene/WorldGrid/WorldGrid.hpp>
@@ -120,6 +121,21 @@ DefaultGame::~DefaultGame()
 
 void DefaultGame::OnLaunch()
 {
+    World* world = GetWorld();
+
+    if (!EngineGlobals::IsHeadless() && world != nullptr && world->GetScenes().Any() && SceneHelpers::FindMainCamera(*world) == nullptr)
+    {
+        Handle<Camera> freeCamera = MakeHandle<Camera>(70.0f, 1280, 720, 0.25f, 4000.0f);
+        freeCamera->SetName(NAME("FreeCamera"));
+        freeCamera->AddCameraController(MakeHandle<FirstPersonCameraController>());
+
+        world->GetScenes()[0]->GetRoot()->AddChild(freeCamera);
+
+        freeCamera->SetIsDynamic(true);
+        freeCamera->AddTag<EntityTag::PrimaryCamera>();
+        freeCamera->SetWorldTranslation(Vec3f(0.0f, 10.0f, 0.0f));
+    }
+
     Game::OnLaunch();
 
     // Should be set up by Game::OnLaunch(). A headless server doesn't need one

@@ -56,8 +56,7 @@ public:
 
     bool isWarmingUp = false;
 
-    Array<GlimmerGroundUpload> groundUploads;
-    uint32 groundUploadGeneration = 0;
+    Array<GlimmerGroundUpload, GlimmerAllocator> groundUploads;
 };
 
 HYP_CLASS(NoScriptBindings)

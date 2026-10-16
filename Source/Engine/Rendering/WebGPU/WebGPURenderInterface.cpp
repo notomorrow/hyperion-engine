@@ -718,7 +718,7 @@ void WebGPURenderInterface::PrepareSwapchain(WebGPUSwapchain* swapchain)
     swapchain->PrepareForFrame();
 }
 
-void WebGPURenderInterface::PresentToSwapchain(WebGPUSwapchain* swapchain)
+void WebGPURenderInterface::PresentToSwapchains(Span<WebGPUSwapchain* const> swapchains)
 {
     WebGPUCommandBuffer* commandBuffer = GetCurrentCommandBuffer();
     AssertDebug(commandBuffer != nullptr);
@@ -742,9 +742,12 @@ void WebGPURenderInterface::PresentToSwapchain(WebGPUSwapchain* swapchain)
 
     wgpuQueueOnSubmittedWorkDone(m_queue, callbackInfo);
 
-    if (swapchain != nullptr)
+    for (WebGPUSwapchain* swapchain : swapchains)
     {
-        swapchain->PresentFrame();
+        if (swapchain != nullptr)
+        {
+            swapchain->PresentFrame();
+        }
     }
 }
 

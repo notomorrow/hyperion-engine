@@ -39,6 +39,19 @@ if(EXISTS "${HYP_PLATFORM_DIR}")
   list(APPEND HEADERS ${PLATFORM_HEADERS})
 endif()
 
+# the engine is static on the web, so a C++ project's game code is built straight into the page
+if(HYP_WEB)
+  set(HYP_WEB_GAME_SOURCE_DIR "" CACHE PATH "A C++ project's Source folder, whose Game/ is built into the web build")
+
+  if(HYP_WEB_GAME_SOURCE_DIR)
+    file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS "${HYP_WEB_GAME_SOURCE_DIR}/Game/*.cpp")
+    list(APPEND SOURCES ${GAME_SOURCES})
+
+    include_directories(${HYP_WEB_GAME_SOURCE_DIR})
+    add_compile_definitions(HYP_WEB_GAME_MODULE=1)
+  endif()
+endif()
+
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to be used")
 include_directories(
     ${HYP_GENERATED_DIR}

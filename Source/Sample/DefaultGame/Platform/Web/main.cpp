@@ -21,6 +21,10 @@
 
 using namespace Hyperion;
 
+#ifdef HYP_WEB_GAME_MODULE
+extern "C" const char* HypGameModule_GetGameClassName();
+#endif
+
 static void MountPackage()
 {
 #ifdef HYP_WEB_NODE_PACKAGE_DIR
@@ -222,9 +226,18 @@ int main(int argc, char** argv)
 
     EngineGlobals::GetBlobStorage()->Lock(EngineGlobals::GetCacheDirectory(), /* readOnly */ true);
 
-    Handle<Game> defaultGame = Game::CreateGame("DefaultGame"_sh);
+#ifdef HYP_WEB_GAME_MODULE
+    Handle<Game> game = Game::CreateGame(StringHash(HypGameModule_GetGameClassName()));
+#else
+    Handle<Game> game = Game::CreateGame("DefaultGame"_sh);
+#endif
 
-    Hyp_SetGame(defaultGame.Get());
+    if (!game.IsValid())
+    {
+        HYP_FAIL("Failed to create the game!");
+    }
+
+    Hyp_SetGame(game.Get());
 
     if (!Hyp_LaunchThreads())
     {

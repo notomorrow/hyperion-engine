@@ -105,6 +105,12 @@ if not "%SHADER_CACHE%"=="" (
     if exist "%SHADER_CACHE%\pipelinevariants.bin" copy /Y "%SHADER_CACHE%\pipelinevariants.bin" "%OUT_DIR%\ShaderCache\" >nul
 
     set "COOK_ARGS=!COOK_ARGS! --cachedir=%OUT_DIR%\ShaderCache"
+) else (
+    REM Without it the cook would take the lists from the host tools' own cache, which another project or an older
+    REM build of the shaders left there. An empty folder means no list.
+    if not exist "%OUT_DIR%\ShaderCache" mkdir "%OUT_DIR%\ShaderCache"
+
+    set "COOK_ARGS=!COOK_ARGS! --cachedir=%OUT_DIR%\ShaderCache"
 )
 
 if not "%ENGINE_ASSETS%"=="" (
@@ -169,6 +175,12 @@ if "%SKIP_BUILD%"=="1" (
     del /q "%WEB_BIN_DIR%\hyperion-sample.js" >nul 2>nul
 
     set "HYP_WEB_PACKAGE_DIR=%OUT_DIR%"
+
+    set "HYP_WEB_GAME_SOURCE_DIR="
+    if exist "%PROJECT_PATH%/Source/Game\" (
+        set "HYP_WEB_GAME_SOURCE_DIR=%PROJECT_PATH%/Source"
+        echo Building the project's game code into the page: %PROJECT_PATH%/Source/Game
+    )
 
     pushd "%HYP_ROOT_DIR%"
     call "%SCRIPT_DIR%BuildHyperion.bat" Web Regenerate

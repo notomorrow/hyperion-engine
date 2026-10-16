@@ -1074,7 +1074,43 @@ void WebGPUGpuImage::Fill(
 
     if (m_textureDesc.type == TextureType::Texture3D)
     {
-        HYP_LOG(RenderingBackend, Warning, "Fill is not supported for 3D textures on WebGPU");
+        if (value != 0.0f)
+        {
+            HYP_LOG_ONCE(RenderingBackend, Warning, "Fill of a 3D texture with a value other than 0 is not supported on WebGPU");
+
+            return;
+        }
+
+        commandBuffer->EndActivePass();
+
+        const uint32 numVolumeLevels = MathUtil::Min(uint32(subResource.numLevels), NumMips() - uint32(subResource.baseMipLevel));
+
+        for (uint32 mipLevel = subResource.baseMipLevel; mipLevel < subResource.baseMipLevel + numVolumeLevels; mipLevel++)
+        {
+            const Vec3u mipExtent = m_textureDesc.GetMipExtent(mipLevel);
+            const uint32 alignedRowPitch = ByteUtil::AlignAs(mipExtent.x * GetBytesPerPixel(m_textureDesc.format), CopyRowPitchAlignment);
+
+            WGPUBufferDescriptor zeroBufferDescriptor = WGPU_BUFFER_DESCRIPTOR_INIT;
+            zeroBufferDescriptor.usage = WGPUBufferUsage_CopySrc;
+            zeroBufferDescriptor.size = uint64(alignedRowPitch) * mipExtent.y * mipExtent.z;
+
+            WGPUBuffer zeroBuffer = wgpuDeviceCreateBuffer(RI.GetDevice(), &zeroBufferDescriptor);
+
+            WGPUTexelCopyBufferInfo source = WGPU_TEXEL_COPY_BUFFER_INFO_INIT;
+            source.buffer = zeroBuffer;
+            source.layout.bytesPerRow = alignedRowPitch;
+            source.layout.rowsPerImage = mipExtent.y;
+
+            WGPUTexelCopyTextureInfo destination = WGPU_TEXEL_COPY_TEXTURE_INFO_INIT;
+            destination.texture = m_texture;
+            destination.mipLevel = mipLevel;
+
+            const WGPUExtent3D copyExtent { mipExtent.x, mipExtent.y, mipExtent.z };
+
+            wgpuCommandEncoderCopyBufferToTexture(commandBuffer->GetEncoder(), &source, &destination, &copyExtent);
+
+            wgpuBufferRelease(zeroBuffer);
+        }
 
         return;
     }

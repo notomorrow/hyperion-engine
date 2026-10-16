@@ -638,7 +638,9 @@ void TraceRequest(uint index)
     }
 
     // unlocks it, once what it holds is written
+#ifndef BACKEND_WEBGPU
     DeviceMemoryBarrier();
+#endif
 
     uint unlockedFrom;
     InterlockedExchange(slotBlocks[block * BLOCK_WORDS + 1u], hash, unlockedFrom);
