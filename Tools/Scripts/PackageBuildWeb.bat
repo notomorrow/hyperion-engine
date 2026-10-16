@@ -194,7 +194,7 @@ if "%SKIP_BUILD%"=="1" (
 )
 
 echo Copying the page...
-for %%F in (index.html hyperion-sample.js hyperion-sample.wasm hyperion-sample.data) do (
+for %%F in (index.html isolation-worker.js hyperion-sample.js hyperion-sample.wasm hyperion-sample.data) do (
     if not exist "%WEB_BIN_DIR%\%%F" (
         echo ERROR: "%WEB_BIN_DIR%\%%F" not found.
         exit /b 1

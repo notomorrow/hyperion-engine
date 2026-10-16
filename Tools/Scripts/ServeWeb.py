@@ -13,6 +13,8 @@ binaries_dir = os.path.abspath(sys.argv[1])
 package_dir = os.path.abspath(sys.argv[2])
 port = int(sys.argv[3]) if len(sys.argv) > 3 else 8080
 
+sends_isolation_headers = os.environ.get("HYP_SERVE_WITHOUT_ISOLATION") != "1"
+
 content_types = {
     ".html": "text/html",
     ".js": "text/javascript",
@@ -118,9 +120,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 remaining -= len(chunk)
 
     def send_isolation_headers(self):
-        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
-        self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
-        self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        if sends_isolation_headers:
+            self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+            self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
+            self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+
         self.send_header("Cache-Control", "no-store")
 
     def do_GET(self):

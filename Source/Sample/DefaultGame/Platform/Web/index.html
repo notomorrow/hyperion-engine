@@ -270,7 +270,27 @@
     {
         statusElement.textContent = 'WebGPU is not available in this browser.';
     }
-    else if (!crossOriginIsolated)
+    else if (crossOriginIsolated)
+    {
+        sessionStorage.removeItem('isolationReload');
+
+        const engineScript = document.createElement('script');
+        engineScript.src = 'hyperion-sample.js';
+        document.body.appendChild(engineScript);
+    }
+    else if ('serviceWorker' in navigator && isSecureContext && !sessionStorage.getItem('isolationReload'))
+    {
+        statusElement.textContent = 'Setting up threads, the page reloads once...';
+
+        navigator.serviceWorker.register('isolation-worker.js')
+            .then(() => navigator.serviceWorker.ready)
+            .then(() => {
+                sessionStorage.setItem('isolationReload', '1');
+                location.reload();
+            })
+            .catch((error) => { statusElement.textContent = 'Could not set up threads: ' + error; });
+    }
+    else
     {
         statusElement.textContent = 'The page is not cross-origin isolated, threads cannot start. Serve it with COOP and COEP headers.';
     }
@@ -296,6 +316,5 @@
         });
     }
 </script>
-<script src="hyperion-sample.js"></script>
 </body>
 </html>
