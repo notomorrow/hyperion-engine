@@ -47,10 +47,7 @@ extern CVar<bool> g_cvGlimmerHalfRes; // irradiance evaluated for one pixel of e
 // 3 = sky visibility of the single voxel (no interpolation)
 extern CVar<int> g_cvGlimmerDebugSH;
 
-// how much the probes' and SH voxels' depth moments cut off light from behind walls: 1 = fully, 0 = not at all (for comparing)
 extern CVar<float> g_cvGlimmerVisibility;
-
-/// @TODO Move to GlimmerHelpers?
-bool IsGlimmerSceneRequired();
+extern CVar<bool> g_cvGlimmerLookAhead;
 
 } // namespace Hyperion

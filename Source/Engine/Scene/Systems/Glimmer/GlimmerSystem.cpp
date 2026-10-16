@@ -39,6 +39,12 @@ HYP_DECLARE_LOG_CHANNEL(Rendering);
 
 namespace /* Helpers */ {
 
+static constexpr float LookAheadSeconds = 1.0f;
+static constexpr float MaxLookAhead = 64.0f;
+static constexpr float VelocityResponse = 3.0f;  // 1/s, smooths out frame to frame jitter in the camera's motion
+static constexpr float TeleportDistance = 100.0f; // a move further than this in one frame is a jump, not motion
+static constexpr float MaxBudgetScale = 4.0f;
+
 bool IsWorldGlimmerEnabled(const World* world)
 {
     return world != nullptr && world->GetEnvironmentSettings().globalIllumination.glimmerEnabled;
@@ -349,7 +355,13 @@ void GlimmerSystem::Process(float delta, Span<Handle<Scene>> scenes)
     {
         state.viewerPosition = viewerPosition;
 
+        UpdateViewerMotion(viewerPosition, delta, state);
+
         m_groundClipmap.Update(GetWorld(), viewerPosition, groundUploads);
+    }
+    else
+    {
+        m_hasLastViewer = false;
     }
 
     m_groundClipmap.FillState(state);
@@ -361,6 +373,40 @@ void GlimmerSystem::Process(float delta, Span<Handle<Scene>> scenes)
         UpdateProbeDebugRecords(delta);
         DebugDrawProbes(viewerPosition);
     }
+}
+
+void GlimmerSystem::UpdateViewerMotion(const Vec3f& viewerPosition, float delta, GlimmerChannelState& outState)
+{
+    const Vec3f moved = viewerPosition - m_lastViewerPosition;
+
+    if (!m_hasLastViewer || delta <= 0.0f || moved.Length() > TeleportDistance)
+    {
+        m_viewerVelocity = Vec3f::Zero();
+    }
+    else
+    {
+        const float blend = 1.0f - MathUtil::Exp(-VelocityResponse * delta);
+
+        m_viewerVelocity += (moved / delta - m_viewerVelocity) * blend;
+    }
+
+    m_lastViewerPosition = viewerPosition;
+    m_hasLastViewer = true;
+
+    Vec3f lookAhead = m_viewerVelocity * LookAheadSeconds;
+
+    if (lookAhead.Length() > MaxLookAhead)
+    {
+        lookAhead = lookAhead.Normalized() * MaxLookAhead;
+    }
+
+    if (!g_cvGlimmerLookAhead.Get())
+    {
+        return;
+    }
+
+    outState.lookAhead = lookAhead;
+    outState.budgetScale = MathUtil::Clamp(delta * 60.0f, 1.0f, MaxBudgetScale);
 }
 
 void GlimmerSystem::UpdateProbeDebugRecords(float delta)

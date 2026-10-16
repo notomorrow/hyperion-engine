@@ -302,10 +302,10 @@ float GlimmerBrickWindowExit(GlimmerBrickParams bricks, float3 origin, float3 di
 struct GlimmerBrickCrossing
 {
     ///// depth from the cell's low side along the brick's axis at the middle of the column
-    float depth;
     float3 normal;
-    uint mask;   // visibility bitmask
+    float depth;
     float3 color;
+    uint mask;   // visibility bitmask
 };
 
 GlimmerBrickCrossing GlimmerLoadBrickCrossing(GlimmerBrickParams bricks, uint crossingIndex)

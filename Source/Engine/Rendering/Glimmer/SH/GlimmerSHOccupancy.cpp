@@ -247,7 +247,14 @@ void GlimmerSHOccupancy::ScrollWindow(Frame* frame, uint32 cascadeIndex, const V
     SetBuilt(cascadeIndex, origin);
 }
 
-void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache, const GlimmerLightmapPages& lightmapPages, GlimmerScratchBuffer& scratchBuffer)
+void GlimmerSHOccupancy::Update(
+    Frame* frame,
+    const Vec3f& viewerPosition,
+    const Vec3f& lookAhead,
+    const GlimmerSceneInstances& sceneInstances,
+    const GlimmerTriangleCache& triangleCache,
+    const GlimmerLightmapPages& lightmapPages,
+    GpuBuffer& scratchBuffer)
 {
     HYP_SCOPE;
 
@@ -263,7 +270,11 @@ void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const
 
     const size_t numCascadeVoxels = size_t(GlimmerSHOccupancyGridXZ) * GlimmerSHOccupancyGridY * GlimmerSHOccupancyGridXZ;
 
-    m_albedoSumsBuffer = scratchBuffer.Reserve(numCascadeVoxels * (AlbedoSumWords + LightmapSumWords) * sizeof(uint32));
+    Check(scratchBuffer.EnsureCapacity(
+        numCascadeVoxels * (AlbedoSumWords + LightmapSumWords) * sizeof(uint32),
+        alignof(Vec4f)));
+
+    m_albedoSumsBuffer = &scratchBuffer;
 
     if (!sceneInstances.IsReady() || !triangleCache.IsReady() || !sceneInstances.GetSpanInstancesBuffer().IsValid())
     {
@@ -327,10 +338,13 @@ void GlimmerSHOccupancy::Update(Frame* frame, const Vec3f& viewerPosition, const
     {
         const float spacing = GetGlimmerSHOccupancySpacing(cascadeIndex);
 
+        // must lean exactly as the SH volume's windows do, which line up with these
+        const Vec3f center = GetGlimmerWindowCenter(viewerPosition, lookAhead, Vec3f(float(GlimmerSHOccupancyGridXZ), float(GlimmerSHOccupancyGridY), float(GlimmerSHOccupancyGridXZ)) * spacing);
+
         const Vec3i origin = Vec3i(
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(viewerPosition.x / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2), WindowSnapVoxels),
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(viewerPosition.y / spacing)) - int32(GlimmerSHOccupancyGridY / 2), WindowSnapVoxels),
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(viewerPosition.z / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2), WindowSnapVoxels));
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.x / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2), WindowSnapVoxels),
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.y / spacing)) - int32(GlimmerSHOccupancyGridY / 2), WindowSnapVoxels),
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.z / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2), WindowSnapVoxels));
 
         Array<Box, GlimmerAllocator>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
 

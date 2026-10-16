@@ -102,8 +102,23 @@ public:
 
     ~GlimmerBrickWorld();
 
-    // technique: where the cards' indirect light comes from; light: the sun and sky they are lit by
-    void Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache, const GlimmerTechnique* technique, const GlimmerLightShaderData& light);
+    /*! \param frame            the frame
+     *  \param viewerPosition   where the window is centered
+     *  \param lookAhead        where the viewer is headed, to build ahead of them
+     *  \param budgetScale      how much of the frame's build budget to use
+     *  \param sceneInstances   the scene's instances
+     *  \param triangleCache    the scene's triangles
+     *  \param technique        where the cards indirect light comes from
+     *  \param light             */
+    void Update(
+        Frame* frame,
+        const Vec3f& viewerPosition,
+        const Vec3f& lookAhead,
+        float budgetScale,
+        const GlimmerSceneInstances& sceneInstances,
+        const GlimmerTriangleCache& triangleCache,
+        const GlimmerTechnique* technique,
+        const GlimmerLightShaderData& light);
 
     bool RenderDebugView(const GlimmerDebugViewContext& context, GlimmerBrickDebugView debugView);
 

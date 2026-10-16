@@ -6,15 +6,13 @@
 
 #pragma once
 
-#include <Rendering/Glimmer/GlimmerMemory.hpp>
-
 #include <Core/Containers/Array.hpp>
 #include <Core/Utilities/Span.hpp>
 #include <Core/Math/BoundingBox.hpp>
 
 namespace Hyperion {
 
-struct GlimmerBVHNode
+struct PathTracerBVHNode
 {
     float leftMin[3];
     uint32 leftIndex;   //!< Child node index, or first primitive when the child is a leaf
@@ -29,9 +27,9 @@ struct GlimmerBVHNode
     uint32 rightCount;
 };
 
-static_assert(sizeof(GlimmerBVHNode) == 64);
+static_assert(sizeof(PathTracerBVHNode) == 64);
 
-struct GlimmerBVHBuildParams
+struct PathTracerBVHBuildParams
 {
     uint32 minLeafSize = 2;
     uint32 maxLeafSize = 8;
@@ -42,19 +40,19 @@ struct GlimmerBVHBuildParams
 };
 
 /// @TODO Make namespace? since its only static functions
-class ENGINE_API GlimmerBVHBuilder
+class ENGINE_API PathTracerBVHBuilder
 {
 public:
-    /// Instantiated for GlimmerAllocator and DynamicAllocator
+    /// Instantiated for DynamicAllocator
     template <class AllocatorType>
     static void Build(
         Span<const BoundingBox> primitiveBounds,
-        const GlimmerBVHBuildParams& params,
-        Array<GlimmerBVHNode, AllocatorType>& outNodes,
+        const PathTracerBVHBuildParams& params,
+        Array<PathTracerBVHNode, AllocatorType>& outNodes,
         Array<uint32, AllocatorType>& outPrimitiveOrder);
 
     /*! \brief Deepest root-to-leaf path, for sizing traversal stacks. */
-    static uint32 CalculateDepth(Span<const GlimmerBVHNode> nodes);
+    static uint32 CalculateDepth(Span<const PathTracerBVHNode> nodes);
 };
 
 } // namespace Hyperion

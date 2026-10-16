@@ -151,10 +151,7 @@ void GlimmerRelight::UpdateProbeWindows(const GlimmerChannelState& state)
     {
         const float blockSize = GetGlimmerProbeLevelSpacing(levelIndex) * float(GlimmerProbeBlock);
 
-        const Vec3i origin = Vec3i(
-            int32(MathUtil::Floor(state.viewerPosition.x / blockSize)) - window / 2,
-            int32(MathUtil::Floor(state.viewerPosition.y / blockSize)) - window / 2,
-            int32(MathUtil::Floor(state.viewerPosition.z / blockSize)) - window / 2);
+        const Vec3i origin = GetGlimmerProbeWindowOrigin(state.viewerPosition, state.lookAhead, levelIndex);
 
         const Vec3i previous = m_probeWindows[levelIndex];
 

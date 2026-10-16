@@ -18,7 +18,7 @@
 
 #include <Core/Utilities/Span.hpp>
 
-#include <Rendering/Glimmer/GlimmerBVHBuilder.hpp>
+#include <Baking/PathTracer/PathTracerBVHBuilder.hpp>
 
 namespace Hyperion {
 
@@ -26,8 +26,6 @@ class Mesh;
 class RenderProxyList;
 
 namespace Baking {
-
-using PathTracerBVHNode = GlimmerBVHNode;
 
 struct PathTracerTriangle
 {

@@ -53,6 +53,8 @@ struct GlimmerSHVolumeShaderData
 struct GlimmerSHVolumeUpdateInputs
 {
     Vec3f viewerPosition;
+    Vec3f lookAhead;          // GlimmerChannelState::lookAhead
+    float budgetScale = 1.0f; // GlimmerChannelState::budgetScale
     const GlimmerSurfaceCache* surfaceCache = nullptr;
     const GlimmerSpanCache* spanCache = nullptr;
     const GlimmerSceneInstances* sceneInstances = nullptr;

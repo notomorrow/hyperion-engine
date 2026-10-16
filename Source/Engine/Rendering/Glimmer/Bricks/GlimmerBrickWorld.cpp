@@ -1008,7 +1008,7 @@ bool GlimmerBrickWorld::MakeRoom(Frame* frame, const Chunk& requester, const Vec
     return true;
 }
 
-void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache, const GlimmerTechnique* technique, const GlimmerLightShaderData& light)
+void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const Vec3f& lookAhead, float budgetScale, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache, const GlimmerTechnique* technique, const GlimmerLightShaderData& light)
 {
     HYP_SCOPE;
 
@@ -1129,9 +1129,12 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
         chunk.isStarved = false;
     }
 
+    // counted per frame, so a low frame rate gets more a frame to keep the same pace
     const uint32 maxBuilds = m_numSoloBuilds != 0
         ? 1u
-        : uint32(MathUtil::Clamp(g_cvGlimmerBricksChunksPerFrame.Get(), 1, int32(GlimmerBrickMaxChunkBuildsPerFrame)));
+        : uint32(MathUtil::Clamp(int32(float(g_cvGlimmerBricksChunksPerFrame.Get()) * MathUtil::Clamp(budgetScale, 1.0f, 4.0f)), 1, int32(GlimmerBrickMaxChunkBuildsPerFrame)));
+
+    const Vec3f buildFocus = GetGlimmerWindowCenter(viewerPosition, lookAhead, Vec3f(ChunkDims) * ChunkSize);
 
     FixedArray<Chunk*, GlimmerBrickMaxChunkBuildsPerFrame> batch;
     uint32 numBatched = 0;
@@ -1148,7 +1151,7 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
                 continue;
             }
 
-            const float distance = ChunkCenter(chunk.coord).DistanceSquared(viewerPosition);
+            const float distance = ChunkCenter(chunk.coord).DistanceSquared(buildFocus);
 
             if (distance < nearestDistance)
             {

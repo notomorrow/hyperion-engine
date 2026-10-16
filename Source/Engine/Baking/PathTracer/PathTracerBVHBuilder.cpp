@@ -4,9 +4,9 @@
  *  @licence MIT
  */
 
-#include <RenderingPch.hpp>
+#include <HyperionPch.hpp>
 
-#include <Rendering/Glimmer/GlimmerBVHBuilder.hpp>
+#include <Baking/PathTracer/PathTracerBVHBuilder.hpp>
 
 #include <Core/Math/MathUtil.hpp>
 
@@ -27,10 +27,10 @@ static HYP_FORCE_INLINE uint32 GetSplitBinIndex(float centroid, float binMin, fl
 }
 
 template <class AllocatorType>
-class GlimmerBVHBuildContext
+class PathTracerBVHBuildContext
 {
 public:
-    GlimmerBVHBuildContext(Span<const BoundingBox> primitiveBounds, const GlimmerBVHBuildParams& params)
+    PathTracerBVHBuildContext(Span<const BoundingBox> primitiveBounds, const PathTracerBVHBuildParams& params)
         : m_primitiveBounds(primitiveBounds),
           m_params(params)
     {
@@ -62,7 +62,7 @@ public:
         m_params.maxLeafSize = MathUtil::Max(m_params.maxLeafSize, m_params.minLeafSize);
     }
 
-    void Build(Array<GlimmerBVHNode, AllocatorType>& outNodes, Array<uint32, AllocatorType>& outPrimitiveOrder)
+    void Build(Array<PathTracerBVHNode, AllocatorType>& outNodes, Array<uint32, AllocatorType>& outPrimitiveOrder)
     {
         const uint32 numPrimitives = uint32(m_primitiveOrder.Size());
 
@@ -72,7 +72,7 @@ public:
         {
             const ChildReference leaf { m_primitiveBounds[0], 0, 1 };
 
-            GlimmerBVHNode& root = m_nodes.EmplaceBack();
+            PathTracerBVHNode& root = m_nodes.EmplaceBack();
             WriteChild(leaf, root.leftMin, root.leftMax, root.leftIndex, root.leftCount);
             WriteChild(leaf, root.rightMin, root.rightMax, root.rightIndex, root.rightCount);
         }
@@ -303,7 +303,7 @@ private:
         const ChildReference right = BuildChild(middle, end, depth + 1);
 
         // m_nodes may have grown while building the children
-        GlimmerBVHNode& node = m_nodes[nodeIndex];
+        PathTracerBVHNode& node = m_nodes[nodeIndex];
         WriteChild(left, node.leftMin, node.leftMax, node.leftIndex, node.leftCount);
         WriteChild(right, node.rightMin, node.rightMax, node.rightIndex, node.rightCount);
 
@@ -323,12 +323,12 @@ private:
     }
 
     Span<const BoundingBox> m_primitiveBounds;
-    GlimmerBVHBuildParams m_params;
+    PathTracerBVHBuildParams m_params;
 
     Array<Vec3f, AllocatorType> m_primitiveCentroids;
     Array<uint32, AllocatorType> m_primitiveOrder;
 
-    Array<GlimmerBVHNode, AllocatorType> m_nodes;
+    Array<PathTracerBVHNode, AllocatorType> m_nodes;
 
     SplitBin m_bins[NumSplitBins];
 
@@ -336,24 +336,24 @@ private:
 };
 
 template <class AllocatorType>
-void GlimmerBVHBuilder::Build(
+void PathTracerBVHBuilder::Build(
     Span<const BoundingBox> primitiveBounds,
-    const GlimmerBVHBuildParams& params,
-    Array<GlimmerBVHNode, AllocatorType>& outNodes,
+    const PathTracerBVHBuildParams& params,
+    Array<PathTracerBVHNode, AllocatorType>& outNodes,
     Array<uint32, AllocatorType>& outPrimitiveOrder)
 {
     HYP_SCOPE;
 
-    GlimmerBVHBuildParams clampedParams = params;
+    PathTracerBVHBuildParams clampedParams = params;
     clampedParams.maxDepth = MathUtil::Max(clampedParams.maxDepth, 2u);
 
-    GlimmerBVHBuildContext<AllocatorType> context { primitiveBounds, clampedParams };
+    PathTracerBVHBuildContext<AllocatorType> context { primitiveBounds, clampedParams };
     context.Build(outNodes, outPrimitiveOrder);
 
-    AssertDebug(outNodes.Empty() || GlimmerBVHBuilder::CalculateDepth(outNodes.ToSpan()) <= clampedParams.maxDepth);
+    AssertDebug(outNodes.Empty() || PathTracerBVHBuilder::CalculateDepth(outNodes.ToSpan()) <= clampedParams.maxDepth);
 }
 
-uint32 GlimmerBVHBuilder::CalculateDepth(Span<const GlimmerBVHNode> nodes)
+uint32 PathTracerBVHBuilder::CalculateDepth(Span<const PathTracerBVHNode> nodes)
 {
     if (nodes.Size() == 0)
     {
@@ -366,7 +366,7 @@ uint32 GlimmerBVHBuilder::CalculateDepth(Span<const GlimmerBVHNode> nodes)
         uint32 depth;
     };
 
-    Array<PendingNode, GlimmerAllocator> pending;
+    Array<PendingNode> pending;
     pending.PushBack(PendingNode { 0, 1 });
 
     uint32 maxDepth = 0;
@@ -376,7 +376,7 @@ uint32 GlimmerBVHBuilder::CalculateDepth(Span<const GlimmerBVHNode> nodes)
         const PendingNode current = pending.PopBack();
         maxDepth = MathUtil::Max(maxDepth, current.depth);
 
-        const GlimmerBVHNode& node = nodes[current.index];
+        const PathTracerBVHNode& node = nodes[current.index];
 
         if (node.leftCount == 0 && node.leftIndex < nodes.Size())
         {
@@ -392,7 +392,6 @@ uint32 GlimmerBVHBuilder::CalculateDepth(Span<const GlimmerBVHNode> nodes)
     return maxDepth;
 }
 
-template void GlimmerBVHBuilder::Build<GlimmerAllocator>(Span<const BoundingBox> primitiveBounds, const GlimmerBVHBuildParams& params, Array<GlimmerBVHNode, GlimmerAllocator>& outNodes, Array<uint32, GlimmerAllocator>& outPrimitiveOrder);
-template void GlimmerBVHBuilder::Build<DynamicAllocator>(Span<const BoundingBox> primitiveBounds, const GlimmerBVHBuildParams& params, Array<GlimmerBVHNode, DynamicAllocator>& outNodes, Array<uint32, DynamicAllocator>& outPrimitiveOrder);
+template void PathTracerBVHBuilder::Build<DynamicAllocator>(Span<const BoundingBox> primitiveBounds, const PathTracerBVHBuildParams& params, Array<PathTracerBVHNode, DynamicAllocator>& outNodes, Array<uint32, DynamicAllocator>& outPrimitiveOrder);
 
 } // namespace Hyperion

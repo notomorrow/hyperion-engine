@@ -179,7 +179,7 @@ public:
         return m_ownerWindow;
     }
 
-    void ProcessEvent(Event&& event);
+    ENGINE_API void ProcessEvent(Event&& event);
 
     void MainThreadUpdate();
     void BufferSwap();

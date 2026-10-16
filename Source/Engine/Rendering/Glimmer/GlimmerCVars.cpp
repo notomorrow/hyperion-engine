@@ -20,10 +20,6 @@ CVar<int> g_cvGlimmerDebugView("Rendering.Glimmer.DebugView", 0);
 CVar<bool> g_cvGlimmerHalfRes("Rendering.Glimmer.HalfRes", true);
 CVar<int> g_cvGlimmerDebugSH("Rendering.Glimmer.DebugSH", 0);
 CVar<float> g_cvGlimmerVisibility("Rendering.Glimmer.Visibility", 1.0f);
-
-bool IsGlimmerSceneRequired()
-{
-    return g_cvGlimmerEnabled.Get() || g_cvGlimmerDebugView.Get() >= int(GlimmerDebugView::TechniqueFirst);
-}
+CVar<bool> g_cvGlimmerLookAhead("Rendering.Glimmer.LookAhead", true);
 
 } // namespace Hyperion

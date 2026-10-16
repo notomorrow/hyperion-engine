@@ -56,12 +56,15 @@ static constexpr float DenoiseBlurBeta = 1.2f;
 static constexpr float MaxScreenRadiusFraction = 0.3f;
 
 // slices, steps per slice side
-static const Vec2f QualityPresets[] = {
-    Vec2f(1.0f, 2.0f),
-    Vec2f(2.0f, 2.0f),
-    Vec2f(3.0f, 3.0f),
-    Vec2f(9.0f, 3.0f)
+static constexpr Vec2f QualityPresets[] = {
+    { 1.0f, 2.0f },
+    { 2.0f, 2.0f },
+    { 3.0f, 3.0f },
+    { 9.0f, 3.0f }
 };
+
+/// @TODO Make some structure or enumerable macro type thing to create the constexpr StringHashes inline with the enums?
+/// Then switch as much as possible to use it.
 
 enum GTAOUniformSlot : uint32
 {

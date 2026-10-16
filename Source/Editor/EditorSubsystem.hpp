@@ -20,6 +20,8 @@
 
 #include <Scene/Subsystem.hpp>
 
+#include <Framework/GameState.hpp>
+
 #include <Physics/PhysicsShape.hpp>
 
 #include <Core/Math/BoundingBox.hpp>
@@ -782,6 +784,9 @@ public:
 
     HYP_FIELD()
     ScriptableDelegate<void, EditorPlayNetStatus> OnPlayNetStatusChanged;
+
+    HYP_FIELD()
+    ScriptableDelegate<void, GameStateMode> OnGameModeRequested;
 
     /*! \brief Fired on the sim thread after a changed script was reloaded, which can add, remove or redefine components. */
     HYP_FIELD()

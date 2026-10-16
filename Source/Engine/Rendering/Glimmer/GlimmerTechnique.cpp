@@ -39,6 +39,8 @@
 #include <Rendering/PlaceholderData.hpp>
 #include <Rendering/Frame.hpp>
 
+#include <Rendering/Util/DeletionQueue.hpp>
+
 #include <Scene/Camera/Camera.hpp>
 
 #include <Framework/EngineStats.hpp>
@@ -156,6 +158,7 @@ GlimmerTechnique::GlimmerTechnique()
 
 GlimmerTechnique::~GlimmerTechnique()
 {
+    EnqueueDeletion(std::move(m_scratchBuffer));
 }
 
 bool GlimmerTechnique::IsReady() const
@@ -172,6 +175,16 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
 
     if (context.updateLighting && context.surfaceCache && context.spanCache)
     {
+        if (!m_scratchBuffer.IsValid())
+        {
+            m_scratchBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, 16, alignof(Vec4f));
+            Check(m_scratchBuffer->Create());
+
+#ifdef HYP_RHI_DEBUG_NAMES
+            m_scratchBuffer->SetDebugName(NAME("GlimmerScratch"));
+#endif
+        }
+
         const bool probesEnabled = g_cvGlimmerProbesEnabled.Get();
 
         GlimmerLightShaderData light;
@@ -198,10 +211,12 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
             CollectGlimmerLightmapPages(*context.sceneProxies, lightmapPages);
         }
 
-        m_shOccupancy->Update(context.frame, context.channelState->viewerPosition, sceneInstances, *context.triangleCache, lightmapPages, m_scratchBuffer);
+        m_shOccupancy->Update(context.frame, context.channelState->viewerPosition, context.channelState->lookAhead, sceneInstances, *context.triangleCache, lightmapPages, *m_scratchBuffer);
 
         GlimmerSHVolumeUpdateInputs shInputs;
         shInputs.viewerPosition = context.channelState->viewerPosition;
+        shInputs.lookAhead = context.channelState->lookAhead;
+        shInputs.budgetScale = context.channelState->budgetScale;
         shInputs.surfaceCache = context.surfaceCache;
         shInputs.spanCache = context.spanCache;
         shInputs.occupancy = &m_shOccupancy->GetShaderData();
@@ -223,6 +238,8 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         probeInputs.occupancy = &m_shOccupancy->GetShaderData();
         probeInputs.occupancyImageView = m_shOccupancy->GetImageView();
         probeInputs.viewerPosition = context.channelState->viewerPosition;
+        probeInputs.lookAhead = context.channelState->lookAhead;
+        probeInputs.budgetScale = context.channelState->budgetScale;
         probeInputs.surfaceCache = context.surfaceCache;
         probeInputs.spanCache = context.spanCache;
         probeInputs.triangleCache = context.triangleCache;
@@ -233,7 +250,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         probeInputs.brickWorld = g_cvGlimmerBricksEnabled.Get() ? m_brickWorld.Get() : nullptr;
         probeInputs.cloudPass = context.cloudPass;
         probeInputs.light = light;
-        probeInputs.scratchBuffer = &m_scratchBuffer;
+        probeInputs.scratchBuffer = m_scratchBuffer.Get();
 
         if (probesEnabled)
         {
@@ -253,12 +270,16 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
 
     if (g_cvGlimmerBricksEnabled.Get() && context.triangleCache)
     {
-        const Vec3f viewerPosition = context.channelState && context.channelState->hasViewer ? context.channelState->viewerPosition : context.region.GetCenter();
+        const bool hasViewer = context.channelState && context.channelState->hasViewer;
+
+        const Vec3f viewerPosition = hasViewer ? context.channelState->viewerPosition : context.region.GetCenter();
+        const Vec3f lookAhead = hasViewer ? context.channelState->lookAhead : Vec3f::Zero();
+        const float budgetScale = context.channelState ? context.channelState->budgetScale : 1.0f;
 
         GlimmerLightShaderData light;
         GetGlimmerLightShaderData(context.skyProbe, light);
 
-        m_brickWorld->Update(context.frame, viewerPosition, sceneInstances, *context.triangleCache, this, light);
+        m_brickWorld->Update(context.frame, viewerPosition, lookAhead, budgetScale, sceneInstances, *context.triangleCache, this, light);
     }
 }
 

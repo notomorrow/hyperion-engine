@@ -342,10 +342,10 @@ PathTracerBVH::BuildResult PathTracerBVH::Build(Span<const Instance> instances)
 
     Array<uint32> triangleOrder;
 
-    GlimmerBVHBuildParams buildParams;
+    PathTracerBVHBuildParams buildParams;
     buildParams.maxDepth = 64;
 
-    GlimmerBVHBuilder::Build(triangleBounds.ToSpan(), buildParams, buildResult.nodes, triangleOrder);
+    PathTracerBVHBuilder::Build(triangleBounds.ToSpan(), buildParams, buildResult.nodes, triangleOrder);
 
     buildResult.triangles.Resize(triangleOrder.Size());
     buildResult.triangleAttributes.Resize(triangleOrder.Size());

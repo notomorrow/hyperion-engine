@@ -29,7 +29,6 @@ class GlimmerSceneInstances;
 class GlimmerSHVolume;
 class GlimmerRelight;
 class GlimmerBrickWorld;
-class GlimmerScratchBuffer;
 struct GlimmerSHOccupancyShaderData;
 
 static constexpr uint32 GlimmerProbeLevels = 4;
@@ -71,6 +70,8 @@ struct GlimmerProbeVolumeShaderData
 struct GlimmerProbeUpdateInputs
 {
     Vec3f viewerPosition;
+    Vec3f lookAhead;          // GlimmerChannelState::lookAhead
+    float budgetScale = 1.0f; // GlimmerChannelState::budgetScale
 
     const GlimmerSurfaceCache* surfaceCache = nullptr;
     const GlimmerSpanCache* spanCache = nullptr;
@@ -90,7 +91,7 @@ struct GlimmerProbeUpdateInputs
 
     GlimmerLightShaderData light;
 
-    GlimmerScratchBuffer* scratchBuffer = nullptr; // holds the rays, from the trace to the blend
+    GpuBuffer* scratchBuffer = nullptr;
 };
 
 class GlimmerProbeVolume final
@@ -130,7 +131,7 @@ public:
 private:
     void CreateResources(Frame* frame);
     void ReleaseResources();
-    void UpdateWindows(const Vec3f& viewerPosition);
+    void UpdateWindows(const Vec3f& viewerPosition, const Vec3f& lookAhead);
 
     const GpuBufferRef& GetBufferOrPlaceholder(const GpuBufferRef& buffer) const;
 

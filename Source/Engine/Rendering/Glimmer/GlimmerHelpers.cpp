@@ -10,6 +10,7 @@
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHVolume.hpp>
+#include <Rendering/Glimmer/Probes/GlimmerProbeVolume.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
 
 #include <Rendering/RenderInterface.hpp>
@@ -105,6 +106,11 @@ void GetGlimmerScrolledRects(const GlimmerTexelRect& oldWindow, const GlimmerTex
     }
 }
 
+bool IsGlimmerSceneRequired()
+{
+    return g_cvGlimmerEnabled.Get() || g_cvGlimmerDebugView.Get() >= int(GlimmerDebugView::TechniqueFirst);
+}
+
 float GetGlimmerRegionMinRadius()
 {
     return 96.0f;
@@ -125,54 +131,67 @@ float GetGlimmerProbeLevelSpacing(uint32 levelIndex)
     return 2.0f * float(1u << levelIndex);
 }
 
+Vec3f GetGlimmerWindowCenter(const Vec3f& viewerPosition, const Vec3f& lookAhead, const Vec3f& windowExtent)
+{
+    const Vec2f horizontal = Vec2f(lookAhead.x, lookAhead.z);
+    const float maxHorizontal = 0.25f * MathUtil::Min(windowExtent.x, windowExtent.z);
+
+    const float horizontalLength = horizontal.Length();
+
+    Vec2f clampedHorizontal = horizontal;
+    
+    if(horizontalLength > maxHorizontal)
+    {
+        clampedHorizontal = horizontal * (maxHorizontal / horizontalLength);
+    }
+
+    const float clampedVertical = MathUtil::Clamp(lookAhead.y, -0.25f * windowExtent.y, 0.25f * windowExtent.y);
+
+    return viewerPosition + Vec3f(clampedHorizontal.x, clampedVertical, clampedHorizontal.y);
+}
+
+Vec3i GetGlimmerProbeWindowOrigin(const Vec3f& viewerPosition, const Vec3f& lookAhead, uint32 levelIndex)
+{
+    const int32 halfWindow = int32(GlimmerProbeWindow / 2);
+
+    const float blockSize = GetGlimmerProbeLevelSpacing(levelIndex) * float(GlimmerProbeBlock);
+    const Vec3f center = GetGlimmerWindowCenter(viewerPosition, lookAhead, Vec3f(blockSize * float(GlimmerProbeWindow)));
+
+    return Vec3i(
+        int32(MathUtil::Floor(center.x / blockSize)) - halfWindow,
+        int32(MathUtil::Floor(center.y / blockSize)) - halfWindow,
+        int32(MathUtil::Floor(center.z / blockSize)) - halfWindow);
+}
+
 Vec4f MakeGlimmerRandomRotation(uint32 seed)
 {
+    constexpr float TwoPi = 2.0f * MathUtil::pi<float>;
+
     const float u1 = float(MathUtil::HashUint32(seed * 3 + 0) & 0xFFFFFFu) / float(0x1000000);
     const float u2 = float(MathUtil::HashUint32(seed * 3 + 1) & 0xFFFFFFu) / float(0x1000000);
     const float u3 = float(MathUtil::HashUint32(seed * 3 + 2) & 0xFFFFFFu) / float(0x1000000);
 
     const float a = MathUtil::Sqrt(1.0f - u1);
     const float b = MathUtil::Sqrt(u1);
-    const float twoPi = 2.0f * MathUtil::pi<float>;
 
-    return Vec4f(a * MathUtil::Sin(twoPi * u2), a * MathUtil::Cos(twoPi * u2), b * MathUtil::Sin(twoPi * u3), b * MathUtil::Cos(twoPi * u3));
+    return {
+        a * MathUtil::Sin(TwoPi * u2),
+        a * MathUtil::Cos(TwoPi * u2),
+        b * MathUtil::Sin(TwoPi * u3),
+        b * MathUtil::Cos(TwoPi * u3)
+    };
 }
 
 GpuBufferRef CreateGlimmerStructuredBuffer(size_t elementSize, size_t numElements)
 {
-    GpuBufferRef buffer = RI.MakeGpuBuffer(GpuBufferType::StructuredBuffer, elementSize * MathUtil::Max(numElements, size_t(1)), alignof(Vec4f));
+    GpuBufferRef buffer = RI.MakeGpuBuffer(
+        GpuBufferType::StructuredBuffer,
+        elementSize * MathUtil::Max(numElements, size_t(1)),
+        alignof(Vec4f));
+
     Check(buffer->Create());
 
     return buffer;
-}
-
-GlimmerScratchBuffer::GlimmerScratchBuffer()
-    : m_byteSize(0)
-{
-}
-
-GlimmerScratchBuffer::~GlimmerScratchBuffer()
-{
-    EnqueueDeletion(std::move(m_buffer));
-}
-
-GpuBuffer* GlimmerScratchBuffer::Reserve(size_t byteSize)
-{
-    if (!m_buffer.IsValid() || byteSize > m_byteSize)
-    {
-        EnqueueDeletion(std::move(m_buffer));
-
-        m_byteSize = MathUtil::Max(byteSize, size_t(16));
-
-        m_buffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, m_byteSize, alignof(Vec4f));
-        Check(m_buffer->Create());
-
-#ifdef HYP_RHI_DEBUG_NAMES
-        m_buffer->SetDebugName(NAME("GlimmerScratch"));
-#endif
-    }
-
-    return m_buffer.Get();
 }
 
 Handle<Texture> CreateGlimmerStorageTexture(TextureType type, TextureFormat format, const Vec3u& extent, uint16 numLayers, Name name, TextureWrapMode wrapMode)

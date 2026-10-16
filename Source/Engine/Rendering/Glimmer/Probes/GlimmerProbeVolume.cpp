@@ -85,6 +85,7 @@ static_assert(GlimmerProbeRays == 32);
 static constexpr uint32 ListGroupSize = 64;
 
 static constexpr uint32 MinProbesPerFrameCapacity = 256;
+static constexpr uint32 MaxBudgetScale = 4;
 static constexpr uint32 ComposeGroupSize = 64;
 
 static constexpr uint32 NumProbeCounters = 16; // NOTE must match GLIMMER_PROBE_COUNTERS
@@ -277,7 +278,8 @@ const GpuBufferRef& GlimmerProbeVolume::GetSlotsBuffer() const
 void GlimmerProbeVolume::CreateResources(Frame* frame)
 {
     m_poolBlocks = uint32(MathUtil::Clamp(g_cvGlimmerProbesPoolBlocks.Get(), 1, int(GlimmerProbePoolBlocks)));
-    m_maxProbesPerFrame = MathUtil::Clamp(uint32(MathUtil::Max(g_cvGlimmerProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays, MinProbesPerFrameCapacity, GlimmerMaxProbesPerFrame);
+    // room for the budget scaled up at low frame rates (GlimmerChannelState::budgetScale)
+    m_maxProbesPerFrame = MathUtil::Clamp(uint32(MathUtil::Max(g_cvGlimmerProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays * MaxBudgetScale, MinProbesPerFrameCapacity, GlimmerMaxProbesPerFrame);
 
     const size_t poolProbes = size_t(m_poolBlocks) * GlimmerProbesPerBlock;
 
@@ -357,22 +359,16 @@ void GlimmerProbeVolume::CreateResources(Frame* frame)
     upload(m_countersBuffer, zeros.Data(), NumProbeCounters * sizeof(uint32));
 }
 
-void GlimmerProbeVolume::UpdateWindows(const Vec3f& viewerPosition)
+void GlimmerProbeVolume::UpdateWindows(const Vec3f& viewerPosition, const Vec3f& lookAhead)
 {
-    const int32 halfWindow = int32(GlimmerProbeWindow / 2);
-
     for (uint32 levelIndex = 0; levelIndex < GlimmerProbeLevels; levelIndex++)
     {
         const float spacing = GetGlimmerProbeLevelSpacing(levelIndex);
-        const float blockSize = spacing * float(GlimmerProbeBlock);
 
-        const Vec3i viewerBlock = Vec3i(
-            int32(MathUtil::Floor(viewerPosition.x / blockSize)),
-            int32(MathUtil::Floor(viewerPosition.y / blockSize)),
-            int32(MathUtil::Floor(viewerPosition.z / blockSize)));
+        const Vec3i origin = GetGlimmerProbeWindowOrigin(viewerPosition, lookAhead, levelIndex);
 
         GlimmerProbeLevelShaderData& level = m_shaderData.levels[levelIndex];
-        level.windowOrigin = Vec4i(viewerBlock.x - halfWindow, viewerBlock.y - halfWindow, viewerBlock.z - halfWindow, 1);
+        level.windowOrigin = Vec4i(origin.x, origin.y, origin.z, 1);
         level.params = Vec4f(spacing, 1.0f / spacing, 0.0f, 0.0f);
     }
 }
@@ -408,17 +404,22 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
         CreateResources(frame);
     }
 
-    // the trace pass leaves its hits in the rays for the shade pass, which writes the rays over them
-    GpuBuffer* const raysBuffer = inputs.scratchBuffer->Reserve(RayRecordSize * m_maxProbesPerFrame * GlimmerProbeRays);
+    Check(inputs.scratchBuffer->EnsureCapacity(
+        RayRecordSize * m_maxProbesPerFrame * GlimmerProbeRays,
+        alignof(Vec4f)));
+
+    GpuBuffer* const raysBuffer = inputs.scratchBuffer;
 
     m_frameIndex++;
 
-    UpdateWindows(inputs.viewerPosition);
+    UpdateWindows(inputs.viewerPosition, inputs.lookAhead);
 
     // the probes trace the bricks; the scene instances' change journal says which probes to wake
     const bool hasBricks = inputs.sceneInstances && inputs.sceneInstances->IsReady() && inputs.brickWorld && inputs.brickWorld->IsReady();
 
-    const uint32 probesPerFrame = MathUtil::Clamp(uint32(MathUtil::Max(g_cvGlimmerProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays, 1u, m_maxProbesPerFrame);
+    // counted per frame, so a low frame rate gets more a frame to keep the same pace
+    const float budgetScale = MathUtil::Clamp(inputs.budgetScale, 1.0f, float(MaxBudgetScale));
+    const uint32 probesPerFrame = MathUtil::Clamp(uint32(float(uint32(MathUtil::Max(g_cvGlimmerProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays) * budgetScale), 1u, m_maxProbesPerFrame);
 
     const uint32 sleepMaxInterval = g_cvGlimmerProbesSleep.Get() ? SleepMaxInterval : 0u;
 
@@ -454,7 +455,10 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
             MinHeightAboveGround,
             float(ClassifyPeriod),
             0.0f);
-        constants.viewer = Vec4f(inputs.viewerPosition.x, inputs.viewerPosition.y, inputs.viewerPosition.z, 0.0f);
+        // blocks are ranked by distance from where the viewer is headed, so what it flies into gets slots first
+        const Vec3f priorityPoint = GetGlimmerWindowCenter(inputs.viewerPosition, inputs.lookAhead, Vec3f(GetGlimmerProbeLevelSpacing(0) * float(GlimmerProbeBlock * GlimmerProbeWindow)));
+
+        constants.viewer = Vec4f(priorityPoint.x, priorityPoint.y, priorityPoint.z, 0.0f);
 
         bool wakeEverything = false;
 

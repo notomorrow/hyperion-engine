@@ -54,10 +54,11 @@ public:
     void Update(
         Frame* frame,
         const Vec3f& viewerPosition,
+        const Vec3f& lookAhead,
         const GlimmerSceneInstances& sceneInstances,
         const GlimmerTriangleCache& triangleCache,
         const GlimmerLightmapPages& lightmapPages,
-        GlimmerScratchBuffer& scratchBuffer);
+        GpuBuffer& scratchBuffer);
 
     HYP_FORCE_INLINE const GlimmerSHOccupancyShaderData& GetShaderData() const
     {

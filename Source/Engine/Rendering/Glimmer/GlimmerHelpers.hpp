@@ -94,6 +94,8 @@ GlimmerTexelRect GetGlimmerGroundWindow(const Vec2i& origin);
 
 void GetGlimmerScrolledRects(const GlimmerTexelRect& oldWindow, const GlimmerTexelRect& newWindow, GlimmerTexelRect& outColumns, GlimmerTexelRect& outRows);
 
+bool IsGlimmerSceneRequired();
+
 float GetGlimmerRegionMinRadius();
 
 float GetGlimmerSHCascadeSpacing(uint32 cascadeIndex);
@@ -101,30 +103,15 @@ float GetGlimmerSHOccupancySpacing(uint32 cascadeIndex);
 
 float GetGlimmerProbeLevelSpacing(uint32 levelIndex);
 
+Vec3f GetGlimmerWindowCenter(const Vec3f& viewerPosition, const Vec3f& lookAhead, const Vec3f& windowExtent);
+Vec3i GetGlimmerProbeWindowOrigin(const Vec3f& viewerPosition, const Vec3f& lookAhead, uint32 levelIndex);
+
 Vec4f MakeGlimmerRandomRotation(uint32 seed);
 
 /// @TODO: Return a `StructuredBuffer`!
 GpuBufferRef CreateGlimmerStructuredBuffer(size_t elementSize, size_t numElements);
 
 Handle<Texture> CreateGlimmerStorageTexture(TextureType type, TextureFormat format, const Vec3u& extent, uint16 numLayers, Name name, TextureWrapMode wrapMode = TextureWrapMode::Repeat);
-
-// one buffer shared by passes that don't keep what they write in it past their frame; it only grows
-class GlimmerScratchBuffer final
-{
-public:
-    GlimmerScratchBuffer();
-
-    GlimmerScratchBuffer(const GlimmerScratchBuffer& other) = delete;
-    GlimmerScratchBuffer& operator=(const GlimmerScratchBuffer& other) = delete;
-
-    ~GlimmerScratchBuffer();
-
-    GpuBuffer* Reserve(size_t byteSize);
-
-private:
-    GpuBufferRef m_buffer;
-    size_t m_byteSize;
-};
 
 uint32 CalculateGlimmerMipChainCells(uint32 resolution, uint32 numLevels);
 

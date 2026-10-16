@@ -5,6 +5,7 @@
 #include <Rendering/GBuffer.hpp>
 
 #include <Framework/View.hpp>
+#include <Framework/Game.hpp>
 #include <Framework/EngineStats.hpp>
 
 #include <Util/Img/WritePng.hpp>
@@ -734,28 +735,43 @@ public:
     {
         AssertOnThread(g_simThread);
 
-        EditorViewport* activeViewport = subsystem->GetActiveViewport();
+        Handle<View> captureView;
+        Vec2u wireframeExtent = Vec2u::One();
 
-        // optional second argument picks a viewport by type: perspective, top, front or side
-        if (NumArguments() >= 2)
+        // editor viewports don't render while simulating, so capture the game's own view
+        if (subsystem->IsSimulating() && NumArguments() < 2)
         {
-            activeViewport = subsystem->FindViewport(GetArgument(1));
+            captureView = FindGameView(subsystem);
+        }
+        else
+        {
+            EditorViewport* activeViewport = subsystem->GetActiveViewport();
+
+            // optional second argument picks a viewport by type: perspective, top, front or side
+            if (NumArguments() >= 2)
+            {
+                activeViewport = subsystem->FindViewport(GetArgument(1));
+            }
+
+            if (activeViewport != nullptr)
+            {
+                captureView = activeViewport->GetView();
+                wireframeExtent = Vec2u(MathUtil::Max(activeViewport->GetCamera()->GetDimensions(), Vec2i::One()));
+            }
         }
 
-        if (!activeViewport || !activeViewport->GetView().IsValid())
+        if (!captureView.IsValid())
         {
-            HYP_LOG(Editor, Warning, "no active viewport");
+            HYP_LOG(Editor, Warning, "no viewport to capture");
             return;
         }
-
-        const Vec2u wireframeExtent = Vec2u(MathUtil::Max(activeViewport->GetCamera()->GetDimensions(), Vec2i::One()));
 
         const FilePath path = NumArguments() >= 1 && !GetArgument(0).Empty()
             ? FilePath(GetArgument(0))
             : CoreApi::GetExecutablePath() / "Screenshots" / "Viewport.png";
 
         GetThreadById(g_renderThread)->GetScheduler().Enqueue(
-            [view = activeViewport->GetView(), path, wireframeExtent]()
+            [view = captureView, path, wireframeExtent]()
             {
                 static constexpr uint64 CaptureTimeoutMs = 5000;
                 static ThumbnailCaptureState* s_pendingCapture = nullptr;
@@ -846,9 +862,152 @@ public:
             },
             TaskEnqueueFlags::FIRE_AND_FORGET);
     }
+
+private:
+    static Handle<View> FindGameView(EditorSubsystem* subsystem)
+    {
+        const Handle<EditorProject>& project = subsystem->GetCurrentProject();
+
+        if (!project.IsValid() || !project->GetGame().IsValid() || !project->GetGame()->GetWorld().IsValid())
+        {
+            return Handle<View>();
+        }
+
+        constexpr EnumFlags<ViewFlags> nonGameFlags = ViewFlags::EDITOR_VIEW | ViewFlags::THUMBNAIL_VIEW | ViewFlags::ENV_PROBE_VIEW
+            | ViewFlags::BAKER_VIEW | ViewFlags::SHADOW_VIEW | ViewFlags::UI_VIEW;
+
+        for (View* view : project->GetGame()->GetWorld()->GetViews())
+        {
+            if (view != nullptr && (view->GetFlags() & ViewFlags::GBUFFER) && !(view->GetFlags() & nonGameFlags))
+            {
+                return MakeStrongRef(view);
+            }
+        }
+
+        return Handle<View>();
+    }
 };
 
 DEFINE_EDITOR_COMMAND(CaptureViewport);
+
+#pragma region Play
+
+class EditorCommandPlay final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandPlay);
+
+public:
+    virtual ~EditorCommandPlay() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Play";
+    }
+
+    virtual bool AllowedWhileSimulating() const override
+    {
+        return true;
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        const Handle<EditorProject>& project = subsystem->GetCurrentProject();
+
+        if (!project.IsValid())
+        {
+            HYP_LOG(Editor, Warning, "no project open");
+            return;
+        }
+
+        if (subsystem->IsSimulating() && project->GetGame()->GetGameState().mode == GameStateMode::SIMULATING)
+        {
+            HYP_LOG(Editor, Warning, "already simulating");
+            return;
+        }
+
+        subsystem->OnGameModeRequested(GameStateMode::SIMULATING);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(Play);
+
+#pragma endregion Play
+
+#pragma region Pause
+
+class EditorCommandPause final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandPause);
+
+public:
+    virtual ~EditorCommandPause() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Pause";
+    }
+
+    virtual bool AllowedWhileSimulating() const override
+    {
+        return true;
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        if (!subsystem->IsSimulating())
+        {
+            HYP_LOG(Editor, Warning, "not simulating");
+            return;
+        }
+
+        subsystem->OnGameModeRequested(GameStateMode::PAUSED);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(Pause);
+
+#pragma endregion Pause
+
+#pragma region Stop
+
+class EditorCommandStop final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandStop);
+
+public:
+    virtual ~EditorCommandStop() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Stop";
+    }
+
+    virtual bool AllowedWhileSimulating() const override
+    {
+        return true;
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        if (!subsystem->IsSimulating())
+        {
+            HYP_LOG(Editor, Warning, "not simulating");
+            return;
+        }
+
+        subsystem->OnGameModeRequested(GameStateMode::STOPPED);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(Stop);
+
+#pragma endregion Stop
 
 #pragma endregion CaptureViewport
 

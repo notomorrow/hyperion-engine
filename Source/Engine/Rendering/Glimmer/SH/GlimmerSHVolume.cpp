@@ -560,10 +560,13 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
 
         m_shaderData.cascades[cascadeIndex].params.z = MathUtil::Clamp(g_cvGlimmerVisibility.Get(), 0.0f, 1.0f);
 
+        // must lean exactly as GlimmerSHOccupancy's windows do
+        const Vec3f center = GetGlimmerWindowCenter(inputs.viewerPosition, inputs.lookAhead, Vec3f(float(GlimmerSHGridXZ), float(GlimmerSHGridY), float(GlimmerSHGridXZ)) * spacing);
+
         const Vec3i origin = Vec3i(
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(inputs.viewerPosition.x / spacing)) - int32(GlimmerSHGridXZ / 2), WindowSnapVoxels),
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(inputs.viewerPosition.y / spacing)) - int32(GlimmerSHGridY / 2), WindowSnapVoxels),
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(inputs.viewerPosition.z / spacing)) - int32(GlimmerSHGridXZ / 2), WindowSnapVoxels));
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.x / spacing)) - int32(GlimmerSHGridXZ / 2), WindowSnapVoxels),
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.y / spacing)) - int32(GlimmerSHGridY / 2), WindowSnapVoxels),
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.z / spacing)) - int32(GlimmerSHGridXZ / 2), WindowSnapVoxels));
 
         MoveWindow(cascadeIndex, origin);
     }
@@ -637,15 +640,15 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
 
     ENGINE_STAT_GPU_SCOPE(&s_statGlimmerSHUpdate);
 
-    int32 budget = VoxelsPerFrame;
+    // counted per frame, so a low frame rate gets more a frame to keep the same pace
+    int32 budget = int32(float(VoxelsPerFrame) * MathUtil::Clamp(inputs.budgetScale, 1.0f, 4.0f));
     bool hasBarriers = false;
 
-    // finest first: it's what the camera sits in
-    for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades && budget > 0; cascadeIndex++)
+    const auto spend = [&](uint32 cascadeIndex, int32 allowance)
     {
         Cascade& cascade = m_cascades[cascadeIndex];
 
-        while (cascade.pending.Any() && budget > 0)
+        while (cascade.pending.Any() && allowance > 0 && budget > 0)
         {
             Box& box = cascade.pending.Front();
 
@@ -657,16 +660,39 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
             }
 
             const Vec3i extent = box.Extent();
-            const int32 slices = MathUtil::Clamp(budget / MathUtil::Max(extent.x * extent.y, 1), 1, extent.z);
+
+            // slice across the thinnest cross section so a small allowance still makes progress without overshooting
+            const int32 sliceSizes[3] = { extent.y * extent.z, extent.x * extent.z, extent.x * extent.y };
+            const uint32 axis = sliceSizes[0] <= sliceSizes[1] && sliceSizes[0] <= sliceSizes[2] ? 0u : (sliceSizes[1] <= sliceSizes[2] ? 1u : 2u);
+
+            const int32 sliceSize = MathUtil::Max(sliceSizes[axis], 1);
+            const int32 slices = MathUtil::Clamp(MathUtil::Min(allowance, budget) / sliceSize, 1, extent[axis]);
 
             Box chunk = box;
-            chunk.max.z = chunk.min.z + slices;
+            chunk.max[axis] = chunk.min[axis] + slices;
 
             DispatchBox(frame, cascadeIndex, chunk, RadianceHysteresis, inputs, hasBarriers);
 
-            budget -= extent.x * extent.y * slices;
-            box.min.z += slices;
+            const int32 spent = sliceSize * slices;
+
+            budget -= spent;
+            allowance -= spent;
+            box.min[axis] += slices;
         }
+    };
+
+    // every cascade gets a share first, so a moving camera that keeps the finest one busy can't starve the far field ahead of it
+    const int32 share = budget / int32(GlimmerSHCascades * 2);
+
+    for (uint32 cascadeIndex = 1; cascadeIndex < GlimmerSHCascades && budget > 0; cascadeIndex++)
+    {
+        spend(cascadeIndex, share);
+    }
+
+    // then finest first: it's what the camera sits in
+    for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades && budget > 0; cascadeIndex++)
+    {
+        spend(cascadeIndex, budget);
     }
 
     m_refreshBudget = MathUtil::Min(m_refreshBudget + IdleRefreshVoxelsPerFrame, MathUtil::Max(IdleRefreshVoxelsPerFrame, RefreshSliceVoxels) * 2);

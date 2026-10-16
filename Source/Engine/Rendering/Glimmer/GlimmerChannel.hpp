@@ -68,6 +68,9 @@ struct GlimmerChannelState
 {
     Vec3f viewerPosition;
     bool hasViewer = false;
+    // where a viewer is headed to predict where we need to load.
+    Vec3f lookAhead;
+    float budgetScale = 1.0f;
 
     FixedArray<GlimmerGroundLevelState, GlimmerGroundLevels> groundLevels {};
 

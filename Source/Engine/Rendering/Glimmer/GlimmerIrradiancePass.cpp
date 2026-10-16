@@ -51,7 +51,12 @@ static StaticShaderPropertyId s_propModeHalf { ShaderProperty(NAME("MODE"), NAME
 static StaticShaderPropertyId s_propModeUpsample { ShaderProperty(NAME("MODE"), NAME("UPSAMPLE")) };
 
 // the pixel of each 2x2 quad the half-res pass shades, cycled so TAA sees all four
-static const Vec2u s_halfResPicks[4] = { Vec2u(0, 0), Vec2u(1, 1), Vec2u(1, 0), Vec2u(0, 1) };
+static constexpr Vec2u HalfResPicks[4] = {
+    { 0, 0 },
+    { 1, 1 },
+    { 1, 0 },
+    { 0, 1 }
+};
 
 #pragma region GlimmerIrradiancePass
 
@@ -202,7 +207,7 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
     ENGINE_STAT_GPU_SCOPE(&s_statGlimmerIrradiance);
 
     const bool isHalfRes = g_cvGlimmerHalfRes.Get() && !isDebugView;
-    const Vec2u halfResPick = s_halfResPicks[m_frameIndex++ % 4];
+    const Vec2u& halfResPick = HalfResPicks[m_frameIndex++ % 4];
 
     const GBufferTarget& opaquePass = m_gbuffer->GetPass(GBufferPass::Opaque);
 
@@ -219,7 +224,7 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
 
         glimmerPass->WriteApplyShaderData(*RI.cbufferAllocator, renderSetup.world);
 
-        const Vec4u irradianceParams(halfResPick.x, halfResPick.y, 0, 0);
+        const Vec4u irradianceParams { halfResPick.x, halfResPick.y, 0, 0 };
         RI.cbufferAllocator->Write(&irradianceParams);
 
         RI.cbufferAllocator->Commit(cbuffer, cbufferOffset, cbufferSize);

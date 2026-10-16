@@ -1132,6 +1132,7 @@ namespace Hyperion.Editor.ViewModels
         private DelegateHandler? _activeSwatchChangedHandler;
         private DelegateHandler? _activeLayersChangedHandler;
         private DelegateHandler? _playNetStateChangedHandler;
+        private DelegateHandler? _gameModeRequestedHandler;
 
         private int _isUpdatingSelectionFromEngine = 0; // atomic
         private int _isUpdatingFocusedNodeFromEngine = 0; // atomic
@@ -1912,6 +1913,7 @@ namespace Hyperion.Editor.ViewModels
             BindPrefabEditStateChanged();
             BindScriptReloaded();
             BindPlayNetStateChanged();
+            BindGameModeRequested();
 
             EngineManager.TaskStarted += OnTaskStarted;
             EngineManager.TaskEnded += OnTaskEnded;
@@ -1961,6 +1963,7 @@ namespace Hyperion.Editor.ViewModels
             _activeSwatchChangedHandler?.Remove();
             _activeLayersChangedHandler?.Remove();
             _playNetStateChangedHandler?.Remove();
+            _gameModeRequestedHandler?.Remove();
 
             if (isDisposing)
             {
@@ -2880,6 +2883,33 @@ namespace Hyperion.Editor.ViewModels
                 });
 
             RefreshPlayNetSettings();
+        }
+
+        private void BindGameModeRequested()
+        {
+            WeakReference<MainWindowViewModel> weakThis = new WeakReference<MainWindowViewModel>(this);
+
+            _gameModeRequestedHandler?.Remove();
+            _gameModeRequestedHandler = _editorSubsystem.GetOnGameModeRequestedDelegate()
+                .Bind((GameStateMode mode) =>
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (!weakThis.TryGetTarget(out MainWindowViewModel? target))
+                        {
+                            return;
+                        }
+
+                        ICommand command = mode switch
+                        {
+                            GameStateMode.Simulating => target.SetGameModePlaying,
+                            GameStateMode.Paused => target.SetGameModePaused,
+                            _ => target.SetGameModeStopped
+                        };
+
+                        command.Execute(null);
+                    });
+                });
         }
 
         private void BindMeshEditStateChanged()

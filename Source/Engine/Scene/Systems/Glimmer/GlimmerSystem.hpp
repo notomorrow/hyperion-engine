@@ -49,6 +49,7 @@ private:
 
     ////////// DEBUG //////////
     void UpdateProbeDebugRecords(float delta);
+    void UpdateViewerMotion(const Vec3f& viewerPosition, float delta, GlimmerChannelState& outState);
     void LogProbeStats();
     void DebugDrawProbes(const Vec3f& viewerPosition);
     ///////////////////////////
@@ -71,6 +72,10 @@ private:
 
     Array<GlimmerProbeDebugRecord, GlimmerAllocator> m_probeDebugRecords;
     float m_probeStatsLogTimer = 0.0f;
+
+    Vec3f m_lastViewerPosition;
+    Vec3f m_viewerVelocity;
+    bool m_hasLastViewer = false;
 };
 
 } // namespace Hyperion

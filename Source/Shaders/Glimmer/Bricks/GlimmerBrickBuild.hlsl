@@ -21,7 +21,8 @@ PERMUTE(MODE, INIT, BEGIN, CLEAR, BIN, ALLOC, ARGS, COUNT, PREFIX, GATHER, TILES
 
 DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickTableBuffer) RWStructuredBuffer<uint> glimmerBrickTable;
 DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickIndexBuffer) RWStructuredBuffer<uint> glimmerBrickIndex;
-DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickCrossingsBuffer) RWStructuredBuffer<uint> glimmerBrickCrossings;
+// @TODO Make RWByteAddressBuffer, and use Load2 for loading brick crossings ? Or I guess RWStructuredBuffer<uint2> ?
+DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickCrossingsBuffer) RWStructuredBuffer<uint> glimmerBrickCrossings; 
 DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickMaterialBuffer) RWStructuredBuffer<uint> glimmerBrickMaterial;
 DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickCountersBuffer) RWStructuredBuffer<uint> glimmerBrickCounters;
 DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickFreeListBuffer) RWStructuredBuffer<uint> glimmerBrickFreeList;
