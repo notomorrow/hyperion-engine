@@ -44,6 +44,7 @@
 #include <Rendering/Texture.hpp>
 #include <Rendering/Mesh.hpp>
 #include <Rendering/Material.hpp>
+#include <Rendering/RenderHelpers.hpp>
 
 #include <Rendering/Shadows/ShadowMapCache.hpp>
 #include <Rendering/Shadows/ShadowCameraHelper.hpp>
@@ -117,9 +118,7 @@ static bool IsMaterialExcludedFromView(EnumFlags<ViewFlags> viewFlags, const Mat
         return false;
     }
 
-    const StringHash shaderNameHash = material->GetAttributes().shaderName;
-
-    return shaderNameHash == "Terrain"_sh;
+    return RenderHelpers::IsTerrainShader(material->GetAttributes().shaderName);
 }
 
 #pragma region ViewOutputTarget

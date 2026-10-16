@@ -1634,7 +1634,7 @@ void RenderInterface::CommitPipelineState(PSOType psoType, CommandBuffer* comman
                 }
                 else
                 {
-                    HYP_LOG(Rendering, Warning, "Skipping draw, returned null pipeline handle for shader {}!",
+                    HYP_LOG(Rendering, Debug, "Skipping draw, returned null pipeline handle for shader {}!",
                             state.attributes.GetShaderName());
                 }
 
@@ -1679,7 +1679,13 @@ void RenderInterface::CommitPipelineState(PSOType psoType, CommandBuffer* comman
             || !state.boundComputePipeline->MatchesSignature(ShaderDesc(state.attributes.GetShaderName(), state.attributes.GetShaderProperties())))
         {
             pipeline = computePipelineCache->GetOrCreate(state.attributes.GetShaderName(), state.attributes.GetShaderProperties());
-            Assert(pipeline != nullptr);
+
+            if (HYP_UNLIKELY(pipeline == nullptr))
+            {
+                state.boundComputePipeline = nullptr;
+
+                return;
+            }
 
             pipeline->Bind(commandBuffer);
             state.boundComputePipeline = pipeline;
@@ -1705,7 +1711,13 @@ void RenderInterface::CommitPipelineState(PSOType psoType, CommandBuffer* comman
             || !state.boundRayTracingPipeline->MatchesSignature(ShaderDesc(state.attributes.GetShaderName(), state.attributes.GetShaderProperties())))
         {
             pipeline = rayTracingPipelineCache->GetOrCreate(state.attributes.GetShaderName(), state.attributes.GetShaderProperties());
-            Assert(pipeline != nullptr);
+
+            if (HYP_UNLIKELY(pipeline == nullptr))
+            {
+                state.boundRayTracingPipeline = nullptr;
+
+                return;
+            }
 
             pipeline->Bind(commandBuffer);
             state.boundRayTracingPipeline = pipeline;

@@ -277,7 +277,7 @@ private:
     uint32 m_triangleEvictionGenerationAtGather;
     Vec3f m_viewerPositionAtGather;
 
-    Map<uint64, uint8> m_instanceLods; // the LOD each instance (entity id << 32 | a hash of its transform within the entity) was given at the last gather
+    Map<uint64, uint8, GlimmerAllocator> m_instanceLods; // the LOD each instance (entity id << 32 | a hash of its transform within the entity) was given at the last gather
     bool m_dirty;
     bool m_waitingForTriangles;
     bool m_usesLightmaps;

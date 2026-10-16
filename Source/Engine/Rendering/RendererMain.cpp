@@ -232,7 +232,7 @@ static void BuildAttributes(const RenderProxyMesh& proxy, RenderableAttributeSet
 
     // checked before the override is applied so passes like shadow maps still know they're drawing terrain
     const StringHash sourceShaderNameHash = proxy.attributes.GetMaterialAttributes().shaderName;
-    const bool isTerrainMesh = (sourceShaderNameHash == "Terrain"_sh);
+    const bool isTerrainMesh = RenderHelpers::IsTerrainShader(sourceShaderNameHash);
 
     if (overrideAttributes)
     {
@@ -262,9 +262,7 @@ static void BuildAttributes(const RenderProxyMesh& proxy, RenderableAttributeSet
 
     const MaterialParameters& materialParameters = material->GetParameters();
 
-    // lightmapped pixels spend the gbuffer bits emissive is packed into on their atlas UV, so glowing surfaces get deferred lit instead
-    const bool isEmissive = materialParameters.emissiveIntensity > 0.0f
-        && (materialParameters.emissiveColor.GetRed() > 0.0f || materialParameters.emissiveColor.GetGreen() > 0.0f || materialParameters.emissiveColor.GetBlue() > 0.0f);
+    const bool isEmissive = RenderHelpers::IsEmissive(materialParameters);
 
     const bool hasForwardLighting = (bucket == RenderBucket::Translucent || bucket == RenderBucket::Sky || bucket == RenderBucket::Debug);
     const bool hasLightmaps = (bucket == RenderBucket::Lightmapped) && g_cvLightmapVolumes.Get() && proxy.lightmapStencilValue != 0 && !isEmissive;

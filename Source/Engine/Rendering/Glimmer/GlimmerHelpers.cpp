@@ -20,6 +20,7 @@
 #include <Rendering/CommandRecorder.hpp>
 #include <Rendering/Texture.hpp>
 #include <Rendering/Material.hpp>
+#include <Rendering/RenderHelpers.hpp>
 
 #include <Rendering/Util/DeletionQueue.hpp>
 
@@ -247,7 +248,7 @@ void CollectGlimmerTerrainPatches(
             continue;
         }
 
-        if (proxy->attributes.GetMaterialAttributes().shaderName != "Terrain"_sh)
+        if (!RenderHelpers::IsTerrainShader(proxy->attributes.GetMaterialAttributes().shaderName))
         {
             continue;
         }

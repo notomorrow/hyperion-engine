@@ -7,6 +7,7 @@
 #include <RenderingPch.hpp>
 
 #include <Rendering/RenderHelpers.hpp>
+#include <Rendering/MaterialTypes.hpp>
 
 #include <Core/Math/MathUtil.hpp>
 
@@ -25,6 +26,14 @@ Vec3u WrapComputeGroupCount(uint32 numGroups)
     const uint32 groupsX = MathUtil::Min(numGroups, MaxComputeGroupsPerDimension);
 
     return Vec3u { groupsX, (numGroups + groupsX - 1) / groupsX, 1 };
+}
+
+bool IsEmissive(const MaterialParameters& materialParameters)
+{
+    return materialParameters.emissiveIntensity > 0.0f
+        && (materialParameters.emissiveColor.GetRed() > 0.0f
+            || materialParameters.emissiveColor.GetGreen() > 0.0f
+            || materialParameters.emissiveColor.GetBlue() > 0.0f);
 }
 
 } // namespace RenderHelpers

@@ -803,10 +803,12 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer, bo
                 {
                     RI.CommitPipelineState(PSO_Compute, commandBuffer);
                     pipeline = RI.state.boundComputePipeline;
-                    AssertDebug(pipeline != nullptr);
                 }
 
-                pipeline->Dispatch(commandBuffer, cmd->m_workgroupCount);
+                if (pipeline != nullptr)
+                {
+                    pipeline->Dispatch(commandBuffer, cmd->m_workgroupCount);
+                }
 
                 static_assert(std::is_trivially_destructible_v<DispatchCompute>);
             }
@@ -820,9 +822,11 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer, bo
                 RI.CommitPipelineState(PSO_Compute, commandBuffer);
 
                 ComputePipeline* pipeline = RI.state.boundComputePipeline;
-                AssertDebug(pipeline != nullptr);
 
-                pipeline->DispatchIndirect(commandBuffer, MakeStrongRef(cmd->m_argsBuffer), cmd->m_argsOffset);
+                if (pipeline != nullptr)
+                {
+                    pipeline->DispatchIndirect(commandBuffer, MakeStrongRef(cmd->m_argsBuffer), cmd->m_argsOffset);
+                }
 
                 static_assert(std::is_trivially_destructible_v<DispatchComputeIndirect>);
             }
@@ -840,10 +844,12 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer, bo
                 {
                     RI.CommitPipelineState(PSO_RayTracing, commandBuffer);
                     pipeline = RI.state.boundRayTracingPipeline;
-                    AssertDebug(pipeline != nullptr);
                 }
 
-                pipeline->TraceRays(commandBuffer, cmd->m_workgroupCount);
+                if (pipeline != nullptr)
+                {
+                    pipeline->TraceRays(commandBuffer, cmd->m_workgroupCount);
+                }
 
                 static_assert(std::is_trivially_destructible_v<TraceRays>);
             }

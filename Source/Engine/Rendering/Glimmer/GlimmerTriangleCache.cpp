@@ -351,7 +351,7 @@ GlimmerTriangleRequestResult GlimmerTriangleCache::Request(Mesh* mesh, uint8 lod
 
     const uint64 key = MakeKey(mesh, lodIndex);
 
-    if (KeyValuePair<uint64, UniquePtr<Entry>>* it = m_entries.TryGet(key))
+    if (KeyValuePair<uint64, UniquePtr<Entry, GlimmerAllocator>>* it = m_entries.TryGet(key))
     {
         Entry& entry = *it->second;
 
@@ -405,7 +405,7 @@ GlimmerTriangleRequestResult GlimmerTriangleCache::Request(Mesh* mesh, uint8 lod
         return GlimmerTriangleRequestResult::Pending;
     }
 
-    UniquePtr<Entry> entry = MakeUnique<Entry>();
+    auto entry = MakeUniqueWithAllocator<Entry, GlimmerAllocator>();
     entry->state = EntryState::Queued;
     entry->mesh = MakeStrongRef(mesh);
     entry->meshWeak = MakeWeakRef(mesh);
@@ -420,7 +420,11 @@ GlimmerTriangleRequestResult GlimmerTriangleCache::Request(Mesh* mesh, uint8 lod
     return GlimmerTriangleRequestResult::Pending;
 }
 
-bool GlimmerTriangleCache::TryGetResident(Mesh* mesh, uint8 lodIndex, float priority, GlimmerTriangleRef& outRef)
+bool GlimmerTriangleCache::TryGetResident(
+    Mesh* mesh,
+    uint8 lodIndex,
+    float priority,
+    GlimmerTriangleRef& outRef)
 {
     HYP_SCOPE;
     AssertOnThread(g_renderThread);
@@ -430,7 +434,7 @@ bool GlimmerTriangleCache::TryGetResident(Mesh* mesh, uint8 lodIndex, float prio
         return false;
     }
 
-    KeyValuePair<uint64, UniquePtr<Entry>>* it = m_entries.TryGet(MakeKey(mesh, lodIndex));
+    KeyValuePair<uint64, UniquePtr<Entry, GlimmerAllocator>>* it = m_entries.TryGet(MakeKey(mesh, lodIndex));
 
     if (!it)
     {
@@ -457,7 +461,7 @@ void GlimmerTriangleCache::AddReferences(Span<const uint64> keys)
 {
     for (const uint64 key : keys)
     {
-        if (KeyValuePair<uint64, UniquePtr<Entry>>* it = m_entries.TryGet(key))
+        if (KeyValuePair<uint64, UniquePtr<Entry, GlimmerAllocator>>* it = m_entries.TryGet(key))
         {
             it->second->numReferences++;
         }
@@ -468,7 +472,7 @@ void GlimmerTriangleCache::RemoveReferences(Span<const uint64> keys)
 {
     for (const uint64 key : keys)
     {
-        if (KeyValuePair<uint64, UniquePtr<Entry>>* it = m_entries.TryGet(key))
+        if (KeyValuePair<uint64, UniquePtr<Entry, GlimmerAllocator>>* it = m_entries.TryGet(key))
         {
             Entry& entry = *it->second;
 
@@ -1451,7 +1455,7 @@ void GlimmerTriangleCache::Update(Frame* frame)
 
     for (const uint64 keyToErase : m_keysToErase)
     {
-        if (KeyValuePair<uint64, UniquePtr<Entry>>* it = m_entries.TryGet(keyToErase))
+        if (KeyValuePair<uint64, UniquePtr<Entry, GlimmerAllocator>>* it = m_entries.TryGet(keyToErase))
         {
             if (it->second->state == EntryState::Evicted)
             {

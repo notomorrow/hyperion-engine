@@ -20,6 +20,7 @@
 #include <Rendering/Frame.hpp>
 #include <Rendering/Mesh.hpp>
 #include <Rendering/Material.hpp>
+#include <Rendering/RenderHelpers.hpp>
 
 #include <Rendering/Util/DeletionQueue.hpp>
 
@@ -425,9 +426,8 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
         }
 
         // terrain comes from the terrain itself, and foliage only goes into the heightfield, as canopy
-        const StringHash shaderNameHash = materialAttributes.shaderName;
 
-        if (shaderNameHash == "Terrain"_sh)
+        if (RenderHelpers::IsTerrainShader(materialAttributes.shaderName))
         {
             continue;
         }
@@ -455,10 +455,7 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
             && proxy->lightmapStencilValue != 0
             && proxy->lightmapVolume != nullptr)
         {
-            const MaterialParameters& materialParameters = proxy->material->GetParameters();
-
-            const bool isEmissive = materialParameters.emissiveIntensity > 0.0f
-                && (materialParameters.emissiveColor.GetRed() > 0.0f || materialParameters.emissiveColor.GetGreen() > 0.0f || materialParameters.emissiveColor.GetBlue() > 0.0f);
+            const bool isEmissive = RenderHelpers::IsEmissive(proxy->material->GetParameters());
 
             const RenderProxyLightmapVolume* volumeProxy = static_cast<RenderProxyLightmapVolume*>(GetRenderProxy(proxy->lightmapVolume));
 
