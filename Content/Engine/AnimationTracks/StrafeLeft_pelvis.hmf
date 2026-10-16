@@ -1,4 +1,5 @@
 AnimationTrack StrafeLeft_pelvis {
+    RotationConvention = 1
     BoneName = pelvis
     KeyframeData = {
         Key = "Engine://AnimationTracks/StrafeLeft_pelvis.KEYF"

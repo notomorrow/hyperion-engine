@@ -1,4 +1,5 @@
 AnimationTrack HitHead_lowerarm_l {
+    RotationConvention = 1
     BoneName = lowerarm_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/HitHead_lowerarm_l.KEYF"

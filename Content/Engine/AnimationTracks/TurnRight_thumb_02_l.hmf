@@ -1,4 +1,5 @@
 AnimationTrack TurnRight_thumb_02_l {
+    RotationConvention = 1
     BoneName = thumb_02_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/TurnRight_thumb_02_l.KEYF"

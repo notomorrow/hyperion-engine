@@ -1,4 +1,5 @@
 AnimationTrack HitHead_head {
+    RotationConvention = 1
     BoneName = head
     KeyframeData = {
         Key = "Engine://AnimationTracks/HitHead_head.KEYF"

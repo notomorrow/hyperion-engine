@@ -1,4 +1,5 @@
 AnimationTrack Roll_middle_01_r {
+    RotationConvention = 1
     BoneName = middle_01_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/Roll_middle_01_r.KEYF"

@@ -1,4 +1,5 @@
 AnimationTrack Land_thigh_l {
+    RotationConvention = 1
     BoneName = thigh_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/Land_thigh_l.KEYF"

@@ -1,4 +1,5 @@
 AnimationTrack PistolReload_clavicle_r {
+    RotationConvention = 1
     BoneName = clavicle_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/PistolReload_clavicle_r.KEYF"

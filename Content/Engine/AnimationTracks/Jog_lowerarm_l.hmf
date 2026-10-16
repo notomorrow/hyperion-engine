@@ -1,4 +1,5 @@
 AnimationTrack Jog_lowerarm_l {
+    RotationConvention = 1
     BoneName = lowerarm_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/Jog_lowerarm_l.KEYF"

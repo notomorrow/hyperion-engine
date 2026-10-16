@@ -1,4 +1,5 @@
 AnimationTrack RunLand_pinky_01_l {
+    RotationConvention = 1
     BoneName = pinky_01_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/RunLand_pinky_01_l.KEYF"

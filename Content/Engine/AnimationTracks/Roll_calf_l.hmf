@@ -1,4 +1,5 @@
 AnimationTrack Roll_calf_l {
+    RotationConvention = 1
     BoneName = calf_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/Roll_calf_l.KEYF"

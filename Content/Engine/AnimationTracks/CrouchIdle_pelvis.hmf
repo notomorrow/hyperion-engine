@@ -1,4 +1,5 @@
 AnimationTrack CrouchIdle_pelvis {
+    RotationConvention = 1
     BoneName = pelvis
     KeyframeData = {
         Key = "Engine://AnimationTracks/CrouchIdle_pelvis.KEYF"

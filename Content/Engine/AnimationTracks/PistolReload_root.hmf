@@ -1,4 +1,5 @@
 AnimationTrack PistolReload_root {
+    RotationConvention = 1
     BoneName = root
     KeyframeData = {
         Key = "Engine://AnimationTracks/PistolReload_root.KEYF"

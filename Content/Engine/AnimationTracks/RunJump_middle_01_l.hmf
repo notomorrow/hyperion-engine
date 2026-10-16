@@ -1,4 +1,5 @@
 AnimationTrack RunJump_middle_01_l {
+    RotationConvention = 1
     BoneName = middle_01_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/RunJump_middle_01_l.KEYF"

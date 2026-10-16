@@ -1,4 +1,5 @@
 AnimationTrack PistolIdle_middle_02_l {
+    RotationConvention = 1
     BoneName = middle_02_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/PistolIdle_middle_02_l.KEYF"

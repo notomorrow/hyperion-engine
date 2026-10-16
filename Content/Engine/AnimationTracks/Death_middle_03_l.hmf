@@ -1,4 +1,5 @@
 AnimationTrack Death_middle_03_l {
+    RotationConvention = 1
     BoneName = middle_03_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/Death_middle_03_l.KEYF"

@@ -1,4 +1,5 @@
 AnimationTrack Idle_root {
+    RotationConvention = 1
     BoneName = root
     KeyframeData = {
         Key = "Engine://AnimationTracks/Idle_root.KEYF"

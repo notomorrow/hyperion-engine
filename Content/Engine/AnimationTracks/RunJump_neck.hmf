@@ -1,4 +1,5 @@
 AnimationTrack RunJump_neck {
+    RotationConvention = 1
     BoneName = neck
     KeyframeData = {
         Key = "Engine://AnimationTracks/RunJump_neck.KEYF"

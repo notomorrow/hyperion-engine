@@ -1,4 +1,5 @@
 AnimationTrack PickUp_pelvis {
+    RotationConvention = 1
     BoneName = pelvis
     KeyframeData = {
         Key = "Engine://AnimationTracks/PickUp_pelvis.KEYF"

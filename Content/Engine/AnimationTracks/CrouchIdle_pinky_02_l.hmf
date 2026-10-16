@@ -1,4 +1,5 @@
 AnimationTrack CrouchIdle_pinky_02_l {
+    RotationConvention = 1
     BoneName = pinky_02_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/CrouchIdle_pinky_02_l.KEYF"

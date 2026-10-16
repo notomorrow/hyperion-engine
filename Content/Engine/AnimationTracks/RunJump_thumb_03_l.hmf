@@ -1,4 +1,5 @@
 AnimationTrack RunJump_thumb_03_l {
+    RotationConvention = 1
     BoneName = thumb_03_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/RunJump_thumb_03_l.KEYF"

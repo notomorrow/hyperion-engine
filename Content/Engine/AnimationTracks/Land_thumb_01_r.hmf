@@ -1,4 +1,5 @@
 AnimationTrack Land_thumb_01_r {
+    RotationConvention = 1
     BoneName = thumb_01_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/Land_thumb_01_r.KEYF"

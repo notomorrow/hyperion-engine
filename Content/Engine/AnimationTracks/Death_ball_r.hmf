@@ -1,4 +1,5 @@
 AnimationTrack Death_ball_r {
+    RotationConvention = 1
     BoneName = ball_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/Death_ball_r.KEYF"

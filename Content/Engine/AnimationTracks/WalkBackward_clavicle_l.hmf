@@ -1,4 +1,5 @@
 AnimationTrack WalkBackward_clavicle_l {
+    RotationConvention = 1
     BoneName = clavicle_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/WalkBackward_clavicle_l.KEYF"

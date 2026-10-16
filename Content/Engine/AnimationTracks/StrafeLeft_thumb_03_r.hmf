@@ -1,4 +1,5 @@
 AnimationTrack StrafeLeft_thumb_03_r {
+    RotationConvention = 1
     BoneName = thumb_03_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/StrafeLeft_thumb_03_r.KEYF"

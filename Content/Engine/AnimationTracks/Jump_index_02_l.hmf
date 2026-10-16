@@ -1,4 +1,5 @@
 AnimationTrack Jump_index_02_l {
+    RotationConvention = 1
     BoneName = index_02_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/Jump_index_02_l.KEYF"

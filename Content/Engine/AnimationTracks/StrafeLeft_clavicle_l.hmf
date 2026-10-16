@@ -1,4 +1,5 @@
 AnimationTrack StrafeLeft_clavicle_l {
+    RotationConvention = 1
     BoneName = clavicle_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/StrafeLeft_clavicle_l.KEYF"

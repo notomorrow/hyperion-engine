@@ -1,4 +1,5 @@
 AnimationTrack Death_root {
+    RotationConvention = 1
     BoneName = root
     KeyframeData = {
         Key = "Engine://AnimationTracks/Death_root.KEYF"

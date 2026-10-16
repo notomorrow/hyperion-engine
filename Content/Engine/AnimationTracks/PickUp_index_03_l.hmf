@@ -1,4 +1,5 @@
 AnimationTrack PickUp_index_03_l {
+    RotationConvention = 1
     BoneName = index_03_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/PickUp_index_03_l.KEYF"

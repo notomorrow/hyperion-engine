@@ -1,4 +1,5 @@
 AnimationTrack JumpWindup_thumb_02_r {
+    RotationConvention = 1
     BoneName = thumb_02_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/JumpWindup_thumb_02_r.KEYF"

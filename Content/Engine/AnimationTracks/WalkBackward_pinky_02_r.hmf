@@ -1,4 +1,5 @@
 AnimationTrack WalkBackward_pinky_02_r {
+    RotationConvention = 1
     BoneName = pinky_02_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/WalkBackward_pinky_02_r.KEYF"

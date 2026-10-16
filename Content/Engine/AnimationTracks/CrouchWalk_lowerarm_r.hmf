@@ -1,4 +1,5 @@
 AnimationTrack CrouchWalk_lowerarm_r {
+    RotationConvention = 1
     BoneName = lowerarm_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/CrouchWalk_lowerarm_r.KEYF"

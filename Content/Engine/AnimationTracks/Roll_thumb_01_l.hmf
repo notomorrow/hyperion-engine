@@ -1,4 +1,5 @@
 AnimationTrack Roll_thumb_01_l {
+    RotationConvention = 1
     BoneName = thumb_01_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/Roll_thumb_01_l.KEYF"

@@ -1,4 +1,5 @@
 AnimationTrack StrafeRight_upperarm_l {
+    RotationConvention = 1
     BoneName = upperarm_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/StrafeRight_upperarm_l.KEYF"

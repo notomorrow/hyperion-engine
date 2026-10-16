@@ -1,4 +1,5 @@
 AnimationTrack HoldRifle_head {
+    RotationConvention = 1
     BoneName = head
     KeyframeData = {
         Key = "Engine://AnimationTracks/HoldRifle_head.KEYF"

@@ -1,4 +1,5 @@
 AnimationTrack WalkBackward_index_02_l {
+    RotationConvention = 1
     BoneName = index_02_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/WalkBackward_index_02_l.KEYF"

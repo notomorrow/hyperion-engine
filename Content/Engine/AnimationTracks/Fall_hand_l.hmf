@@ -1,4 +1,5 @@
 AnimationTrack Fall_hand_l {
+    RotationConvention = 1
     BoneName = hand_l
     KeyframeData = {
         Key = "Engine://AnimationTracks/Fall_hand_l.KEYF"

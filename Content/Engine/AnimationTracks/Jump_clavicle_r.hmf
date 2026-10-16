@@ -1,4 +1,5 @@
 AnimationTrack Jump_clavicle_r {
+    RotationConvention = 1
     BoneName = clavicle_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/Jump_clavicle_r.KEYF"

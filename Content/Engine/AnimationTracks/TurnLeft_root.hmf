@@ -1,4 +1,5 @@
 AnimationTrack TurnLeft_root {
+    RotationConvention = 1
     BoneName = root
     KeyframeData = {
         Key = "Engine://AnimationTracks/TurnLeft_root.KEYF"

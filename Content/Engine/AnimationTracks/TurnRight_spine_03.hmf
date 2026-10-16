@@ -1,4 +1,5 @@
 AnimationTrack TurnRight_spine_03 {
+    RotationConvention = 1
     BoneName = spine_03
     KeyframeData = {
         Key = "Engine://AnimationTracks/TurnRight_spine_03.KEYF"

@@ -1,4 +1,5 @@
 AnimationTrack Fall_pelvis {
+    RotationConvention = 1
     BoneName = pelvis
     KeyframeData = {
         Key = "Engine://AnimationTracks/Fall_pelvis.KEYF"

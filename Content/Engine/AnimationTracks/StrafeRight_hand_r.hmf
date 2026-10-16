@@ -1,4 +1,5 @@
 AnimationTrack StrafeRight_hand_r {
+    RotationConvention = 1
     BoneName = hand_r
     KeyframeData = {
         Key = "Engine://AnimationTracks/StrafeRight_hand_r.KEYF"
