@@ -300,12 +300,15 @@ static ViewData* GetViewData(View* view, bool createIfNotExist)
 // Data for views that is buffered over multiple frames
 struct BufferedViewData
 {
+    // holds a ref, so rplShared can't be freed and the View's address reused while this entry exists
     View* view = nullptr;
     Viewport viewport {};
     RenderProxyList* rplShared = nullptr;
 
     // Only render thread touches this member, since ViewData is created from the render thread
     ViewData* viewData = nullptr;
+
+    AtomicVar<uint32> lastUsedFrame { 0 };
 };
 
 struct RenderingData
@@ -367,6 +370,8 @@ static BufferedViewData* GetBufferedViewData(View* view, uint8 ringIndex)
     auto it = bufferedData.perViewData.Find(view);
     if (it != bufferedData.perViewData.End())
     {
+        it->second->lastUsedFrame.Set(GetFrameCounter(), MemoryOrder::RELAXED);
+
         return it->second;
     }
 
@@ -379,12 +384,17 @@ static BufferedViewData* GetBufferedViewData(View* view, uint8 ringIndex)
 
         if (it != bufferedData.perViewData.End())
         {
+            it->second->lastUsedFrame.Set(GetFrameCounter(), MemoryOrder::RELAXED);
+
             return it->second;
         }
     }
 
     BufferedViewData* bufferedViewData = new BufferedViewData;
     bufferedViewData->view = view;
+    bufferedViewData->lastUsedFrame.Set(GetFrameCounter(), MemoryOrder::RELAXED);
+
+    view->AddRef();
 
     bufferedViewData->rplShared = view->GetRenderProxyList(ringIndex);
     AssertDebug(bufferedViewData->rplShared != nullptr);
@@ -1421,6 +1431,25 @@ void RenderInterface::CleanupUnusedResources(uint32 frameIndex)
     {
         Framework::BufferedViewData* bufferedViewData = it->second;
 
+        // never picked up as an active view (e.g. collected directly), so no ViewData was made for it
+        if (bufferedViewData->viewData == nullptr)
+        {
+            if (int64(frameIndex) - int64(bufferedViewData->lastUsedFrame.Get(MemoryOrder::RELAXED)) >= MaxFramesBeforeDiscardViews)
+            {
+                bufferedViewData->view->Release();
+
+                delete bufferedViewData;
+
+                it = bufferedData.perViewData.Erase(it);
+
+                continue;
+            }
+
+            ++it;
+
+            continue;
+        }
+
         if (bufferedViewData->viewData != nullptr)
         {
             Framework::ViewData* viewData = bufferedViewData->viewData;
@@ -1479,6 +1508,7 @@ void RenderInterface::CleanupUnusedResources(uint32 frameIndex)
                 }
 
                 bufferedViewData->viewData = nullptr;
+                bufferedViewData->view->Release();
 
                 delete bufferedViewData;
 

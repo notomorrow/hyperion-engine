@@ -621,7 +621,25 @@ RenderProxyList::~RenderProxyList()
 
 void RenderProxyList::BeginWrite()
 {
-    m_lock.LockWriter();
+    uint32 numAttempts = 0;
+
+    while (!m_lock.TryLockWriter())
+    {
+        if (++numAttempts < 64)
+        {
+            HYP_WAIT_IDLE();
+
+            continue;
+        }
+
+        ThreadSleep(1);
+
+        if (numAttempts == 64 + 5000)
+        {
+            HYP_LOG(Rendering, Error, "RenderProxyList {} has waited ~5 s for its write lock; a reader or writer never released it, or the list was freed (isShared: {})",
+                (void*)this, isShared);
+        }
+    }
 
     AssertDebug(state != CS_READING);
     state = CS_WRITING;
