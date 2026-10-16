@@ -79,6 +79,7 @@ if(HYP_WEB)
   set(HYP_WEB_PACKAGE_DIR "" CACHE PATH "Host folder holding the Config/ and Content/ to preload in the browser build")
 
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Platform/Web/index.html" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/index.html" COPYONLY)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Platform/Web/isolation-worker.js" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/isolation-worker.js" COPYONLY)
 
   # DWARF triples the download (60 MB against 21 MB) and holds the link back to limited optimisation.
   # Function names are kept either way, so a stack trace in the browser's console stays readable.

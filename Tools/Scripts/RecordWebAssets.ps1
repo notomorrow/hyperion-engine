@@ -3,7 +3,8 @@ param(
     [string]$Package = "",
     [int]$Seconds = 60,
     [string]$Project = "",
-    [int]$FrameRate = 0
+    [int]$FrameRate = 0,
+    [int]$MaxTextureSize = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -201,6 +202,11 @@ if ($numMissing -ne 0)
 Remove-Item (Join-Path $workDir "Cache"), (Join-Path $workDir "Content") -Recurse -Force
 
 $packageArguments = "--engine-assets `"$recordedDir\engine-assets.txt`" --shader-cache `"$recordedDir`" --skip-precompile"
+
+if ($MaxTextureSize -gt 0)
+{
+    $packageArguments = "$packageArguments --max-texture-size $MaxTextureSize"
+}
 
 if ($World -ne "")
 {
