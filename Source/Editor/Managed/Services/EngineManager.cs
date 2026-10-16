@@ -41,6 +41,8 @@ namespace Hyperion.Editor
         public static event Action<ObjIdBase>? TaskEnded;
         public static event Action<ObjIdBase, float>? TaskProgressUpdated;
 
+        public static event Action? EditorInitialized;
+
         // raised on the sim thread
         public static event Action<uint>? ViewportLayoutRequested;
 
@@ -231,6 +233,8 @@ namespace Hyperion.Editor
             });
 
             SetEditorViewportsEnabled(true);
+
+            EditorInitialized?.Invoke();
         }
 
         // Also rebound by MainWindowViewModel when the edited World changes

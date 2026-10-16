@@ -1916,6 +1916,7 @@ namespace Hyperion.Editor.ViewModels
             EngineManager.TaskStarted += OnTaskStarted;
             EngineManager.TaskEnded += OnTaskEnded;
             EngineManager.TaskProgressUpdated += OnTaskProgressUpdated;
+            EngineManager.EditorInitialized += OnEditorInitialized;
 
             _ = EngineManager.PostToSimThread(() =>
             {
@@ -1968,6 +1969,7 @@ namespace Hyperion.Editor.ViewModels
                 EngineManager.TaskStarted -= OnTaskStarted;
                 EngineManager.TaskEnded -= OnTaskEnded;
                 EngineManager.TaskProgressUpdated -= OnTaskProgressUpdated;
+                EngineManager.EditorInitialized -= OnEditorInitialized;
 
                 SceneHierarchy.SelectedNodeChanged -= OnSceneHierarchyNodeSelected;
                 SceneHierarchy.SelectionChanged -= OnSceneHierarchySelectionChanged;
@@ -1975,6 +1977,37 @@ namespace Hyperion.Editor.ViewModels
 
                 ContentBrowser.Dispose();
             }
+        }
+
+        private void OnEditorInitialized()
+        {
+            RefreshSimulationDependentState();
+        }
+
+        private void RefreshSimulationDependentState()
+        {
+            Dispatcher.UIThread.VerifyAccess();
+
+            RefreshGameModeState();
+
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
+            OnPropertyChanged(nameof(CanCopy));
+            OnPropertyChanged(nameof(CanPaste));
+
+            (SelectTransformModeTranslate as SetGizmoCommand)?.RaiseCanExecuteChanged();
+            (SelectTransformModeRotate as SetGizmoCommand)?.RaiseCanExecuteChanged();
+            (SelectTransformModeScale as SetGizmoCommand)?.RaiseCanExecuteChanged();
+
+            OnPropertyChanged(nameof(CanSelectGizmo));
+            OnPropertyChanged(nameof(CanSelectTransformModeTranslate));
+            OnPropertyChanged(nameof(CanSelectTransformModeRotate));
+            OnPropertyChanged(nameof(CanSelectTransformModeScale));
+
+            NotifyTransformModeChanged();
+
+            _ = EngineManager.PostToSimThread(RefreshMeshEditState);
+            _ = EngineManager.PostToSimThread(RefreshCsgState);
         }
 
         private void OnTaskStarted(EditorTaskBase task, bool isForegroundTask)
@@ -2281,29 +2314,7 @@ namespace Hyperion.Editor.ViewModels
                 _gameModeChangedHandler = project.GameInstance.GetOnGameStateChangeDelegate()
                     .Bind((Game game, GameStateMode newMode, GameStateMode prevMode) =>
                     {
-                        Dispatcher.UIThread.Post(() =>
-                        {
-                            RefreshGameModeState();
-
-                            OnPropertyChanged(nameof(CanUndo));
-                            OnPropertyChanged(nameof(CanRedo));
-                            OnPropertyChanged(nameof(CanCopy));
-                            OnPropertyChanged(nameof(CanPaste));
-
-                            (SelectTransformModeTranslate as SetGizmoCommand)?.RaiseCanExecuteChanged();
-                            (SelectTransformModeRotate as SetGizmoCommand)?.RaiseCanExecuteChanged();
-                            (SelectTransformModeScale as SetGizmoCommand)?.RaiseCanExecuteChanged();
-
-                            OnPropertyChanged(nameof(CanSelectGizmo));
-                            OnPropertyChanged(nameof(CanSelectTransformModeTranslate));
-                            OnPropertyChanged(nameof(CanSelectTransformModeRotate));
-                            OnPropertyChanged(nameof(CanSelectTransformModeScale));
-
-                            NotifyTransformModeChanged();
-
-                            _ = EngineManager.PostToSimThread(RefreshMeshEditState);
-                            _ = EngineManager.PostToSimThread(RefreshCsgState);
-                        });
+                        Dispatcher.UIThread.Post(RefreshSimulationDependentState);
                     });
             }
 
