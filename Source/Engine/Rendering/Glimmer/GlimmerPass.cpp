@@ -181,6 +181,8 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         return;
     }
 
+    bool isRestarting = false;
+
     if (RI.GetNumPipelinesCompilingInBackground() != 0)
     {
         scene->isWarmingUp = true;
@@ -189,16 +191,12 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     {
         scene->technique.Reset();
 
-        if (scene->tlas && scene->blasCache)
-        {
-            scene->tlas->Release(*scene->blasCache);
-        }
-
-        scene->tlas = MakeUnique<GlimmerTLAS>();
         scene->surfaceCache = MakeUnique<GlimmerSurfaceCache>();
         scene->spanCache = MakeUnique<GlimmerSpanCache>();
         scene->technique = MakeUnique<GlimmerTechnique>();
         scene->isWarmingUp = false;
+
+        isRestarting = true;
     }
     else
     {
@@ -248,6 +246,15 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         channel->Consume(channelState, groundUploads);
     }
 
+    const size_t numGivenGroundUploads = isRestarting ? 0 : scene->groundUploads.Size();
+
+    for (GlimmerGroundUpload& groundUpload : groundUploads)
+    {
+        scene->groundUploads.PushBack(std::move(groundUpload));
+    }
+
+    const Span<const GlimmerGroundUpload> newGroundUploads(scene->groundUploads.Data() + numGivenGroundUploads, scene->groundUploads.Size() - numGivenGroundUploads);
+
     const Vec3f viewerPosition = channelState.hasViewer ? channelState.viewerPosition : region.GetCenter();
 
     scene->sceneInstances->Update(frame, rpl, region, viewerPosition, *scene->triangleCache);
@@ -288,8 +295,8 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
         s_statGlimmerTerrainPatches = uint32(terrainPatches.Size());
 
-        scene->surfaceCache->Update(frame, channelState, groundUploads.ToSpan(), terrainPatches.ToSpan());
-        scene->spanCache->Update(frame, channelState, *scene->tlas, *scene->blasCache, *scene->surfaceCache);
+        scene->surfaceCache->Update(frame, channelState, newGroundUploads, terrainPatches.ToSpan());
+        scene->spanCache->Update(frame, channelState, *scene->sceneInstances, *scene->triangleCache, *scene->surfaceCache);
 
         context.channelState = &channelState;
         context.channel = channel.Get();

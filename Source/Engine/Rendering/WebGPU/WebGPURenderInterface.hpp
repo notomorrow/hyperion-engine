@@ -89,7 +89,7 @@ public:
     WebGPUSwapchainRef CreateSwapchain(ApplicationWindow* window, const Vec2u& extent) override;
 
     void PrepareSwapchain(WebGPUSwapchain* swapchain) override;
-    void PresentToSwapchain(WebGPUSwapchain* swapchain) override;
+    void PresentToSwapchains(Span<WebGPUSwapchain* const> swapchains) override;
 
     WebGPUCommandBuffer* GetCurrentCommandBuffer() const override
     {

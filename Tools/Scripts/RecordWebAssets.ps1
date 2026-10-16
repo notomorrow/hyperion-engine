@@ -10,7 +10,6 @@ $ErrorActionPreference = "Stop"
 
 $rootDir = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $binDir = Join-Path $rootDir "Binaries\Windows\Release"
-$configDir = Join-Path $binDir "Config"
 $webDir = Join-Path $rootDir "PackagedBuilds\Web"
 $recordedDir = Join-Path $webDir "Recorded"
 $workDir = Join-Path $recordedDir "Work"
@@ -49,6 +48,40 @@ if ($Package -eq "" -or -not (Test-Path (Join-Path $Package "Cache\toc.bin")))
     Fail "No cooked package to run the level from. Make one first: Tools\Scripts\PackageBuildWeb.bat --project <project>"
 }
 
+# a C++ project records with its own launcher, so what its game code draws is in the list too
+$runExe = $sampleExe
+
+if ($Project -ne "" -and (Test-Path (Join-Path $Project "Source\Game")))
+{
+    $Project = (Resolve-Path $Project).Path
+    $projectName = (Get-ChildItem $Project -Filter *.hypproject | Select-Object -First 1).BaseName
+    $buildScript = Join-Path $Project "Build\Windows\Build.bat"
+
+    if (-not (Test-Path $buildScript))
+    {
+        Fail "$buildScript not found. Generate the C++ project and build the game from the editor once first"
+    }
+
+    Write-Host "Building the game code of $projectName against this engine build..."
+
+    & cmd /c "`"$buildScript`""
+
+    if ($LASTEXITCODE -ne 0)
+    {
+        Fail "Building the game code failed"
+    }
+
+    $runExe = Join-Path $Project "Binaries\Windows\$projectName.exe"
+
+    if (-not (Test-Path $runExe))
+    {
+        Fail "$runExe not found after building the game code"
+    }
+}
+
+$runDir = Split-Path $runExe
+$configDir = Join-Path $runDir "Config"
+
 Write-Host "Running the level from $Package"
 
 if (Test-Path $workDir)
@@ -77,7 +110,7 @@ foreach ($name in $swappedConfigs)
 
 function RunLevel([string]$label, [string[]]$extraArguments)
 {
-    $arguments = @("--singleplayer=true", "--cachedir=$workDir\Cache", "--contentdir=$workDir\Content") + $extraArguments
+    $arguments = @("--singleplayer=true", "--cooked=true", "--cachedir=$workDir\Cache", "--contentdir=$workDir\Content") + $extraArguments
 
     if ($World -ne "")
     {
@@ -86,7 +119,7 @@ function RunLevel([string]$label, [string[]]$extraArguments)
 
     Write-Host "$label, $Seconds seconds (closing the window ends it sooner)..."
 
-    $process = Start-Process -FilePath $sampleExe -ArgumentList $arguments -WorkingDirectory $binDir -PassThru `
+    $process = Start-Process -FilePath $runExe -ArgumentList $arguments -WorkingDirectory $runDir -PassThru `
         -RedirectStandardOutput (Join-Path $workDir "$label.log") -RedirectStandardError (Join-Path $workDir "$label.err.log")
 
     if (-not $process.WaitForExit($Seconds * 1000))
@@ -114,7 +147,8 @@ try
     Set-Content (Join-Path $configDir "EngineConfig.json") $engineConfig -Encoding ascii
 
     $globalConfig = Get-Content (Join-Path $rootDir "Config\GlobalConfig.Web.json") -Raw | ConvertFrom-Json
-    $globalConfig.App.Args = "$($globalConfig.App.Args) --basedir=../../../"
+    $globalConfig.App.Name = (Get-Content (Join-Path $configDir "GlobalConfig.json.recordbackup") -Raw | ConvertFrom-Json).App.Name
+    $globalConfig.App.Args = "$($globalConfig.App.Args) --basedir=`"$($rootDir -replace '\\', '/')`""
     $globalConfig | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $configDir "GlobalConfig.json") -Encoding ascii
 
     # A shader variant compiled during a run is not in that run's list, so the first run only compiles.

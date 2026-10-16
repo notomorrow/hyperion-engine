@@ -153,6 +153,10 @@ REM Left alone when unset, so a plain rebuild keeps the package the build direct
 set "HYP_WEB_PACKAGE_CMAKE="
 if defined HYP_WEB_PACKAGE_DIR set "HYP_WEB_PACKAGE_CMAKE=-DHYP_WEB_PACKAGE_DIR=%HYP_WEB_PACKAGE_DIR:\=/%"
 
+REM HYP_WEB_GAME_SOURCE_DIR: a C++ project's Source folder, whose Game/ is built into the page. Passed with every package,
+REM empty for a project without game code, so the last project's code doesn't stay in the build.
+if defined HYP_WEB_PACKAGE_DIR set "HYP_WEB_PACKAGE_CMAKE=%HYP_WEB_PACKAGE_CMAKE% -DHYP_WEB_GAME_SOURCE_DIR=%HYP_WEB_GAME_SOURCE_DIR%"
+
 call emcmake cmake ../../../Source -G Ninja -DCMAKE_BUILD_TYPE="%HYP_BUILD_TYPE%" %HYP_WEB_PACKAGE_CMAKE%
 if errorlevel 1 (
     echo CMake generation failed. Aborting build.
