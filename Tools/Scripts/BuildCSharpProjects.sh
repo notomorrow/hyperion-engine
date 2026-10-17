@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # This script builds the C# libraries manually - Xcode currently will not build them so we need to do it ourselves.
 
@@ -35,7 +35,7 @@ for project in "${projects[@]}"; do
         if [ ! -d "$buildDir/../Binaries/$CURR_PLATFORM/$CONFIG" ]; then
             mkdir -p "$buildDir/../Binaries/$CURR_PLATFORM/$CONFIG"
         fi
-        cp "bin/$CONFIG/net9.0/$project.dll" "$buildDir/../Binaries/$CURR_PLATFORM/$CONFIG/$project.dll"
+        cp "bin/$CONFIG/net10.0/$project.dll" "$buildDir/../Binaries/$CURR_PLATFORM/$CONFIG/$project.dll"
     popd # $project
 done
 

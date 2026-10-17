@@ -230,6 +230,16 @@ include(ExternalProject)
 
 function(RunCodeGen version_major version_minor)
 
+  # CI runs CodeGen once and hands Source/Generated to every build job
+  if(DEFINED ENV{HYP_SKIP_CODEGEN} AND NOT "$ENV{HYP_SKIP_CODEGEN}" STREQUAL "0")
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/Generated/CodeGenOutput.inc")
+      message(FATAL_ERROR "HYP_SKIP_CODEGEN is set but ${CMAKE_SOURCE_DIR}/Generated/CodeGenOutput.inc does not exist")
+    endif()
+
+    message(STATUS "Skipping CodeGen (HYP_SKIP_CODEGEN is set)")
+    return()
+  endif()
+
   if(CMAKE_HOST_WIN32)
     set(HYP_CODEGEN_RUN_SCRIPT_PATH "${CMAKE_SOURCE_DIR}/../Tools/Scripts/RunCodeGen.bat")
     set(HYP_CODEGEN_BUILD_SCRIPT_PATH "${CMAKE_SOURCE_DIR}/../Tools/Scripts/BuildCodeGen.bat")
@@ -572,6 +582,11 @@ if(NOT HYP_ANDROID AND NOT HYP_IOS AND NOT HYP_SHIPPING)
     add_definitions(-DHYP_ROOT_DIR="${HYP_ROOT_DIR_ESCAPED}")
   else()
     message(STATUS "HYP_BAKE_ROOT_DIR is OFF, binaries won't reference the source tree")
+
+    # __FILE__ in asserts and logs would still name the source tree
+    if(HYP_CLANG_OR_GCC AND NOT MSVC AND HYP_ROOT_DIR)
+      add_compile_options("-ffile-prefix-map=${HYP_ROOT_DIR}/=")
+    endif()
   endif()
 
   if(NOT HYP_RUNTIME_ONLY)

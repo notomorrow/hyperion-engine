@@ -178,13 +178,21 @@ if [[ $DO_CMAKE -eq 1 ]]; then
         cmake -G Xcode ../../../Source -DCMAKE_OSX_SYSROOT=macosx -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 $HYP_CMAKE_PARAMS
     elif [[ $USE_NINJA -eq 1 ]]; then
         printf "Building with Ninja...\n"
-        cmake -G Ninja ../../../Source $HYP_CMAKE_PARAMS
+        cmake -G Ninja ../../../Source -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 $HYP_CMAKE_PARAMS
     else
         printf "Building with default cmake generator...\n"
-        cmake ../../../Source $HYP_CMAKE_PARAMS
+        cmake ../../../Source -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 $HYP_CMAKE_PARAMS
+    fi
+
+    if [[ $? -ne 0 ]]; then
+        echo "CMake configure failed"
+        exit 1
     fi
 fi
 
-cmake --build . --parallel 8 --config "$CONFIG"
+cmake --build . --parallel "${HYP_BUILD_JOBS:-8}" --config "$CONFIG"
+BUILD_RESULT=$?
 
 popd
+
+exit $BUILD_RESULT
