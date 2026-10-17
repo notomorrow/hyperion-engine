@@ -15,6 +15,8 @@
 
 #include <Core/Functional/Delegate.hpp>
 
+#include <Core/Math/Vector2.hpp>
+
 #include <Input/Mouse.hpp>
 
 #include <Editor/EditorCamera.hpp>
@@ -138,5 +140,7 @@ protected:
 
     Array<WeakHandle<Scene>> m_isolatedScenes;
 };
+
+void CaptureViewToPng(const Handle<View>& view, const FilePath& path, Vec2u wireframeExtent, Vec2u outputExtent = Vec2u::Zero());
 
 } // namespace Hyperion

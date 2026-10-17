@@ -14,9 +14,7 @@ namespace Hyperion.Editor
     public partial class App : Application
     {
         public static bool AlreadyInitialized { get; set; } = false;
-
-        // On hold for now
-        private static readonly bool IsStartScreenEnabled = false;
+        private static readonly bool IsStartScreenEnabled = true;
 
         public override void Initialize()
         {
@@ -55,7 +53,7 @@ namespace Hyperion.Editor
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                SplashWindow splashWindow = new SplashWindow();
+                SplashWindow splashWindow = new();
                 splashWindow.Show();
 
                 StartEditor(desktop, splashWindow);
@@ -87,18 +85,16 @@ namespace Hyperion.Editor
 
             ShowMainWindow(desktop);
 
-            // Main window must be open before the splash closes, otherwise the lifetime sees the last window close and shuts down
             splashWindow.Close();
         }
 
         private static void ShowStartScreen(IClassicDesktopStyleApplicationLifetime desktop, SplashWindow splashWindow)
         {
-            StartScreenViewModel startScreenViewModel = new StartScreenViewModel();
+            StartScreenViewModel startScreenViewModel = new();
             StartScreenWindow startScreenWindow = new StartScreenWindow { DataContext = startScreenViewModel };
 
             bool mainWindowShown = false;
 
-            // Same rule as the splash: the main window has to be open before the start screen closes, including via its close button
             void ContinueToEditor()
             {
                 if (mainWindowShown)

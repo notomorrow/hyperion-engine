@@ -26,20 +26,51 @@
 
 #include <EditorState.generated.inl>
 
+#include <chrono>
+
 namespace Hyperion {
 
 EDITOR_API HYP_DECLARE_LOG_CHANNEL(Editor);
 
 #ifdef HYP_EDITOR
 
+namespace {
+
 static constexpr const char* RecentProjectsConfigKey = "Projects.Recent";
+static constexpr const char* RecentProjectsOpenedConfigKey = "Projects.RecentOpened";
+static constexpr const char* RecentProjectsPinnedConfigKey = "Projects.RecentPinned";
 static constexpr const char* AlwaysOpenLastProjectConfigKey = "Projects.AlwaysOpenLastProject";
 static constexpr uint32 MaxRecentProjects = 10;
 
-static String NormalizeProjectFilepath(const String& projectFilepath)
+String NormalizeProjectFilepath(const String& projectFilepath)
 {
-    return projectFilepath.Trimmed().ReplaceAll("/", HYP_FILESYSTEM_SEPARATOR).ReplaceAll("\\", HYP_FILESYSTEM_SEPARATOR);
+    const String trimmed = projectFilepath.Trimmed();
+
+    if (trimmed.Empty())
+    {
+        return String::empty;
+    }
+
+    return String(FilePath::Canonical(FilePath(trimmed)).Data()).ReplaceAll("/", HYP_FILESYSTEM_SEPARATOR).ReplaceAll("\\", HYP_FILESYSTEM_SEPARATOR);
 }
+
+bool IsSameProjectFilepath(const String& a, const String& b)
+{
+#ifdef HYP_WINDOWS
+    return a.ToLower() == b.ToLower();
+#else
+    return a == b;
+#endif
+}
+
+int64 GetUnixTimeSeconds()
+{
+    return int64(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+}
+
+} // namespace
+
+#pragma region EditorState
 
 const Handle<EditorState>& EditorState::GetInstance()
 {
@@ -208,7 +239,104 @@ String EditorState::GetRecentProject(int32 index) const
         return String::empty;
     }
 
-    return m_recentProjects[index];
+    return m_recentProjects[index].filepath;
+}
+
+int64 EditorState::GetRecentProjectLastOpened(int32 index) const
+{
+    Mutex::Guard guard(m_recentProjectsMutex);
+
+    if (index < 0 || index >= int32(m_recentProjects.Size()))
+    {
+        return 0;
+    }
+
+    return m_recentProjects[index].lastOpened;
+}
+
+bool EditorState::IsRecentProjectPinned(int32 index) const
+{
+    Mutex::Guard guard(m_recentProjectsMutex);
+
+    if (index < 0 || index >= int32(m_recentProjects.Size()))
+    {
+        return false;
+    }
+
+    return m_recentProjects[index].pinned;
+}
+
+void EditorState::SetRecentProjectPinned(const String& projectFilepath, bool pinned)
+{
+    const String normalizedFilepath = NormalizeProjectFilepath(projectFilepath);
+
+    {
+        Mutex::Guard guard(m_recentProjectsMutex);
+
+        const int32 existingIndex = FindRecentProject(normalizedFilepath);
+
+        if (existingIndex < 0 || m_recentProjects[existingIndex].pinned == pinned)
+        {
+            return;
+        }
+
+        RecentProjectEntry entry = std::move(m_recentProjects[existingIndex]);
+        m_recentProjects.EraseAt(existingIndex);
+
+        entry.pinned = pinned;
+        InsertRecentProject(std::move(entry));
+
+        TrimRecentProjects();
+
+        SaveRecentProjects();
+    }
+
+    OnRecentProjectsChanged();
+}
+
+int32 EditorState::FindRecentProject(const String& normalizedFilepath) const
+{
+    for (size_t index = 0; index < m_recentProjects.Size(); index++)
+    {
+        if (IsSameProjectFilepath(m_recentProjects[index].filepath, normalizedFilepath))
+        {
+            return int32(index);
+        }
+    }
+
+    return -1;
+}
+
+void EditorState::InsertRecentProject(RecentProjectEntry&& entry)
+{
+    size_t index = 0;
+
+    for (; index < m_recentProjects.Size(); index++)
+    {
+        const RecentProjectEntry& other = m_recentProjects[index];
+
+        if (entry.pinned != other.pinned ? entry.pinned : entry.lastOpened > other.lastOpened)
+        {
+            break;
+        }
+    }
+
+    m_recentProjects.Insert(m_recentProjects.Begin() + index, std::move(entry));
+}
+
+void EditorState::TrimRecentProjects()
+{
+    size_t numUnpinned = 0;
+
+    for (const RecentProjectEntry& entry : m_recentProjects)
+    {
+        numUnpinned += entry.pinned ? 0 : 1;
+    }
+
+    for (; numUnpinned > MaxRecentProjects; numUnpinned--)
+    {
+        m_recentProjects.PopBack();
+    }
 }
 
 void EditorState::AddRecentProject(const String& projectFilepath)
@@ -223,18 +351,20 @@ void EditorState::AddRecentProject(const String& projectFilepath)
     {
         Mutex::Guard guard(m_recentProjectsMutex);
 
-        if (m_recentProjects.Any() && m_recentProjects[0] == normalizedFilepath)
+        const int32 existingIndex = FindRecentProject(normalizedFilepath);
+
+        bool pinned = false;
+
+        if (existingIndex >= 0)
         {
-            return;
+            pinned = m_recentProjects[existingIndex].pinned;
+
+            m_recentProjects.EraseAt(existingIndex);
         }
 
-        m_recentProjects.Erase(normalizedFilepath);
-        m_recentProjects.PushFront(normalizedFilepath);
+        InsertRecentProject(RecentProjectEntry { normalizedFilepath, GetUnixTimeSeconds(), pinned });
 
-        while (m_recentProjects.Size() > MaxRecentProjects)
-        {
-            m_recentProjects.PopBack();
-        }
+        TrimRecentProjects();
 
         SaveRecentProjects();
     }
@@ -249,12 +379,14 @@ void EditorState::RemoveRecentProject(const String& projectFilepath)
     {
         Mutex::Guard guard(m_recentProjectsMutex);
 
-        if (!m_recentProjects.Contains(normalizedFilepath))
+        const int32 existingIndex = FindRecentProject(normalizedFilepath);
+
+        if (existingIndex < 0)
         {
             return;
         }
 
-        m_recentProjects.Erase(normalizedFilepath);
+        m_recentProjects.EraseAt(existingIndex);
 
         SaveRecentProjects();
     }
@@ -310,12 +442,22 @@ String EditorState::GetStartupProjectPath() const
         return String::empty;
     }
 
-    if (!FilePath(m_recentProjects[0]).Exists())
+    const RecentProjectEntry* lastEntry = &m_recentProjects[0];
+
+    for (const RecentProjectEntry& entry : m_recentProjects)
+    {
+        if (entry.lastOpened > lastEntry->lastOpened)
+        {
+            lastEntry = &entry;
+        }
+    }
+
+    if (!FilePath(lastEntry->filepath).Exists())
     {
         return String::empty;
     }
 
-    return m_recentProjects[0];
+    return lastEntry->filepath;
 }
 
 void EditorState::LoadRecentProjects()
@@ -332,10 +474,20 @@ void EditorState::LoadRecentProjects()
 
     m_recentProjects.Clear();
 
+    const ConfigValue& openedValue = config.Get(RecentProjectsOpenedConfigKey);
+    const bool hasOpenedTimes = openedValue.IsArray();
+
+    const ConfigValue& pinnedValue = config.Get(RecentProjectsPinnedConfigKey);
+    const bool hasPinned = pinnedValue.IsArray();
+
     if (const ConfigValue& recentProjectsValue = config.Get(RecentProjectsConfigKey); recentProjectsValue.IsArray())
     {
-        for (const ConfigValue& projectValue : recentProjectsValue.AsArray())
+        const JSON::JArray& projectValues = recentProjectsValue.AsArray();
+
+        for (size_t index = 0; index < projectValues.Size(); index++)
         {
+            const ConfigValue& projectValue = projectValues[index];
+
             if (!projectValue.IsString())
             {
                 continue;
@@ -343,18 +495,24 @@ void EditorState::LoadRecentProjects()
 
             const String normalizedFilepath = NormalizeProjectFilepath(projectValue.ToString());
 
-            if (normalizedFilepath.Empty() || m_recentProjects.Contains(normalizedFilepath))
+            if (normalizedFilepath.Empty() || FindRecentProject(normalizedFilepath) >= 0)
             {
                 continue;
             }
 
-            m_recentProjects.PushBack(normalizedFilepath);
+            int64 lastOpened = 0;
 
-            if (m_recentProjects.Size() >= MaxRecentProjects)
+            if (hasOpenedTimes && index < openedValue.AsArray().Size())
             {
-                break;
+                lastOpened = openedValue.AsArray()[index].ToInt64(0);
             }
+
+            const bool pinned = hasPinned && index < pinnedValue.AsArray().Size() && pinnedValue.AsArray()[index].ToBool(false);
+
+            InsertRecentProject(RecentProjectEntry { normalizedFilepath, lastOpened, pinned });
         }
+
+        TrimRecentProjects();
     }
 
     m_alwaysOpenLastProject = config.Get(AlwaysOpenLastProjectConfigKey).ToBool(false);
@@ -367,13 +525,19 @@ void EditorState::SaveRecentProjects() const
     config.Load();
 
     JSON::JArray recentProjectsArray;
+    JSON::JArray openedArray;
+    JSON::JArray pinnedArray;
 
-    for (const String& projectFilepath : m_recentProjects)
+    for (const RecentProjectEntry& entry : m_recentProjects)
     {
-        recentProjectsArray.PushBack(ConfigValue(projectFilepath));
+        recentProjectsArray.PushBack(ConfigValue(entry.filepath));
+        openedArray.PushBack(ConfigValue(entry.lastOpened));
+        pinnedArray.PushBack(ConfigValue(entry.pinned));
     }
 
     config.Set(RecentProjectsConfigKey, ConfigValue(std::move(recentProjectsArray)));
+    config.Set(RecentProjectsOpenedConfigKey, ConfigValue(std::move(openedArray)));
+    config.Set(RecentProjectsPinnedConfigKey, ConfigValue(std::move(pinnedArray)));
     config.Set(AlwaysOpenLastProjectConfigKey, ConfigValue(m_alwaysOpenLastProject));
 
     if (!config.Save())
@@ -381,6 +545,8 @@ void EditorState::SaveRecentProjects() const
         HYP_LOG(Editor, Warning, "Failed to save recent projects");
     }
 }
+
+#pragma endregion EditorState
 
 #endif
 

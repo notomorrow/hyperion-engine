@@ -5460,9 +5460,26 @@ void EditorSubsystem::OpenProject(const Handle<EditorProject>& project)
 
     m_delegateHandlers.Add(m_currentProject->OnProjectSaved.Bind(
         m_currentProject.Get(),
-        [](const Handle<EditorProject>& savedProject)
+        [this](const Handle<EditorProject>& savedProject)
         {
             g_editorState->AddRecentProject(savedProject->GetFilePath());
+
+            if (IsSimulating())
+            {
+                return;
+            }
+
+            EditorViewport* viewport = GetMainWindowViewport();
+
+            if (viewport != nullptr && viewport->IsOrthographic())
+            {
+                viewport = FindViewport(EditorViewportType::Perspective);
+            }
+
+            if (viewport != nullptr)
+            {
+                CaptureViewToPng(viewport->GetView(), savedProject->GetFilePath().BasePath() / "Saved" / "Thumbnail.png", Vec2u::One(), Vec2u(256, 144));
+            }
         }));
 
     if (const Handle<EditorActionStack>& actionStack = m_currentProject->GetActionStack(); actionStack.IsValid())
@@ -6238,39 +6255,17 @@ EditorViewport* EditorSubsystem::GetMainWindowViewport() const
     return GetActiveViewport();
 }
 
-EditorViewport* EditorSubsystem::FindViewport(const String& typeName) const
+EditorViewport* EditorSubsystem::FindViewport(EditorViewportType type) const
 {
     AssertOnThread(g_simThread);
 
-    const String lowerName = typeName.ToLower();
-
-    for (const Handle<EditorViewport>& viewport : m_editorViewports)
-    {
-        const char* name = nullptr;
-
-        switch (viewport->GetViewportType())
+    auto it = m_editorViewports.FindIf(
+        [type](const Handle<EditorViewport>& vp)
         {
-        case EditorViewportType::Top:
-            name = "top";
-            break;
-        case EditorViewportType::Front:
-            name = "front";
-            break;
-        case EditorViewportType::Side:
-            name = "side";
-            break;
-        default:
-            name = "perspective";
-            break;
-        }
+            return vp->GetViewportType() == type;
+        });
 
-        if (lowerName == name)
-        {
-            return viewport.Get();
-        }
-    }
-
-    return nullptr;
+    return it == m_editorViewports.End() ? nullptr : *it;
 }
 
 InputManager* EditorSubsystem::GetActiveInputManager() const

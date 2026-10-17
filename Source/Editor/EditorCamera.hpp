@@ -70,7 +70,7 @@ protected:
 };
 
 HYP_ENUM()
-enum class EditorViewportType : uint32
+enum class EditorViewportType : uint8
 {
     Perspective = 0,
     Top,

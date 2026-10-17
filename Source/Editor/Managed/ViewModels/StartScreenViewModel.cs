@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
 using System.Windows.Input;
 using Avalonia.Threading;
 using Hyperion.Editor.Commands;
@@ -9,9 +12,13 @@ namespace Hyperion.Editor.ViewModels
 {
     public class StartScreenViewModel : ViewModelBase, IDisposable
     {
+        private const int SearchThreshold = 8;
+
         private readonly DelegateHandler _currentProjectChangedHandler;
 
-        private RecentProjectItemViewModel? _lastProject;
+        private readonly List<RecentProjectItemViewModel> _allRecentProjects = new();
+        private RecentProjectItemViewModel? _selectedProject;
+        private string _filterText = string.Empty;
         private bool _alwaysOpenLastProject;
         private bool _isBusy;
         private string _busyText = string.Empty;
@@ -20,21 +27,27 @@ namespace Hyperion.Editor.ViewModels
 
         public ObservableCollection<RecentProjectItemViewModel> RecentProjects { get; } = new();
 
-        public bool HasRecentProjects => RecentProjects.Count > 0;
+        public bool HasRecentProjects => _allRecentProjects.Count > 0;
 
-        public RecentProjectItemViewModel? LastProject
+        public bool IsSearchVisible => _allRecentProjects.Count > SearchThreshold;
+
+        public RecentProjectItemViewModel? SelectedProject
         {
-            get => _lastProject;
-            private set
+            get => _selectedProject;
+            set => SetProperty(ref _selectedProject, value);
+        }
+
+        public string FilterText
+        {
+            get => _filterText;
+            set
             {
-                if (SetProperty(ref _lastProject, value))
+                if (SetProperty(ref _filterText, value))
                 {
-                    OnPropertyChanged(nameof(HasLastProject));
+                    ApplyFilter();
                 }
             }
         }
-
-        public bool HasLastProject => LastProject != null;
 
         public bool AlwaysOpenLastProject
         {
@@ -62,9 +75,10 @@ namespace Hyperion.Editor.ViewModels
 
         public ICommand NewProjectCommand { get; }
         public ICommand BrowseCommand { get; }
-        public ICommand OpenLastProjectCommand { get; }
         public ICommand OpenRecentProjectCommand { get; }
         public ICommand RemoveRecentProjectCommand { get; }
+        public ICommand ShowInExplorerCommand { get; }
+        public ICommand TogglePinCommand { get; }
 
         /// Raised once the user has picked something and the editor should take over
         public event Action? Finished;
@@ -73,13 +87,20 @@ namespace Hyperion.Editor.ViewModels
         {
             NewProjectCommand = new RelayCommand(NewProject, () => !IsBusy);
             BrowseCommand = new RelayCommand(Browse, () => !IsBusy);
-            OpenLastProjectCommand = new RelayCommand(() => OpenProject(LastProject), () => !IsBusy && HasLastProject);
             OpenRecentProjectCommand = new RelayCommand<RecentProjectItemViewModel>(OpenProject, _ => !IsBusy);
             RemoveRecentProjectCommand = new RelayCommand<RecentProjectItemViewModel>(item =>
             {
                 if (item != null)
                 {
                     RecentProjectsService.Instance.Remove(item.FilePath);
+                }
+            });
+            ShowInExplorerCommand = new RelayCommand<RecentProjectItemViewModel>(ShowInExplorer);
+            TogglePinCommand = new RelayCommand<RecentProjectItemViewModel>(item =>
+            {
+                if (item != null)
+                {
+                    RecentProjectsService.Instance.SetPinned(item.FilePath, !item.IsPinned);
                 }
             });
 
@@ -105,17 +126,36 @@ namespace Hyperion.Editor.ViewModels
 
         private void RefreshRecentProjects()
         {
-            RecentProjects.Clear();
+            string? selectedFilePath = SelectedProject?.FilePath;
 
-            foreach (string projectFilepath in RecentProjectsService.Instance.RecentProjects)
+            _allRecentProjects.Clear();
+
+            foreach (RecentProjectEntry entry in RecentProjectsService.Instance.RecentProjectEntries)
             {
-                RecentProjects.Add(new RecentProjectItemViewModel(projectFilepath));
+                _allRecentProjects.Add(new RecentProjectItemViewModel(entry));
             }
 
-            LastProject = RecentProjects.Count > 0 && RecentProjects[0].Exists ? RecentProjects[0] : null;
+            ApplyFilter(selectedFilePath);
 
             OnPropertyChanged(nameof(HasRecentProjects));
+            OnPropertyChanged(nameof(IsSearchVisible));
             RaiseCanExecuteChanged();
+        }
+
+        private void ApplyFilter(string? selectedFilePath = null)
+        {
+            selectedFilePath ??= SelectedProject?.FilePath;
+
+            RecentProjects.Clear();
+
+            foreach (RecentProjectItemViewModel item in _allRecentProjects.Where(item => item.Matches(FilterText)))
+            {
+                RecentProjects.Add(item);
+            }
+
+            SelectedProject = RecentProjects.FirstOrDefault(item => item.FilePath == selectedFilePath)
+                ?? RecentProjects.Where(item => item.Exists).MaxBy(item => item.LastOpened ?? DateTime.MinValue)
+                ?? RecentProjects.FirstOrDefault();
         }
 
         private void NewProject()
@@ -139,7 +179,7 @@ namespace Hyperion.Editor.ViewModels
 
         private void OpenProject(RecentProjectItemViewModel? item)
         {
-            if (item == null)
+            if (item == null || IsBusy)
             {
                 return;
             }
@@ -155,6 +195,36 @@ namespace Hyperion.Editor.ViewModels
             }
 
             RecentProjectsService.Instance.OpenProject(item.FilePath);
+        }
+
+        private static void ShowInExplorer(RecentProjectItemViewModel? item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            try
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    ProcessStartInfo startInfo = new ProcessStartInfo("explorer.exe") { UseShellExecute = false };
+                    startInfo.ArgumentList.Add(item.Exists ? $"/select,{item.FilePath}" : item.Directory);
+
+                    Process.Start(startInfo)?.Dispose();
+                }
+                else if (System.IO.Directory.Exists(item.Directory))
+                {
+                    ProcessStartInfo startInfo = new ProcessStartInfo(OperatingSystem.IsMacOS() ? "open" : "xdg-open") { UseShellExecute = false };
+                    startInfo.ArgumentList.Add(item.Directory);
+
+                    Process.Start(startInfo)?.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, $"Could not show {item.FilePath}: {ex.Message}");
+            }
         }
 
         private void OnCurrentProjectChanged(bool isSaved)
@@ -193,7 +263,6 @@ namespace Hyperion.Editor.ViewModels
         {
             ((RelayCommand)NewProjectCommand).RaiseCanExecuteChanged();
             ((RelayCommand)BrowseCommand).RaiseCanExecuteChanged();
-            ((RelayCommand)OpenLastProjectCommand).RaiseCanExecuteChanged();
             ((RelayCommand<RecentProjectItemViewModel>)OpenRecentProjectCommand).RaiseCanExecuteChanged();
         }
     }
