@@ -39,6 +39,7 @@ static ThreadLocalCacheMap& GetDummyThreadLocalCache()
 }
 
 thread_local ThreadLocalCacheMap* t_cache;
+thread_local uint32 t_cacheGeneration = 0;
 
 static void InitThreadLocalCache()
 {
@@ -79,7 +80,8 @@ ClassRegistry& ClassRegistry::GetInstance()
 }
 
 ClassRegistry::ClassRegistry()
-    : m_isInitialized(false)
+    : m_isInitialized(false),
+      m_cacheGeneration(0)
 {
 }
 
@@ -95,6 +97,16 @@ const Class* ClassRegistry::GetClass(TypeId typeId) const
         if (HYP_UNLIKELY(!t_cache))
         {
             InitThreadLocalCache();
+        }
+
+        if (const uint32 generation = m_cacheGeneration.Get(MemoryOrder::ACQUIRE); HYP_UNLIKELY(t_cacheGeneration != generation))
+        {
+            if (t_cache != &GetDummyThreadLocalCache())
+            {
+                t_cache->Clear();
+            }
+
+            t_cacheGeneration = generation;
         }
 
         auto it = t_cache->Find(typeId);
@@ -378,6 +390,42 @@ bool ClassRegistry::Unregister(const Class* cls)
     m_dynamicClasses.Erase(it);
 
     return true;
+}
+
+Array<const Class*> ClassRegistry::UnregisterClassesInRange(UIntPtr begin, UIntPtr end)
+{
+    Array<const Class*> classes;
+
+    Mutex::Guard guard(m_mutex);
+
+    for (auto&& it : m_classesByTypeId)
+    {
+        const UIntPtr address = reinterpret_cast<UIntPtr>(it.second);
+
+        if (address >= begin && address < end)
+        {
+            classes.PushBack(it.second);
+        }
+    }
+
+    for (const Class* cls : classes)
+    {
+        HYP_LOG(Object, Verbose, "Unregister class {}", cls->GetName());
+
+        if (cls->GetStaticIndex() >= 0 && size_t(cls->GetStaticIndex()) < m_classesByStaticIndex.Size())
+        {
+            m_classesByStaticIndex[cls->GetStaticIndex()] = nullptr;
+        }
+
+        m_classesByTypeId.Erase(cls->GetTypeId());
+    }
+
+    if (classes.Any())
+    {
+        m_cacheGeneration.Increment(1, MemoryOrder::RELEASE);
+    }
+
+    return classes;
 }
 
 void ClassRegistry::ForEachClass(const ProcRef<IterationResult(const Class*)>& callback, bool includeDynamicClasses) const

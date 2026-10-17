@@ -184,6 +184,33 @@ DEFINE_EDITOR_COMMAND(BuildNativeGame);
 
 #pragma endregion BuildNativeGame
 
+#pragma region ReloadGameModule
+
+class EditorCommandReloadGameModule final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandReloadGameModule);
+
+public:
+    virtual ~EditorCommandReloadGameModule() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Reload Game";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        if (Result result = ReloadGameModule(subsystem); result.HasError())
+        {
+            HYP_LOG(Editor, Error, "{}", result.GetError().GetMessage());
+        }
+    }
+};
+
+DEFINE_EDITOR_COMMAND(ReloadGameModule);
+
+#pragma endregion ReloadGameModule
+
 #pragma region BuildWebGame
 
 class EditorCommandBuildWebGame final : public EditorCommandBase

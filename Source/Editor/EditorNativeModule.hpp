@@ -17,12 +17,17 @@
 namespace Hyperion {
 
 class Game;
+class EditorSubsystem;
 
 EDITOR_API String GetNativeProjectName(const FilePath& projectFilepath);
 
 EDITOR_API FilePath GetNativeModulePath(const FilePath& projectFilepath);
 
 EDITOR_API TResult<Handle<Game>> CreateGameFromNativeModule(const FilePath& projectFilepath);
+
+EDITOR_API Result ReloadGameModule(EditorSubsystem* subsystem);
+
+EDITOR_API void UpdateGameModules(EditorSubsystem* subsystem);
 
 EDITOR_API FilePath GetManagedProjectFilePath(const FilePath& projectFilepath);
 

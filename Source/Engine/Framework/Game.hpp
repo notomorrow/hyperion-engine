@@ -63,6 +63,11 @@ public:
     HYP_METHOD(Property = "AssetRegistry", Transient)
     void SetAssetRegistry(const Handle<AssetRegistry>& assetRegistry);
 
+    Handle<AssetRegistry> DetachAssetRegistry();
+
+    // Disposes the C# object of the Game
+    void ReleaseManagedObject();
+
     HYP_METHOD(Property = "World")
     const Handle<World>& GetWorld() const
     {

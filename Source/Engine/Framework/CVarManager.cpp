@@ -289,7 +289,25 @@ static void InitCVar(CVarManager* manager, CVarBase* cvar, const ANSIStringView&
     }
 
     cvar->name = Name(path);
-    cvar->id = s_nextCVarId.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
+    cvar->id = -1;
+
+    const int numVars = s_nextCVarId.Get(MemoryOrder::ACQUIRE);
+
+    for (int i = 0; i < numVars && i < int(MaxCVars); i++)
+    {
+        if (manager->cvars[i] == nullptr && manager->retiredCVarNames[i] == cvar->name)
+        {
+            manager->retiredCVarNames[i] = Name::Invalid();
+            cvar->id = i;
+
+            break;
+        }
+    }
+
+    if (cvar->id < 0)
+    {
+        cvar->id = s_nextCVarId.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
+    }
 
     Assert(cvar->id < MaxCVars);
 
@@ -332,6 +350,7 @@ CVarManager::CVarManager()
 
     cvars.Resize(MaxCVars);
     cvarToConfigPath.Resize(MaxCVars);
+    retiredCVarNames.Resize(MaxCVars);
 
     Array<DeferredInitCVar>& deferredInitCVars = GetDeferredInitCVars();
 
@@ -469,6 +488,30 @@ void CVarManager::Publish(uint8 ringIndex)
 
     next.numVars = numVars;
     next.version = m_snapshots[currentIdx].version + 1;
+}
+
+void CVarManager::UnregisterVarsInRange(UIntPtr begin, UIntPtr end)
+{
+    const int numVars = s_nextCVarId.Get(MemoryOrder::ACQUIRE);
+
+    for (int i = 0; i < numVars && i < int(MaxCVars); i++)
+    {
+        const UIntPtr address = reinterpret_cast<UIntPtr>(cvars[i]);
+
+        if (cvars[i] == nullptr || address < begin || address >= end)
+        {
+            continue;
+        }
+
+        retiredCVarNames[i] = cvars[i]->name;
+        cvars[i] = nullptr;
+
+        if (cvarToConfigPath[i] != nullptr)
+        {
+            Memory::Free(const_cast<char*>(cvarToConfigPath[i]));
+            cvarToConfigPath[i] = nullptr;
+        }
+    }
 }
 
 const CVarSnapshot& CVarManager::GetCurrentSnapshot_Internal() const

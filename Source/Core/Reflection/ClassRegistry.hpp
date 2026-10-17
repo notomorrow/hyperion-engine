@@ -16,6 +16,7 @@
 #include <Core/Containers/TypeMap.hpp>
 
 #include <Core/Threading/Mutex.hpp>
+#include <Core/Threading/AtomicVar.hpp>
 #include <Core/Threading/DataRaceDetector.hpp>
 
 #include <Core/Functional/Proc.hpp>
@@ -143,6 +144,8 @@ public:
     // Only for Dynamic classes
     bool Unregister(const Class* cls);
 
+    Array<const Class*> UnregisterClassesInRange(UIntPtr begin, UIntPtr end);
+
     void ForEachClass(const ProcRef<IterationResult(const Class*)>& callback, bool includeDynamicClasses = true) const;
 
     void Initialize();
@@ -160,6 +163,8 @@ private:
     mutable Mutex m_managedClassesMutex;
 
     bool m_isInitialized : 1;
+
+    AtomicVar<uint32> m_cacheGeneration;
 };
 
 } // namespace Hyperion

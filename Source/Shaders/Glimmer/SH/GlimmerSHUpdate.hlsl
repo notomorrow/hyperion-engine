@@ -7,8 +7,6 @@ PERMUTE(PROBES);
 
 #define GLIMMER_SH_PROFILE 0
 
-
-
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../../Include/Material.hlsli"
 #include "../../Include/Scene.hlsli"

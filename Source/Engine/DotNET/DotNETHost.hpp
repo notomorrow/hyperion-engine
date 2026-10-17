@@ -65,6 +65,7 @@ public:
         AddObjectToCacheFunction addObjectToCacheFunction = nullptr;
         SetKeepAliveFunction setKeepAliveFunction = nullptr;
         TriggerGCFunction triggerGcFunction = nullptr;
+        TriggerGCFunction collectGarbageAndWaitFunction = nullptr;
         GetAssemblyPointerFunction getAssemblyPointerFunction = nullptr;
         CleanupOnShutdownFunction cleanupOnShutdownFunction = nullptr;
         RemoveObjectFromCacheFunction removeObjectFromCacheFptr = nullptr;

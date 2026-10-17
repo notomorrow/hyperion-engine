@@ -189,6 +189,74 @@ CORE_API TypeInfo* TypeInfo_FetchFromCache(TypeId typeId, uint16 size, uint16 al
     return nullptr;
 }
 
+// dropped from the cache but kept until shutdown, values made before may still point at them
+static Array<TypeInfo*>& GetEvictedTypeInfos()
+{
+    static Array<TypeInfo*> s_evictedTypeInfos;
+    return s_evictedTypeInfos;
+}
+
+static bool RefersToLibrary(const TypeInfoEx& extendedInfo, UIntPtr begin, UIntPtr end, const Array<const TypeInfo*>& evicted)
+{
+    for (const TypeInfoEx* it = &extendedInfo; it != nullptr; it = it->next)
+    {
+        const UIntPtr handlerAddress = reinterpret_cast<UIntPtr>(it->handler);
+
+        if (handlerAddress >= begin && handlerAddress < end)
+        {
+            return true;
+        }
+
+        if (it->dataType == TypeInfoEx::DT_TYPE_INFO && evicted.Contains(it->data.typeInfo))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+CORE_API void TypeInfo_EvictForLibrary(UIntPtr begin, UIntPtr end, const Array<TypeId>& typeIds)
+{
+    Mutex::Guard guard(GetTypeInfoCacheMutex());
+
+    TypeInfoCache& typeAttributeCache = s_typeInfoSystemInitialized ? *s_typeInfoCache : GetTypeInfoCache();
+
+    Array<const TypeInfo*> evicted;
+    Array<TypeId> evictedIds;
+
+    // a container of an evicted type refers to it, so keep going until nothing more is found
+    bool foundAny = true;
+
+    while (foundAny)
+    {
+        foundAny = false;
+
+        for (auto& it : typeAttributeCache)
+        {
+            if (evictedIds.Contains(it.first))
+            {
+                continue;
+            }
+
+            if (typeIds.Contains(it.first) || RefersToLibrary(it.second->extendedInfo, begin, end, evicted))
+            {
+                evicted.PushBack(it.second);
+                evictedIds.PushBack(it.first);
+
+                foundAny = true;
+            }
+        }
+    }
+
+    for (size_t i = 0; i < evictedIds.Size(); i++)
+    {
+        typeAttributeCache.Erase(evictedIds[i]);
+
+        GetEvictedTypeInfos().PushBack(const_cast<TypeInfo*>(evicted[i]));
+    }
+}
+
 CORE_API void TypeInfo_Initialize()
 {
     AssertOnThread(g_mainThread, "TypeInfo system must be initialized on the main thread");
@@ -217,6 +285,13 @@ CORE_API void TypeInfo_Shutdown()
     {
         pair.second->~TypeInfo();
     }
+
+    for (TypeInfo* evictedTypeInfo : GetEvictedTypeInfos())
+    {
+        evictedTypeInfo->~TypeInfo();
+    }
+
+    GetEvictedTypeInfos().Clear();
 
     delete s_typeInfoCache;
     s_typeInfoCache = nullptr;
