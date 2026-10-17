@@ -37,12 +37,14 @@ struct GlimmerDebugViewContext;
 static constexpr uint32 GlimmerBrickGridXZ = 128;
 static constexpr uint32 GlimmerBrickGridY = 64;
 static constexpr uint32 GlimmerBrickChunkCells = 8;
-static constexpr uint32 GlimmerBrickSide = 32;
+static constexpr uint32 GlimmerBrickSide = 16;
 static constexpr uint32 GlimmerBrickTile = 4;
 static constexpr uint32 GlimmerBrickPageCrossings = 256;
 static constexpr uint32 GlimmerBrickMaxPages = 31;
 static constexpr uint32 GlimmerBrickCards = 8;
-static constexpr uint32 GlimmerBrickMips = 6;
+static constexpr uint32 GlimmerBrickMips = 5;
+
+static_assert((1u << (GlimmerBrickMips - 1)) == GlimmerBrickSide);
 static constexpr uint32 GlimmerBrickCardFirstMip = 2;
 static constexpr uint32 GlimmerBrickCardSide = GlimmerBrickSide >> GlimmerBrickCardFirstMip;
 static constexpr uint32 GlimmerBrickCardTexels = (4 * GlimmerBrickCardSide * GlimmerBrickCardSide - 1) / 3;
@@ -52,16 +54,20 @@ static constexpr uint32 GlimmerBrickGIRays = 8;
 static constexpr uint32 GlimmerBrickGITiles = GlimmerBrickCardSide * GlimmerBrickCardSide;
 static constexpr uint32 GlimmerBrickIndexStride = 1 + GlimmerBrickMaxPages + GlimmerBrickCards + 7 + (GlimmerBrickSide / GlimmerBrickTile) * (GlimmerBrickSide / GlimmerBrickTile) + GlimmerBrickSide * GlimmerBrickSide;
 
-static constexpr uint32 GlimmerBrickMaxPoolBricks = 32768;
+static constexpr uint32 GlimmerBrickMaxPoolBricks = 65536;
 static constexpr uint32 GlimmerBrickMaxPoolPages = 65535;
-static constexpr uint32 GlimmerBrickMaxPoolCards = 65535;
+static constexpr uint32 GlimmerBrickMaxPoolCards = 262143;
 
 // NOTE must match GlimmerBricks.hlsli: a reflection slot keeps its card in this many bits and the brick's serial above them
-static constexpr uint32 GlimmerBrickCardBits = 18;
+static constexpr uint32 GlimmerBrickCardBits = 19;
 
 static_assert(GlimmerBrickMaxPoolBricks * GlimmerBrickCards <= (1u << GlimmerBrickCardBits));
 
-static constexpr float GlimmerBrickCellSize = 2.0f;
+// the finest level's cells, from Rendering.Glimmer.Bricks.CellSize
+float GetGlimmerBrickCellSize();
+
+// how many times a level's cells are the size of the finer level's, from Rendering.Glimmer.Bricks.LevelScale
+uint32 GetGlimmerBrickLevelScale();
 
 // NOTE must match GLIMMER_BRICK_LEVELS in GlimmerBricks.hlsli: each level's cells twice the size of the one before
 static constexpr uint32 GlimmerBrickLevels = 4;
@@ -210,6 +216,9 @@ public:
         return m_crossingLightBuffer;
     }
 
+    // x = the least distance the surface bricks were built from may lie from the one drawn, y = that per metre from the viewer (their LOD's error)
+    Vec2f GetLodReach() const;
+
     // what arrives at each card texel; only valid while HasGI()
     HYP_FORCE_INLINE const GpuBufferRef& GetArrivingBuffer() const
     {
@@ -305,9 +314,18 @@ private:
     void ReleasePoolBuffers(PoolUse use);
     void GrowPoolResources(Frame* frame, const Vec3u& grown);
     bool GrowPools(const Vec3u& needed);
+    Vec3u FitPools(double pagesPerBrick, double cardsPerBrick, uint64 budgetBytes) const;
+    bool WantsRebalancedPools() const;
+    void RebalancePools();
     FixedArray<uint32, GlimmerBrickLevels> CountLevelBricks() const;
     void ListLiveBricks(Frame* frame);
     void MoveWindow(Frame* frame, uint32 level, const Vec3i& originChunk);
+    void GetReachBox(uint32 level, Vec3i& outMin, Vec3i& outMax) const;
+    bool IsInReach(const Chunk& chunk) const;
+    bool IsCoveredByFiner(const Chunk& chunk) const;
+    void SetLevelOrigin(uint32 level);
+    void RefreshReach(uint32 level);
+    void UpdateReach();
     void MarkAllDirty();
     void MarkSceneChanges();
     void MarkOccupiedChunks();
@@ -325,7 +343,9 @@ private:
     void ClearChunk(Frame* frame, Chunk& chunk);
 
     static uint32 ChunkSlot(uint32 level, const Vec3i& coord);
-    static float LevelCellSize(uint32 level);
+    float LevelCellSize(uint32 level) const;
+    float LevelChunkSize(uint32 level) const;
+    Vec3f ChunkCenter(uint32 level, const Vec3i& coord) const;
 
     GpuBufferRef m_tableBuffer;
     GpuBufferRef m_indexBuffer;
@@ -365,6 +385,7 @@ private:
     GlimmerLightShaderData m_relitLight;
     float m_relitIntensity = 0.0f;
     uint32 m_relightBurst = 0;
+    uint32 m_retraceBurst = 0;
     bool m_hasRelitLight = false;
     bool m_isLit = false;
     bool m_isGI = false;
@@ -372,8 +393,16 @@ private:
     FixedArray<Vec3i, GlimmerBrickLevels> m_originChunks;
     FixedArray<bool, GlimmerBrickLevels> m_hasWindows {};
     FixedArray<uint32, GlimmerBrickLevels> m_numDirtyChunks {};
+    FixedArray<int32, GlimmerBrickLevels> m_reachChunks {}; // half the extent across x and z of where a level holds bricks, in its chunks
+    uint32 m_framesSinceReachChange = 0;
+    uint32 m_framesWithoutStarving = 0;
+    Vec3u m_freeInPools = Vec3u::Zero();
     uint32 m_numLevels = 1;
     uint32 m_tableLevels = 0;
+    float m_cellSize = 0.0f;
+    uint32 m_levelScale = 2;
+    bool m_isBalanced = false;
+    bool m_wantsRebalance = false;
     Vec3u m_pools = Vec3u::Zero();
     uint32 m_relightCursor = 0;
     uint32 m_retraceCursor = 0;

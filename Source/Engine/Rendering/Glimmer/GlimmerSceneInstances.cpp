@@ -171,6 +171,11 @@ void GlimmerSceneChanges::Quantize(size_t maxChanges)
 
 #pragma region GlimmerSceneInstances
 
+Vec2f GlimmerSceneInstances::GetSolidLodError(float lodErrorScale)
+{
+    return Vec2f(SolidLodErrorMeters, LodErrorPerMeter * lodErrorScale);
+}
+
 GlimmerSceneInstances::GlimmerSceneInstances()
     : m_lastBuildStartTime(0),
       m_triangleGenerationAtGather(~0u),

@@ -104,6 +104,7 @@ public:
     ~GlimmerTechnique();
 
     bool IsReady() const;
+    bool IsBrickGIReady() const;
 
     void Update(const GlimmerTechniqueUpdateContext& context);
 

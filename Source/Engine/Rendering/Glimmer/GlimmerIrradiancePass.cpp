@@ -246,7 +246,8 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
         groundLitShaderData = groundGI->GetShaderData();
     }
 
-    const Vec4f groundParams { GetGlimmerFoliageExtinction(), 0.0f, 0.0f, 0.0f };
+    const Vec2f lodReach = hasBrickGI ? brickWorld->GetLodReach() : Vec2f::Zero();
+    const Vec4f groundParams { GetGlimmerFoliageExtinction(), lodReach.x, lodReach.y, 0.0f };
 
     const auto draw = [&](const StaticShaderPropertyId& modeProperty)
     {

@@ -88,7 +88,7 @@ DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
 {
     GlimmerApply glimmer;
     uint4 irradianceParams; // xy = the pixel of each 2x2 quad HALF shades this frame, z = 1 when the ground cache can be read
-    float4 groundParams;    // x = foliage extinction
+    float4 groundParams;    // x = foliage extinction, yz = the bricks' LOD error, least and per metre
     GlimmerBrickLevels bricks; // origin.w = 0 without brick GI
     GlimmerGroundParams ground;
     GlimmerSpanParams spans;
@@ -156,7 +156,7 @@ float4 GlimmerSampleBrickIrradiance(float3 P, float3 N)
         return (float4)0.0;
     }
 
-    const GlimmerBrickReceiver receiver = GlimmerFindBrickReceiver(bricks, P, N);
+    const GlimmerBrickReceiver receiver = GlimmerFindBrickReceiver(bricks, P, N, GlimmerBrickLodReach(groundParams.yz, distance(P, camera.position.xyz)));
 
     if (!receiver.found)
     {
@@ -237,11 +237,16 @@ PSOutput GlimmerEvaluateSurface(GlimmerSurface surface)
     const float3 V = normalize(camera.position.xyz - surface.P);
     const float3 R = reflect(-V, surface.N);
 
-    output.irradiance = EvaluateGlimmer(glimmer, surface.P, surface.N, R, output.specular, output.reflection);
-
-    // brick GI: static surfaces read their card, the ground its cache, the rest keep the volumes' light
-    if (glimmer.params.w != 0u)
+    // brick GI stands alone: static surfaces read their card, the ground its cache, leaves the canopy's, and what none of them covers gets no indirect light
+    if (glimmer.params.w == 0u)
     {
+        output.irradiance = EvaluateGlimmer(glimmer, surface.P, surface.N, R, output.specular, output.reflection);
+    }
+    else
+    {
+        output.specular = (float2)0.0;
+        output.reflection = (float3)0.0;
+
         float4 brickIrradiance = GlimmerSampleBrickIrradiance(surface.P, surface.N);
 
         if (brickIrradiance.a < 1.0)
@@ -258,10 +263,7 @@ PSOutput GlimmerEvaluateSurface(GlimmerSurface surface)
             brickIrradiance.rgb /= max(brickIrradiance.a, 1e-4);
         }
 
-        if (brickIrradiance.a > 0.0)
-        {
-            output.irradiance = float4(lerp(output.irradiance.rgb, brickIrradiance.rgb, brickIrradiance.a), max(output.irradiance.a, brickIrradiance.a));
-        }
+        output.irradiance = float4(brickIrradiance.rgb * brickIrradiance.a, 1.0);
     }
 
     return output;

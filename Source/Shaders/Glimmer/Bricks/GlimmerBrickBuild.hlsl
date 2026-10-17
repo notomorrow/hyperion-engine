@@ -164,7 +164,7 @@ uint PlaceColumn(inout uint cursor, uint count)
 #define FLAT_AGREEMENT 0.9999
 
 // columns' worth of surface a brick needs to be built
-#define MIN_BRICK_COLUMNS 48.0
+#define MIN_BRICK_COLUMNS (48.0 / 1024.0 * float(COLUMNS_PER_BRICK))
 #define AREA_SCALE 4.0
 
 uint BoxCells()

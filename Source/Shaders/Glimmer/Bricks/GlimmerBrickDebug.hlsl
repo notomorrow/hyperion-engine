@@ -32,7 +32,7 @@ DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickArrivingBuffer) StructuredBuffer<uint
 struct GlimmerBrickDebugConstants
 {
     uint4 dimensionsMode;          // xy = output size, z = debug view
-    float4 params;                 // x = max trace distance
+    float4 params;                 // x = max trace distance, yz = the bricks' LOD error, least and per metre
     uint4 info;                    // x = pool bricks, y = pool pages, z = pool cards
     GlimmerBrickLevels bricks;
 };
@@ -101,7 +101,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
             const float3 normal = normalize(DecodeNormal(GBufferNormalsTexture.Load(int3(coord, 0)).yzww));
             const float grey = 0.25 + 0.5 * saturate(dot(normal, DebugLightDirection) * 0.5 + 0.5);
 
-            const GlimmerBrickReceiver receiver = GlimmerFindBrickReceiver(constants.bricks, position, normal);
+            const GlimmerBrickReceiver receiver = GlimmerFindBrickReceiver(constants.bricks, position, normal, GlimmerBrickLodReach(constants.params.yz, distance(position, cameraPosition)));
 
             result = (receiver.found ? levelColors[min(receiver.level, 3u)] : float3(1.0, 0.0, 1.0)) * grey;
         }
@@ -176,7 +176,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
             }
             else
             {
-                const GlimmerBrickReceiver receiver = GlimmerFindBrickReceiver(constants.bricks, position, normal);
+                const GlimmerBrickReceiver receiver = GlimmerFindBrickReceiver(constants.bricks, position, normal, GlimmerBrickLodReach(constants.params.yz, distance(position, cameraPosition)));
 
                 if (receiver.found)
                 {

@@ -65,6 +65,9 @@ static EngineStatCounter<uint32> s_statGlimmerHeightfieldDebugRays("Rendering/Gl
 
 static constexpr float RegionRecenterFraction = 0.25f;
 
+// past this the coarsest bricks' window gathers no instances
+static constexpr float MaxBrickRegionRadius = 4096.0f;
+
 struct GlimmerHeightfieldDebugConstants
 {
     Vec4u dimensionsMode;
@@ -88,7 +91,14 @@ GlimmerSceneRegionParams GlimmerTechnique::GetSceneRegionParams()
     {
         const uint32 coarsestLevel = uint32(MathUtil::Clamp(g_cvGlimmerBricksLevels.Get(), 1, int32(GlimmerBrickLevels))) - 1;
 
-        params.radius = MathUtil::Max(params.radius, 0.5f * float(GlimmerBrickGridXZ) * GlimmerBrickCellSize * float(1u << coarsestLevel));
+        float coarsestCell = GetGlimmerBrickCellSize();
+
+        for (uint32 level = 0; level < coarsestLevel; level++)
+        {
+            coarsestCell *= float(GetGlimmerBrickLevelScale());
+        }
+
+        params.radius = MathUtil::Max(params.radius, MathUtil::Min(0.5f * float(GlimmerBrickGridXZ) * coarsestCell, MaxBrickRegionRadius));
     }
     params.recenterDistance = minRadius * RegionRecenterFraction;
 
@@ -107,7 +117,8 @@ void GlimmerTechnique::WriteApplyShaderData(CBufferAllocator& cbufferAllocator, 
             probeShaderData = technique->m_probeVolume->GetShaderData();
         }
 
-        if (technique->m_shVolume->IsReady())
+        // brick GI doesn't fall back on the SH grid
+        if (technique->m_shVolume->IsReady() && !g_cvGlimmerBrickGI.Get())
         {
             shShaderData = technique->m_shVolume->GetShaderData();
         }
@@ -183,7 +194,12 @@ void GlimmerTechnique::ResetLighting()
 
 bool GlimmerTechnique::IsReady() const
 {
-    return IsProbesReady() || IsSHReady();
+    return IsProbesReady() || IsSHReady() || IsBrickGIReady();
+}
+
+bool GlimmerTechnique::IsBrickGIReady() const
+{
+    return g_cvGlimmerBrickGI.Get() && g_cvGlimmerBricksEnabled.Get() && m_brickWorld->IsReady() && m_brickWorld->HasGI();
 }
 
 bool GlimmerTechnique::IsSHReady() const
@@ -241,7 +257,13 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
             CollectGlimmerLightmapPages(*context.sceneProxies, lightmapPages);
         }
 
-        m_shOccupancy->Update(context.frame, context.channelState->viewerPosition, context.channelState->lookAhead, sceneInstances, *context.triangleCache, lightmapPages, *m_scratchBuffer);
+        // brick GI replaces the SH grid; its occupancy is still kept for the probes
+        const bool wantsSH = !g_cvGlimmerBrickGI.Get();
+
+        if (wantsSH || probesEnabled)
+        {
+            m_shOccupancy->Update(context.frame, context.channelState->viewerPosition, context.channelState->lookAhead, sceneInstances, *context.triangleCache, lightmapPages, *m_scratchBuffer);
+        }
 
         GlimmerSHVolumeUpdateInputs shInputs;
         shInputs.viewerPosition = context.channelState->viewerPosition;
@@ -261,7 +283,10 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         shInputs.cloudPass = context.cloudPass;
         shInputs.light = light;
 
-        m_shVolume->Update(context.frame, shInputs);
+        if (wantsSH)
+        {
+            m_shVolume->Update(context.frame, shInputs);
+        }
 
         // near field
         GlimmerProbeUpdateInputs probeInputs;

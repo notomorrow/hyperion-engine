@@ -108,6 +108,9 @@ struct GlimmerSceneInstancesStats
 class GlimmerSceneInstances final
 {
 public:
+    // x = the least LOD error a solid instance's triangles are chosen for, y = the error per metre of its distance from the viewer, both in metres
+    static Vec2f GetSolidLodError(float lodErrorScale);
+
     struct SpanKey
     {
         uint64 hash;

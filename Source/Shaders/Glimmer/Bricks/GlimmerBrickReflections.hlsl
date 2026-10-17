@@ -727,11 +727,11 @@ void Resolve(int2 pixel, uint2 texel, uint index)
         at += (T * shift.x + B * shift.y) * ditherWidth;
     }
 
-    GlimmerBrickReceiver receiver = GlimmerFindBrickReceiver(constants.bricks, at, surfaceNormal);
+    GlimmerBrickReceiver receiver = GlimmerFindBrickReceiver(constants.bricks, at, surfaceNormal, 0.0);
 
     if (!receiver.found)
     {
-        receiver = GlimmerFindBrickReceiver(constants.bricks, surface.P, surfaceNormal);
+        receiver = GlimmerFindBrickReceiver(constants.bricks, surface.P, surfaceNormal, 0.0);
     }
 
     if (!receiver.found)
