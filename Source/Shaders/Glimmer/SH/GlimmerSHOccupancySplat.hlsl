@@ -16,14 +16,24 @@ PERMUTE(MODE, CLEAR, SPLAT, RESOLVE, BLOCKS)
 
 struct GlimmerSHOccupancySplatConstants
 {
-    int4 origin;   // xyz = absolute voxel of the cascade's window, w = cascade
+    /// xyz = absolute voxel of the cascade's window
+    /// w = cascade
+    int4 origin;
     
-    float4 params; // x = voxel spacing, y = 1 / spacing
+    /// x = voxel spacing
+    /// y = 1 / spacing
+    float4 params;
     
-    uint4 counts;  // x = span instances, y = span chunks, z = groups along x
+    /// x = span instances
+    /// y = span chunks
+    /// z = groups along x
+    uint4 counts;
     
-    int4 boxMin;   // xyz = absolute voxel; only voxels in the box are cleared and splatted
-    int4 boxMax;   // xyz = absolute voxel, exclusive
+    /// xyz = absolute voxel. only voxels in the box are cleared and splatted
+    int4 boxMin;
+    
+    /// xyz = absolute voxel, exclusive
+    int4 boxMax;
 
     uint4 lightmapStencils;
 };

@@ -763,7 +763,7 @@ PathTraceResult PathTracer::Render(Frame* frame, const RenderSetup& renderSetup,
 
     if (m_computeBVH)
     {
-        cr << SetShaderUniform(0, "BVHNodesBuffer"_sh, m_computeBVH->GetNodesBuffer(), ShaderDataOffset(0, sizeof(PathTracerBVHNode)));
+        cr << SetShaderUniform(0, "BVHNodesBuffer"_sh, m_computeBVH->GetNodesBuffer(), ShaderDataOffset(0, sizeof(SAHBVHNode)));
         cr << SetShaderUniform(1, "BVHTrianglesBuffer"_sh, m_computeBVH->GetTrianglesBuffer(), ShaderDataOffset(0, sizeof(PathTracerTriangle)));
         cr << SetShaderUniform(4, "BVHTriangleAttributesBuffer"_sh, m_computeBVH->GetTriangleAttributesBuffer(), ShaderDataOffset(0, sizeof(PathTracerTriangleAttributes)));
     }

@@ -342,10 +342,10 @@ PathTracerBVH::BuildResult PathTracerBVH::Build(Span<const Instance> instances)
 
     Array<uint32> triangleOrder;
 
-    PathTracerBVHBuildParams buildParams;
+    SAHBVHBuildParams buildParams;
     buildParams.maxDepth = 64;
 
-    PathTracerBVHBuilder::Build(triangleBounds.ToSpan(), buildParams, buildResult.nodes, triangleOrder);
+    SAHBVHBuilder::Build(triangleBounds.ToSpan(), buildParams, buildResult.nodes, triangleOrder);
 
     buildResult.triangles.Resize(triangleOrder.Size());
     buildResult.triangleAttributes.Resize(triangleOrder.Size());

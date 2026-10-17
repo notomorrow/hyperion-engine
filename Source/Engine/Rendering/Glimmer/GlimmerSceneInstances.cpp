@@ -10,6 +10,7 @@
 #include <Rendering/Glimmer/GlimmerTriangleCache.hpp>
 #include <Rendering/Glimmer/GlimmerSpanCache.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
+#include <Rendering/Glimmer/GlimmerCVars.hpp>
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/RenderProxy.hpp>
@@ -46,6 +47,7 @@ namespace Hyperion {
 extern CVar<bool> g_cvLightmapVolumes;
 
 static constexpr uint32 MaxSpanInstances = 262144;
+static constexpr uint32 MaxTracedInstances = 131072;
 
 static constexpr float SolidLodErrorMeters = 0.05f;
 static constexpr float FoliageLodErrorMeters = 1.0f;
@@ -193,6 +195,8 @@ GlimmerSceneInstances::~GlimmerSceneInstances()
     }
 
     EnqueueDeletion(std::move(m_spanInstancesBuffer));
+    EnqueueDeletion(std::move(m_tlasNodesBuffer));
+    EnqueueDeletion(std::move(m_tracedInstancesBuffer));
     EnqueueDeletion(std::move(m_spanChunksBuffer));
 }
 
@@ -259,6 +263,23 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
     Map<uint64, uint8, GlimmerAllocator> instanceLods;
 
     const float lodErrorScale = triangleCache.GetLodErrorScale();
+
+    // near-field rays trace what stands within this of the viewer's cell; the rest is the far field's.
+    // the traced set and its LODs follow the cell, so the TLAS only changes when the viewer crosses one (or the scene changes)
+    const float tracedCellSize = MathUtil::Max(g_cvGlimmerBVHCellSize.Get(), 1.0f);
+
+    // a cell in xz only: climbing and diving don't change the set or its LODs
+    const Vec2f tracedCenter = Vec2f(
+        (float(MathUtil::Floor(viewerPosition.x / tracedCellSize)) + 0.5f) * tracedCellSize,
+        (float(MathUtil::Floor(viewerPosition.z / tracedCellSize)) + 0.5f) * tracedCellSize);
+
+    const float tracedRadius = MathUtil::Max(g_cvGlimmerBVHRadius.Get(), 0.0f);
+
+    BoundingBox tracedRegion = region;
+    tracedRegion.min.x = MathUtil::Max(region.min.x, tracedCenter.x - tracedRadius);
+    tracedRegion.max.x = MathUtil::Min(region.max.x, tracedCenter.x + tracedRadius);
+    tracedRegion.min.z = MathUtil::Max(region.min.z, tracedCenter.y - tracedRadius);
+    tracedRegion.max.z = MathUtil::Min(region.max.z, tracedCenter.y + tracedRadius);
 
     // the rect offset is 0 for a mesh that isn't lit by a lightmap
     const auto addInstance = [&](
@@ -381,6 +402,57 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
         spanInstance.texcoordBase = triangleRef.texcoordBase;
 
         outInput.spanInstanceBounds.PushBack(worldBounds);
+
+        // leaves dim light rather than stop it: they're the canopy spans' business, not the BVH's
+        if (!isFoliage && outInput.tracedInstances.Size() < MaxTracedInstances && worldBounds.Overlaps(tracedRegion))
+        {
+            // from the nearest point of the cell, so wherever the viewer is in it the LOD is no coarser than its own would be
+            const float tracedGapX = MathUtil::Max(MathUtil::Abs(tracedCenter.x - MathUtil::Clamp(tracedCenter.x, worldBounds.min.x, worldBounds.max.x)) - tracedCellSize * 0.5f, 0.0f);
+            const float tracedGapZ = MathUtil::Max(MathUtil::Abs(tracedCenter.y - MathUtil::Clamp(tracedCenter.y, worldBounds.min.z, worldBounds.max.z)) - tracedCellSize * 0.5f, 0.0f);
+
+            const float tracedMaxError = MathUtil::Max(SolidLodErrorMeters, Vec2f(tracedGapX, tracedGapZ).Length() * LodErrorPerMeter * lodErrorScale);
+            const uint8 tracedLod = meshDesc.GetCoarsestLodWithinError(worldScale, tracedMaxError);
+
+            // the span's triangles stand in until the traced LOD's are resident
+            GlimmerTriangleRef tracedRef = triangleRef;
+
+            if (tracedLod != lodIndex || requestResult != GlimmerTriangleRequestResult::Resident)
+            {
+                GlimmerTriangleRef tracedLodRef;
+
+                const GlimmerTriangleRequestResult tracedResult = triangleCache.Request(proxy.mesh, tracedLod, priority, tracedLodRef);
+
+                if (tracedResult == GlimmerTriangleRequestResult::Resident)
+                {
+                    tracedRef = tracedLodRef;
+                }
+                else if (tracedResult == GlimmerTriangleRequestResult::Pending)
+                {
+                    outNumWaitingForTriangles++;
+                }
+            }
+
+            if (tracedRef.nodeCount != 0)
+            {
+                const Mat4f tracedGridToWorld = objectToWorld * Mat4f::Translation(tracedRef.gridOrigin) * Mat4f::Scaling(tracedRef.gridScale);
+                const Mat4f worldToGrid = tracedGridToWorld.Inverse();
+
+                GlimmerTracedInstanceShaderData& traced = outInput.tracedInstances.EmplaceBack();
+                Memory::Copy(traced.worldToObject, worldToGrid.values, sizeof(traced.worldToObject));
+
+                traced.blasNodeBase = tracedRef.nodeBase;
+                traced.blasTriangleBase = tracedRef.triangleBase;
+                traced.materialIndex = materialIndex;
+                traced.flags = instanceFlags;
+
+                outInput.tracedBounds.PushBack(objectToWorld * tracedRef.localBounds);
+
+                if (tracedRef.key != triangleRef.key && meshKeysSeen.Insert(tracedRef.key).second)
+                {
+                    outInput.meshKeys.PushBack(tracedRef.key);
+                }
+            }
+        }
 
         if (meshKeysSeen.Insert(triangleRef.key).second)
         {
@@ -520,6 +592,7 @@ GlimmerSceneInstances::BuildResult GlimmerSceneInstances::Build(BuildInput&& inp
     result.region = input.region;
 
     result.inputHash = FNV1::DoHashWords(input.spanInstances.Data(), input.spanInstances.ByteSize(), 0);
+    result.inputHash = FNV1::DoHashWords(input.tracedInstances.Data(), input.tracedInstances.ByteSize(), result.inputHash);
 
     result.meshKeys = std::move(input.meshKeys);
 
@@ -641,6 +714,29 @@ GlimmerSceneInstances::BuildResult GlimmerSceneInstances::Build(BuildInput&& inp
         }
     }
 
+    result.tlasHash = FNV1::DoHashWords(input.tracedInstances.Data(), input.tracedInstances.ByteSize(), 0);
+    result.isTLASUnchanged = result.tlasHash == input.previousTLASHash;
+
+    if (input.tracedInstances.Any() && !result.isTLASUnchanged)
+    {
+        SAHBVHBuildParams params;
+        params.minLeafSize = 1;
+        params.maxLeafSize = 1;
+        params.traversalCost = 0.25f;
+
+        Array<uint32, GlimmerAllocator> instanceOrder;
+        SAHBVHBuilder::Build(input.tracedBounds.ToSpan(), params, result.tlasNodes, instanceOrder);
+
+        result.tracedInstances.Resize(instanceOrder.Size());
+
+        for (size_t orderIndex = 0; orderIndex < instanceOrder.Size(); orderIndex++)
+        {
+            result.tracedInstances[orderIndex] = input.tracedInstances[instanceOrder[orderIndex]];
+        }
+
+        result.tlasDepth = SAHBVHBuilder::CalculateDepth(result.tlasNodes.ToSpan());
+    }
+
     result.buildMs = PerformanceClock::TimeSince(startTime);
 
     return result;
@@ -696,6 +792,54 @@ void GlimmerSceneInstances::Upload(Frame* frame, BuildResult& result)
 
     m_spanInstancesBuffer = std::move(spanInstancesBuffer);
     m_spanChunksBuffer = std::move(spanChunksBuffer);
+
+    if (!result.isTLASUnchanged)
+    {
+        UploadTLAS(frame, result);
+    }
+}
+
+void GlimmerSceneInstances::UploadTLAS(Frame* frame, BuildResult& result)
+{
+    CommandRecorder& cr = frame->cr;
+
+    m_numTracedInstances = uint32(result.tracedInstances.Size());
+    m_tlasDepth = result.tlasDepth;
+    m_activeTLASHash = result.tlasHash;
+    m_stats.numTLASBuilds++;
+
+    // a single placeholder element keeps the buffers bindable without a TLAS
+    GpuBufferRef nodesBuffer = CreateGlimmerStructuredBuffer(sizeof(SAHBVHNode), MathUtil::Max(result.tlasNodes.Size(), size_t(1)));
+    GpuBufferRef instancesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerTracedInstanceShaderData), MathUtil::Max(result.tracedInstances.Size(), size_t(1)));
+
+    const size_t nodesByteSize = result.tlasNodes.ByteSize();
+    const size_t instancesByteSize = result.tracedInstances.ByteSize();
+
+    if (nodesByteSize + instancesByteSize != 0)
+    {
+        GpuBuffer* stagingBuffer = RI.stagingBufferPool->AcquireStagingBuffer(nodesByteSize + instancesByteSize);
+        Assert(stagingBuffer != nullptr);
+
+        stagingBuffer->Copy(0, nodesByteSize, result.tlasNodes.Data());
+        stagingBuffer->Copy(nodesByteSize, instancesByteSize, result.tracedInstances.Data());
+        stagingBuffer->Flush(0, nodesByteSize + instancesByteSize);
+
+        cr << InsertBarrier(stagingBuffer, ResourceState::CopySrc);
+        cr << InsertBarrier(nodesBuffer.Get(), ResourceState::CopyDst);
+        cr << InsertBarrier(instancesBuffer.Get(), ResourceState::CopyDst);
+
+        cr << CopyBuffer(stagingBuffer, nodesBuffer.Get(), 0, 0, uint32(nodesByteSize));
+        cr << CopyBuffer(stagingBuffer, instancesBuffer.Get(), uint32(nodesByteSize), 0, uint32(instancesByteSize));
+    }
+
+    cr << InsertBarrier(nodesBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
+    cr << InsertBarrier(instancesBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
+
+    EnqueueDeletion(std::move(m_tlasNodesBuffer));
+    EnqueueDeletion(std::move(m_tracedInstancesBuffer));
+
+    m_tlasNodesBuffer = std::move(nodesBuffer);
+    m_tracedInstancesBuffer = std::move(instancesBuffer);
 }
 
 void GlimmerSceneInstances::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& region, const Vec3f& viewerPosition, GlimmerTriangleCache& triangleCache)
@@ -814,6 +958,7 @@ void GlimmerSceneInstances::Update(Frame* frame, RenderProxyList& rpl, const Bou
     input.previousSpanKeys = m_spanKeys;
     input.previousInstanceRecords = m_instanceRecords;
     input.hasPrevious = IsReady() || !m_spanKeys.Empty();
+    input.previousTLASHash = m_activeTLASHash;
 
     triangleCache.AddReferences(input.meshKeys.ToSpan());
     m_pendingMeshKeys = input.meshKeys;

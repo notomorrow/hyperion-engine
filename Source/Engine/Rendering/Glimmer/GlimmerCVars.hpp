@@ -53,5 +53,8 @@ extern CVar<float> g_cvGlimmerVisibility;
 extern CVar<bool> g_cvGlimmerLookAhead;
 extern CVar<float> g_cvGlimmerStartupBurstSeconds;
 extern CVar<int> g_cvGlimmerBuildThreads;
+extern CVar<float> g_cvGlimmerBVHRadius;                     // how far from the viewer's cell instances go into the TLAS
+extern CVar<float> g_cvGlimmerBVHCellSize;                   // the TLAS and its LODs follow the viewer a cell (xz) at a time
+extern CVar<int> g_cvGlimmerBVHNodePoolMB;                   // BLAS nodes for tracing the triangle cache; 0 builds no BVH
 
 } // namespace Hyperion

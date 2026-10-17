@@ -36,10 +36,32 @@ struct GlimmerTriangle
     static constexpr uint32 GridMax = 65535;
 
     uint16 grid[9];
-    uint16 padding;
+    uint16 leafFlags; // GlimmerBLASNode::LeafEndFlag on the last triangle of a BLAS leaf
 };
 
 static_assert(sizeof(GlimmerTriangle) == 20);
+
+/*  Compressed BLAS node
+ *
+ *    words[0..2]  node bounds origin (3x floats)
+ *    words[3]     bits 0-17: per-axis scale exponents, 6 bits each, biased by 32 (scale = 2^(value - 32));
+ *                 bits 18-31: bits 9-22 of the right child ref
+ *    words[4..6]  child bounds, one byte per component. left min xyz, left max xyz, right min xyz, right max xyz
+ *    words[7]     bits 0-22: left child ref, bits 23-31: bits 0-8 of the right child ref
+ *
+ *  A 'child ref' is bit 22 = child is a leaf bits 0-21 = node index (interior) or first triangle (leaf).
+ *  Leaves have no count: the last triangle of a leaf has GlimmerBLASNode::LeafEndFlag set in its leafFlags. */
+struct GlimmerBLASNode
+{
+    static constexpr uint32 RefLeafBit = 1u << 22;
+    static constexpr uint32 RefIndexMask = RefLeafBit - 1;
+    static constexpr uint32 MaxIndex = RefIndexMask;
+    static constexpr uint32 LeafEndFlag = 1u;
+
+    uint32 words[8];
+};
+
+static_assert(sizeof(GlimmerBLASNode) == 32);
 
 struct GlimmerTriangleLightmapUVs
 {
@@ -59,10 +81,13 @@ static_assert(sizeof(GlimmerTriangleTexcoords) == 16);
 struct GlimmerTriangleRef
 {
     uint64 key = 0;
+    uint32 nodeBase = 0;
+    uint32 nodeCount = 0;           // 0 without a BLAS (the node pool is off)
+    uint32 depth = 0;
     uint32 triangleBase = 0;
     uint32 triangleCount = 0;
-    uint32 lightmapUVBase = ~0u; // ~0u for a mesh without lightmap UVs, or when their pool is full
-    uint32 texcoordBase = ~0u;   // ~0u when their pool is full
+    uint32 lightmapUVBase = ~0u;    // ~0u for a mesh without lightmap UVs, or when their pool is full
+    uint32 texcoordBase = ~0u;      // ~0u when their pool is full
     
     BoundingBox localBounds;
 
@@ -121,6 +146,8 @@ struct GlimmerTriangleCacheStats
     uint32 numDemoted = 0;
     uint32 numWaitingForRoom = 0;
     uint32 numResidentTriangles = 0;
+    uint32 nodesUsed = 0;
+    uint32 nodesCapacity = 0;
     uint32 trianglesUsed = 0;
     uint32 trianglesCapacity = 0;
     uint32 lightmapUVsUsed = 0;
@@ -188,6 +215,16 @@ public:
         return m_lodErrorScale;
     }
 
+    HYP_FORCE_INLINE const GpuBufferRef& GetNodesBuffer() const
+    {
+        return m_nodesBuffer;
+    }
+
+    HYP_FORCE_INLINE bool HasBLAS() const
+    {
+        return m_nodesBuffer.IsValid();
+    }
+
     HYP_FORCE_INLINE const GpuBufferRef& GetTrianglesBuffer() const
     {
         return m_trianglesBuffer;
@@ -223,15 +260,18 @@ private:
 
     struct BuildResult
     {
-        Array<GlimmerTriangle, GlimmerAllocator> triangles;
-        Array<GlimmerTriangleLightmapUVs, GlimmerAllocator> lightmapUVs; // one per triangle, or empty
-        Array<GlimmerTriangleTexcoords, GlimmerAllocator> texcoords; // one per triangle
+        Array<GlimmerBLASNode, GlimmerAllocator> nodes;                     // empty when the node pool is off
+        Array<GlimmerTriangle, GlimmerAllocator> triangles;                 // in BLAS leaf order when there are nodes
+        Array<GlimmerTriangleLightmapUVs, GlimmerAllocator> lightmapUVs;    // one per triangle, or empty
+        Array<GlimmerTriangleTexcoords, GlimmerAllocator> texcoords;        // one per triangle
 
         BoundingBox localBounds;
 
         Vec3f gridOrigin = Vec3f::Zero();
         Vec3f gridScale = Vec3f::One();
-        
+
+        uint32 depth = 0;
+
         bool isFail = false; // set when there's nothing to trace, as opposed to mesh data not being readable yet
     };
 
@@ -259,6 +299,7 @@ private:
         float priority = 0.0f;
         uint32 priorityFrame = ~0u;
 
+        uint32 lastNodeCount = 0;
         uint32 lastTriangleCount = 0;
 
         uint32 numDefers = 0;
@@ -273,6 +314,8 @@ private:
 
     struct DeferredFree
     {
+        uint32 nodeOffset;
+        uint32 nodeCount;
         uint32 triangleOffset;
         uint32 triangleCount;
         uint32 frameFreed;
@@ -282,7 +325,7 @@ private:
         uint32 texcoordCount;
     };
 
-    static BuildResult BuildMeshTriangles(const Handle<Mesh>& mesh, uint8 lodIndex);
+    static BuildResult BuildMeshTriangles(const Handle<Mesh>& mesh, uint8 lodIndex, bool withBLAS);
 
     void CreatePoolBuffers();
     bool AllocateEntry(Entry& entry);
@@ -290,7 +333,7 @@ private:
     bool RequeueForReplacement(Entry& entry);
     bool EvictOne();
     bool IsWorthBuilding(const Entry& entry, uint32 frameCounter, float farthestDemotablePriority) const;
-    bool MakeContiguousRoom(const Entry& requester, uint32 triangleCount, uint32& numDemotions);
+    bool MakeContiguousRoom(const Entry& requester, uint32 nodeCount, uint32 triangleCount, uint32& numDemotions);
     void Defer(Entry& entry, uint32 frameCounter);
     void FreeEntryRanges(Entry& entry);
     void UploadEntry(Frame* frame, Entry& entry);
@@ -300,10 +343,12 @@ private:
     uint32 m_numBuildThreads;
     UniquePtr<TaskThreadPool> m_buildPool;
 
+    GpuBufferRef m_nodesBuffer;
     GpuBufferRef m_trianglesBuffer;
     GpuBufferRef m_lightmapUVsBuffer;
     GpuBufferRef m_texcoordsBuffer;
 
+    GlimmerPoolAllocator m_nodeAllocator;
     GlimmerPoolAllocator m_triangleAllocator;
     GlimmerPoolAllocator m_lightmapUVAllocator;
     GlimmerPoolAllocator m_texcoordAllocator;

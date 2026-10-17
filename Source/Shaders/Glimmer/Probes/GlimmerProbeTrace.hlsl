@@ -3,6 +3,7 @@
 #include "../../Include/Packing.hlsli"
 
 PERMUTE(MODE, TRACE, SHADE, RELIGHT)
+PERMUTE(TRACER, BRICKS, BVH)
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../../Include/Material.hlsli"
@@ -16,12 +17,28 @@ PERMUTE(MODE, TRACE, SHADE, RELIGHT)
 
 #include "../GlimmerRelight.hlsli"
 
+#if defined(TRACER_BVH)
+#include "../../Include/RayTracing/BVH.hlsli"
+#include "../BVH/GlimmerBVHCommon.hlsli"
+
+DECLARE_SRV(GlimmerProbeTrace, GlimmerTLASNodesBuffer) StructuredBuffer<BVHNode> glimmerTLASNodes;
+DECLARE_SRV(GlimmerProbeTrace, GlimmerTracedInstancesBuffer) StructuredBuffer<GlimmerTracedInstance> glimmerTracedInstances;
+DECLARE_SRV(GlimmerProbeTrace, GlimmerBLASNodesBuffer) StructuredBuffer<BVHBLASNode> glimmerBLASNodes;
+DECLARE_SRV(GlimmerProbeTrace, GlimmerTrianglesBuffer) StructuredBuffer<uint> glimmerTriangles;
+
+#include "../BVH/GlimmerBVHTrace.hlsli"
+
+#define GLIMMER_BRICKS_NO_TRACE
+#include "../Bricks/GlimmerBricks.hlsli"
+#undef GLIMMER_BRICKS_NO_TRACE
+#else
 DECLARE_SRV(GlimmerProbeTrace, GlimmerBrickTableBuffer) StructuredBuffer<uint> glimmerBrickTable;
 DECLARE_SRV(GlimmerProbeTrace, GlimmerBrickIndexBuffer) StructuredBuffer<uint> glimmerBrickIndex;
 DECLARE_SRV(GlimmerProbeTrace, GlimmerBrickCrossingsBuffer) StructuredBuffer<uint> glimmerBrickCrossings;
 DECLARE_SRV(GlimmerProbeTrace, GlimmerBrickMaterialBuffer) StructuredBuffer<uint> glimmerBrickMaterial;
 
 #include "../Bricks/GlimmerBricks.hlsli"
+#endif
 
 struct GlimmerProbeTraceConstants
 {
@@ -37,6 +54,7 @@ struct GlimmerProbeTraceConstants
     int4 relightRect;    // relight pass: xy = absolute texel of the rect to light, zw = its extent
     uint4 relightInfo;   // relight pass: x = ground level, y = groups along x
     GlimmerBrickParams bricks;
+    uint4 bvh;           // x = traced instances in the TLAS
 };
 
 #include "../../Include/Clouds.hlsli"
@@ -323,10 +341,10 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     const GlimmerProbeLevel level = constants.volume.levels[levelIndex];
     const float3 origin = GlimmerProbePosition(constants.volume, probeIndex, slot, glimmerProbeStates[probeIndex]);
 
-    const bool traceBricks = constants.volume.nearField.z != 0.0 && float(levelIndex) < constants.volume.nearField.x;
+    const bool traceNear = constants.volume.nearField.z != 0.0 && float(levelIndex) < constants.volume.nearField.x;
 
     const float maxDistance = constants.volume.params.w;
-    const float bricksRange = min(constants.volume.nearField.y * level.params.x, maxDistance);
+    const float nearRange = min(constants.volume.nearField.y * level.params.x, maxDistance);
 
     // finer levels that don't cover a probe fall through to coarser ones in GlimmerSampleGround
     const uint startLevel = 0u;
@@ -345,21 +363,40 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         bool isDone = true;
         bool isBackface = false;
 
-        GlimmerBrickHit brickHit;
-        bool hitBricks = false;
+#if defined(TRACER_BVH)
+        GlimmerBVHHit bvhHit;
+        bool hitNear = false;
 
-        // the bricks own the solids up to where the ray leaves them; the spans' solids count from there
-        const float solidsFromT = traceBricks ? min(GlimmerBrickWindowExit(constants.bricks, origin, direction), bricksRange) : 0.0;
+        const float solidsFromT = traceNear ? nearRange : 0.0;
 
         if (solidsFromT > 0.0)
         {
-            hitBricks = TraceGlimmerBricks(constants.bricks, origin, direction, 0.0, solidsFromT, brickHit);
+            GlimmerBVHStats stats = GlimmerMakeBVHStats();
 
-            if (hitBricks)
+            hitNear = TraceGlimmerBVH(origin, direction, 0.0, solidsFromT, constants.bvh.x, false, bvhHit, stats);
+
+            if (hitNear)
+            {
+                hitT = bvhHit.t;
+            }
+        }
+#else
+        GlimmerBrickHit brickHit;
+        bool hitNear = false;
+
+        // the bricks own the solids up to where the ray leaves them; the spans' solids count from there
+        const float solidsFromT = traceNear ? min(GlimmerBrickWindowExit(constants.bricks, origin, direction), nearRange) : 0.0;
+
+        if (solidsFromT > 0.0)
+        {
+            hitNear = TraceGlimmerBricks(constants.bricks, origin, direction, 0.0, solidsFromT, brickHit);
+
+            if (hitNear)
             {
                 hitT = brickHit.t;
             }
         }
+#endif
 
         GlimmerHeightfieldHit heightfieldHit;
 
@@ -403,7 +440,43 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
                 }
             }
         }
-        else if (hitBricks)
+#if defined(TRACER_BVH)
+        else if (hitNear)
+        {
+            const GlimmerTracedInstance instance = glimmerTracedInstances[bvhHit.instanceIndex];
+
+            isBackface = !bvhHit.frontFace && (instance.data.w & (GLIMMER_INSTANCE_FLAG_DOUBLE_SIDED | GLIMMER_INSTANCE_FLAG_ALPHA_TESTED)) == 0u;
+
+            if (!isBackface)
+            {
+                const float3 P = origin + direction * hitT;
+                const float3 N = GlimmerGetHitNormal(bvhHit, direction);
+
+                float3 emissive = GlimmerGetMaterialEmissive(instance.data.z);
+
+                const float emissiveLuminance = GlimmerLuminance(emissive);
+
+                if (emissiveLuminance > constants.volume.params.z)
+                {
+                    emissive *= constants.volume.params.z / emissiveLuminance;
+                }
+
+                GlimmerHeightfieldHit emittingHit = heightfieldHit;
+                GlimmerAddLight(emittingHit.inscatter, GlimmerRestLight(emissive), (float3)heightfieldHit.transmittance);
+
+                GlimmerWriteRayHit(
+                    rayRecordIndex,
+                    P,
+                    N,
+                    hitT,
+                    GlimmerGetMaterialAverageAlbedo(instance.data.z),
+                    emittingHit);
+
+                isDone = false;
+            }
+        }
+#else
+        else if (hitNear)
         {
             const uint packedMaterial = glimmerBrickMaterial[brickHit.crossing];
             const uint materialIndex = (packedMaterial & 0xFFFFu) == 0xFFFFu ? 0xFFFFFFFFu : (packedMaterial & 0xFFFFu);
@@ -436,6 +509,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
                 isDone = false;
             }
         }
+#endif
         else
         {
             escape = heightfieldHit.transmittance;
