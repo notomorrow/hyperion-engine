@@ -70,6 +70,8 @@ is_macho() { file -b "$1" | grep -q "Mach-O"; }
 
 for path in "$BIN_DIR"/*.dylib; do
     cp "$path" "$STAGE_DIR/"
+    # the debug map names the build machine's object files
+    strip -S "$STAGE_DIR/$(basename "$path")"
 done
 
 # --- Bundle non-system libraries --------------------------------------------------------------------------------------
