@@ -56,6 +56,9 @@ env -u MSBuildSdksPath dotnet publish "$EDITOR_PROJECT" --configuration Release 
 cp -R "$PUBLISH_ROOT/publish/." "$STAGE_DIR/"
 rm -rf "$PUBLISH_ROOT"
 
+# loaded at runtime by ScriptSystem, so the editor's publish doesn't pick it up
+cp "$BIN_DIR/Hyperion.NET.Scripting.dll" "$STAGE_DIR/"
+
 # script projects compile against these; at runtime the published copies are used
 mkdir -p "$STAGE_DIR/ref"
 for name in Hyperion.NET.Shared.dll Hyperion.NET.Runtime.dll Hyperion.NET.Interop.dll; do

@@ -14,11 +14,10 @@
 #undef INCLUDE_FROM_RHI
 #undef INCLUDE_FROM_RHI_BASE
 
+// for DescriptorSetRootIndices
 #include <Rendering/DX12/DX12Shared.hpp>
 
 namespace Hyperion {
-
-// DescriptorSetRootIndices is defined in DX12Shared.hpp
 
 HYP_CLASS(NoScriptBindings)
 class DX12ComputePipeline final : public ComputePipelineBase
