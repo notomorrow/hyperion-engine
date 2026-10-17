@@ -52,6 +52,24 @@ struct RenderProxy;
 enum class LightType : uint32;
 enum EnvProbeType : uint32;
 
+namespace GeometryPass {
+
+struct DrawMaterialInputs
+{
+    MaterialAttributes materialAttributes;
+    bool isEmissive = false;
+    bool hasInstancing = false;
+    bool hasSkinning = false;
+    uint8 lightmapStencilValue = 0;
+    bool lightmapVolumes = true;
+    bool pathTracing = false;
+};
+
+ENGINE_API void BuildMaterialAttributes(const DrawMaterialInputs& inputs, const MaterialAttributes* overrideMaterialAttributes, MaterialAttributes& outMaterialAttributes);
+ENGINE_API ShaderPropertySet GetDrawShaderProperties(const MaterialAttributes& materialAttributes, bool clusteredForwardLighting, bool forwardDDGI);
+
+} // namespace GeometryPass
+
 struct DrawCallRange
 {
     size_t start;

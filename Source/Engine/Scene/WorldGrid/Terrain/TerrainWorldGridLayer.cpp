@@ -325,6 +325,16 @@ float TerrainWorldGridLayer::GetNearestLodViewpointDistance(const BoundingBox& w
     return m_lodViewpoints.GetNearestDistance(worldBounds);
 }
 
+MaterialAttributes TerrainWorldGridLayer::GetTerrainMaterialAttributes()
+{
+    MaterialAttributes attributes;
+    attributes.shaderName = NAME("Terrain");
+    attributes.bucket = RenderBucket::Opaque;
+    attributes.flags |= MAF_DEPTH_TEST | MAF_DEPTH_WRITE;
+
+    return attributes;
+}
+
 void TerrainWorldGridLayer::Regenerate()
 {
     HYP_SCOPE;
@@ -734,10 +744,7 @@ void TerrainWorldGridLayer::OnAdded(WorldGrid* worldGrid)
 
     m_scene->Initialize();
 
-    MaterialAttributes attributes;
-    attributes.shaderName = NAME("Terrain");
-    attributes.bucket = RenderBucket::Opaque;
-    attributes.flags |= MAF_DEPTH_TEST | MAF_DEPTH_WRITE;
+    const MaterialAttributes attributes = GetTerrainMaterialAttributes();
 
     MaterialParameters parameters;
     parameters.albedo = Vec4f(0.06f, 0.25f, 0.05f, 1.0f);

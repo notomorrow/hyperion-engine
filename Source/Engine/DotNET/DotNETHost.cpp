@@ -179,7 +179,7 @@ public:
 
 protected:
     FilePath m_basePath;
-    ManagedDelegates m_managedDelegates;
+    ManagedDelegates m_managedDelegates {};
     
     Map<FilePath, SharedPtr<Assembly>> m_assembliesByPath;
     Map<String, ManagedGuid> m_coreAssemblies;
@@ -191,8 +191,7 @@ class DotNetImpl final : public DotNetImplBase
 {
 public:
     DotNetImpl()
-        : m_managedDelegates {},
-          m_cxt(nullptr),
+        : m_cxt(nullptr),
           m_initFptr(nullptr),
           m_getDelegateFptr(nullptr),
           m_closeFptr(nullptr),

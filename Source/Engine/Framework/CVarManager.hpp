@@ -77,8 +77,15 @@ public:
     virtual bool SetFromBoxed(const BoxedValue& boxed) = 0;
     virtual bool SetFromString(const String& str) = 0;
 
+    HYP_FORCE_INLINE const CVarSnapshotValue& GetDefaultValue() const
+    {
+        return m_defaultValue;
+    }
+
 protected:
     virtual void WriteToSnapshot(CVarSnapshotValue& snapshotValue) const = 0;
+
+    CVarSnapshotValue m_defaultValue;
 };
 
 namespace Detail {
@@ -103,6 +110,10 @@ public:
         : CVarBase(path, configPath),
           m_value(Detail::AcquireCVarValue(defaultValue))
     {
+        if constexpr (!std::is_same_v<T, CVarString>)
+        {
+            m_defaultValue.Set(defaultValue);
+        }
     }
 
     ~CVar();

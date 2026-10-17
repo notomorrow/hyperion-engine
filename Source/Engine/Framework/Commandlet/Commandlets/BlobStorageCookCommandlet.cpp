@@ -9,6 +9,7 @@
 #include <Framework/Commandlet/Commandlet.hpp>
 #include <Framework/EngineGlobals.hpp>
 #include <Framework/EngineDefaults.hpp>
+#include <Framework/CVarManager.hpp>
 
 #include <Core/Reflection/ClassUtils.hpp>
 #include <Core/Reflection/ClassRegistry.hpp>
@@ -34,6 +35,7 @@
 
 #include <Asset/AssetRegistry.hpp>
 #include <Asset/AssetObject.hpp>
+#include <Asset/AssetReference.hpp>
 #include <Asset/AssetBucket.hpp>
 #include <Asset/BlobStorage.hpp>
 
@@ -50,12 +52,24 @@
 #include <System/MessageBox.hpp>
 
 #ifdef HYP_EDITOR
+
 #include <Scene/World.hpp>
+#include <Scene/Scene.hpp>
+#include <Scene/Node.hpp>
+#include <Scene/EnvProbe.hpp>
+#include <Scene/Light/Light.hpp>
+
 #include <Scene/WorldGrid/WorldGrid.hpp>
 #include <Scene/WorldGrid/WorldGridLayer.hpp>
+#include <Scene/WorldGrid/Terrain/TerrainWorldGridLayer.hpp>
+
+#include <Rendering/Material.hpp>
+#include <Rendering/RendererMain.hpp>
+#include <Rendering/RenderHelpers.hpp>
 
 #include <Editor/EditorProject.hpp>
 #include <Editor/EditorState.hpp>
+
 #endif // HYP_EDITOR
 
 namespace Hyperion {
@@ -337,19 +351,20 @@ protected:
         s_maxTextureSize = 0;
         StringUtil::Parse(args["max-texture-size"].ToString(), &s_maxTextureSize);
 
+        ShaderTarget shaderTarget;
         Array<Handle<AssetObject>> targetShaderAssets;
 
         if (const String shaderTargetArg = args["shader-target"].ToString(); shaderTargetArg.Any())
         {
             SetEngineAssetRegistry(engineRegistry);
 
-            if (Result compileResult = CompileTargetShaders(engineRegistry, shaderTargetArg, FilePath(args["target-config"].ToString()), targetShaderAssets); compileResult.HasError())
+            if (Result compileResult = CompileTargetShaders(engineRegistry, shaderTargetArg, FilePath(args["target-config"].ToString()), shaderTarget, targetShaderAssets); compileResult.HasError())
             {
                 return compileResult;
             }
         }
 
-        Result result = Cook(engineRegistry, gameRegistry, projectDir, worldNames, FilePath(engineAssetListArg), targetShaderAssets, outCacheDir, outContentDir, outEngineContentDir);
+        Result result = Cook(engineRegistry, gameRegistry, projectDir, worldNames, FilePath(engineAssetListArg), shaderTarget, std::move(targetShaderAssets), outCacheDir, outContentDir, outEngineContentDir);
 
         if (result.HasError())
         {
@@ -549,29 +564,58 @@ private:
         return {};
     }
 
-    static bool IsConditionMet(const JSON::Value& targetConfig, const String& condition)
+    struct ShaderTarget
     {
-        if (condition.Empty() || !targetConfig.IsObject())
+        bool isEnabled = false;
+        JSON::Value config;
+        Set<Name> materialShaderNames;
+    };
+
+    static bool GetTargetBool(
+        const JSON::Value& targetConfig,
+        const String& name,
+        bool defaultValue)
+    {
+        if (name.Empty())
         {
-            return true;
+            return defaultValue;
         }
 
-        const auto value = targetConfig.Get(condition);
-
-        if (value.IsObject())
+        if (targetConfig.IsObject())
         {
-            const auto enabled = value["Enabled"];
+            const auto value = targetConfig.Get(name);
 
-            return enabled.IsNullOrUndefined() || enabled.ToBool();
+            if (value.IsObject())
+            {
+                if (const auto enabled = value["Enabled"]; !enabled.IsNullOrUndefined())
+                {
+                    return enabled.ToBool();
+                }
+            }
+            else if (!value.IsNullOrUndefined())
+            {
+                return value.ToBool();
+            }
         }
 
-        return value.IsNullOrUndefined() || value.ToBool();
+        if (const CVarBase* cvar = CVarManager::GetInstance().FindVar(ANSIString(name.Data())); cvar != nullptr && cvar->GetDefaultValue().Is<bool>())
+        {
+            return cvar->GetDefaultValue().Get<bool>();
+        }
+
+        return defaultValue;
+    }
+
+    static bool CheckCondition(const JSON::Value& targetConfig, const String& condition)
+    {
+        return GetTargetBool(targetConfig, condition, true);
     }
 
     static Result CompileTargetShaders(
         const Handle<AssetRegistry>& engineRegistry,
         const String& target,
         const FilePath& targetConfigPath,
+        ShaderTarget& outShaderTarget,
         Array<Handle<AssetObject>>& outAssets)
     {
         if (target != "web")
@@ -579,7 +623,9 @@ private:
             return HYP_MAKE_ERROR(Error, "Unknown shader target '{}', expected web", target);
         }
 
-        JSON::Value targetConfig;
+        outShaderTarget.isEnabled = true;
+
+        JSON::Value& targetConfig = outShaderTarget.config;
 
         if (targetConfigPath.Any())
         {
@@ -618,7 +664,14 @@ private:
 
         for (const ShaderDefinition& definition : definitions.definitions)
         {
-            if (definition.cookKind != ShaderCookKind::Pass || !IsConditionMet(targetConfig, definition.condition))
+            if (definition.cookKind == ShaderCookKind::Material)
+            {
+                outShaderTarget.materialShaderNames.Insert(definition.name);
+
+                continue;
+            }
+
+            if (definition.cookKind != ShaderCookKind::Pass || !CheckCondition(targetConfig, definition.condition))
             {
                 continue;
             }
@@ -680,6 +733,284 @@ private:
 
         return {};
     }
+
+#ifdef HYP_EDITOR
+    struct ScenePassNeeds
+    {
+        bool hasPointShadows = false;
+        // per kind of env probe: bit 0 for EPF_VISIBILITY, bit 1 for EPF_HIT_MASK
+        Set<uint32> envProbeKinds;
+    };
+
+    static void CollectScenePassNeeds(const Node* node, ScenePassNeeds& outNeeds)
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+
+        if (node->IsA<PointLight>() && (static_cast<const PointLight*>(node)->GetLightFlags() & LightFlags::ShadowCaster))
+        {
+            outNeeds.hasPointShadows = true;
+        }
+
+        if (node->IsA<EnvProbe>())
+        {
+            const EnvProbe* envProbe = static_cast<const EnvProbe*>(node);
+
+            if (!envProbe->IsSkyProbe())
+            {
+                const EnumFlags<EnvProbeFlags> envProbeFlags = envProbe->GetEnvProbeFlags();
+
+                outNeeds.envProbeKinds.Insert((bool(envProbeFlags & EPF_VISIBILITY) ? 0x1u : 0x0u) | (bool(envProbeFlags & EPF_HIT_MASK) ? 0x2u : 0x0u));
+            }
+        }
+
+        for (const Handle<Node>& child : node->GetChildren())
+        {
+            CollectScenePassNeeds(child.Get(), outNeeds);
+        }
+    }
+
+    // Compiles the variants the cooked materials draw with in every pass the target runs, decided by the renderer's own
+    // GeometryPass::BuildMaterialAttributes, then collects them from their bundles.
+    static void CompileMaterialShaders(
+        const Handle<AssetRegistry>& engineRegistry,
+        const Array<Handle<AssetObject>>& assetsToCook,
+        bool usesTerrain,
+        const Array<MaterialAttributes>& runtimeMaterials,
+        const ShaderTarget& shaderTarget,
+        Array<Handle<AssetObject>>& outAssets)
+    {
+        struct MaterialInput
+        {
+            MaterialAttributes attributes;
+            bool isEmissive = false;
+        };
+
+        Array<MaterialInput> materials;
+        bool hasInstancing = false;
+        bool hasSkinning = false;
+        ScenePassNeeds scenePassNeeds;
+
+        for (const Handle<AssetObject>& assetObject : assetsToCook)
+        {
+            if (!assetObject.IsValid())
+            {
+                continue;
+            }
+
+            const AssetBucket& bucket = assetObject->GetPath().GetBucket();
+
+            if (bucket == AssetBuckets::Materials)
+            {
+                const Material* material = static_cast<const Material*>(assetObject.Get());
+
+                materials.PushBack(MaterialInput { material->GetAttributes(), RenderHelpers::IsEmissive(material->GetParameters()) });
+            }
+            else if (bucket == AssetBuckets::InstanceData || bucket == AssetBuckets::Terrain)
+            {
+                // instance groups, and ground cover planted on terrain
+                hasInstancing = true;
+            }
+            else if (bucket == AssetBuckets::Skeletons)
+            {
+                hasSkinning = true;
+            }
+            else if (bucket == AssetBuckets::Scenes)
+            {
+                CollectScenePassNeeds(static_cast<const Scene*>(assetObject.Get())->GetRoot().Get(), scenePassNeeds);
+            }
+        }
+
+        const JSON::Value& targetConfig = shaderTarget.config;
+        const bool lightmapVolumes = GetTargetBool(targetConfig, "Rendering.LightmapVolumes", true);
+        const bool pathTracing = GetTargetBool(targetConfig, "Rendering.PathTracing", false);
+        const bool forwardDDGI = GetTargetBool(targetConfig, "Rendering.DDGI", false);
+
+        ShaderPropertyDictionary& propertyDictionary = ShaderPropertyDictionary::GetInstance();
+
+        // the views that draw meshes with a shader of their own; the main view draws with the material's
+        Array<MaterialAttributes> passOverrides;
+
+        if (GetTargetBool(targetConfig, "Rendering.Shadows.Enabled", true))
+        {
+            MaterialAttributes& shadowPass = passOverrides.EmplaceBack();
+            shadowPass.shaderName = NAME("DrawShadowMap");
+        }
+
+        if (scenePassNeeds.hasPointShadows)
+        {
+            MaterialAttributes& pointShadowPass = passOverrides.EmplaceBack();
+            pointShadowPass.shaderName = NAME("DrawCubemap");
+            pointShadowPass.shaderProperties.Add(propertyDictionary.Intern(ShaderProperty(NAME("MODE_SHADOWS"))));
+        }
+
+        for (const uint32 envProbeKind : scenePassNeeds.envProbeKinds)
+        {
+            MaterialAttributes& envProbePass = passOverrides.EmplaceBack();
+            envProbePass.shaderName = NAME("DrawCubemap");
+            envProbePass.shaderProperties.Add(propertyDictionary.Intern(ShaderProperty(NAME("FORWARD_SHADING"))));
+            envProbePass.shaderProperties.Add(propertyDictionary.Intern(ShaderProperty(NAME("APPLY_LIGHTMAPS"))));
+
+            if (envProbeKind & 0x1u)
+            {
+                envProbePass.shaderProperties.Add(propertyDictionary.Intern(ShaderProperty(NAME("WRITE_MOMENTS"))));
+            }
+
+            if (envProbeKind & 0x2u)
+            {
+                envProbePass.shaderProperties.Add(propertyDictionary.Intern(ShaderProperty(NAME("WRITE_HIT_MASK"))));
+            }
+        }
+
+        struct VariantRequest
+        {
+            Name shaderName;
+            ShaderPropertySet properties;
+        };
+
+        Array<VariantRequest> requests;
+        Set<HashCode> seenRequests;
+
+        const auto addRequest = [&](const MaterialAttributes& materialAttributes, const ShaderPropertySet& properties)
+        {
+            if (!shaderTarget.materialShaderNames.Contains(materialAttributes.shaderName))
+            {
+                return;
+            }
+
+            HashCode hashCode = materialAttributes.shaderName.GetHashCode();
+            hashCode.Add(properties.GetHashCode());
+
+            if (seenRequests.Insert(hashCode).second)
+            {
+                requests.PushBack(VariantRequest { materialAttributes.shaderName, properties });
+            }
+        };
+
+        if (usesTerrain)
+        {
+            materials.PushBack(MaterialInput { TerrainWorldGridLayer::GetTerrainMaterialAttributes(), false });
+        }
+
+        for (const MaterialAttributes& runtimeMaterial : runtimeMaterials)
+        {
+            materials.PushBack(MaterialInput { runtimeMaterial, false });
+        }
+
+        for (const MaterialInput& material : materials)
+        {
+            GeometryPass::DrawMaterialInputs inputs;
+            inputs.materialAttributes = material.attributes;
+            inputs.isEmissive = material.isEmissive;
+            inputs.lightmapVolumes = lightmapVolumes;
+            inputs.pathTracing = pathTracing;
+
+            const bool canBeLightmapped = lightmapVolumes && inputs.materialAttributes.bucket == RenderBucket::Lightmapped;
+
+            for (uint32 combination = 0; combination < 8; combination++)
+            {
+                inputs.hasInstancing = (combination & 0x1u) != 0;
+                inputs.hasSkinning = (combination & 0x2u) != 0;
+                inputs.lightmapStencilValue = (combination & 0x4u) != 0 ? 1 : 0;
+
+                if ((inputs.hasInstancing && !hasInstancing) || (inputs.hasSkinning && !hasSkinning) || (inputs.lightmapStencilValue != 0 && !canBeLightmapped))
+                {
+                    continue;
+                }
+
+                MaterialAttributes materialAttributes;
+                GeometryPass::BuildMaterialAttributes(inputs, nullptr, materialAttributes);
+                addRequest(materialAttributes, GeometryPass::GetDrawShaderProperties(materialAttributes, /* clusteredForwardLighting */ true, forwardDDGI));
+
+                for (const MaterialAttributes& passOverride : passOverrides)
+                {
+                    GeometryPass::BuildMaterialAttributes(inputs, &passOverride, materialAttributes);
+                    addRequest(materialAttributes, materialAttributes.shaderProperties);
+                }
+            }
+        }
+
+        Map<Name, uint32> numRequestsPerShader;
+
+        for (const VariantRequest& request : requests)
+        {
+            ++numRequestsPerShader[request.shaderName];
+        }
+
+        HYP_LOG(Assets, Info, "Compiling {} material shader variant(s) for the {} cooked material(s) and {} pass override(s){}{}: {}",
+            requests.Size(), materials.Size(), passOverrides.Size(),
+            scenePassNeeds.hasPointShadows ? ", point light shadows" : "",
+            scenePassNeeds.envProbeKinds.Any() ? ", env probes" : "",
+            String::Join(numRequestsPerShader, ", ", [](const auto& it)
+                {
+                    return HYP_FORMAT("{} {}", it.second, it.first);
+                }));
+
+        const ShaderPropertyId targetPropertyId = propertyDictionary.Intern(ShaderProperty(NAME("TARGET"), NAME("WEB")));
+        const ShaderPropertyId backendPropertyId = propertyDictionary.Intern(ShaderProperty(NAME("BACKEND"), NAME("WEBGPU")));
+        const ShaderPropertyId numGBufferTexturesPropertyId = propertyDictionary.Intern(ShaderProperty(NAME("NUM_GBUFFER_TEXTURES"), int(NumGBufferTargets)));
+
+        Map<Name, Set<HashCode>> requestedVariants;
+
+        for (const VariantRequest& request : requests)
+        {
+            if (!g_shaderCompiler->CompileVariantForTarget(request.shaderName, request.properties, VertexInputLayoutDesc { VT_Simple }, ShaderCompileTargetPlatform::Web, ShaderCompileTargetBackend::WebGPU))
+            {
+                HYP_LOG(Assets, Warning, "Failed to compile a {} variant for web (see the errors above)", request.shaderName);
+                continue;
+            }
+
+            ShaderPropertySet targetProperties = request.properties;
+            targetProperties.Add(targetPropertyId);
+            targetProperties.Add(backendPropertyId);
+
+            requestedVariants[request.shaderName].Insert(targetProperties.GetHashCode());
+        }
+
+        uint32 numVariants = 0;
+
+        for (const auto& it : requestedVariants)
+        {
+            Handle<AssetObject> bundleAsset = engineRegistry->GetAsset(AssetBuckets::ShaderBundles, it.first);
+
+            if (!bundleAsset.IsValid())
+            {
+                continue;
+            }
+
+            const ShaderBundle* bundle = static_cast<const ShaderBundle*>(bundleAsset.Get());
+
+            outAssets.PushBack(bundleAsset);
+
+            for (const Handle<Shader>& shader : bundle->compiledShaders)
+            {
+                if (!shader.IsValid())
+                {
+                    continue;
+                }
+
+                // a variant carries its bundle's STATIC() properties and the global ones on top of what was requested
+                ShaderPropertySet requestedProperties = shader->properties;
+                requestedProperties.Set(numGBufferTexturesPropertyId, false);
+
+                for (const ShaderPropertyId staticPropertyId : bundle->staticProperties)
+                {
+                    requestedProperties.Set(staticPropertyId, false);
+                }
+
+                if (it.second.Contains(requestedProperties.GetHashCode()))
+                {
+                    outAssets.PushBack(shader);
+                    ++numVariants;
+                }
+            }
+        }
+
+        HYP_LOG(Assets, Info, "{} material shader variant(s) for web", numVariants);
+    }
+#endif // HYP_EDITOR
 
     static Result CookListedAssets(
         AssetRegistry* registry,
@@ -855,7 +1186,8 @@ private:
         const FilePath& projectPath,
         const Array<String>& worldNames,
         const FilePath& engineAssetListPath,
-        const Array<Handle<AssetObject>>& targetShaderAssets,
+        const ShaderTarget& shaderTarget,
+        Array<Handle<AssetObject>> targetShaderAssets,
         const FilePath& outputCacheDir, const FilePath& outputContentDir, const FilePath& outputEngineContentDir)
     {
         Array<TSharedResLock<AssetObject>> readLocks;
@@ -885,6 +1217,9 @@ private:
             GlobalContextScope assetRegistryContextScope { AssetRegistryContext { gameRegistry } };
             gameRegistry->LoadAssetDescs();
 
+            bool usesTerrain = false;
+            Array<MaterialAttributes> runtimeMaterials;
+
             TResult<Handle<EditorProject>> loadProjectResult = EditorProject::Load(projectPath);
 
             if (loadProjectResult.HasValue())
@@ -913,8 +1248,6 @@ private:
                 gameRegistry->GetBucketAssetDescs(WorldsBucket.GetIndex(), assetDescs);
 
                 static const Name s_terrainLayerClassName = NAME("TerrainWorldGridLayer");
-
-                bool usesTerrain = false;
 
                 for (const AssetDesc& assetDesc : assetDescs)
                 {
@@ -960,42 +1293,24 @@ private:
                     AssetRegistry::WalkAssetDeep(BoxedValue(engineDefaults), callback);
                 }
 
-                for (const String& entry : loadProjectResult.GetValue()->GetPlatformSettings().cook.alwaysCook)
+                const EditorCookSettings& cookSettings = loadProjectResult.GetValue()->GetPlatformSettings().cook;
+
+                runtimeMaterials = cookSettings.runtimeMaterials;
+
+                for (const AssetPath& additionalAsset : cookSettings.additionalAssets)
                 {
-                    const Array<String> parts = entry.Split('/');
-                    const AssetBucket& bucket = parts.Any() ? GetAssetBucketByName(StringHash(parts[0])) : AssetBuckets::None;
+                    Handle<AssetObject> asset = AssetReference(additionalAsset).Resolve();
 
-                    if (bucket == AssetBuckets::None || parts.Size() > 2)
+                    if (!asset.IsValid())
                     {
-                        HYP_LOG(Assets, Warning, "Skipping AlwaysCook entry '{}', expected Bucket or Bucket/Name", entry);
+                        HYP_LOG(Assets, Warning, "Additional asset {} is not in the project", additionalAsset);
                         continue;
                     }
 
-                    if (parts.Size() == 2)
-                    {
-                        Handle<AssetObject> asset = gameRegistry->GetAsset(bucket, StringHash(parts[1]));
-
-                        if (!asset.IsValid())
-                        {
-                            HYP_LOG(Assets, Warning, "AlwaysCook entry '{}' is not in the project", entry);
-                            continue;
-                        }
-
-                        AssetRegistry::WalkAssetDeep(BoxedValue(asset), callback);
-
-                        continue;
-                    }
-
-                    Array<AssetDesc> bucketAssetDescs;
-                    gameRegistry->GetBucketAssetDescs(bucket.GetIndex(), bucketAssetDescs);
-
-                    for (const AssetDesc& bucketAssetDesc : bucketAssetDescs)
-                    {
-                        AssetRegistry::WalkAssetDeep(BoxedValue(gameRegistry->GetAsset(bucket, bucketAssetDesc.name)), callback);
-                    }
+                    AssetRegistry::WalkAssetDeep(BoxedValue(asset), callback);
                 }
 
-                HYP_LOG(Assets, Info, "{} asset(s) to cook with the engine defaults{} and AlwaysCook", assetsToCook.Size(), usesTerrain ? " (terrain included)" : "");
+                HYP_LOG(Assets, Info, "{} asset(s) to cook with the engine defaults{} and the additional assets", assetsToCook.Size(), usesTerrain ? " (terrain included)" : "");
             }
             else
             {
@@ -1022,6 +1337,11 @@ private:
                 {
                     projectMeshLayouts.Insert(static_cast<const Mesh*>(assetObject.Get())->GetMeshAttributes().inputLayout.mask);
                 }
+            }
+
+            if (shaderTarget.isEnabled && engineRegistry)
+            {
+                CompileMaterialShaders(engineRegistry, assetsToCook, usesTerrain, runtimeMaterials, shaderTarget, targetShaderAssets);
             }
         }
 #endif // HYP_EDITOR
