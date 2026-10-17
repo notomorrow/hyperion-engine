@@ -12,8 +12,8 @@ namespace Hyperion {
 
 extern CVar<int> g_cvGlimmerProbesNearFieldCascades;
 
-// the probe blocks; off leaves the near field to the SH voxels
 extern CVar<bool> g_cvGlimmerProbesEnabled;
+extern CVar<int> g_cvGlimmerProbesTracer;       // 1 = triangle BVH, 0 = bricks
 extern CVar<int> g_cvGlimmerProbesRaysPerFrame; // probes traced a frame = this / rays per probe
 extern CVar<int> g_cvGlimmerProbesPoolBlocks;   // blocks of 64 probes the pool holds at most (up to GlimmerProbePoolBlocks)
 extern CVar<bool> g_cvGlimmerProbesLogStats;    // logs how many probes there are (per level, by state, and on screen) once a second

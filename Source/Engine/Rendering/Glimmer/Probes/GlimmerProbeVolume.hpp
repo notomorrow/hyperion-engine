@@ -151,6 +151,7 @@ private:
     Time m_startTime;
     uint32 m_frameIndex;
     uint32 m_seenInstancesGeneration;
+    uint32 m_nearTracer = 0;
     uint32 m_poolBlocks;
     uint32 m_maxProbesPerFrame;
 

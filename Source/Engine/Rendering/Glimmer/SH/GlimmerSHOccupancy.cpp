@@ -35,12 +35,22 @@
 namespace Hyperion {
 
 static EngineStatGpuTimer s_statGlimmerSHOccupancy("Rendering/GPU/Glimmer/SHOccupancy");
+static EngineStatGpuTimer s_statGlimmerSHOccupancySplat("Rendering/GPU/Glimmer/SHOccupancySplat");
+static EngineStatCounter<uint32> s_statGlimmerSHOccupancyScrolls("Rendering/Glimmer/SHOccupancyScrolls", false);
+static EngineStatCounter<uint32> s_statGlimmerSHOccupancyDirtyBoxes("Rendering/Glimmer/SHOccupancyDirtyBoxes", false);
+static EngineStatCounter<uint32> s_statGlimmerSHOccupancyRebuildSlices("Rendering/Glimmer/SHOccupancyRebuildSlices", false);
+static EngineStatCounter<uint32> s_statGlimmerSHOccupancyFullBuilds("Rendering/Glimmer/SHOccupancyFullBuilds", false);
+static EngineStatCounter<uint32> s_statGlimmerSHOccupancyVoxels("Rendering/Glimmer/SHOccupancyVoxels", false);
 
 static StaticShaderPropertyId s_propOccupancyModeClear { ShaderProperty(NAME("MODE"), NAME("CLEAR")) };
 static StaticShaderPropertyId s_propOccupancyModeSplat { ShaderProperty(NAME("MODE"), NAME("SPLAT")) };
 static StaticShaderPropertyId s_propOccupancyModeResolve { ShaderProperty(NAME("MODE"), NAME("RESOLVE")) };
+static StaticShaderPropertyId s_propOccupancyModeBlocks { ShaderProperty(NAME("MODE"), NAME("BLOCKS")) };
 
 static constexpr uint32 OccupancyGroupSize = 64;
+static constexpr int32 OccupancyBlockShift = 2;
+static constexpr int32 OccupancyBlockVoxels = 1 << OccupancyBlockShift;
+
 static constexpr int32 WindowSnapVoxels = 8;
 static constexpr uint32 AlbedoSumWords = 4;
 static constexpr uint32 LightmapSumWords = GlimmerSHOccupancyLightmapFaces * 4;
@@ -109,8 +119,9 @@ void GlimmerSHOccupancy::CreateResources()
     const size_t numCascadeVoxels = size_t(GlimmerSHOccupancyGridXZ) * GlimmerSHOccupancyGridY * GlimmerSHOccupancyGridXZ;
     const size_t numVoxels = numCascadeVoxels * GlimmerSHCascades;
 
-    // the mask words, then the traced cascades' lightmap words
-    const size_t numMaskWords = numVoxels * GlimmerSHOccupancyMaskWords + numCascadeVoxels * GlimmerSHOccupancyTracedCascades * GlimmerSHOccupancyLightmapFaces;
+    // the mask words, then the traced cascades' lightmap words, then a word per block of their voxels
+    const size_t numMaskWords = numVoxels * GlimmerSHOccupancyMaskWords + numCascadeVoxels * GlimmerSHOccupancyTracedCascades * GlimmerSHOccupancyLightmapFaces
+        + (numCascadeVoxels / (OccupancyBlockVoxels * OccupancyBlockVoxels * OccupancyBlockVoxels)) * GlimmerSHOccupancyTracedCascades;
 
     m_maskBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, numMaskWords * sizeof(uint32), alignof(uint32));
     Check(m_maskBuffer->Create());
@@ -191,6 +202,8 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
     const Vec3i boxExtent = box.max - box.min;
     const uint32 numBoxVoxels = uint32(boxExtent.x * boxExtent.y * boxExtent.z);
 
+    s_statGlimmerSHOccupancyVoxels += numBoxVoxels;
+
     dispatchPass(s_propOccupancyModeClear, numBoxVoxels);
 
     if (sceneInstances.GetNumSpanChunks() != 0)
@@ -198,11 +211,29 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
         insertWriteBarriers();
 
         // a group per chunk
-        dispatchPass(s_propOccupancyModeSplat, sceneInstances.GetNumSpanChunks() * OccupancyGroupSize);
+        {
+            ENGINE_STAT_GPU_SCOPE(&s_statGlimmerSHOccupancySplat);
+
+            dispatchPass(s_propOccupancyModeSplat, sceneInstances.GetNumSpanChunks() * OccupancyGroupSize);
+        }
 
         insertWriteBarriers();
 
         dispatchPass(s_propOccupancyModeResolve, numBoxVoxels);
+    }
+
+    if (cascadeIndex < GlimmerSHOccupancyTracedCascades)
+    {
+        insertWriteBarriers();
+
+        const Vec3i blockMin = Vec3i(box.min.x >> OccupancyBlockShift, box.min.y >> OccupancyBlockShift, box.min.z >> OccupancyBlockShift);
+        const Vec3i blockMax = Vec3i(
+            (box.max.x + OccupancyBlockVoxels - 1) >> OccupancyBlockShift,
+            (box.max.y + OccupancyBlockVoxels - 1) >> OccupancyBlockShift,
+            (box.max.z + OccupancyBlockVoxels - 1) >> OccupancyBlockShift);
+        const Vec3i blockExtent = blockMax - blockMin;
+
+        dispatchPass(s_propOccupancyModeBlocks, uint32(blockExtent.x * blockExtent.y * blockExtent.z));
     }
 
     cr << InsertBarrier(m_texture->GetGpuImage(), ResourceState::ShaderResource, ShaderModuleType::Compute);
@@ -287,12 +318,20 @@ void GlimmerSHOccupancy::Update(
 
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
     {
-        if (m_builtGenerations[cascadeIndex] == generation || m_builtGenerations[cascadeIndex] + 1 != generation || sceneInstances.IsSpanFullyDirty())
+        if (m_builtGenerations[cascadeIndex] == generation || m_builtGenerations[cascadeIndex] == ~0u || sceneInstances.IsSpanFullyDirty())
         {
             continue;
         }
 
         if (m_rebuildSlices[cascadeIndex] >= 0)
+        {
+            continue;
+        }
+
+        // a cascade too far behind the journal is rebuilt below
+        GlimmerSceneChanges changes;
+
+        if (!sceneInstances.GetChangesSince(m_builtGenerations[cascadeIndex], changes))
         {
             continue;
         }
@@ -303,8 +342,16 @@ void GlimmerSHOccupancy::Update(
 
         Array<Box, GlimmerAllocator>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
 
-        for (const BoundingBox& bounds : sceneInstances.GetSpanDirtyBounds())
+        for (const GlimmerSceneChange& change : changes)
         {
+            // another LOD of the same instance is within its LOD error of what was splatted: not worth a splat
+            if (change.isLodOnly)
+            {
+                continue;
+            }
+
+            const BoundingBox& bounds = change.bounds;
+
             const Vec3i boundsMin = Vec3i(int32(MathUtil::Floor(bounds.min.x * invSpacing)), int32(MathUtil::Floor(bounds.min.y * invSpacing)), int32(MathUtil::Floor(bounds.min.z * invSpacing)));
             const Vec3i boundsMax = Vec3i(int32(MathUtil::Floor(bounds.max.x * invSpacing)), int32(MathUtil::Floor(bounds.max.y * invSpacing)), int32(MathUtil::Floor(bounds.max.z * invSpacing)));
 
@@ -319,11 +366,31 @@ void GlimmerSHOccupancy::Update(
             }
         }
 
-        if (dirtyBoxes.Size() > MaxDirtyBoxes)
+        // too many to splat one by one: the pair whose union adds the least is merged, until few enough are left
+        while (dirtyBoxes.Size() > MaxDirtyBoxes)
         {
-            dirtyBoxes.Clear();
+            size_t bestA = 0;
+            size_t bestB = 1;
+            int64 bestGrowth = MathUtil::MaxSafeValue<int64>();
 
-            continue;
+            for (size_t a = 0; a < dirtyBoxes.Size(); a++)
+            {
+                for (size_t b = a + 1; b < dirtyBoxes.Size(); b++)
+                {
+                    const Box merged = Box::Union(dirtyBoxes[a], dirtyBoxes[b]);
+                    const int64 growth = merged.Volume() - dirtyBoxes[a].Volume() - dirtyBoxes[b].Volume();
+
+                    if (growth < bestGrowth)
+                    {
+                        bestGrowth = growth;
+                        bestA = a;
+                        bestB = b;
+                    }
+                }
+            }
+
+            dirtyBoxes[bestA] = Box::Union(dirtyBoxes[bestA], dirtyBoxes[bestB]);
+            dirtyBoxes.EraseAt(bestB);
         }
 
         m_builtGenerations[cascadeIndex] = generation;
@@ -368,6 +435,8 @@ void GlimmerSHOccupancy::Update(
 
                 ScrollWindow(frame, cascadeIndex, origin, sceneInstances, triangleCache);
 
+                s_statGlimmerSHOccupancyScrolls += 1;
+
                 hasRebuilt = true;
             }
 
@@ -380,6 +449,8 @@ void GlimmerSHOccupancy::Update(
 
                 if (box.max.x > box.min.x && box.max.y > box.min.y && box.max.z > box.min.z)
                 {
+                    s_statGlimmerSHOccupancyDirtyBoxes += 1;
+
                     SplatBox(frame, cascadeIndex, origin, box, sceneInstances, triangleCache);
                 }
             }
@@ -409,6 +480,8 @@ void GlimmerSHOccupancy::Update(
             {
                 SplatBox(frame, cascadeIndex, origin, Box { origin, origin + OccupancyGridSize }, sceneInstances, triangleCache);
 
+                s_statGlimmerSHOccupancyFullBuilds += 1;
+
                 SetBuilt(cascadeIndex, origin);
                 m_builtGenerations[cascadeIndex] = generation;
 
@@ -426,6 +499,8 @@ void GlimmerSHOccupancy::Update(
         slice.max.z = slice.min.z + sliceDepth;
 
         SplatBox(frame, cascadeIndex, builtOrigin, slice, sceneInstances, triangleCache);
+
+        s_statGlimmerSHOccupancyRebuildSlices += 1;
 
         if (++m_rebuildSlices[cascadeIndex] == RebuildSlices)
         {

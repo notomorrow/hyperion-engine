@@ -18,7 +18,7 @@
 
 #include <Core/Utilities/Span.hpp>
 
-#include <Baking/PathTracer/PathTracerBVHBuilder.hpp>
+#include <Rendering/Util/SAHBVHBuilder.hpp>
 
 namespace Hyperion {
 
@@ -97,7 +97,7 @@ private:
 
     struct BuildResult
     {
-        Array<PathTracerBVHNode> nodes;
+        Array<SAHBVHNode> nodes;
         Array<PathTracerTriangle> triangles;
         Array<PathTracerTriangleAttributes> triangleAttributes;
     };

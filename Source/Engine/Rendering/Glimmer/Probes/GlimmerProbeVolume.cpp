@@ -45,7 +45,11 @@
 
 #include <Core/Profiling/ProfileScope.hpp>
 
+#include <Core/Logging/Logger.hpp>
+
 namespace Hyperion {
+
+HYP_DECLARE_LOG_CHANNEL(Rendering);
 
 static EngineStatGpuTimer s_statGlimmerProbes("Rendering/GPU/Glimmer/Probes");
 static EngineStatGpuTimer s_statGlimmerProbeClassify("Rendering/GPU/Glimmer/ProbeClassify");
@@ -68,6 +72,8 @@ static StaticShaderPropertyId s_propAllocModeList { ShaderProperty(NAME("MODE"),
 static StaticShaderPropertyId s_propTraceModeTrace { ShaderProperty(NAME("MODE"), NAME("TRACE")) };
 static StaticShaderPropertyId s_propTraceModeShade { ShaderProperty(NAME("MODE"), NAME("SHADE")) };
 static StaticShaderPropertyId s_propTraceModeRelight { ShaderProperty(NAME("MODE"), NAME("RELIGHT")) };
+static StaticShaderPropertyId s_propTracerBricks { ShaderProperty(NAME("TRACER"), NAME("BRICKS")) };
+static StaticShaderPropertyId s_propTracerBVH { ShaderProperty(NAME("TRACER"), NAME("BVH")) };
 
 static StaticShaderPropertyId s_propBlendModeBlend { ShaderProperty(NAME("MODE"), NAME("BLEND")) };
 static StaticShaderPropertyId s_propBlendModeCompose { ShaderProperty(NAME("MODE"), NAME("COMPOSE")) };
@@ -165,6 +171,7 @@ struct GlimmerProbeTraceConstants
     Vec4u relightInfo;
 
     GlimmerBrickShaderData bricks;
+    Vec4u bvh; // x = traced instances in the TLAS
 };
 
 struct GlimmerProbeBlendConstants
@@ -414,8 +421,34 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
 
     UpdateWindows(inputs.viewerPosition, inputs.lookAhead);
 
-    // the probes trace the bricks; the scene instances' change journal says which probes to wake
-    const bool hasBricks = inputs.sceneInstances && inputs.sceneInstances->IsReady() && inputs.brickWorld && inputs.brickWorld->IsReady();
+    const bool useBVH = g_cvGlimmerProbesTracer.Get() != 0;
+
+    const bool hasBVH = useBVH
+        && inputs.sceneInstances && inputs.sceneInstances->IsReady() && inputs.sceneInstances->HasTLAS()
+        && inputs.triangleCache && inputs.triangleCache->HasBLAS();
+    
+    const bool hasBricks = !useBVH
+        && inputs.sceneInstances && inputs.sceneInstances->IsReady()
+        && inputs.brickWorld && inputs.brickWorld->IsReady();
+        
+    const bool hasNearTracer = hasBVH || hasBricks;
+    const uint32 nearTracer = hasBVH ? 2u : (hasBricks ? 1u : 0u);
+
+    const bool isNewTracer = nearTracer != m_nearTracer;
+
+    if (isNewTracer)
+    {
+        const GlimmerTriangleCacheStats triangleStats = inputs.triangleCache ? inputs.triangleCache->GetStats() : GlimmerTriangleCacheStats {};
+
+        HYP_LOG(Rendering, Info, "Glimmer: probes trace {} from {} ms; BLAS nodes {} of {}, {} traced instances",
+            nearTracer == 2u ? "the BVH" : (nearTracer == 1u ? "the bricks" : "nothing near"),
+            Time::Now().ToMilliseconds() - m_startTime.ToMilliseconds(),
+            triangleStats.nodesUsed,
+            triangleStats.nodesCapacity,
+            hasBVH ? inputs.sceneInstances->GetNumTracedInstances() : 0u);
+    }
+
+    m_nearTracer = nearTracer;
 
     // counted per frame, so a low frame rate gets more a frame to keep the same pace
     const float budgetScale = MathUtil::Clamp(inputs.budgetScale, 1.0f, float(MaxBudgetScale));
@@ -432,7 +465,7 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
     m_shaderData.nearField = Vec4f(
         float(MathUtil::Clamp(g_cvGlimmerProbesNearFieldCascades.Get(), 0, int(GlimmerProbeLevels))),
         NearFieldReachSpacings,
-        hasBricks ? 1.0f : 0.0f,
+        hasNearTracer ? 1.0f : 0.0f,
         GlimmerDefaultGroundAlbedo);
 
     const GlimmerGroundShaderData& groundShaderData = inputs.surfaceCache->GetGroundShaderData();
@@ -460,11 +493,11 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
 
         constants.viewer = Vec4f(priorityPoint.x, priorityPoint.y, priorityPoint.z, 0.0f);
 
-        bool wakeEverything = false;
+        bool wakeEverything = isNewTracer;
 
         uint32 numChangedBoxes = 0;
 
-        if (hasBricks && inputs.sceneInstances->GetGeneration() != m_seenInstancesGeneration)
+        if (hasNearTracer && inputs.sceneInstances->GetGeneration() != m_seenInstancesGeneration)
         {
             GlimmerSceneChanges changes;
 
@@ -528,7 +561,7 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
             SafetyRefreshSeconds);
 
         // a probe whose rays could reach bricks still being built keeps what it has until they are
-        if (inputs.brickWorld)
+        if (hasBricks)
         {
             inputs.brickWorld->GetBuildingChunks(constants.brickChunkOrigin, constants.brickChunksBuilding);
         }
@@ -636,6 +669,11 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
             constants.bricks = inputs.brickWorld->GetShaderData();
         }
 
+        if (hasBVH)
+        {
+            constants.bvh = Vec4u(inputs.sceneInstances->GetNumTracedInstances(), 0u, 0u, 0u);
+        }
+
         const GpuImageViewRef relightImageView = inputs.relight ? inputs.relight->GetImageView() : GpuImageViewRef();
 
         const auto bindTraceResources = [&](const StaticShaderPropertyId& modeProperty, const GlimmerProbeTraceConstants& dispatchConstants)
@@ -665,6 +703,7 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
 
             ShaderPropertySet shaderProperties;
             shaderProperties.Add(modeProperty);
+            shaderProperties.Add(useBVH ? s_propTracerBVH : s_propTracerBricks);
 
             cr << SetCurrentShader(ShaderDesc(NAME("GlimmerProbeTrace"), shaderProperties));
 
@@ -675,10 +714,29 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
             cr << SetShaderUniform(uniformIndex++, "MaterialsBuffer"_sh, RI.namedBuffers[NamedBuffer::Materials]);
             cr << SetShaderUniform(uniformIndex++, "SamplerLinearMipmap"_sh, RI.placeholderData->GetSamplerLinearMipmap());
 
-            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickTableBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetTableBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
-            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickIndexBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetIndexBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
-            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingsBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetCrossingsBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
-            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickMaterialBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetMaterialBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+            if (useBVH && hasBVH)
+            {
+                cr << SetShaderUniform(uniformIndex++, "GlimmerTLASNodesBuffer"_sh, inputs.sceneInstances->GetTLASNodesBuffer().Get(), ShaderDataOffset(0, sizeof(SAHBVHNode)));
+                cr << SetShaderUniform(uniformIndex++, "GlimmerTracedInstancesBuffer"_sh, inputs.sceneInstances->GetTracedInstancesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerTracedInstanceShaderData)));
+                cr << SetShaderUniform(uniformIndex++, "GlimmerBLASNodesBuffer"_sh, inputs.triangleCache->GetNodesBuffer().Get(), ShaderDataOffset(0, sizeof(GlimmerBLASNode)));
+                cr << SetShaderUniform(uniformIndex++, "GlimmerTrianglesBuffer"_sh, inputs.triangleCache->GetTrianglesBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+            }
+            else if (useBVH)
+            {
+                const GpuBufferRef& placeholder = GetBufferOrPlaceholder(m_placeholderBuffer);
+
+                for (const StringHash name : { "GlimmerTLASNodesBuffer"_sh, "GlimmerTracedInstancesBuffer"_sh, "GlimmerBLASNodesBuffer"_sh, "GlimmerTrianglesBuffer"_sh })
+                {
+                    cr << SetShaderUniform(uniformIndex++, name, placeholder.Get(), ShaderDataOffset(0, sizeof(uint32)));
+                }
+            }
+            else
+            {
+                cr << SetShaderUniform(uniformIndex++, "GlimmerBrickTableBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetTableBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+                cr << SetShaderUniform(uniformIndex++, "GlimmerBrickIndexBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetIndexBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+                cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingsBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetCrossingsBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+                cr << SetShaderUniform(uniformIndex++, "GlimmerBrickMaterialBuffer"_sh, GetBufferOrPlaceholder(hasBricks ? inputs.brickWorld->GetMaterialBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+            }
 
             cr << SetShaderUniform(uniformIndex++, "GlimmerGroundTexture"_sh, groundImageView);
             cr << SetShaderUniform(uniformIndex++, "GlimmerGroundAlbedoTexture"_sh, inputs.surfaceCache->GetGroundAlbedoImageView());
