@@ -537,8 +537,6 @@ void DX12RenderInterface::Shutdown()
     }
     m_frameFence.Reset();
 
-    m_queueData = {};
-
     m_gpuTimerBackend->Shutdown();
     delete m_gpuTimerBackend;
     m_gpuTimerBackend = nullptr;
@@ -563,6 +561,8 @@ void DX12RenderInterface::Shutdown()
         m_submittedTransientCommandBuffers.Clear();
         m_transientCommandBufferStorage.Clear();
     }
+
+    m_queueData = {};
 
     descriptorHeapManager->Shutdown();
     delete descriptorHeapManager;

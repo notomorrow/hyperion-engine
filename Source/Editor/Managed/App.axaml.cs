@@ -113,7 +113,14 @@ namespace Hyperion.Editor
                 startScreenWindow.Close();
             };
 
-            startScreenWindow.Closing += (_, _) => ContinueToEditor();
+            startScreenWindow.Closed += (_, _) =>
+            {
+                if (!mainWindowShown)
+                {
+                    EngineManager.Shutdown();
+                    desktop.Shutdown();
+                }
+            };
 
             startScreenWindow.Show();
             splashWindow.Close();
