@@ -1174,9 +1174,9 @@ Vec4f Texture::Sample(Vec3f uvw, uint32 faceIndex)
     const TextureDesc& textureDesc = GetTextureDesc();
 
     Vec3u coord = {
-        uint32(MathUtil::Abs(std::fmodf(uvw.x, 1.0f)) * float(textureDesc.extent.x - 1) + 0.5f),
-        uint32(MathUtil::Abs(std::fmodf(uvw.y, 1.0f)) * float(textureDesc.extent.y - 1) + 0.5f),
-        uint32(MathUtil::Abs(std::fmodf(uvw.z, 1.0f)) * float(textureDesc.extent.z - 1) + 0.5f)
+        uint32(MathUtil::Abs(std::fmod(uvw.x, 1.0f)) * float(textureDesc.extent.x - 1) + 0.5f),
+        uint32(MathUtil::Abs(std::fmod(uvw.y, 1.0f)) * float(textureDesc.extent.y - 1) + 0.5f),
+        uint32(MathUtil::Abs(std::fmod(uvw.z, 1.0f)) * float(textureDesc.extent.z - 1) + 0.5f)
     };
 
     const uint32 bytesPerComponent = TextureUtils::BytesPerComponent(textureDesc.format);
