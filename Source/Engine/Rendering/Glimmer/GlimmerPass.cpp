@@ -491,7 +491,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
         scene->surfaceCache->Update(frame, channelState, newGroundUploads, terrainPatches.ToSpan());
         scene->isReplayingGroundUploads = false;
-        
+
         scene->spanCache->Update(frame, channelState, *scene->sceneInstances, *scene->triangleCache, *scene->surfaceCache);
 
         context.channelState = &channelState;
@@ -627,7 +627,7 @@ uint32 GlimmerPass::BindApplyResources(CommandRecorder& cr, uint32 uniformIndex,
 
 void GlimmerPass::OnFrameEnd(uint32 prevFrameIndex)
 {
-    // the base class deletes pass data of views that went away, so drop our pointers to it first
+    // the base class deletes pass datas, so drop our pointers to it to prevent hanging onto dangled ones.
     for (auto it = m_scenes.Begin(); it != m_scenes.End();)
     {
         if (!it->second || it->second->view.Expired())

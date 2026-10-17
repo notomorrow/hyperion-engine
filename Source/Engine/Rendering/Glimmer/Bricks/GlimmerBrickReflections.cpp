@@ -218,7 +218,10 @@ void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer,
     const GlimmerTechnique* technique = scene ? scene->technique.Get() : nullptr;
     const GlimmerBrickWorld* brickWorld = technique ? technique->GetBrickWorld() : nullptr;
 
-    if (!brickWorld || !brickWorld->IsReady() || !brickWorld->IsLit() || !g_cvGlimmerBricksReflections.Get() || !view || !view->GetCamera() || extent.x == 0 || extent.y == 0)
+    if (!brickWorld || !brickWorld->IsReady() || !brickWorld->IsLit()
+        || !g_cvGlimmerBricksReflections.Get()
+        || !view || !view->GetCamera()
+        || extent.Volume() == 0)
     {
         m_hasHistory = false;
         m_hasRequests = false;
@@ -243,7 +246,7 @@ void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer,
 
     ENGINE_STAT_GPU_SCOPE(&s_statGlimmerBrickReflections);
 
-    const Vec2u halfExtent = Vec2u((extent.x + 1) / 2, (extent.y + 1) / 2);
+    const Vec2u halfExtent = (extent + 1) / 2;
 
     GlimmerBrickReflectionsConstants constants {};
     constants.bricks = brickWorld->GetShaderData();
