@@ -46,7 +46,7 @@ DECLARE_UAV(DeferredPass, SlotCountsBuffer) RWStructuredBuffer<uint> slotCounts;
 
 struct GlimmerBrickReflectionsHeightfieldConstants
 {
-    GlimmerBrickParams bricks;
+    GlimmerBrickLevels bricks;
     uint4 dimensions; // xy = the view's, zw = the half resolution picture's
     float4 params;    // x = the foliage's extinction
     GlimmerGroundParams ground;
@@ -94,7 +94,7 @@ GlimmerLight GlimmerCanopyRadiance(float3 P, float3 weightedAlbedo)
 // rgb = radiance times a, a = how much of the ray the heightfield covers; outKind is GLIMMER_HEIGHTFIELD_GROUND, _SOLID or _MISS
 float4 TraceHeightfield(float3 origin, float3 direction, out float outT, out uint outKind)
 {
-    const float solidsFromT = max(GlimmerBrickWindowExit(constants.bricks, origin, direction), SOLIDS_SLACK_TEXELS * constants.spans.levels[0].params.x);
+    const float solidsFromT = max(GlimmerBricksWindowExit(constants.bricks, origin, direction), SOLIDS_SLACK_TEXELS * constants.spans.levels[0].params.x);
 
     GlimmerHeightfieldHit hit;
 

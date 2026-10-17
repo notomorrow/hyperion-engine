@@ -110,9 +110,15 @@ int2 FullPixel(int2 texel)
     return min(texel * 2, int2(constants.dimensions.xy) - 1);
 }
 
+// the columns of the finest level there; the finest level's past every window
+float ColumnWidthAt(float3 position)
+{
+    return GlimmerBrickLevelParams(constants.bricks, min(GlimmerBrickLevelAt(constants.bricks, position), uint(GLIMMER_BRICK_LEVELS - 1))).params.z;
+}
+
 float3 RayStart(float3 position, float3 normal)
 {
-    return position + normal * (RAY_BIAS_COLUMNS * constants.bricks.params.z);
+    return position + normal * (RAY_BIAS_COLUMNS * ColumnWidthAt(position));
 }
 
 #endif

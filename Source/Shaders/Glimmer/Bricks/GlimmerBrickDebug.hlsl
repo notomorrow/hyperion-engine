@@ -15,6 +15,7 @@
 #define DEBUG_VIEW_LIGHT 4
 #define DEBUG_VIEW_LIGHT_COARSE 5
 #define DEBUG_VIEW_ARRIVING 6
+#define DEBUG_VIEW_LEVEL 7
 
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickTableBuffer) StructuredBuffer<uint> glimmerBrickTable;
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickIndexBuffer) StructuredBuffer<uint> glimmerBrickIndex;
@@ -33,7 +34,7 @@ struct GlimmerBrickDebugConstants
     uint4 dimensionsMode;          // xy = output size, z = debug view
     float4 params;                 // x = max trace distance
     uint4 info;                    // x = pool bricks, y = pool pages, z = pool cards
-    GlimmerBrickParams bricks;
+    GlimmerBrickLevels bricks;
 };
 
 DECLARE_BUFFER_DYNAMIC(GlimmerBrickDebug, CBuffer) cbuffer CBuffer
@@ -70,10 +71,12 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     const float3 direction = normalize(farPosition - cameraPosition);
 
     const float maxDistance = constants.params.x;
-    const float width = constants.bricks.params.z;
 
     GlimmerBrickHit brickHit;
     const bool didHitBricks = TraceGlimmerBricks(constants.bricks, cameraPosition, direction, 0.0, maxDistance, brickHit);
+
+    const GlimmerBrickParams hitBricks = GlimmerBrickLevelParams(constants.bricks, brickHit.level);
+    const float width = hitBricks.params.z;
 
     float3 result = SkyColor(direction);
 
@@ -81,9 +84,32 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
     {
         if (didHitBricks)
         {
-            const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(constants.bricks, brickHit.crossing);
+            const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(hitBricks, brickHit.crossing);
 
             result = ShadeHit(crossing.color, dot(crossing.normal, direction) > 0.0 ? -crossing.normal : crossing.normal);
+        }
+    }
+    else if (mode == DEBUG_VIEW_LEVEL)
+    {
+        // the level of a surface pixel's receiver (magenta: none), and past the surfaces the level a ray from the eye hits
+        const float3 levelColors[4] = { float3(1.0, 1.0, 1.0), float3(0.3, 1.0, 0.3), float3(0.3, 0.6, 1.0), float3(1.0, 0.4, 0.3) };
+        const float depth = GBufferDepthTexture.Load(int3(coord, 0)).r;
+
+        if (depth < 1.0)
+        {
+            const float3 position = ReconstructWorldSpacePositionFromDepth(camera.invProjMat, camera.invViewMat, uv, depth).xyz;
+            const float3 normal = normalize(DecodeNormal(GBufferNormalsTexture.Load(int3(coord, 0)).yzww));
+            const float grey = 0.25 + 0.5 * saturate(dot(normal, DebugLightDirection) * 0.5 + 0.5);
+
+            const GlimmerBrickReceiver receiver = GlimmerFindBrickReceiver(constants.bricks, position, normal);
+
+            result = (receiver.found ? levelColors[min(receiver.level, 3u)] : float3(1.0, 0.0, 1.0)) * grey;
+        }
+        else if (didHitBricks)
+        {
+            const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(hitBricks, brickHit.crossing);
+
+            result = levelColors[min(brickHit.level, 3u)] * ShadeHit((float3)0.6, dot(crossing.normal, direction) > 0.0 ? -crossing.normal : crossing.normal);
         }
     }
     else if (mode == DEBUG_VIEW_STEPS)
@@ -96,14 +122,15 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
         {
             int3 cell;
             uint axis;
-            GlimmerLoadBrickPlace(brickHit.brick, cell, axis);
+            uint level;
+            GlimmerLoadBrickPlace(brickHit.brick, cell, axis, level);
 
-            const uint cardSlot = GlimmerBrickCardSlot(constants.bricks, brickHit.axis, brickHit.normal, brickHit.depth);
+            const uint cardSlot = GlimmerBrickCardSlot(hitBricks, brickHit.axis, brickHit.normal, brickHit.depth);
 
             // the crossing's own light, or its card's at the tiles
             const float4 light = mode == DEBUG_VIEW_LIGHT
                 ? GlimmerBrickUnpackLight(glimmerBrickCrossingLight[brickHit.crossing])
-                : GlimmerSampleBrickLight(constants.bricks, cell, brickHit.axis, cardSlot, cameraPosition + direction * brickHit.t, (float3)0.0, 4.0 * width);
+                : GlimmerSampleBrickLight(hitBricks, level, cell, brickHit.axis, cardSlot, cameraPosition + direction * brickHit.t, (float3)0.0, 4.0 * width);
 
             // magenta: the card has nothing there
             result = light.a > 1e-3 ? light.rgb / light.a : float3(1.0, 0.0, 1.0);
@@ -115,12 +142,13 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
         {
             int3 cell;
             uint axis;
-            GlimmerLoadBrickPlace(brickHit.brick, cell, axis);
+            uint level;
+            GlimmerLoadBrickPlace(brickHit.brick, cell, axis, level);
 
-            const uint cardSlot = GlimmerBrickCardSlot(constants.bricks, brickHit.axis, brickHit.normal, brickHit.depth);
+            const uint cardSlot = GlimmerBrickCardSlot(hitBricks, brickHit.axis, brickHit.normal, brickHit.depth);
             const uint card = glimmerBrickIndex[GlimmerBrickWord(brickHit.brick, uint(GLIMMER_BRICK_INDEX_CARDS) + cardSlot)];
 
-            const float2 across = GlimmerBrickAcross(axis, cameraPosition + direction * brickHit.t - GlimmerBrickCellLow(constants.bricks, cell)) * constants.bricks.params.w;
+            const float2 across = GlimmerBrickAcross(axis, cameraPosition + direction * brickHit.t - GlimmerBrickCellLow(hitBricks, cell)) * hitBricks.params.w;
             const uint2 tile = uint2(clamp(int2(floor(across)), 0, GLIMMER_BRICK_SIDE - 1)) / uint(GLIMMER_BRICK_TILE);
 
             const float4 arriving = card == GLIMMER_BRICK_NONE
@@ -142,7 +170,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
             const float grey = 0.25 + 0.5 * saturate(dot(normal, DebugLightDirection) * 0.5 + 0.5);
 
-            if (!GlimmerBrickCellInWindow(constants.bricks, int3(floor(position * constants.bricks.params.y))))
+            if (GlimmerBrickLevelAt(constants.bricks, position) >= uint(GLIMMER_BRICK_LEVELS))
             {
                 result = (float3)(grey * 0.4);
             }

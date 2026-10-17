@@ -29,7 +29,7 @@ DECLARE_SRV(GlimmerBrickReflections, GlimmerBrickCrossingLightBuffer) Structured
 
 struct GlimmerBrickReflectionsConstants
 {
-    GlimmerBrickParams bricks;
+    GlimmerBrickLevels bricks;
 
     /// xy = the view's dimensions
     /// zw = the half resolution picture's dimensions
@@ -321,6 +321,8 @@ uint HeldSlot(uint keys[4], uint key)
 
 /// rgb = radiance times how much of the patch is surface, a = that share
 float4 CardLight(
+    GlimmerBrickParams bricks,
+    uint brickLevel,
     int3 cell,
     uint axis,
     uint cardSlot,
@@ -328,26 +330,26 @@ float4 CardLight(
     float3 normal,
     float footprint)
 {
-    const float width = constants.bricks.params.z;
+    const float width = bricks.params.z;
 
     if (footprint >= float(1u << uint(GLIMMER_BRICK_CARD_FIRST_MIP)) * width * 0.75)
     {
-        const float4 light = GlimmerSampleBrickLight(constants.bricks, cell, axis, cardSlot, position, normal, footprint);
+        const float4 light = GlimmerSampleBrickLight(bricks, brickLevel, cell, axis, cardSlot, position, normal, footprint);
 
         return light.a < 1e-3 ? (float4)0.0 : light;
     }
     
-    const float3 cellLow = GlimmerBrickCellLow(constants.bricks, cell);
-    const float2 across = GlimmerBrickAcross(axis, position - cellLow) * constants.bricks.params.w;
+    const float3 cellLow = GlimmerBrickCellLow(bricks, cell);
+    const float2 across = GlimmerBrickAcross(axis, position - cellLow) * bricks.params.w;
     const int2 beside = int2(floor(across / float(GLIMMER_BRICK_SIDE)));
     const int3 otherCell = cell + int3(GlimmerBrickPoint(axis, float2(beside), 0.0));
 
-    if (!GlimmerBrickCellInWindow(constants.bricks, otherCell))
+    if (!GlimmerBrickCellInWindow(bricks, otherCell))
     {
         return (float4)0.0;
     }
 
-    const uint brick = glimmerBrickTable[GlimmerBrickTableIndex(otherCell, axis)];
+    const uint brick = glimmerBrickTable[GlimmerBrickTableIndex(brickLevel, otherCell, axis)];
 
     if (brick == GLIMMER_BRICK_NONE)
     {
@@ -366,9 +368,9 @@ float4 CardLight(
 
     for (uint k = 0; k < count; k++)
     {
-        const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(constants.bricks, first + k);
+        const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(bricks, first + k);
 
-        if (GlimmerBrickCardSlot(constants.bricks, axis, crossing.normal, crossing.depth) == cardSlot && abs(crossing.depth - depthAt) < nearestApart)
+        if (GlimmerBrickCardSlot(bricks, axis, crossing.normal, crossing.depth) == cardSlot && abs(crossing.depth - depthAt) < nearestApart)
         {
             nearestApart = abs(crossing.depth - depthAt);
             nearest = first + k;
@@ -389,13 +391,16 @@ float4 HitLight(GlimmerBrickHit hit, float3 position, float footprint)
 {
     int3 cell = int3(0, 0, 0);
     uint axis = 0u;
+    uint brickLevel = 0u;
 
-    if (!GlimmerLoadBrickPlace(hit.brick, cell, axis))
+    if (!GlimmerLoadBrickPlace(hit.brick, cell, axis, brickLevel))
     {
         return (float4)0.0;
     }
 
-    return CardLight(cell, axis, GlimmerBrickCardSlot(constants.bricks, axis, hit.normal, hit.depth), position, hit.normal, footprint);
+    const GlimmerBrickParams bricks = GlimmerBrickLevelParams(constants.bricks, brickLevel);
+
+    return CardLight(bricks, brickLevel, cell, axis, GlimmerBrickCardSlot(bricks, axis, hit.normal, hit.depth), position, hit.normal, footprint);
 }
 
 // rgb = radiance times a, a = how much of the pixel's reflection a ray found in the bricks; outT is how far it went, less than 0 where it left them
@@ -505,8 +510,9 @@ void TraceRequest(uint index)
 
     int3 cell = int3(0, 0, 0);
     uint axis = 0u;
+    uint brickLevel = 0u;
 
-    if (crossingIndex >= constants.limits.x || !GlimmerLoadBrickPlace(brick, cell, axis))
+    if (crossingIndex >= constants.limits.x || !GlimmerLoadBrickPlace(brick, cell, axis, brickLevel))
     {
         return;
     }
@@ -515,9 +521,10 @@ void TraceRequest(uint index)
     const int2 base = int2(int(code & 0x1FFFu), int((code >> 13u) & 0x1FFFu));
 
     const int2 column = int2(columnIndex % uint(GLIMMER_BRICK_SIDE), columnIndex / uint(GLIMMER_BRICK_SIDE));
-    const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(constants.bricks, crossingIndex);
+    const GlimmerBrickParams bricks = GlimmerBrickLevelParams(constants.bricks, brickLevel);
+    const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(bricks, crossingIndex);
 
-    const float3 origin = RayStart(GlimmerBrickCrossingPoint(constants.bricks, cell, axis, column, crossing), crossing.normal);
+    const float3 origin = RayStart(GlimmerBrickCrossingPoint(bricks, cell, axis, column, crossing), crossing.normal);
 
     const uint hash = CrossingHash(crossingIndex);
 
@@ -606,7 +613,7 @@ void TraceRequest(uint index)
             else if (dot(hit.normal, direction) < 0.0)
             {
                 // the back of something is what a ray sees from inside it: nothing to show
-                card = PackSlotCard(hit.brick, GlimmerBrickCardSlot(constants.bricks, hit.axis, hit.normal, hit.depth));
+                card = PackSlotCard(hit.brick, GlimmerBrickCardSlot(GlimmerBrickLevelParams(constants.bricks, hit.level), hit.axis, hit.normal, hit.depth));
                 t = hit.t;
             }
         }
@@ -686,7 +693,7 @@ void Resolve(int2 pixel, uint2 texel, uint index)
     }
 
     const float3 surfaceNormal = LoadSurfaceNormal(pixel, surface.P, surface.N);
-    const float width = constants.bricks.params.z;
+    const float ditherWidth = ColumnWidthAt(surface.P);
 
     const uint level = LevelOf(surface.alpha);
     const bool isScattered = level < uint(SCATTER_BELOW_LEVEL);
@@ -711,13 +718,13 @@ void Resolve(int2 pixel, uint2 texel, uint index)
         between = BetweenMips(pcg_hash(own ^ 0x9E3779B9u));
 
         // as far as the rays are scattered: where they are not, the crossings around have nothing more to say than the pixel's own
-        at += (T * shift.x + B * shift.y) * width * (isScattered ? 2.0 * DITHER_REACH_COLUMNS : 1.0);
+        at += (T * shift.x + B * shift.y) * ditherWidth * (isScattered ? 2.0 * DITHER_REACH_COLUMNS : 1.0);
     }
     else
     {
         const float2 shift = float2(InterleavedGradientNoise(float2(texel) + 0.5), InterleavedGradientNoise(float2(texel.yx) + float2(47.5, 17.5))) - 0.5;
 
-        at += (T * shift.x + B * shift.y) * width;
+        at += (T * shift.x + B * shift.y) * ditherWidth;
     }
 
     GlimmerBrickReceiver receiver = GlimmerFindBrickReceiver(constants.bricks, at, surfaceNormal);
@@ -744,15 +751,18 @@ void Resolve(int2 pixel, uint2 texel, uint index)
 
     int3 receiverCell = (int3)0;
     uint receiverAxis = 0u;
+    uint receiverLevel = 0u;
 
-    if (!GlimmerLoadBrickPlace(receiver.brick, receiverCell, receiverAxis))
+    if (!GlimmerLoadBrickPlace(receiver.brick, receiverCell, receiverAxis, receiverLevel))
     {
         SetWant(index, WANT_RAY, 0u, 0u, 0u);
 
         return;
     }
 
-    const float3 receiverPosition = GlimmerBrickCrossingPoint(constants.bricks, receiverCell, receiverAxis, receiver.column, GlimmerLoadBrickCrossing(constants.bricks, receiver.crossing));
+    const GlimmerBrickParams receiverBricks = GlimmerBrickLevelParams(constants.bricks, receiverLevel);
+    const float width = receiverBricks.params.z;
+    const float3 receiverPosition = GlimmerBrickCrossingPoint(receiverBricks, receiverCell, receiverAxis, receiver.column, GlimmerLoadBrickCrossing(receiverBricks, receiver.crossing));
 
     const uint block = FindBlock(receiver.crossing, CrossingHash(receiver.crossing));
 
@@ -844,8 +854,9 @@ void Resolve(int2 pixel, uint2 texel, uint index)
 
         int3 cardCell = int3(0, 0, 0);
         uint cardAxis = 0u;
+        uint cardLevel = 0u;
 
-        if (!GlimmerLoadBrickPlace(card / uint(GLIMMER_BRICK_CARDS), cardCell, cardAxis))
+        if (!GlimmerLoadBrickPlace(card / uint(GLIMMER_BRICK_CARDS), cardCell, cardAxis, cardLevel))
         {
             missing += 1.0;
 
@@ -890,7 +901,8 @@ void Resolve(int2 pixel, uint2 texel, uint index)
 
         int3 cardCell = int3(0, 0, 0);
         uint cardAxis = 0u;
-        GlimmerLoadBrickPlace(card / uint(GLIMMER_BRICK_CARDS), cardCell, cardAxis);
+        uint cardLevel = 0u;
+        GlimmerLoadBrickPlace(card / uint(GLIMMER_BRICK_CARDS), cardCell, cardAxis, cardLevel);
 
         readAt[layer] = surface.P + aim * layerT[layer];
         readAxis[layer] = cardAxis;
@@ -910,7 +922,7 @@ void Resolve(int2 pixel, uint2 texel, uint index)
             continue;
         }
 
-        const float4 arriving = CardLight(cardCell, cardAxis, card % uint(GLIMMER_BRICK_CARDS), readAt[layer], (float3)0.0, angle * layerT[layer] * between);
+        const float4 arriving = CardLight(GlimmerBrickLevelParams(constants.bricks, cardLevel), cardLevel, cardCell, cardAxis, card % uint(GLIMMER_BRICK_CARDS), readAt[layer], (float3)0.0, angle * layerT[layer] * between);
 
         if (arriving.a == 0.0)
         {

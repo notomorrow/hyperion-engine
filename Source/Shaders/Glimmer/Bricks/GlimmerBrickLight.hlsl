@@ -47,7 +47,7 @@ DECLARE_SRV(DeferredPass, GlimmerHeightBoundsBuffer) StructuredBuffer<float> gli
 
 struct GlimmerBrickLightConstants
 {
-    GlimmerBrickParams bricks;
+    GlimmerBrickLevels bricks;
     uint4 range;   // x = first place in the live list, y = bricks, z = 1 when they are the build list's, w = mip level
     float4 params; // x = columns off its surface a shadow ray starts, y = how far a shadow ray looks, z = 1 when the indirect light is the slots' (brick GI), w = foliage extinction
     uint4 info;    // x = 1 when the ground cache can be read, y = 1 when a shadow ray goes on through the heightfield
@@ -69,6 +69,19 @@ DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #include "../GlimmerMaterial.hlsli"
+
+// the level of the brick a thread is lighting, set as it loads the brick's place
+static GlimmerBrickParams g_levelBricks;
+
+bool GlimmerLoadBrickPlaceLevel(uint brick, out int3 outCell, out uint outAxis)
+{
+    uint level;
+    const bool isPlaced = GlimmerLoadBrickPlace(brick, outCell, outAxis, level);
+
+    g_levelBricks = GlimmerBrickLevelParams(constants.bricks, level);
+
+    return isPlaced;
+}
 
 // canopy is only counted as transmittance in a shadow ray
 GlimmerLight GlimmerCanopyRadiance(float3 P, float3 weightedAlbedo)
@@ -119,7 +132,7 @@ bool IsBrickGI()
 // irradiance / pi the slots of the crossing's tile gathered, without the sun on the crossing itself
 float3 ArrivingAt(uint brick, uint axis, int2 column, GlimmerBrickCrossing crossing)
 {
-    const uint cardSlot = GlimmerBrickCardSlot(constants.bricks, axis, crossing.normal, crossing.depth);
+    const uint cardSlot = GlimmerBrickCardSlot(g_levelBricks, axis, crossing.normal, crossing.depth);
     const uint card = glimmerBrickIndex[GlimmerBrickWord(brick, uint(GLIMMER_BRICK_INDEX_CARDS) + cardSlot)];
 
     if (card == GLIMMER_BRICK_NONE)
@@ -161,12 +174,12 @@ void LightColumn(uint brick, int2 column)
     int3 cell;
     uint axis;
 
-    if (!GlimmerLoadBrickPlace(brick, cell, axis))
+    if (!GlimmerLoadBrickPlaceLevel(brick, cell, axis))
     {
         return;
     }
 
-    const float width = constants.bricks.params.z;
+    const float width = g_levelBricks.params.z;
 
     uint first;
     const uint count = GlimmerLoadBrickColumn(brick, column, first);
@@ -177,10 +190,10 @@ void LightColumn(uint brick, int2 column)
     for (uint k = 0; k < count; k++)
     {
         const uint crossingIndex = first + k;
-        const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(constants.bricks, crossingIndex);
+        const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(g_levelBricks, crossingIndex);
         const uint packedMaterial = glimmerBrickMaterial[crossingIndex];
 
-        const float3 P = GlimmerBrickCrossingPoint(constants.bricks, cell, axis, column, crossing);
+        const float3 P = GlimmerBrickCrossingPoint(g_levelBricks, cell, axis, column, crossing);
         const float3 N = crossing.normal;
 
         const bool isDoubleSided = GlimmerBrickHasFlag(packedMaterial, GLIMMER_BRICK_FLAG_DOUBLE_SIDED);
@@ -209,7 +222,7 @@ void LightColumn(uint brick, int2 column)
                 {
                     GlimmerHeightfieldHit heightfieldHit;
 
-                    visibility = GlimmerTraceHeightfield(constants.ground, constants.spans, shadowOrigin, toSun, constants.params.y, 0u, GlimmerBrickWindowExit(constants.bricks, shadowOrigin, toSun), constants.params.w, false, heightfieldHit)
+                    visibility = GlimmerTraceHeightfield(constants.ground, constants.spans, shadowOrigin, toSun, constants.params.y, 0u, GlimmerBricksWindowExit(constants.bricks, shadowOrigin, toSun), constants.params.w, false, heightfieldHit)
                         ? 0.0
                         : heightfieldHit.transmittance;
                 }
@@ -249,8 +262,8 @@ float4 TileLight(uint brick, uint axis, uint cardSlot, uint2 tile)
         // crossings are nearest first
         for (uint k = 0; k < count; k++)
         {
-            const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(constants.bricks, first + k);
-            const uint slot = GlimmerBrickCardSlot(constants.bricks, axis, crossing.normal, crossing.depth);
+            const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(g_levelBricks, first + k);
+            const uint slot = GlimmerBrickCardSlot(g_levelBricks, axis, crossing.normal, crossing.depth);
 
             if (slot == cardSlot && (shown == GLIMMER_BRICK_NONE || facesAlong))
             {
@@ -411,7 +424,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     int3 cell;
     uint axis;
 
-    if (!GlimmerLoadBrickPlace(brick, cell, axis))
+    if (!GlimmerLoadBrickPlaceLevel(brick, cell, axis))
     {
         return;
     }
@@ -424,7 +437,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     }
 
 #if defined(MODE_GATHER)
-    GatherTile(card, texelIndex, GlimmerBrickCellLow(constants.bricks, cell).xz + 0.5 * constants.bricks.params.x);
+    GatherTile(card, texelIndex, GlimmerBrickCellLow(g_levelBricks, cell).xz + 0.5 * g_levelBricks.params.x);
 #else
     const uint base = card * uint(GLIMMER_BRICK_CARD_TEXELS);
     const uint2 texel = uint2(texelIndex % side, texelIndex / side);

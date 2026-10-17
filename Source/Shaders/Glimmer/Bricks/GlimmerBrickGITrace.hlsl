@@ -22,7 +22,7 @@ DECLARE_SRV(GlimmerBrickGITrace, GlimmerHeightBoundsBuffer) StructuredBuffer<flo
 
 struct GlimmerBrickGITraceConstants
 {
-    GlimmerBrickParams bricks;
+    GlimmerBrickLevels bricks;
     uint4 range;   // x = first place in the live list, y = bricks, z = 1 when they are the build list's, w = 1 when the ground and spans can be traced, 2 when the ground also has its cache
     float4 params; // x = columns off its surface a ray starts, y = how far a ray looks, z = foliage extinction, w = albedo where the ground's isn't known
     GlimmerGroundParams ground;
@@ -41,6 +41,10 @@ GlimmerLight GlimmerCanopyRadiance(float3 P, float3 weightedAlbedo)
 }
 
 #include "../GlimmerHeightfield.hlsli"
+
+
+// the level of the brick a thread traces for
+static GlimmerBrickParams g_levelBricks;
 
 #define GROUP_SIZE 64
 #define RAYS_PER_THREAD (GLIMMER_BRICK_GI_RAYS / 2)
@@ -74,9 +78,9 @@ uint ShownCrossing(uint brick, uint axis, uint cardSlot, int2 column)
 
     for (uint k = 0; k < count; k++)
     {
-        const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(constants.bricks, first + k);
+        const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(g_levelBricks, first + k);
 
-        if (GlimmerBrickCardSlot(constants.bricks, axis, crossing.normal, crossing.depth) == cardSlot && (shown == GLIMMER_BRICK_NONE || facesAlong))
+        if (GlimmerBrickCardSlot(g_levelBricks, axis, crossing.normal, crossing.depth) == cardSlot && (shown == GLIMMER_BRICK_NONE || facesAlong))
         {
             shown = first + k;
         }
@@ -107,16 +111,16 @@ uint TraceSlot(uint brick, int3 cell, uint axis, uint cardSlot, uint2 tile, uint
         return GLIMMER_BRICK_SLOT_NONE;
     }
 
-    const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(constants.bricks, crossingIndex);
+    const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(g_levelBricks, crossingIndex);
 
-    const float3 P = GlimmerBrickCrossingPoint(constants.bricks, cell, axis, column, crossing);
+    const float3 P = GlimmerBrickCrossingPoint(g_levelBricks, cell, axis, column, crossing);
     const float3 N = crossing.normal;
 
     const float3 direction = GlimmerBrickGIDirection(N, ray, seed);
-    const float3 origin = P + N * (constants.params.x * constants.bricks.params.z);
+    const float3 origin = P + N * (constants.params.x * g_levelBricks.params.z);
 
     const float maxDistance = constants.params.y;
-    const float bricksExit = GlimmerBrickWindowExit(constants.bricks, origin, direction);
+    const float bricksExit = GlimmerBricksWindowExit(constants.bricks, origin, direction);
 
     GlimmerBrickHit hit;
 
@@ -177,11 +181,14 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
     int3 cell;
     uint axis;
+    uint level;
 
-    if (!GlimmerLoadBrickPlace(brick, cell, axis))
+    if (!GlimmerLoadBrickPlace(brick, cell, axis, level))
     {
         return;
     }
+
+    g_levelBricks = GlimmerBrickLevelParams(constants.bricks, level);
 
     const uint card = glimmerBrickIndex[GlimmerBrickWord(brick, uint(GLIMMER_BRICK_INDEX_CARDS) + cardSlot)];
 

@@ -36,7 +36,7 @@ struct GlimmerProbeTraceConstants
     GlimmerRelightParams relight;
     int4 relightRect;    // relight pass: xy = absolute texel of the rect to light, zw = its extent
     uint4 relightInfo;   // relight pass: x = ground level, y = groups along x
-    GlimmerBrickParams bricks;
+    GlimmerBrickLevels bricks;
 };
 
 #include "../../Include/Clouds.hlsli"
@@ -349,7 +349,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         bool hitBricks = false;
 
         // the bricks own the solids up to where the ray leaves them; the spans' solids count from there
-        const float solidsFromT = traceBricks ? min(GlimmerBrickWindowExit(constants.bricks, origin, direction), bricksRange) : 0.0;
+        const float solidsFromT = traceBricks ? min(GlimmerBricksWindowExit(constants.bricks, origin, direction), bricksRange) : 0.0;
 
         if (solidsFromT > 0.0)
         {

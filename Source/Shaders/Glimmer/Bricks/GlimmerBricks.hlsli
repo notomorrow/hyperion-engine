@@ -30,13 +30,18 @@
 #define GLIMMER_BRICK_CARD_SIDE (GLIMMER_BRICK_SIDE >> GLIMMER_BRICK_CARD_FIRST_MIP)
 #define GLIMMER_BRICK_CARD_TEXELS ((4 * GLIMMER_BRICK_CARD_SIDE * GLIMMER_BRICK_CARD_SIDE - 1) / 3)
 
-// per brick in glimmerBrickIndex: its pages of crossings (count first), its cards, where it is, how many times it has been taken, then a depth range per tile, then first crossing and count per column
+// levels of cells, each twice the size of the one before, in windows of the same number of cells (rna bricks.md 13-15)
+// NOTE must match GlimmerBrickWorld.hpp
+#define GLIMMER_BRICK_LEVELS 4
+
+// per brick in glimmerBrickIndex: its pages of crossings (count first), its cards, where it is, how many times it has been taken, its level, then a depth range per tile, then first crossing and count per column
 #define GLIMMER_BRICK_INDEX_CARDS (1 + GLIMMER_BRICK_MAX_PAGES)
 #define GLIMMER_BRICK_INDEX_CARD_MASK (GLIMMER_BRICK_INDEX_CARDS + GLIMMER_BRICK_CARDS)
 #define GLIMMER_BRICK_INDEX_CELL (GLIMMER_BRICK_INDEX_CARD_MASK + 1)
 #define GLIMMER_BRICK_INDEX_AXIS (GLIMMER_BRICK_INDEX_CELL + 3) // GLIMMER_BRICK_NONE while the brick is free
 #define GLIMMER_BRICK_INDEX_SERIAL (GLIMMER_BRICK_INDEX_AXIS + 1)
-#define GLIMMER_BRICK_INDEX_TILES (GLIMMER_BRICK_INDEX_SERIAL + 1)
+#define GLIMMER_BRICK_INDEX_LEVEL (GLIMMER_BRICK_INDEX_SERIAL + 1)
+#define GLIMMER_BRICK_INDEX_TILES (GLIMMER_BRICK_INDEX_LEVEL + 1)
 #define GLIMMER_BRICK_INDEX_COLUMNS (GLIMMER_BRICK_INDEX_TILES + GLIMMER_BRICK_TILES_PER_SIDE * GLIMMER_BRICK_TILES_PER_SIDE)
 #define GLIMMER_BRICK_INDEX_STRIDE (GLIMMER_BRICK_INDEX_COLUMNS + GLIMMER_BRICK_SIDE * GLIMMER_BRICK_SIDE)
 
@@ -85,11 +90,56 @@
 
 static const int3 GlimmerBrickGridSize = int3(GLIMMER_BRICK_GRID_XZ, GLIMMER_BRICK_GRID_Y, GLIMMER_BRICK_GRID_XZ);
 
+// the table: a word per chunk of each level, 0 while it has no bricks, then three words per cell of each level, its bricks by axis
+#define GLIMMER_BRICK_CHUNKS_XZ (GLIMMER_BRICK_GRID_XZ / GLIMMER_BRICK_CHUNK_CELLS)
+#define GLIMMER_BRICK_CHUNKS_Y (GLIMMER_BRICK_GRID_Y / GLIMMER_BRICK_CHUNK_CELLS)
+#define GLIMMER_BRICK_LEVEL_CHUNKS uint(GLIMMER_BRICK_CHUNKS_XZ * GLIMMER_BRICK_CHUNKS_Y * GLIMMER_BRICK_CHUNKS_XZ)
+#define GLIMMER_BRICK_TABLE_CHUNK_WORDS (GLIMMER_BRICK_LEVEL_CHUNKS * uint(GLIMMER_BRICK_LEVELS))
+#define GLIMMER_BRICK_TABLE_LEVEL_WORDS (uint(GLIMMER_BRICK_GRID_XZ * GLIMMER_BRICK_GRID_Y * GLIMMER_BRICK_GRID_XZ) * 3u)
+
+// one level
 struct GlimmerBrickParams
 {
     int4 origin;   // xyz = absolute cell of the window's first cell, w = 1 once the window is valid
     float4 params; // x = cell size, y = 1 / cell size, z = column width, w = 1 / column width
 };
+
+struct GlimmerBrickLevels
+{
+    GlimmerBrickParams levels[GLIMMER_BRICK_LEVELS];
+};
+
+// DXC's optimizer fails ("llvm::cast<X>() argument of incompatible type") on a GlimmerBrickLevels passed by value,
+// so functions over every level take the levels one by one, and the macros of their names spread a GlimmerBrickLevels into them
+// NOTE written out for GLIMMER_BRICK_LEVELS
+#define GLIMMER_BRICK_LEVELS_PARAMS GlimmerBrickParams brickLevel0, GlimmerBrickParams brickLevel1, GlimmerBrickParams brickLevel2, GlimmerBrickParams brickLevel3
+#define GLIMMER_BRICK_LEVELS_FORWARD brickLevel0, brickLevel1, brickLevel2, brickLevel3
+#define GLIMMER_BRICK_LEVELS_ARGS(allLevels) (allLevels).levels[0], (allLevels).levels[1], (allLevels).levels[2], (allLevels).levels[3]
+
+GlimmerBrickParams GlimmerBrickPickLevel(GLIMMER_BRICK_LEVELS_PARAMS, uint level)
+{
+    if (level == 0u)
+    {
+        return brickLevel0;
+    }
+
+    if (level == 1u)
+    {
+        return brickLevel1;
+    }
+
+    if (level == 2u)
+    {
+        return brickLevel2;
+    }
+
+    return brickLevel3;
+}
+
+// one level of a GlimmerBrickLevels
+#define GlimmerBrickLevelParams(allLevels, level) GlimmerBrickPickLevel(GLIMMER_BRICK_LEVELS_ARGS(allLevels), level)
+
+#define GlimmerBrickHasWindow(allLevels) ((allLevels).levels[0].origin.w != 0)
 
 float GlimmerBrickDepthMargin(GlimmerBrickParams bricks)
 {
@@ -186,12 +236,36 @@ bool GlimmerBrickCellInWindow(GlimmerBrickParams bricks, int3 cell)
     return bricks.origin.w != 0 && all(cell >= bricks.origin.xyz) && all(cell < bricks.origin.xyz + GlimmerBrickGridSize);
 }
 
-uint GlimmerBrickTableIndex(int3 cell, uint axis)
+uint GlimmerBrickTableIndex(uint level, int3 cell, uint axis)
 {
     const uint3 wrapped = uint3(cell & (GlimmerBrickGridSize - 1));
 
-    return ((wrapped.z * uint(GLIMMER_BRICK_GRID_Y) + wrapped.y) * uint(GLIMMER_BRICK_GRID_XZ) + wrapped.x) * 3u + axis;
+    return GLIMMER_BRICK_TABLE_CHUNK_WORDS + level * GLIMMER_BRICK_TABLE_LEVEL_WORDS + ((wrapped.z * uint(GLIMMER_BRICK_GRID_Y) + wrapped.y) * uint(GLIMMER_BRICK_GRID_XZ) + wrapped.x) * 3u + axis;
 }
+
+// the table word of the chunk a cell is in
+uint GlimmerBrickChunkIndex(uint level, int3 cell)
+{
+    const uint3 wrapped = uint3((cell >> 3) & int3(GLIMMER_BRICK_CHUNKS_XZ - 1, GLIMMER_BRICK_CHUNKS_Y - 1, GLIMMER_BRICK_CHUNKS_XZ - 1));
+
+    return level * GLIMMER_BRICK_LEVEL_CHUNKS + (wrapped.z * uint(GLIMMER_BRICK_CHUNKS_Y) + wrapped.y) * uint(GLIMMER_BRICK_CHUNKS_XZ) + wrapped.x;
+}
+
+bool GlimmerBrickPointInWindow(GlimmerBrickParams bricks, float3 position)
+{
+    return GlimmerBrickCellInWindow(bricks, int3(floor(position * bricks.params.y)));
+}
+
+// the finest level whose window holds the point, GLIMMER_BRICK_LEVELS for none
+uint GlimmerBrickLevelAtImpl(GLIMMER_BRICK_LEVELS_PARAMS, float3 position)
+{
+    return GlimmerBrickPointInWindow(brickLevel0, position) ? 0u
+        : (GlimmerBrickPointInWindow(brickLevel1, position) ? 1u
+        : (GlimmerBrickPointInWindow(brickLevel2, position) ? 2u
+        : (GlimmerBrickPointInWindow(brickLevel3, position) ? 3u : uint(GLIMMER_BRICK_LEVELS))));
+}
+
+#define GlimmerBrickLevelAt(allLevels, position) GlimmerBrickLevelAtImpl(GLIMMER_BRICK_LEVELS_ARGS(allLevels), position)
 
 float3 GlimmerBrickCellLow(GlimmerBrickParams bricks, int3 cell)
 {
@@ -297,6 +371,17 @@ float GlimmerBrickWindowExit(GlimmerBrickParams bricks, float3 origin, float3 di
     return bricks.origin.w == 0 || range.x > 0.0 ? 0.0 : range.y;
 }
 
+// how far along a ray it leaves the bricks altogether: the coarsest level's window, which holds the finer ones
+float GlimmerBricksWindowExitImpl(GLIMMER_BRICK_LEVELS_PARAMS, float3 origin, float3 direction)
+{
+    return brickLevel3.origin.w != 0 ? GlimmerBrickWindowExit(brickLevel3, origin, direction)
+        : (brickLevel2.origin.w != 0 ? GlimmerBrickWindowExit(brickLevel2, origin, direction)
+        : (brickLevel1.origin.w != 0 ? GlimmerBrickWindowExit(brickLevel1, origin, direction)
+        : GlimmerBrickWindowExit(brickLevel0, origin, direction)));
+}
+
+#define GlimmerBricksWindowExit(allLevels, origin, direction) GlimmerBricksWindowExitImpl(GLIMMER_BRICK_LEVELS_ARGS(allLevels), origin, direction)
+
 #ifndef GLIMMER_BRICKS_NO_TRACE
 
 struct GlimmerBrickCrossing
@@ -323,11 +408,12 @@ GlimmerBrickCrossing GlimmerLoadBrickCrossing(GlimmerBrickParams bricks, uint cr
 }
 
 // false while the brick is free
-bool GlimmerLoadBrickPlace(uint brick, out int3 outCell, out uint outAxis)
+bool GlimmerLoadBrickPlace(uint brick, out int3 outCell, out uint outAxis, out uint outLevel)
 {
     const uint header = GlimmerBrickWord(brick, 0u);
 
     outAxis = glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_AXIS)];
+    outLevel = min(glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_LEVEL)], uint(GLIMMER_BRICK_LEVELS - 1));
     outCell = int3(
         int(glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_CELL)]),
         int(glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_CELL) + 1u]),
@@ -362,6 +448,7 @@ struct GlimmerBrickHit
     uint crossing;
     uint brick;
     uint axis;
+    uint level;
     float3 normal;
     float depth;
     uint steps; // cells and columns looked at on the way
@@ -486,9 +573,10 @@ void GlimmerWalkBrick(
     }
 }
 
-// direction is of unit length
-bool TraceGlimmerBricks(
+// one level's bricks between tMin and tMax; direction is of unit length
+bool TraceGlimmerBrickLevel(
     GlimmerBrickParams bricks,
+    uint level,
     float3 origin,
     float3 direction,
     float tMin,
@@ -499,6 +587,7 @@ bool TraceGlimmerBricks(
     hit.crossing = GLIMMER_BRICK_NONE;
     hit.brick = GLIMMER_BRICK_NONE;
     hit.axis = 0u;
+    hit.level = level;
     hit.normal = -direction;
     hit.depth = 0.0;
     hit.steps = 0u;
@@ -538,12 +627,24 @@ bool TraceGlimmerBricks(
         const float3 at = origin + direction * (t + nudge);
         const int3 cell = clamp(int3(floor(at * bricks.params.y)), cellMin, cellMax);
 
+        // a chunk with no bricks is passed in one step
+        if (glimmerBrickTable[GlimmerBrickChunkIndex(level, cell)] == 0u)
+        {
+            const float3 chunkLow = GlimmerBrickCellLow(bricks, (cell >> 3) << 3);
+            const float3 chunkEdge = chunkLow + select(direction > 0.0, size * float(GLIMMER_BRICK_CHUNK_CELLS), 0.0);
+            const float3 chunkT = select(moves, (chunkEdge - origin) / safeDirection, (float3)GLIMMER_BRICK_MISS_DISTANCE);
+
+            t = max(min(min(chunkT.x, min(chunkT.y, chunkT.z)), tEnd), t + nudge);
+
+            continue;
+        }
+
         const float3 cellLow = GlimmerBrickCellLow(bricks, cell);
         const float3 edge = cellLow + select(direction > 0.0, size, 0.0);
         const float3 edgeT = select(moves, (edge - origin) / safeDirection, (float3)GLIMMER_BRICK_MISS_DISTANCE);
         const float tCell = min(min(edgeT.x, min(edgeT.y, edgeT.z)), tEnd);
 
-        const uint tableIndex = GlimmerBrickTableIndex(cell, 0u);
+        const uint tableIndex = GlimmerBrickTableIndex(level, cell, 0u);
 
         [unroll]
         for (uint axis = 0; axis < 3u; axis++)
@@ -569,19 +670,94 @@ bool TraceGlimmerBricks(
     return true;
 }
 
+// a coming into a finer level's window, past t, ends the stretch there
+float GlimmerBrickFinerEntry(GlimmerBrickParams finer, bool isFiner, float3 origin, float3 direction, float t, float tEnd)
+{
+    if (!isFiner || finer.origin.w == 0)
+    {
+        return tEnd;
+    }
+
+    const float2 range = GlimmerBrickWindowRange(finer, origin, direction);
+
+    return range.x > t && range.x < range.y ? min(tEnd, range.x) : tEnd;
+}
+
+// every level's bricks: a stretch at a time in the finest level that holds it, up to where the ray leaves that level or comes into a finer one
+bool TraceGlimmerBricksImpl(
+    GLIMMER_BRICK_LEVELS_PARAMS,
+    float3 origin,
+    float3 direction,
+    float tMin,
+    float tMax,
+    out GlimmerBrickHit hit)
+{
+    hit.t = tMax;
+    hit.crossing = GLIMMER_BRICK_NONE;
+    hit.brick = GLIMMER_BRICK_NONE;
+    hit.axis = 0u;
+    hit.level = 0u;
+    hit.normal = -direction;
+    hit.depth = 0.0;
+    hit.steps = 0u;
+
+    float t = tMin;
+    uint steps = 0u;
+    bool isHit = false;
+
+    [loop]
+    for (uint stretch = 0; stretch < uint(2 * GLIMMER_BRICK_LEVELS) && t < tMax && !isHit; stretch++)
+    {
+        const uint level = GlimmerBrickLevelAtImpl(GLIMMER_BRICK_LEVELS_FORWARD, origin + direction * t);
+
+        if (level >= uint(GLIMMER_BRICK_LEVELS))
+        {
+            break;
+        }
+
+        const GlimmerBrickParams levelBricks = GlimmerBrickPickLevel(GLIMMER_BRICK_LEVELS_FORWARD, level);
+
+        float tEnd = min(GlimmerBrickWindowRange(levelBricks, origin, direction).y, tMax);
+
+        tEnd = GlimmerBrickFinerEntry(brickLevel0, level > 0u, origin, direction, t, tEnd);
+        tEnd = GlimmerBrickFinerEntry(brickLevel1, level > 1u, origin, direction, t, tEnd);
+        tEnd = GlimmerBrickFinerEntry(brickLevel2, level > 2u, origin, direction, t, tEnd);
+
+        isHit = TraceGlimmerBrickLevel(levelBricks, level, origin, direction, t, tEnd, hit);
+
+        steps += hit.steps;
+
+        // past the edge, by a hair of the level's cells
+        t = max(tEnd, t) + 1e-4 * levelBricks.params.x;
+    }
+
+    hit.steps = steps;
+
+    if (!isHit)
+    {
+        hit.t = tMax;
+    }
+
+    return isHit;
+}
+
+#define TraceGlimmerBricks(allLevels, origin, direction, tMin, tMax, hit) TraceGlimmerBricksImpl(GLIMMER_BRICK_LEVELS_ARGS(allLevels), origin, direction, tMin, tMax, hit)
+
 struct GlimmerBrickReceiver
 {
     bool found;
     uint crossing;
     uint brick;
+    uint level;
     float3 normal;
     int2 column;
 };
 
-// the crossing a point on a surface is on: in the brick of the axis the normal is nearest, failing that of the next
-GlimmerBrickReceiver GlimmerFindBrickReceiver(GlimmerBrickParams bricks, float3 position, float3 normal)
+// the crossing a point on a surface is on, in one level: in the brick of the axis the normal is nearest, failing that of the next
+GlimmerBrickReceiver GlimmerFindBrickReceiverLevel(GlimmerBrickParams bricks, uint level, float3 position, float3 normal)
 {
     GlimmerBrickReceiver receiver = (GlimmerBrickReceiver)0;
+    receiver.level = level;
 
     const int3 cell = int3(floor(position * bricks.params.y));
 
@@ -605,7 +781,7 @@ GlimmerBrickReceiver GlimmerFindBrickReceiver(GlimmerBrickParams bricks, float3 
     for (uint axisIndex = 0; axisIndex < 2u && !receiver.found; axisIndex++)
     {
         const uint axis = axes[axisIndex];
-        const uint brick = glimmerBrickTable[GlimmerBrickTableIndex(cell, axis)];
+        const uint brick = glimmerBrickTable[GlimmerBrickTableIndex(level, cell, axis)];
 
         if (brick == GLIMMER_BRICK_NONE)
         {
@@ -648,6 +824,31 @@ GlimmerBrickReceiver GlimmerFindBrickReceiver(GlimmerBrickParams bricks, float3 
     return receiver;
 }
 
+// the crossing a point on a surface is on, in the finest level that has one there
+GlimmerBrickReceiver GlimmerFindBrickReceiverIn(GlimmerBrickParams bricks, uint level, float3 position, float3 normal, GlimmerBrickReceiver found)
+{
+    if (found.found || !GlimmerBrickPointInWindow(bricks, position))
+    {
+        return found;
+    }
+
+    return GlimmerFindBrickReceiverLevel(bricks, level, position, normal);
+}
+
+GlimmerBrickReceiver GlimmerFindBrickReceiverImpl(GLIMMER_BRICK_LEVELS_PARAMS, float3 position, float3 normal)
+{
+    GlimmerBrickReceiver receiver = (GlimmerBrickReceiver)0;
+
+    receiver = GlimmerFindBrickReceiverIn(brickLevel0, 0u, position, normal, receiver);
+    receiver = GlimmerFindBrickReceiverIn(brickLevel1, 1u, position, normal, receiver);
+    receiver = GlimmerFindBrickReceiverIn(brickLevel2, 2u, position, normal, receiver);
+    receiver = GlimmerFindBrickReceiverIn(brickLevel3, 3u, position, normal, receiver);
+
+    return receiver;
+}
+
+#define GlimmerFindBrickReceiver(allLevels, position, normal) GlimmerFindBrickReceiverImpl(GLIMMER_BRICK_LEVELS_ARGS(allLevels), position, normal)
+
 #endif
 
 #ifdef GLIMMER_BRICKS_WITH_LIGHT
@@ -660,7 +861,7 @@ GlimmerBrickReceiver GlimmerFindBrickReceiver(GlimmerBrickParams bricks, float3 
 // the light a card sends on over a patch footprint metres across: rgb = radiance times how much of the patch is surface, a = that share. expects GLIMMER_BRICK_SAMPLED_BUFFER
 // read across the same card of the cells beside as well, so that neither a texel's edge nor a card's shows
 // a surface sloping across a brick spreads over the cards of the layers its plane passes through: with its normal, every one of them is read; a zero normal reads the card alone
-float4 GlimmerSampleBrickLight(GlimmerBrickParams bricks, int3 cell, uint axis, uint cardSlot, float3 position, float3 normal, float footprint)
+float4 GlimmerSampleBrickLight(GlimmerBrickParams bricks, uint brickLevel, int3 cell, uint axis, uint cardSlot, float3 position, float3 normal, float footprint)
 {
     const float width = bricks.params.z;
 
@@ -728,7 +929,7 @@ float4 GlimmerSampleBrickLight(GlimmerBrickParams bricks, int3 cell, uint axis, 
                 continue;
             }
 
-            const uint brick = glimmerBrickTable[GlimmerBrickTableIndex(otherCell, axis)];
+            const uint brick = glimmerBrickTable[GlimmerBrickTableIndex(brickLevel, otherCell, axis)];
 
             if (brick == GLIMMER_BRICK_NONE)
             {

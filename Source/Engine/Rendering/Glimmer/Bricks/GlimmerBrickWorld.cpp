@@ -86,7 +86,9 @@ static StaticShaderPropertyId s_propBrickLightModeMips { ShaderProperty(NAME("MO
 static StaticShaderPropertyId s_propBrickLightModeGather { ShaderProperty(NAME("MODE"), NAME("GATHER")) };
 
 static constexpr uint32 BrickGroupSize = 64;
-static constexpr uint32 BrickTableSize = GlimmerBrickGridXZ * GlimmerBrickGridY * GlimmerBrickGridXZ * 3;
+// NOTE must match GlimmerBricks.hlsli: a word per chunk of every level, then the cells of the levels held
+static constexpr uint32 BrickTableChunkWords = GlimmerBrickChunks * GlimmerBrickLevels;
+static constexpr uint32 BrickTableLevelSize = GlimmerBrickGridXZ * GlimmerBrickGridY * GlimmerBrickGridXZ * 3;
 static constexpr uint32 BrickListNodeCapacity = 1u << 20;
 static constexpr uint32 BrickListNodeWords = 3;
 
@@ -138,7 +140,6 @@ static constexpr uint32 PoolLogIntervalFrames = 300;
 static constexpr uint32 MinPoolIncrease = 64;
 static constexpr uint32 LightViewFrames = 2;
 static constexpr int32 ChunkCells = int32(GlimmerBrickChunkCells);
-static constexpr float ChunkSize = GlimmerBrickCellSize * float(GlimmerBrickChunkCells);
 static constexpr float ChangeMargin = 0.25f;
 static constexpr float ShadowBiasColumns = 0.5f;
 static constexpr float ShadowDistance = 500.0f;
@@ -148,6 +149,7 @@ static const Vec3i ChunkDims = Vec3i(int32(GlimmerBrickChunksXZ), int32(GlimmerB
 struct GlimmerBrickBuildConstants
 {
     GlimmerBrickShaderData bricks;
+    Vec4u level;   // x = the level of the batch's chunks, or of the cells cleared; y = levels the table holds
     Vec4i boxMin;
     Vec4i boxExtent;
     Vec4u counts;  // x = span chunks, y = groups along x, z = pool bricks, w = list node capacity
@@ -206,9 +208,18 @@ GlimmerBrickWorld::GlimmerBrickWorld()
     : m_framesSinceLightView(LightViewFrames),
       m_isTextured(g_cvGlimmerBricksTextured.Get())
 {
-    const float columnWidth = GlimmerBrickCellSize / float(GlimmerBrickSide);
+    for (uint32 level = 0; level < GlimmerBrickLevels; level++)
+    {
+        const float cellSize = LevelCellSize(level);
+        const float columnWidth = cellSize / float(GlimmerBrickSide);
 
-    m_shaderData.params = Vec4f(GlimmerBrickCellSize, 1.0f / GlimmerBrickCellSize, columnWidth, 1.0f / columnWidth);
+        m_shaderData.levels[level].params = Vec4f(cellSize, 1.0f / cellSize, columnWidth, 1.0f / columnWidth);
+    }
+
+    for (uint32 slot = 0; slot < m_chunks.Size(); slot++)
+    {
+        m_chunks[slot].level = slot / GlimmerBrickChunks;
+    }
 }
 
 GlimmerBrickWorld::~GlimmerBrickWorld()
@@ -230,13 +241,28 @@ GlimmerBrickWorld::~GlimmerBrickWorld()
     }
 }
 
-uint32 GlimmerBrickWorld::ChunkSlot(const Vec3i& coord)
+uint32 GlimmerBrickWorld::ChunkSlot(uint32 level, const Vec3i& coord)
 {
     const uint32 x = uint32(coord.x) & (GlimmerBrickChunksXZ - 1);
     const uint32 y = uint32(coord.y) & (GlimmerBrickChunksY - 1);
     const uint32 z = uint32(coord.z) & (GlimmerBrickChunksXZ - 1);
 
-    return (z * GlimmerBrickChunksY + y) * GlimmerBrickChunksXZ + x;
+    return level * GlimmerBrickChunks + (z * GlimmerBrickChunksY + y) * GlimmerBrickChunksXZ + x;
+}
+
+float GlimmerBrickWorld::LevelCellSize(uint32 level)
+{
+    return GlimmerBrickCellSize * float(1u << level);
+}
+
+static float LevelChunkSize(uint32 level)
+{
+    return GlimmerBrickCellSize * float(1u << level) * float(GlimmerBrickChunkCells);
+}
+
+static uint32 GetBrickLevelCount()
+{
+    return uint32(MathUtil::Clamp(g_cvGlimmerBricksLevels.Get(), 1, int32(GlimmerBrickLevels)));
 }
 
 static GpuBufferRef CreateBrickBuffer(size_t numWords, Name name)
@@ -320,9 +346,43 @@ Vec3u GlimmerBrickWorld::GetInitialPools() const
     return pools;
 }
 
+void GlimmerBrickWorld::CreateTable()
+{
+    EnqueueDeletion(std::move(m_tableBuffer));
+
+    m_tableLevels = GetBrickLevelCount();
+    m_tableBuffer = CreateBrickBuffer(BrickTableChunkWords + size_t(BrickTableLevelSize) * m_tableLevels, NAME("GlimmerBrickTable"));
+}
+
+// every level's window is given up, and the table and pools are as new
+void GlimmerBrickWorld::ResetWindows(Frame* frame)
+{
+    for (Chunk& chunk : m_chunks)
+    {
+        chunk.Empty();
+        chunk.isBuilt = false;
+        chunk.isDirty = false;
+        chunk.isStarved = false;
+        chunk.hasGeometry = false;
+        chunk.buildSerial++;
+    }
+
+    for (uint32 level = 0; level < GlimmerBrickLevels; level++)
+    {
+        m_hasWindows[level] = false;
+        m_numDirtyChunks[level] = 0;
+        m_shaderData.levels[level].origin = Vec4i::Zero();
+    }
+
+    m_numLevels = m_tableLevels;
+
+    Dispatch(frame, BuildPass::Init, Box {}, MathUtil::Max(MathUtil::Max(BrickTableChunkWords + BrickTableLevelSize * m_tableLevels, m_pools.z), MathUtil::Max(m_pools.x, m_pools.y)));
+}
+
 void GlimmerBrickWorld::CreateResources()
 {
-    m_tableBuffer = CreateBrickBuffer(BrickTableSize, NAME("GlimmerBrickTable"));
+    CreateTable();
+
     m_countersBuffer = CreateBrickBuffer(BrickCountersWords, NAME("GlimmerBrickCounters"));
     m_listNodesBuffer = CreateBrickBuffer(size_t(BrickListNodeCapacity) * BrickListNodeWords, NAME("GlimmerBrickListNodes"));
     m_placeholderBuffer = CreateBrickBuffer(4, NAME("GlimmerBrickPlaceholder"));
@@ -406,6 +466,18 @@ void GlimmerBrickWorld::GrowPoolResources(Frame* frame, const Vec3u& grown)
     const uint32 numAdded = MathUtil::Max(grown.x - old.x, MathUtil::Max(grown.y - old.y, grown.z - old.z));
 
     Dispatch(frame, BuildPass::Grow, Box { Vec3i(int32(old.x), int32(old.y), int32(old.z)), Vec3i::Zero() }, numAdded);
+}
+
+FixedArray<uint32, GlimmerBrickLevels> GlimmerBrickWorld::CountLevelBricks() const
+{
+    FixedArray<uint32, GlimmerBrickLevels> counts {};
+
+    for (const Chunk& chunk : m_chunks)
+    {
+        counts[chunk.level] += chunk.hasBricks ? chunk.numBricks : 0;
+    }
+
+    return counts;
 }
 
 bool GlimmerBrickWorld::GrowPools(const Vec3u& needed)
@@ -505,8 +577,10 @@ bool GlimmerBrickWorld::GrowPools(const Vec3u& needed)
 
     if (grown != m_grownPools)
     {
-        HYP_LOG(Rendering, Info, "Glimmer: brick pools ran short; growing to {} bricks, {} pages and {} cards ({} MB)",
-            grown.x, grown.y, grown.z, PoolBytes(grown, m_isLit, m_isGI) / (1024ull * 1024ull));
+        const FixedArray<uint32, GlimmerBrickLevels> levelBricks = CountLevelBricks();
+
+        HYP_LOG(Rendering, Info, "Glimmer: brick pools ran short; growing to {} bricks, {} pages and {} cards ({} MB); bricks by level {} {} {} {}",
+            grown.x, grown.y, grown.z, PoolBytes(grown, m_isLit, m_isGI) / (1024ull * 1024ull), levelBricks[0], levelBricks[1], levelBricks[2], levelBricks[3]);
     }
 
     m_grownPools = grown;
@@ -589,6 +663,7 @@ void GlimmerBrickWorld::SetBuildPass(Frame* frame, BuildPass pass, const Box& bo
 
     GlimmerBrickBuildConstants constants {};
     constants.bricks = m_shaderData;
+    constants.level = Vec4u(pass == BuildPass::Clear ? box.level : m_batchLevel, m_tableLevels, 0u, 0u);
     constants.boxMin = Vec4i(box.min, int32(m_pools.z));
     constants.boxExtent = Vec4i(box.extent, int32(m_pools.y));
     constants.counts = Vec4u(m_sceneInstances->GetNumSpanChunks(), groupsX, m_pools.x, BrickListNodeCapacity);
@@ -635,21 +710,28 @@ void GlimmerBrickWorld::SetBuildPass(Frame* frame, BuildPass pass, const Box& bo
     cr << SetShaderUniform(uniformIndex++, "GlimmerBrickDispatchArgsBuffer"_sh, (pass == BuildPass::Args ? m_dispatchArgsBuffer : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
 }
 
-void GlimmerBrickWorld::MoveWindow(Frame* frame, const Vec3i& originChunk)
+void GlimmerBrickWorld::MoveWindow(Frame* frame, uint32 level, const Vec3i& originChunk)
 {
-    const Vec3i oldOrigin = m_originChunk;
+    const Vec3i oldOrigin = m_originChunks[level];
+    const bool hadWindow = m_hasWindows[level];
 
-    const bool overlapsOld = m_hasWindow
+    const bool overlapsOld = hadWindow
         && MathUtil::Abs(originChunk.x - oldOrigin.x) < ChunkDims.x
         && MathUtil::Abs(originChunk.y - oldOrigin.y) < ChunkDims.y
         && MathUtil::Abs(originChunk.z - oldOrigin.z) < ChunkDims.z;
 
-    m_originChunk = originChunk;
-    m_shaderData.origin = Vec4i(originChunk * ChunkCells, 1);
+    m_originChunks[level] = originChunk;
+    m_shaderData.levels[level].origin = Vec4i(originChunk * ChunkCells, 1);
 
     if (!overlapsOld)
     {
-        Dispatch(frame, BuildPass::Init, Box {}, MathUtil::Max(MathUtil::Max(BrickTableSize, m_pools.z), MathUtil::Max(m_pools.x, m_pools.y)));
+        // a level that jumps clears all of its old window; the table of one that had none is clear already
+        if (hadWindow)
+        {
+            const Box box { oldOrigin * ChunkCells, ChunkDims * ChunkCells, level };
+
+            Dispatch(frame, BuildPass::Clear, box, uint32(box.extent.x * box.extent.y * box.extent.z) * 3);
+        }
     }
     else
     {
@@ -677,7 +759,7 @@ void GlimmerBrickWorld::MoveWindow(Frame* frame, const Vec3i& originChunk)
                 continue;
             }
 
-            const Box box { enteringMin * ChunkCells, (enteringMax - enteringMin) * ChunkCells };
+            const Box box { enteringMin * ChunkCells, (enteringMax - enteringMin) * ChunkCells, level };
 
             Dispatch(frame, BuildPass::Clear, box, uint32(box.extent.x * box.extent.y * box.extent.z) * 3);
         }
@@ -691,7 +773,7 @@ void GlimmerBrickWorld::MoveWindow(Frame* frame, const Vec3i& originChunk)
             {
                 const Vec3i coord = originChunk + Vec3i(x, y, z);
 
-                Chunk& chunk = m_chunks[ChunkSlot(coord)];
+                Chunk& chunk = m_chunks[ChunkSlot(level, coord)];
 
                 // what was starved may fit now that a slab has left
                 chunk.isStarved = false;
@@ -710,13 +792,18 @@ void GlimmerBrickWorld::MoveWindow(Frame* frame, const Vec3i& originChunk)
         }
     }
 
-    m_hasWindow = true;
+    m_hasWindows[level] = true;
 }
 
 void GlimmerBrickWorld::MarkAllDirty()
 {
     for (Chunk& chunk : m_chunks)
     {
+        if (!m_hasWindows[chunk.level])
+        {
+            continue;
+        }
+
         chunk.isDirty = true;
         chunk.isStarved = false;
     }
@@ -745,8 +832,16 @@ void GlimmerBrickWorld::MarkSceneChanges()
 
     for (Chunk& chunk : m_chunks)
     {
-        const Vec3f chunkMin = Vec3f(chunk.coord) * ChunkSize - Vec3f(ChangeMargin);
-        const Vec3f chunkMax = chunkMin + Vec3f(ChunkSize + 2.0f * ChangeMargin);
+        if (!m_hasWindows[chunk.level])
+        {
+            continue;
+        }
+
+        const float chunkSize = LevelChunkSize(chunk.level);
+        const float margin = ChangeMargin * float(1u << chunk.level);
+
+        const Vec3f chunkMin = Vec3f(chunk.coord) * chunkSize - Vec3f(margin);
+        const Vec3f chunkMax = chunkMin + Vec3f(chunkSize + 2.0f * margin);
 
         for (const GlimmerSceneChange& change : changes)
         {
@@ -771,29 +866,41 @@ void GlimmerBrickWorld::MarkOccupiedChunks()
         chunk.hasGeometry = false;
     }
 
-    const Vec3i windowMax = m_originChunk + ChunkDims - Vec3i(1);
-
-    for (const GlimmerSceneInstances::SpanKey& spanKey : m_sceneInstances->GetSpanKeys())
+    for (uint32 level = 0; level < m_numLevels; level++)
     {
-        const Vec3f boundsMin = (spanKey.bounds.min - Vec3f(ChangeMargin)) / ChunkSize;
-        const Vec3f boundsMax = (spanKey.bounds.max + Vec3f(ChangeMargin)) / ChunkSize;
-
-        Vec3i chunkMin;
-        Vec3i chunkMax;
-
-        for (int axis = 0; axis < 3; axis++)
+        if (!m_hasWindows[level])
         {
-            chunkMin[axis] = MathUtil::Max(int32(MathUtil::Floor(boundsMin[axis])), m_originChunk[axis]);
-            chunkMax[axis] = MathUtil::Min(int32(MathUtil::Floor(boundsMax[axis])), windowMax[axis]);
+            continue;
         }
 
-        for (int32 z = chunkMin.z; z <= chunkMax.z; z++)
+        const float chunkSize = LevelChunkSize(level);
+        const float margin = ChangeMargin * float(1u << level);
+
+        const Vec3i originChunk = m_originChunks[level];
+        const Vec3i windowMax = originChunk + ChunkDims - Vec3i(1);
+
+        for (const GlimmerSceneInstances::SpanKey& spanKey : m_sceneInstances->GetSpanKeys())
         {
-            for (int32 y = chunkMin.y; y <= chunkMax.y; y++)
+            const Vec3f boundsMin = (spanKey.bounds.min - Vec3f(margin)) / chunkSize;
+            const Vec3f boundsMax = (spanKey.bounds.max + Vec3f(margin)) / chunkSize;
+
+            Vec3i chunkMin;
+            Vec3i chunkMax;
+
+            for (int axis = 0; axis < 3; axis++)
             {
-                for (int32 x = chunkMin.x; x <= chunkMax.x; x++)
+                chunkMin[axis] = MathUtil::Max(int32(MathUtil::Floor(boundsMin[axis])), originChunk[axis]);
+                chunkMax[axis] = MathUtil::Min(int32(MathUtil::Floor(boundsMax[axis])), windowMax[axis]);
+            }
+
+            for (int32 z = chunkMin.z; z <= chunkMax.z; z++)
+            {
+                for (int32 y = chunkMin.y; y <= chunkMax.y; y++)
                 {
-                    m_chunks[ChunkSlot(Vec3i(x, y, z))].hasGeometry = true;
+                    for (int32 x = chunkMin.x; x <= chunkMax.x; x++)
+                    {
+                        m_chunks[ChunkSlot(level, Vec3i(x, y, z))].hasGeometry = true;
+                    }
                 }
             }
         }
@@ -803,6 +910,7 @@ void GlimmerBrickWorld::MarkOccupiedChunks()
 void GlimmerBrickWorld::BuildChunks(Frame* frame, Chunk* const* chunks, uint32 numChunks, const GlimmerTechnique* technique)
 {
     m_numBatchChunks = numChunks;
+    m_batchLevel = chunks[0]->level;
 
     for (uint32 slot = 0; slot < numChunks; slot++)
     {
@@ -816,7 +924,7 @@ void GlimmerBrickWorld::BuildChunks(Frame* frame, Chunk* const* chunks, uint32 n
 
         for (uint32 slot = 0; slot < numChunks; slot++)
         {
-            Dispatch(frame, BuildPass::Clear, Box { m_batchChunkMins[slot].GetXYZ(), Vec3i(ChunkCells) }, BrickChunkBricks);
+            Dispatch(frame, BuildPass::Clear, Box { m_batchChunkMins[slot].GetXYZ(), Vec3i(ChunkCells), m_batchLevel }, BrickChunkBricks);
         }
     }
 
@@ -900,7 +1008,7 @@ void GlimmerBrickWorld::BuildChunks(Frame* frame, Chunk* const* chunks, uint32 n
 
 void GlimmerBrickWorld::ClearChunk(Frame* frame, Chunk& chunk)
 {
-    Dispatch(frame, BuildPass::Clear, Box { chunk.coord * ChunkCells, Vec3i(ChunkCells) }, BrickChunkBricks);
+    Dispatch(frame, BuildPass::Clear, Box { chunk.coord * ChunkCells, Vec3i(ChunkCells), chunk.level }, BrickChunkBricks);
 
     chunk.Empty();
 }
@@ -928,7 +1036,7 @@ void GlimmerBrickWorld::CopyBuildCounters(Frame* frame, Chunk* const* chunks, ui
 
     for (uint32 buildIndex = 0; buildIndex < numChunks; buildIndex++)
     {
-        m_pendingBuilds[slot][buildIndex] = ChunkBuild { chunks[buildIndex]->coord, chunks[buildIndex]->buildSerial };
+        m_pendingBuilds[slot][buildIndex] = ChunkBuild { chunks[buildIndex]->coord, chunks[buildIndex]->level, chunks[buildIndex]->buildSerial };
     }
 
     m_numPendingBuilds[slot] = numChunks;
@@ -965,6 +1073,7 @@ bool GlimmerBrickWorld::ReadBuildCounters(Frame* frame, const Vec3f& viewerPosit
         const ChunkBuild& build = m_pendingBuilds[slot][buildIndex];
 
         return chunk.coord == build.coord
+            && chunk.level == build.level
             && chunk.buildSerial == build.buildSerial
             && !chunk.isDirty;
     };
@@ -973,7 +1082,7 @@ bool GlimmerBrickWorld::ReadBuildCounters(Frame* frame, const Vec3f& viewerPosit
 
     for (uint32 buildIndex = 0; buildIndex < numPending && !isOverflowed; buildIndex++)
     {
-        const Chunk& chunk = m_chunks[ChunkSlot(m_pendingBuilds[slot][buildIndex].coord)];
+        const Chunk& chunk = m_chunks[ChunkSlot(m_pendingBuilds[slot][buildIndex].level, m_pendingBuilds[slot][buildIndex].coord)];
 
         if (isCurrent(buildIndex, chunk))
         {
@@ -989,7 +1098,7 @@ bool GlimmerBrickWorld::ReadBuildCounters(Frame* frame, const Vec3f& viewerPosit
 
     for (uint32 buildIndex = 0; buildIndex < numPending; buildIndex++)
     {
-        Chunk& chunk = m_chunks[ChunkSlot(m_pendingBuilds[slot][buildIndex].coord)];
+        Chunk& chunk = m_chunks[ChunkSlot(m_pendingBuilds[slot][buildIndex].level, m_pendingBuilds[slot][buildIndex].coord)];
 
         if (!isCurrent(buildIndex, chunk))
         {
@@ -1040,9 +1149,35 @@ bool GlimmerBrickWorld::ReadBuildCounters(Frame* frame, const Vec3f& viewerPosit
     return hasWritten;
 }
 
-static Vec3f ChunkCenter(const Vec3i& coord)
+static Vec3f ChunkCenter(uint32 level, const Vec3i& coord)
 {
-    return (Vec3f(coord) + Vec3f(0.5f)) * ChunkSize;
+    return (Vec3f(coord) + Vec3f(0.5f)) * LevelChunkSize(level);
+}
+
+// how soon a chunk is built, or how late it gives up its room: by its distance in its level's chunks, and a coarse chunk the finer level's window holds after the rest
+float GlimmerBrickWorld::BuildOrder(const Chunk& chunk, const Vec3f& focus) const
+{
+    const float chunkSize = LevelChunkSize(chunk.level);
+
+    float order = ChunkCenter(chunk.level, chunk.coord).Distance(focus) / chunkSize;
+
+    if (chunk.level != 0 && m_hasWindows[chunk.level - 1])
+    {
+        const float finerChunkSize = LevelChunkSize(chunk.level - 1);
+        const Vec3f finerMin = Vec3f(m_originChunks[chunk.level - 1]) * finerChunkSize;
+        const Vec3f finerMax = finerMin + Vec3f(ChunkDims) * finerChunkSize;
+
+        const Vec3f chunkMin = Vec3f(chunk.coord) * chunkSize;
+        const Vec3f chunkMax = chunkMin + Vec3f(chunkSize);
+
+        if (chunkMin.x >= finerMin.x && chunkMin.y >= finerMin.y && chunkMin.z >= finerMin.z
+            && chunkMax.x <= finerMax.x && chunkMax.y <= finerMax.y && chunkMax.z <= finerMax.z)
+        {
+            order += 0.5f * float(ChunkDims.x);
+        }
+    }
+
+    return order;
 }
 
 bool GlimmerBrickWorld::MakeRoom(Frame* frame, const Chunk& requester, const Vec3f& viewerPosition, const Vec3u& needed)
@@ -1054,7 +1189,7 @@ bool GlimmerBrickWorld::MakeRoom(Frame* frame, const Chunk& requester, const Vec
     };
 
     // only from chunks a chunk farther, so two at about the same distance don't take turns
-    const float minDistance = ChunkCenter(requester.coord).Distance(viewerPosition) + ChunkSize;
+    const float minDistance = BuildOrder(requester, viewerPosition) + 1.0f;
 
     Array<Candidate, GlimmerTempAllocator> candidates;
     candidates.Reserve(m_chunks.Size());
@@ -1066,7 +1201,7 @@ bool GlimmerBrickWorld::MakeRoom(Frame* frame, const Chunk& requester, const Vec
             continue;
         }
 
-        const float distance = ChunkCenter(chunk.coord).Distance(viewerPosition);
+        const float distance = BuildOrder(chunk, viewerPosition);
 
         if (distance > minDistance)
         {
@@ -1142,21 +1277,25 @@ void GlimmerBrickWorld::Update(
     m_groundGI = groundGI;
     m_light = light;
 
+    ENGINE_STAT_GPU_SCOPE(&s_statGlimmerBrickBuild);
+
+    bool hasWritten = false;
+
     if (!m_tableBuffer.IsValid())
     {
         CreateResources();
+        ResetWindows(frame);
+
+        hasWritten = true;
     }
+    else if (m_tableLevels != GetBrickLevelCount())
+    {
+        CreateTable();
+        ResetWindows(frame);
 
-    ENGINE_STAT_GPU_SCOPE(&s_statGlimmerBrickBuild);
-
-    const Vec3i viewerChunk = Vec3i(
-        int32(MathUtil::Floor(viewerPosition.x / ChunkSize)),
-        int32(MathUtil::Floor(viewerPosition.y / ChunkSize)),
-        int32(MathUtil::Floor(viewerPosition.z / ChunkSize)));
-
-    const Vec3i originChunk = viewerChunk - Vec3i(ChunkDims.x / 2, ChunkDims.y / 2, ChunkDims.z / 2);
-
-    bool hasWritten = false;
+        m_occupancyGeneration = ~0u;
+        hasWritten = true;
+    }
 
     if (m_grownPools != Vec3u::Zero())
     {
@@ -1167,12 +1306,33 @@ void GlimmerBrickWorld::Update(
         hasWritten = true;
     }
 
-    if (!m_hasWindow
-        || MathUtil::Abs(originChunk.x - m_originChunk.x) >= WindowRecenterChunks
-        || MathUtil::Abs(originChunk.y - m_originChunk.y) >= WindowRecenterChunks
-        || MathUtil::Abs(originChunk.z - m_originChunk.z) >= WindowRecenterChunks)
+    // one level moves a frame, so that their clears and rebuilds are spread out; a level without a window takes one at once
+    bool hasMoved = false;
+
+    for (uint32 level = 0; level < m_numLevels; level++)
     {
-        MoveWindow(frame, originChunk);
+        const float chunkSize = LevelChunkSize(level);
+
+        const Vec3i viewerChunk = Vec3i(
+            int32(MathUtil::Floor(viewerPosition.x / chunkSize)),
+            int32(MathUtil::Floor(viewerPosition.y / chunkSize)),
+            int32(MathUtil::Floor(viewerPosition.z / chunkSize)));
+
+        const Vec3i originChunk = viewerChunk - Vec3i(ChunkDims.x / 2, ChunkDims.y / 2, ChunkDims.z / 2);
+        const Vec3i oldOrigin = m_originChunks[level];
+
+        const bool isFar = MathUtil::Abs(originChunk.x - oldOrigin.x) >= WindowRecenterChunks
+            || MathUtil::Abs(originChunk.y - oldOrigin.y) >= WindowRecenterChunks
+            || MathUtil::Abs(originChunk.z - oldOrigin.z) >= WindowRecenterChunks;
+
+        if (m_hasWindows[level] && (!isFar || hasMoved))
+        {
+            continue;
+        }
+
+        hasMoved = hasMoved || m_hasWindows[level];
+
+        MoveWindow(frame, level, originChunk);
 
         m_occupancyGeneration = ~0u;
 
@@ -1250,7 +1410,7 @@ void GlimmerBrickWorld::Update(
 
     for (Chunk& chunk : m_chunks)
     {
-        if (!chunk.isDirty || chunk.hasGeometry)
+        if (!chunk.isDirty || chunk.hasGeometry || !m_hasWindows[chunk.level])
         {
             continue;
         }
@@ -1278,43 +1438,62 @@ void GlimmerBrickWorld::Update(
         ? 1u
         : uint32(MathUtil::Clamp(int32(float(g_cvGlimmerBricksChunksPerFrame.Get()) * MathUtil::Clamp(budgetScale, 1.0f, 8.0f)), 1, int32(GlimmerBrickMaxChunkBuildsPerFrame)));
 
-    const Vec3f buildFocus = GetGlimmerWindowCenter(viewerPosition, lookAhead, Vec3f(ChunkDims) * ChunkSize);
+    const Vec3f buildFocus = GetGlimmerWindowCenter(viewerPosition, lookAhead, Vec3f(ChunkDims) * LevelChunkSize(0));
 
+    struct BuildCandidate
+    {
+        Chunk* chunk;
+        float order;
+    };
+
+    Array<BuildCandidate, GlimmerTempAllocator> candidates;
+
+    for (Chunk& chunk : m_chunks)
+    {
+        if (!chunk.isDirty || !chunk.hasGeometry || chunk.isStarved || !m_hasWindows[chunk.level])
+        {
+            continue;
+        }
+
+        candidates.PushBack(BuildCandidate { &chunk, BuildOrder(chunk, buildFocus) });
+    }
+
+    // a batch is of one level: the soonest chunk's
     FixedArray<Chunk*, GlimmerBrickMaxChunkBuildsPerFrame> batch;
     uint32 numBatched = 0;
 
-    while (numBatched < maxBuilds)
+    if (candidates.Any())
     {
-        Chunk* nearestChunk = nullptr;
-        float nearestDistance = MathUtil::MaxSafeValue<float>();
-
-        for (Chunk& chunk : m_chunks)
-        {
-            if (!chunk.isDirty || !chunk.hasGeometry || chunk.isStarved)
+        const BuildCandidate* soonest = std::min_element(candidates.Begin(), candidates.End(), [](const BuildCandidate& lhs, const BuildCandidate& rhs)
             {
-                continue;
-            }
+                return lhs.order < rhs.order;
+            });
 
-            const float distance = ChunkCenter(chunk.coord).DistanceSquared(buildFocus);
+        const uint32 batchLevel = soonest->chunk->level;
 
-            if (distance < nearestDistance)
+        BuildCandidate* levelEnd = std::partition(candidates.Begin(), candidates.End(), [batchLevel](const BuildCandidate& candidate)
             {
-                nearestDistance = distance;
-                nearestChunk = &chunk;
-            }
-        }
+                return candidate.chunk->level == batchLevel;
+            });
 
-        if (!nearestChunk)
+        const size_t numLevelCandidates = size_t(levelEnd - candidates.Begin());
+        const size_t numTaken = MathUtil::Min(numLevelCandidates, size_t(maxBuilds));
+
+        std::partial_sort(candidates.Begin(), candidates.Begin() + numTaken, levelEnd, [](const BuildCandidate& lhs, const BuildCandidate& rhs)
+            {
+                return lhs.order < rhs.order;
+            });
+
+        for (size_t candidateIndex = 0; candidateIndex < numTaken; candidateIndex++)
         {
-            break;
+            Chunk* chunk = candidates[candidateIndex].chunk;
+
+            // taken for this batch
+            chunk->isDirty = false;
+
+            batch[numBatched++] = chunk;
         }
-
-        // taken for this batch
-        nearestChunk->isDirty = false;
-
-        batch[numBatched++] = nearestChunk;
     }
-
     if (numBatched != 0)
     {
         BuildChunks(frame, batch.Data(), numBatched, technique);
@@ -1326,11 +1505,22 @@ void GlimmerBrickWorld::Update(
 
     const bool wasSettled = IsSettled();
 
-    m_numDirtyChunks = 0;
+    uint32 numDirtyBefore = 0;
+
+    for (uint32 level = 0; level < GlimmerBrickLevels; level++)
+    {
+        numDirtyBefore += m_numDirtyChunks[level];
+        m_numDirtyChunks[level] = 0;
+    }
+
+    uint32 numDirty = 0;
 
     for (const Chunk& chunk : m_chunks)
     {
-        m_numDirtyChunks += chunk.isDirty && !chunk.isStarved ? 1 : 0;
+        const bool isWaiting = chunk.isDirty && !chunk.isStarved && m_hasWindows[chunk.level];
+
+        m_numDirtyChunks[chunk.level] += isWaiting ? 1 : 0;
+        numDirty += isWaiting ? 1 : 0;
     }
 
     if (IsSettled() && !wasSettled)
@@ -1338,7 +1528,15 @@ void GlimmerBrickWorld::Update(
         HYP_LOG(Rendering, Debug, "Glimmer: bricks settled after {} frames", m_framesUnsettled);
     }
 
+    if (numDirty == 0 && numDirtyBefore != 0)
+    {
+        const FixedArray<uint32, GlimmerBrickLevels> levelBricks = CountLevelBricks();
+
+        HYP_LOG(Rendering, Info, "Glimmer: every brick level settled after {} frames; bricks by level {} {} {} {}", m_framesLevelsUnsettled, levelBricks[0], levelBricks[1], levelBricks[2], levelBricks[3]);
+    }
+
     m_framesUnsettled = IsSettled() ? 0 : m_framesUnsettled + 1;
+    m_framesLevelsUnsettled = numDirty == 0 ? 0 : m_framesLevelsUnsettled + 1;
 
     m_framesSincePoolLog++;
 
@@ -1619,16 +1817,20 @@ void GlimmerBrickWorld::GetBuildingChunks(Vec4i& outOrigin, Vec4u (&outBits)[16]
         return;
     }
 
-    outOrigin = Vec4i(m_originChunk.x, m_originChunk.y, m_originChunk.z, 1);
+    const Vec3i originChunk = m_originChunks[0];
 
-    for (const Chunk& chunk : m_chunks)
+    outOrigin = Vec4i(originChunk.x, originChunk.y, originChunk.z, 1);
+
+    for (uint32 slot = 0; slot < GlimmerBrickChunks; slot++)
     {
+        const Chunk& chunk = m_chunks[slot];
+
         if ((chunk.isBuilt && !chunk.isDirty) || chunk.isStarved)
         {
             continue;
         }
 
-        const Vec3i local = chunk.coord - m_originChunk;
+        const Vec3i local = chunk.coord - originChunk;
 
         if (local.x < 0 || local.y < 0 || local.z < 0 || local.x >= ChunkDims.x || local.y >= ChunkDims.y || local.z >= ChunkDims.z)
         {

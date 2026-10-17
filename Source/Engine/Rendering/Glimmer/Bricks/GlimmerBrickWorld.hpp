@@ -50,7 +50,7 @@ static constexpr uint32 GlimmerBrickCardTexels = (4 * GlimmerBrickCardSide * Gli
 // NOTE must match GlimmerBrickGI.hlsli
 static constexpr uint32 GlimmerBrickGIRays = 8;
 static constexpr uint32 GlimmerBrickGITiles = GlimmerBrickCardSide * GlimmerBrickCardSide;
-static constexpr uint32 GlimmerBrickIndexStride = 1 + GlimmerBrickMaxPages + GlimmerBrickCards + 6 + (GlimmerBrickSide / GlimmerBrickTile) * (GlimmerBrickSide / GlimmerBrickTile) + GlimmerBrickSide * GlimmerBrickSide;
+static constexpr uint32 GlimmerBrickIndexStride = 1 + GlimmerBrickMaxPages + GlimmerBrickCards + 7 + (GlimmerBrickSide / GlimmerBrickTile) * (GlimmerBrickSide / GlimmerBrickTile) + GlimmerBrickSide * GlimmerBrickSide;
 
 static constexpr uint32 GlimmerBrickMaxPoolBricks = 32768;
 static constexpr uint32 GlimmerBrickMaxPoolPages = 65535;
@@ -63,6 +63,9 @@ static_assert(GlimmerBrickMaxPoolBricks * GlimmerBrickCards <= (1u << GlimmerBri
 
 static constexpr float GlimmerBrickCellSize = 2.0f;
 
+// NOTE must match GLIMMER_BRICK_LEVELS in GlimmerBricks.hlsli: each level's cells twice the size of the one before
+static constexpr uint32 GlimmerBrickLevels = 4;
+
 // NOTE must match MAX_BATCH_CHUNKS in GlimmerBricks.hlsli
 static constexpr uint32 GlimmerBrickMaxChunkBuildsPerFrame = 32;
 
@@ -70,13 +73,20 @@ static constexpr uint32 GlimmerBrickChunksXZ = GlimmerBrickGridXZ / GlimmerBrick
 static constexpr uint32 GlimmerBrickChunksY = GlimmerBrickGridY / GlimmerBrickChunkCells;
 static constexpr uint32 GlimmerBrickChunks = GlimmerBrickChunksXZ * GlimmerBrickChunksY * GlimmerBrickChunksXZ;
 
-struct GlimmerBrickShaderData
+struct GlimmerBrickLevelShaderData
 {
     Vec4i origin; // xyz = absolute cell of the window's first cell, w = 1 once the window is valid
     Vec4f params; // x = cell size, y = 1 / cell size, z = column width, w = 1 / column width
 };
 
-static_assert(sizeof(GlimmerBrickShaderData) == 32);
+static_assert(sizeof(GlimmerBrickLevelShaderData) == 32);
+
+struct GlimmerBrickShaderData
+{
+    GlimmerBrickLevelShaderData levels[GlimmerBrickLevels];
+};
+
+static_assert(sizeof(GlimmerBrickShaderData) == 32 * GlimmerBrickLevels);
 
 enum class GlimmerBrickDebugView : int
 {
@@ -87,6 +97,7 @@ enum class GlimmerBrickDebugView : int
     Light,
     LightCoarse,
     Arriving,
+    Level,
 
     Max
 };
@@ -144,13 +155,13 @@ public:
 
     HYP_FORCE_INLINE bool IsReady() const
     {
-        return m_tableBuffer.IsValid() && m_shaderData.origin.w != 0;
+        return m_tableBuffer.IsValid() && m_shaderData.levels[0].origin.w != 0;
     }
 
-    // every chunk of the window built for the scene as it is
+    // every chunk of the finest level's window built for the scene as it is
     HYP_FORCE_INLINE bool IsSettled() const
     {
-        return IsReady() && m_numDirtyChunks == 0;
+        return IsReady() && m_numDirtyChunks[0] == 0;
     }
 
     HYP_FORCE_INLINE bool IsLit() const
@@ -209,6 +220,7 @@ private:
     struct Chunk
     {
         Vec3i coord;
+        uint32 level = 0;
         bool isBuilt = false;
         bool isDirty = false;
         bool hasGeometry = false;
@@ -233,6 +245,7 @@ private:
     struct ChunkBuild
     {
         Vec3i coord;
+        uint32 level;
         uint32 buildSerial;
     };
 
@@ -240,6 +253,7 @@ private:
     {
         Vec3i min;
         Vec3i extent;
+        uint32 level = 0;
     };
 
     enum class BuildPass : uint8
@@ -285,12 +299,15 @@ private:
     Vec3u GetInitialPools() const;
 
     void CreateResources();
+    void CreateTable();
+    void ResetWindows(Frame* frame);
     void CreatePoolBuffers(PoolUse use);
     void ReleasePoolBuffers(PoolUse use);
     void GrowPoolResources(Frame* frame, const Vec3u& grown);
     bool GrowPools(const Vec3u& needed);
+    FixedArray<uint32, GlimmerBrickLevels> CountLevelBricks() const;
     void ListLiveBricks(Frame* frame);
-    void MoveWindow(Frame* frame, const Vec3i& originChunk);
+    void MoveWindow(Frame* frame, uint32 level, const Vec3i& originChunk);
     void MarkAllDirty();
     void MarkSceneChanges();
     void MarkOccupiedChunks();
@@ -304,9 +321,11 @@ private:
     void CopyBuildCounters(Frame* frame, Chunk* const* chunks, uint32 numChunks);
     bool ReadBuildCounters(Frame* frame, const Vec3f& viewerPosition);
     bool MakeRoom(Frame* frame, const Chunk& requester, const Vec3f& viewerPosition, const Vec3u& needed);
+    float BuildOrder(const Chunk& chunk, const Vec3f& focus) const;
     void ClearChunk(Frame* frame, Chunk& chunk);
 
-    static uint32 ChunkSlot(const Vec3i& coord);
+    static uint32 ChunkSlot(uint32 level, const Vec3i& coord);
+    static float LevelCellSize(uint32 level);
 
     GpuBufferRef m_tableBuffer;
     GpuBufferRef m_indexBuffer;
@@ -329,10 +348,11 @@ private:
     FixedArray<FixedArray<ChunkBuild, GlimmerBrickMaxChunkBuildsPerFrame>, NumFramesInFlight> m_pendingBuilds;
     FixedArray<uint32, NumFramesInFlight> m_numPendingBuilds {};
 
-    FixedArray<Chunk, GlimmerBrickChunks> m_chunks;
+    FixedArray<Chunk, GlimmerBrickChunks * GlimmerBrickLevels> m_chunks;
 
     FixedArray<Vec4i, GlimmerBrickMaxChunkBuildsPerFrame> m_batchChunkMins;
     uint32 m_numBatchChunks = 0;
+    uint32 m_batchLevel = 0;
     uint32 m_numSoloBuilds = 0;
 
     const GlimmerSceneInstances* m_sceneInstances = nullptr;
@@ -349,20 +369,23 @@ private:
     bool m_isLit = false;
     bool m_isGI = false;
 
-    Vec3i m_originChunk;
+    FixedArray<Vec3i, GlimmerBrickLevels> m_originChunks;
+    FixedArray<bool, GlimmerBrickLevels> m_hasWindows {};
+    FixedArray<uint32, GlimmerBrickLevels> m_numDirtyChunks {};
+    uint32 m_numLevels = 1;
+    uint32 m_tableLevels = 0;
     Vec3u m_pools = Vec3u::Zero();
     uint32 m_relightCursor = 0;
     uint32 m_retraceCursor = 0;
     uint32 m_seenGeneration = ~0u;
     uint32 m_occupancyGeneration = ~0u;
-    uint32 m_numDirtyChunks = 0;
     uint32 m_framesUnsettled = 0;
+    uint32 m_framesLevelsUnsettled = 0;
     uint32 m_numEvictions = 0;
     uint32 m_numStarved = 0;
     uint32 m_framesSincePoolLog = 0;
     uint32 m_framesSinceLightView;
     Vec3u m_grownPools = Vec3u::Zero();
-    bool m_hasWindow = false;
     bool m_isTextured;
 
     GlimmerBrickShaderData m_shaderData {};

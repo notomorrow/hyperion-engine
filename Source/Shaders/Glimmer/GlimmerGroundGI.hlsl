@@ -31,7 +31,7 @@ DECLARE_UAV(GlimmerGroundGI, GlimmerGroundGIBuffer) RWStructuredBuffer<uint> gli
 
 struct GlimmerGroundGIConstants
 {
-    GlimmerBrickParams bricks; // origin.w = 0 without bricks
+    GlimmerBrickLevels bricks; // origin.w = 0 without bricks
     GlimmerGroundParams ground;
     GlimmerSpanParams spans;
     GlimmerRelightParams lit;  // the lit windows as the last update left them, for the ground the slots landed on
@@ -94,7 +94,7 @@ uint TraceSlot(float3 origin, float3 direction, uint level, out float3 outInscat
     outInscatter = (float3)0.0;
 
     const float maxDistance = constants.params.y;
-    const float bricksExit = GlimmerBrickWindowExit(constants.bricks, origin, direction);
+    const float bricksExit = GlimmerBricksWindowExit(constants.bricks, origin, direction);
 
     GlimmerBrickHit hit;
 
@@ -139,7 +139,7 @@ uint TraceSlot(float3 origin, float3 direction, uint level, out float3 outInscat
 // how much of the sun gets to a point on the ground: nothing in the bricks or the heightfield's solids, then through the canopy
 float SunVisibility(float3 origin, float3 toSun, uint level)
 {
-    const float bricksExit = GlimmerBrickWindowExit(constants.bricks, origin, toSun);
+    const float bricksExit = GlimmerBricksWindowExit(constants.bricks, origin, toSun);
 
     GlimmerBrickHit hit;
 

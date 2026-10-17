@@ -16,4 +16,5 @@ CVar<int> g_cvGlimmerBricksInitialPoolMB("Rendering.Glimmer.Bricks.InitialPoolMB
 CVar<int> g_cvGlimmerBricksChunksPerFrame("Rendering.Glimmer.Bricks.ChunksPerFrame", 4);
 CVar<bool> g_cvGlimmerBricksTextured("Rendering.Glimmer.Bricks.Textured", true);
 CVar<bool> g_cvGlimmerBricksReflections("Rendering.Glimmer.Bricks.Reflections", true);
+CVar<int> g_cvGlimmerBricksLevels("Rendering.Glimmer.Bricks.Levels", 4);
 } // namespace Hyperion

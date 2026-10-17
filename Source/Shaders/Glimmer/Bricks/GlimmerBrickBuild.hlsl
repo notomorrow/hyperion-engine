@@ -37,7 +37,8 @@ DECLARE_UAV(GlimmerBrickBuild, GlimmerBrickDispatchArgsBuffer) RWStructuredBuffe
 
 struct GlimmerBrickBuildConstants
 {
-    GlimmerBrickParams bricks;
+    GlimmerBrickLevels bricks;
+    uint4 level;                        // x = the level of the batch's chunks, or of the cells cleared; y = levels the table holds
     int4 boxMin;                        // xyz = absolute cell, w = pool cards
     int4 boxExtent;                     // xyz = cells, w = pool pages
     uint4 counts;                       // x = span chunks, y = groups along x, z = pool bricks, w = list node capacity
@@ -49,6 +50,9 @@ DECLARE_BUFFER_DYNAMIC(GlimmerBrickBuild, CBuffer) cbuffer CBuffer
 {
     GlimmerBrickBuildConstants constants;
 };
+
+#define BATCH_LEVEL constants.level.x
+#define BATCH_BRICKS constants.bricks.levels[BATCH_LEVEL]
 
 DECLARE_SRV(GlimmerBrickBuild, SpanInstancesBuffer) StructuredBuffer<GlimmerSpanInstance> spanInstances;
 DECLARE_SRV(GlimmerBrickBuild, SpanChunksBuffer) StructuredBuffer<GlimmerSpanChunk> spanChunks;
@@ -222,8 +226,8 @@ void BinTriangle(GlimmerSpanInstance instance, uint spanInstanceIndex, uint loca
 
     const uint axis = GlimmerBrickAxis(worldTriangle.normal);
 
-    const float cellSize = constants.bricks.params.x;
-    const float margin = GlimmerBrickDepthMargin(constants.bricks);
+    const float cellSize = BATCH_BRICKS.params.x;
+    const float margin = GlimmerBrickDepthMargin(BATCH_BRICKS);
 
     const float3 triangleMin = min(worldTriangle.p0, min(worldTriangle.p1, worldTriangle.p2));
     const float3 triangleMax = max(worldTriangle.p0, max(worldTriangle.p1, worldTriangle.p2));
@@ -231,16 +235,16 @@ void BinTriangle(GlimmerSpanInstance instance, uint spanInstanceIndex, uint loca
     // the margin is along the brick's axis only: across it a triangle is in the cells it is over
     const float3 reach = GlimmerBrickPoint(axis, (float2)0.0, margin);
 
-    const int3 triangleCellMin = int3(floor((triangleMin - reach) * constants.bricks.params.y));
-    const int3 triangleCellMax = int3(floor((triangleMax + reach) * constants.bricks.params.y));
+    const int3 triangleCellMin = int3(floor((triangleMin - reach) * BATCH_BRICKS.params.y));
+    const int3 triangleCellMax = int3(floor((triangleMax + reach) * BATCH_BRICKS.params.y));
 
     const float3 halfExtent = (float3)(0.5 * cellSize) + reach;
 
     // what the triangle covers across a brick, in columns: no more than its box does of the cell
     const float3 doubleArea = cross(worldTriangle.p1 - worldTriangle.p0, worldTriangle.p2 - worldTriangle.p0);
-    const float projectedColumns = 0.5 * abs(GlimmerBrickAlong(axis, doubleArea)) * constants.bricks.params.w * constants.bricks.params.w;
-    const float2 triangleMinAcross = GlimmerBrickAcross(axis, triangleMin) * constants.bricks.params.w;
-    const float2 triangleMaxAcross = GlimmerBrickAcross(axis, triangleMax) * constants.bricks.params.w;
+    const float projectedColumns = 0.5 * abs(GlimmerBrickAlong(axis, doubleArea)) * BATCH_BRICKS.params.w * BATCH_BRICKS.params.w;
+    const float2 triangleMinAcross = GlimmerBrickAcross(axis, triangleMin) * BATCH_BRICKS.params.w;
+    const float2 triangleMaxAcross = GlimmerBrickAcross(axis, triangleMax) * BATCH_BRICKS.params.w;
 
     for (uint slots = slotMask; slots != 0u; slots &= slots - 1u)
     {
@@ -291,7 +295,7 @@ void BinTriangle(GlimmerSpanInstance instance, uint spanInstanceIndex, uint loca
                     const float2 overlap = max(min(triangleMaxAcross, cellMinAcross + float(GLIMMER_BRICK_SIDE)) - max(triangleMinAcross, cellMinAcross), 0.0);
                     const uint coveredArea = uint(min(projectedColumns, overlap.x * overlap.y) * AREA_SCALE + 0.5);
 
-                    InterlockedAdd(glimmerBrickTable[GlimmerBrickTableIndex(cell, axis)], coveredArea);
+                    InterlockedAdd(glimmerBrickTable[GlimmerBrickTableIndex(BATCH_LEVEL, cell, axis)], coveredArea);
 
                     glimmerBrickListNodes[node * LIST_NODE_WORDS + 2u] = next;
                 }
@@ -476,10 +480,10 @@ uint TriangleColumnMask(float2 a, float2 b, float2 c)
 
 void GatherColumn(uint brick, uint axis, int3 cell, uint listHead, int2 column)
 {
-    const float width = constants.bricks.params.z;
-    const float cellSize = constants.bricks.params.x;
+    const float width = BATCH_BRICKS.params.z;
+    const float cellSize = BATCH_BRICKS.params.x;
 
-    const float3 columnLow = GlimmerBrickCellLow(constants.bricks, cell) + GlimmerBrickPoint(axis, float2(column) * width, 0.0);
+    const float3 columnLow = GlimmerBrickCellLow(BATCH_BRICKS, cell) + GlimmerBrickPoint(axis, float2(column) * width, 0.0);
     const float3 middle = columnLow + GlimmerBrickPoint(axis, (float2)(0.5 * width), 0.0);
 
     Gathered found[GLIMMER_BRICK_MAX_COLUMN_CROSSINGS];
@@ -503,9 +507,9 @@ void GatherColumn(uint brick, uint axis, int3 cell, uint listHead, int2 column)
         const GlimmerSpanInstance instance = spanInstances[spanInstanceIndex];
         const WorldTriangle worldTriangle = LoadWorldTriangle(instance, localTriangle);
 
-        const float2 a = GlimmerBrickAcross(axis, worldTriangle.p0 - columnLow) * constants.bricks.params.w;
-        const float2 b = GlimmerBrickAcross(axis, worldTriangle.p1 - columnLow) * constants.bricks.params.w;
-        const float2 c = GlimmerBrickAcross(axis, worldTriangle.p2 - columnLow) * constants.bricks.params.w;
+        const float2 a = GlimmerBrickAcross(axis, worldTriangle.p0 - columnLow) * BATCH_BRICKS.params.w;
+        const float2 b = GlimmerBrickAcross(axis, worldTriangle.p1 - columnLow) * BATCH_BRICKS.params.w;
+        const float2 c = GlimmerBrickAcross(axis, worldTriangle.p2 - columnLow) * BATCH_BRICKS.params.w;
 
         if (any(min(a, min(b, c)) > 1.0) || any(max(a, max(b, c)) < 0.0))
         {
@@ -645,12 +649,12 @@ void GatherColumn(uint brick, uint axis, int3 cell, uint listHead, int2 column)
         const uint2 packedFinish = uint2(saturate(finish) * 63.0 + 0.5);
         const uint crossingIndex = first + writeIndex;
 
-        glimmerBrickCrossings[2u * crossingIndex] = GlimmerBrickPackDepth(constants.bricks, depths[order[writeIndex]]) | (GlimmerBrickPackNormal(normal) << 16u);
+        glimmerBrickCrossings[2u * crossingIndex] = GlimmerBrickPackDepth(BATCH_BRICKS, depths[order[writeIndex]]) | (GlimmerBrickPackNormal(normal) << 16u);
         glimmerBrickCrossings[2u * crossingIndex + 1u] = crossing.mask | (GlimmerBrickPackColor(color) << 16u);
 
         glimmerBrickMaterial[crossingIndex] = (crossing.material & 0xFFFFu) | (packedFinish.x << 16u) | (packedFinish.y << 22u) | (flags << 29u);
 
-        InterlockedOr(glimmerBrickIndex[GlimmerBrickWord(brick, GLIMMER_BRICK_INDEX_CARD_MASK)], 1u << GlimmerBrickCardSlot(constants.bricks, axis, normal, depths[order[writeIndex]]));
+        InterlockedOr(glimmerBrickIndex[GlimmerBrickWord(brick, GLIMMER_BRICK_INDEX_CARD_MASK)], 1u << GlimmerBrickCardSlot(BATCH_BRICKS, axis, normal, depths[order[writeIndex]]));
     }
 
 #endif
@@ -665,9 +669,9 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     const uint threadIndex = flatGroupIndex * GROUP_SIZE + groupIndex;
 
 #if defined(MODE_INIT)
-    if (threadIndex < uint(GLIMMER_BRICK_GRID_XZ * GLIMMER_BRICK_GRID_Y * GLIMMER_BRICK_GRID_XZ * 3))
+    if (threadIndex < GLIMMER_BRICK_TABLE_CHUNK_WORDS + GLIMMER_BRICK_TABLE_LEVEL_WORDS * constants.level.y)
     {
-        glimmerBrickTable[threadIndex] = GLIMMER_BRICK_NONE;
+        glimmerBrickTable[threadIndex] = threadIndex < GLIMMER_BRICK_TABLE_CHUNK_WORDS ? 0u : GLIMMER_BRICK_NONE;
     }
 
     if (threadIndex < constants.counts.z)
@@ -713,8 +717,15 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         return;
     }
 
-    const uint tableIndex = GlimmerBrickTableIndex(BoxCell(threadIndex / 3u), threadIndex % 3u);
+    const int3 clearedCell = BoxCell(threadIndex / 3u);
+    const uint tableIndex = GlimmerBrickTableIndex(BATCH_LEVEL, clearedCell, threadIndex % 3u);
     const uint brick = glimmerBrickTable[tableIndex];
+
+    // boxes are whole chunks
+    if (threadIndex % 3u == 0u && all((clearedCell & (GLIMMER_BRICK_CHUNK_CELLS - 1)) == 0))
+    {
+        glimmerBrickTable[GlimmerBrickChunkIndex(BATCH_LEVEL, clearedCell)] = 0u;
+    }
 
     if (brick != GLIMMER_BRICK_NONE)
     {
@@ -759,14 +770,14 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
     const GlimmerSpanChunk chunk = spanChunks[chunkIndex];
 
-    const float margin = GlimmerBrickDepthMargin(constants.bricks);
-    const float chunkSize = float(GLIMMER_BRICK_CHUNK_CELLS) * constants.bricks.params.x;
+    const float margin = GlimmerBrickDepthMargin(BATCH_BRICKS);
+    const float chunkSize = float(GLIMMER_BRICK_CHUNK_CELLS) * BATCH_BRICKS.params.x;
 
     uint slotMask = 0u;
 
     for (uint slot = 0; slot < constants.options.z; slot++)
     {
-        const float3 boxMinPosition = float3(constants.chunkMin[slot].xyz) * constants.bricks.params.x - margin;
+        const float3 boxMinPosition = float3(constants.chunkMin[slot].xyz) * BATCH_BRICKS.params.x - margin;
         const float3 boxMaxPosition = boxMinPosition + chunkSize + 2.0 * margin;
 
         if (all(chunk.boundsMax.xyz >= boxMinPosition) && all(chunk.boundsMin.xyz <= boxMaxPosition))
@@ -815,7 +826,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     const uint slotBrick = threadIndex % BOX_BRICKS;
     const int3 cell = SlotCell(slot, slotBrick);
 
-    const uint tableIndex = GlimmerBrickTableIndex(cell, slotBrick % 3u);
+    const uint tableIndex = GlimmerBrickTableIndex(BATCH_LEVEL, cell, slotBrick % 3u);
 
     const uint coveredArea = glimmerBrickTable[tableIndex] + 1u;
 
@@ -835,6 +846,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     }
 
     glimmerBrickTable[tableIndex] = brick;
+    glimmerBrickTable[GlimmerBrickChunkIndex(BATCH_LEVEL, cell)] = 1u;
 
     const uint header = GlimmerBrickWord(brick, 0u);
 
@@ -850,6 +862,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_CELL) + 1u] = uint(cell.y);
     glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_CELL) + 2u] = uint(cell.z);
     glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_AXIS)] = slotBrick % 3u;
+    glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_LEVEL)] = BATCH_LEVEL;
     glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_SERIAL)] = (glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_SERIAL)] + 1u) & GLIMMER_BRICK_SERIAL_MASK;
 
     uint buildIndex;
@@ -886,8 +899,9 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
     int3 cell;
     uint axis;
+    uint brickLevel;
 
-    if (!GlimmerLoadBrickPlace(brick, cell, axis))
+    if (!GlimmerLoadBrickPlace(brick, cell, axis, brickLevel))
     {
         return;
     }
@@ -912,7 +926,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     {
         Append(glimmerBrickFreeList, COUNTER_FREE_BRICKS, brick);
 
-        glimmerBrickTable[GlimmerBrickTableIndex(cell, axis)] = GLIMMER_BRICK_NONE;
+        glimmerBrickTable[GlimmerBrickTableIndex(brickLevel, cell, axis)] = GLIMMER_BRICK_NONE;
         glimmerBrickIndex[header + uint(GLIMMER_BRICK_INDEX_AXIS)] = GLIMMER_BRICK_NONE;
 
         InterlockedAdd(glimmerBrickCounters[SlotCounter(slot, SLOT_BRICKS)], 0xFFFFFFFFu);
@@ -987,9 +1001,10 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
     int3 cell;
     uint axis;
+    uint brickLevel;
 
     // given back by the prefix pass
-    if (!GlimmerLoadBrickPlace(brick, cell, axis))
+    if (!GlimmerLoadBrickPlace(brick, cell, axis, brickLevel))
     {
         return;
     }

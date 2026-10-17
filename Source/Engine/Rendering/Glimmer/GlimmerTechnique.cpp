@@ -82,6 +82,14 @@ GlimmerSceneRegionParams GlimmerTechnique::GetSceneRegionParams()
 
     GlimmerSceneRegionParams params;
     params.radius = MathUtil::Max(minRadius, g_cvGlimmerSpansRadius.Get());
+
+    // brick GI reaches as far as the coarsest brick level's window
+    if (g_cvGlimmerBrickGI.Get() && g_cvGlimmerBricksEnabled.Get())
+    {
+        const uint32 coarsestLevel = uint32(MathUtil::Clamp(g_cvGlimmerBricksLevels.Get(), 1, int32(GlimmerBrickLevels))) - 1;
+
+        params.radius = MathUtil::Max(params.radius, 0.5f * float(GlimmerBrickGridXZ) * GlimmerBrickCellSize * float(1u << coarsestLevel));
+    }
     params.recenterDistance = minRadius * RegionRecenterFraction;
 
     return params;

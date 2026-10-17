@@ -89,7 +89,7 @@ DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
     GlimmerApply glimmer;
     uint4 irradianceParams; // xy = the pixel of each 2x2 quad HALF shades this frame, z = 1 when the ground cache can be read
     float4 groundParams;    // x = foliage extinction
-    GlimmerBrickParams bricks; // origin.w = 0 without brick GI
+    GlimmerBrickLevels bricks; // origin.w = 0 without brick GI
     GlimmerGroundParams ground;
     GlimmerSpanParams spans;
     GlimmerRelightParams groundLit; // the ground cache's lit windows
@@ -151,7 +151,7 @@ GlimmerSurface GlimmerLoadSurface(int2 pixel, uint2 dimensions)
 // what arrives at the card under a static surface: rgb = irradiance / pi, a = how much the card covers it. 0 where the surface has no crossing of its own
 float4 GlimmerSampleBrickIrradiance(float3 P, float3 N)
 {
-    if (bricks.origin.w == 0)
+    if (!GlimmerBrickHasWindow(bricks))
     {
         return (float4)0.0;
     }
@@ -165,16 +165,18 @@ float4 GlimmerSampleBrickIrradiance(float3 P, float3 N)
 
     int3 cell;
     uint axis;
+    uint level;
 
-    if (!GlimmerLoadBrickPlace(receiver.brick, cell, axis))
+    if (!GlimmerLoadBrickPlace(receiver.brick, cell, axis, level))
     {
         return (float4)0.0;
     }
 
-    const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(bricks, receiver.crossing);
-    const uint cardSlot = GlimmerBrickCardSlot(bricks, axis, crossing.normal, crossing.depth);
+    const GlimmerBrickParams levelBricks = GlimmerBrickLevelParams(bricks, level);
+    const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(levelBricks, receiver.crossing);
+    const uint cardSlot = GlimmerBrickCardSlot(levelBricks, axis, crossing.normal, crossing.depth);
 
-    const float4 arriving = GlimmerSampleBrickLight(bricks, cell, axis, cardSlot, P, crossing.normal, GLIMMER_BRICK_GI_FOOTPRINT_COLUMNS * bricks.params.z);
+    const float4 arriving = GlimmerSampleBrickLight(levelBricks, level, cell, axis, cardSlot, P, crossing.normal, GLIMMER_BRICK_GI_FOOTPRINT_COLUMNS * levelBricks.params.z);
 
     if (arriving.a <= 1e-3)
     {
