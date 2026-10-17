@@ -1,23 +1,15 @@
 #include <Editor/Commands/EditorCommandsCommon.hpp>
 
-#include <Rendering/ThumbnailCaptureState.hpp>
-#include <Rendering/Framebuffer.hpp>
-#include <Rendering/GBuffer.hpp>
-
 #include <Framework/View.hpp>
 #include <Framework/Game.hpp>
 #include <Framework/EngineStats.hpp>
-
-#include <Util/Img/WritePng.hpp>
 
 #include <Asset/SerializationUtils.hpp>
 
 #include <Scene/EnvironmentSettings.hpp>
 
-#include <Core/Utilities/Float16.hpp>
 #include <Core/Threading/Threads.hpp>
 #include <Core/Threading/Semaphore.hpp>
-#include <Core/Utilities/Time.hpp>
 
 namespace Hyperion {
 
@@ -714,6 +706,13 @@ DEFINE_EDITOR_COMMAND(CookGameContent);
 
 #pragma region CaptureViewport
 
+static const Map<UTF8StringView, EditorViewportType> s_editorViewportTypesByName = {
+    { "perspective", EditorViewportType::Perspective },
+    { "top", EditorViewportType::Top },
+    { "front", EditorViewportType::Front },
+    { "side", EditorViewportType::Side }
+};
+
 class EditorCommandCaptureViewport final : public EditorCommandBase
 {
     HYP_OBJECT_BODY(EditorCommandCaptureViewport);
@@ -750,7 +749,11 @@ public:
             // optional second argument picks a viewport by type: perspective, top, front or side
             if (NumArguments() >= 2)
             {
-                activeViewport = subsystem->FindViewport(GetArgument(1));
+                auto it = s_editorViewportTypesByName.Find(GetArgument(1).ToLower());
+                if (it != s_editorViewportTypesByName.End())
+                {
+                    activeViewport = subsystem->FindViewport(it->second);
+                }
             }
 
             if (activeViewport != nullptr)
@@ -770,97 +773,7 @@ public:
             ? FilePath(GetArgument(0))
             : CoreApi::GetExecutablePath() / "Screenshots" / "Viewport.png";
 
-        GetThreadById(g_renderThread)->GetScheduler().Enqueue(
-            [view = captureView, path, wireframeExtent]()
-            {
-                static constexpr uint64 CaptureTimeoutMs = 5000;
-                static ThumbnailCaptureState* s_pendingCapture = nullptr;
-                static uint64 s_pendingSinceMs = 0;
-
-                if (view->thumbnailCaptureState != nullptr)
-                {
-                    if (view->thumbnailCaptureState != s_pendingCapture || Time::Now().ToMilliseconds() - s_pendingSinceMs < CaptureTimeoutMs)
-                    {
-                        HYP_LOG(Editor, Warning, "a capture of this viewport is already in flight");
-                        return;
-                    }
-
-                    HYP_LOG(Editor, Warning, "abandoning a viewport capture that never completed");
-                    view->thumbnailCaptureState = nullptr;
-                }
-
-                const bool isWireframeView = bool(view->GetFlags() & ViewFlags::EDITOR_WIREFRAME_VIEW);
-                const FramebufferRef& framebuffer = isWireframeView ? FramebufferRef::Null() : view->GetOutputTarget().GetFramebuffer(GBufferPass::Opaque);
-
-                if (!isWireframeView && !framebuffer.IsValid())
-                {
-                    HYP_LOG(Editor, Warning, "the viewport hasn't rendered yet");
-                    return;
-                }
-
-                ThumbnailCaptureState* captureState = new ThumbnailCaptureState(isWireframeView ? wireframeExtent : framebuffer->GetExtent());
-                view->thumbnailCaptureState = captureState;
-
-                s_pendingCapture = captureState;
-                s_pendingSinceMs = Time::Now().ToMilliseconds();
-
-                captureState->Request(
-                    [view, path, captureState](ByteBuffer&& color, ByteBuffer&&, Vec2u extent)
-                    {
-                        const uint32 numPixels = extent.x * extent.y;
-
-                        if (numPixels != 0 && color.Size() >= size_t(numPixels) * 8)
-                        {
-                            ByteBuffer rgba8(size_t(numPixels) * 4);
-
-                            //shit for RGBA16F RT
-                            const Float16* src = reinterpret_cast<const Float16*>(color.Data());
-                            ubyte* dst = rgba8.Data();
-
-                            for (uint32 i = 0; i < numPixels; i++)
-                            {
-                                // sRGB
-                                for (uint32 c = 0; c < 3; c++)
-                                {
-                                    float value = MathUtil::Clamp(float(src[i * 4 + c]), 0.0f, 1.0f);
-
-                                    value = value <= 0.0031308f
-                                        ? value * 12.92f
-                                        : 1.055f * MathUtil::Pow(value, 1.0f / 2.4f) - 0.055f;
-
-                                    dst[i * 4 + c] = ubyte(MathUtil::Clamp(value * 255.0f + 0.5f, 0.0f, 255.0f));
-                                }
-
-                                dst[i * 4 + 3] = 255;
-                            }
-
-                            path.BasePath().MkDir();
-
-                            if (WritePng::Write(path, extent.x, extent.y, 4, rgba8.Data()))
-                            {
-                                HYP_LOG(Editor, Info, "EditorCommandCaptureViewport: wrote {} ({}x{})", path, extent.x, extent.y);
-                            }
-                            else
-                            {
-                                HYP_LOG(Editor, Error, "EditorCommandCaptureViewport: failed to write {}", path);
-                            }
-                        }
-
-                        if (view->thumbnailCaptureState == captureState)
-                        {
-                            view->thumbnailCaptureState = nullptr;
-                        }
-
-                        // not from inside its own callback
-                        GetThreadById(g_renderThread)->GetScheduler().Enqueue(
-                            [captureState]()
-                            {
-                                delete captureState;
-                            },
-                            TaskEnqueueFlags::FIRE_AND_FORGET);
-                    });
-            },
-            TaskEnqueueFlags::FIRE_AND_FORGET);
+        CaptureViewToPng(captureView, path, wireframeExtent);
     }
 
 private:

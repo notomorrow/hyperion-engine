@@ -86,6 +86,15 @@ public:
     String GetRecentProject(int32 index) const;
 
     HYP_METHOD()
+    int64 GetRecentProjectLastOpened(int32 index) const;
+
+    HYP_METHOD()
+    bool IsRecentProjectPinned(int32 index) const;
+
+    HYP_METHOD()
+    void SetRecentProjectPinned(const String& projectFilepath, bool pinned);
+
+    HYP_METHOD()
     void AddRecentProject(const String& projectFilepath);
 
     HYP_METHOD()
@@ -137,8 +146,19 @@ public:
     ScriptableDelegate<void> OnRecentProjectsChanged;
 
 private:
+    struct RecentProjectEntry
+    {
+        String filepath;
+        int64 lastOpened = 0;
+        bool pinned = false;
+    };
+
     void LoadRecentProjects();
     void SaveRecentProjects() const;
+
+    int32 FindRecentProject(const String& normalizedFilepath) const;
+    void InsertRecentProject(RecentProjectEntry&& entry);
+    void TrimRecentProjects();
 
     Handle<EditorProject> m_currentProject;
 
@@ -148,7 +168,8 @@ private:
 
     Array<Handle<Node>> m_clipboardNodes;
 
-    Array<String> m_recentProjects;
+    Array<RecentProjectEntry> m_recentProjects;
+    
     bool m_alwaysOpenLastProject;
     mutable Mutex m_recentProjectsMutex;
 

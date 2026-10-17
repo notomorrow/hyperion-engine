@@ -88,6 +88,7 @@ struct MeshComponent;
 struct ConvexDecompositionResult;
 
 enum class InstanceId : uint32;
+enum class EditorViewportType : uint8;
 
 HYP_ENUM()
 enum class MeshEditFaceMode : uint8
@@ -162,8 +163,8 @@ public:
     /*! \brief The viewport whose window is the app's main window. */
     EditorViewport* GetMainWindowViewport() const;
 
-    /*! \brief By type name: perspective, top, front or side. */
-    EditorViewport* FindViewport(const String& typeName) const;
+    /*! \brief Find EditorViewport by type. */
+    EditorViewport* FindViewport(EditorViewportType type) const;
 
     /*! \brief Input manager of the active viewport's window, falling back to the main window's. */
     InputManager* GetActiveInputManager() const;
