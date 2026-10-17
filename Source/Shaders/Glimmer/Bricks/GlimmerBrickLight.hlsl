@@ -3,7 +3,8 @@
 
 // LIGHT: the radiance each crossing of some bricks sends on diffusely, a thread per column
 // MIPS: one mip of those bricks' cards, the first from the crossings and the rest from the one below
-PERMUTE(MODE, LIGHT, MIPS)
+// GATHER: what arrives at each tile of those bricks' cards from what its slots found, a thread per tile
+PERMUTE(MODE, LIGHT, MIPS, GATHER)
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -30,15 +31,20 @@ DECLARE_SRV(DeferredPass, GlimmerBrickCountersBuffer) StructuredBuffer<uint> gli
 DECLARE_SRV(DeferredPass, GlimmerBrickLiveListBuffer) StructuredBuffer<uint> glimmerBrickLiveList;
 DECLARE_UAV(DeferredPass, GlimmerBrickRadianceBuffer) RWStructuredBuffer<uint> glimmerBrickRadiance;
 DECLARE_UAV(DeferredPass, GlimmerBrickCrossingLightBuffer) RWStructuredBuffer<uint> glimmerBrickCrossingLight;
+DECLARE_SRV(DeferredPass, GlimmerBrickSlotsBuffer) StructuredBuffer<uint> glimmerBrickSlots;
+DECLARE_UAV(DeferredPass, GlimmerBrickArrivingBuffer) RWStructuredBuffer<uint> glimmerBrickArriving;
 
 #include "../GlimmerApply.hlsli"
+#include "../GlimmerLight.hlsli"
 #include "GlimmerBricks.hlsli"
+#include "GlimmerBrickGI.hlsli"
 
 struct GlimmerBrickLightConstants
 {
     GlimmerBrickParams bricks;
     uint4 range;   // x = first place in the live list, y = bricks, z = 1 when they are the build list's, w = mip level
-    float4 params; // x = columns off its surface a shadow ray starts, y = how far a shadow ray looks
+    float4 params; // x = columns off its surface a shadow ray starts, y = how far a shadow ray looks, z = 1 when the indirect light is the slots' (brick GI)
+    GlimmerLightParams light;
 };
 
 DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
@@ -73,8 +79,6 @@ uint BrickOfSlot(uint slot)
     return glimmerBrickCounters[BUILD_LIST_BASE + 2u * slot];
 }
 
-#if defined(MODE_LIGHT)
-
 float3 SunIrradiance(out float3 outToSun)
 {
     const float3 toSun = world_shader_data.sun_direction_intensity.xyz;
@@ -84,6 +88,53 @@ float3 SunIrradiance(out float3 outToSun)
     const float aboveHorizon = saturate((outToSun.y + 0.1) / 0.15);
 
     return world_shader_data.sun_color.rgb * world_shader_data.sun_atmosphere_tint.rgb * (world_shader_data.sun_direction_intensity.w * aboveHorizon);
+}
+
+bool IsBrickGI()
+{
+    return constants.params.z != 0.0;
+}
+
+#if defined(MODE_LIGHT)
+
+// irradiance / pi the slots of the crossing's tile gathered, without the sun on the crossing itself
+float3 ArrivingAt(uint brick, uint axis, int2 column, GlimmerBrickCrossing crossing)
+{
+    const uint cardSlot = GlimmerBrickCardSlot(constants.bricks, axis, crossing.normal, crossing.depth);
+    const uint card = glimmerBrickIndex[GlimmerBrickWord(brick, uint(GLIMMER_BRICK_INDEX_CARDS) + cardSlot)];
+
+    if (card == GLIMMER_BRICK_NONE)
+    {
+        return (float3)0.0;
+    }
+
+    // a tile's few rays are noisy alone: a tent two tiles wide each way around the column, over the same card's tiles, weighted by how much of each is surface
+    const float2 at = (float2(column) + 0.5) / float(GLIMMER_BRICK_TILE) - 0.5;
+    const int2 first = int2(floor(at)) - 1;
+
+    float4 sum = (float4)0.0;
+
+    [unroll]
+    for (int dy = 0; dy < 4; dy++)
+    {
+        [unroll]
+        for (int dx = 0; dx < 4; dx++)
+        {
+            const int2 tile = first + int2(dx, dy);
+
+            if (any(tile < 0) || any(tile >= GLIMMER_BRICK_CARD_SIDE))
+            {
+                continue;
+            }
+
+            const float2 apart = abs(at - float2(tile));
+            const float weight = max(2.0 - apart.x, 0.0) * max(2.0 - apart.y, 0.0);
+
+            sum += GlimmerBrickUnpackLight(glimmerBrickArriving[card * uint(GLIMMER_BRICK_CARD_TEXELS) + uint(tile.y) * uint(GLIMMER_BRICK_CARD_SIDE) + uint(tile.x)]) * weight;
+        }
+    }
+
+    return sum.a > 0.0 ? sum.rgb / sum.a : (float3)0.0;
 }
 
 void LightColumn(uint brick, int2 column)
@@ -136,11 +187,13 @@ void LightColumn(uint brick, int2 column)
             }
         }
 
-        // rgb = irradiance / pi from the sky and what bounces
-        const float4 indirect = EvaluateGlimmer(glimmer, P, N);
+        // irradiance / pi from the sky and what bounces
+        const float3 indirect = IsBrickGI()
+            ? ArrivingAt(brick, axis, column, crossing) * glimmer.settings.x
+            : max(EvaluateGlimmer(glimmer, P, N).rgb, 0.0);
 
         const float3 emissive = GlimmerGetMaterialEmissive(packedMaterial & 0xFFFFu);
-        const float3 radiance = crossing.color * (sun + max(indirect.rgb, 0.0)) + emissive;
+        const float3 radiance = crossing.color * (sun + indirect) + emissive;
 
         glimmerBrickCrossingLight[crossingIndex] = GlimmerBrickPackLight(radiance, 7u);
     }
@@ -181,6 +234,92 @@ float4 TileLight(uint brick, uint axis, uint cardSlot, uint2 tile)
     }
 
     return sum / float(GLIMMER_BRICK_TILE * GLIMMER_BRICK_TILE);
+}
+
+// radiance coming back along a slot's ray, false for a slot with nothing to say: not traced, or its crossing's place since taken by another
+bool SlotRadiance(uint slot, float3 toSun, float3 sunIrradiance, out float3 outRadiance)
+{
+    outRadiance = (float3)0.0;
+
+    const uint kind = GlimmerBrickSlotKind(slot);
+
+    if (kind == GLIMMER_BRICK_SLOT_NONE)
+    {
+        return false;
+    }
+
+    if (kind == GLIMMER_BRICK_SLOT_CROSSING)
+    {
+        const uint crossing = slot & 0xFFFFFFu;
+
+        if (((slot >> 24u) & 63u) != GlimmerBrickCrossingHash(glimmerBrickCrossings[2u * crossing]))
+        {
+            return false;
+        }
+
+        outRadiance = GlimmerBrickUnpackLight(glimmerBrickCrossingLight[crossing]).rgb;
+
+        return true;
+    }
+
+    if (kind == GLIMMER_BRICK_SLOT_SKY)
+    {
+        const float transmittance = float((slot >> 20u) & 0xFFu) / 255.0;
+
+        outRadiance = GlimmerBrickSkyRadiance(constants.light, GlimmerBrickUnpackOctahedral(slot & 0xFFFFFu, 10u)) * transmittance;
+
+        return true;
+    }
+
+    if (slot == GLIMMER_BRICK_SLOT_DARK)
+    {
+        return true;
+    }
+
+    // past the bricks: lit by the sun, with nothing in its way counted, and the open sky
+    const float3 albedo = GlimmerBrickUnpackColor(slot & 0xFFFFu);
+    const float3 N = GlimmerBrickUnpackOctahedral((slot >> 16u) & 0xFFFu, 6u);
+
+    outRadiance = albedo * (sunIrradiance * (max(dot(N, toSun), 0.0) / HYP_FMATH_PI) + GlimmerBrickSkyIrradiance(constants.light, N));
+
+    return true;
+}
+
+void GatherTile(uint card, uint tile)
+{
+    float3 toSun;
+    const float3 sunIrradiance = SunIrradiance(toSun);
+
+    float3 sum = (float3)0.0;
+    uint numTraced = 0u;
+    uint numKnown = 0u;
+
+    for (uint ray = 0; ray < uint(GLIMMER_BRICK_GI_RAYS); ray++)
+    {
+        const uint slot = glimmerBrickSlots[GlimmerBrickSlotIndex(card, tile, ray)];
+
+        numTraced += slot != GLIMMER_BRICK_SLOT_NONE ? 1u : 0u;
+
+        float3 radiance;
+
+        if (SlotRadiance(slot, toSun, sunIrradiance, radiance))
+        {
+            sum += radiance;
+            numKnown++;
+        }
+    }
+
+    const uint outIndex = card * uint(GLIMMER_BRICK_CARD_TEXELS) + tile;
+
+    // a tile none of whose crossings' places are still theirs keeps what it had until it is traced again
+    if (numTraced == 0u)
+    {
+        glimmerBrickArriving[outIndex] = 0u;
+    }
+    else if (numKnown != 0u)
+    {
+        glimmerBrickArriving[outIndex] = GlimmerBrickPackLight(sum / float(numKnown), 7u);
+    }
 }
 
 #endif
@@ -230,6 +369,9 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         return;
     }
 
+#if defined(MODE_GATHER)
+    GatherTile(card, texelIndex);
+#else
     const uint base = card * uint(GLIMMER_BRICK_CARD_TEXELS);
     const uint2 texel = uint2(texelIndex % side, texelIndex / side);
 
@@ -244,12 +386,27 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     {
         const uint from = base + GlimmerBrickCardMipOffset(level - 1u);
 
+        float4 arriving = (float4)0.0;
+
         [unroll]
         for (uint child = 0; child < 4u; child++)
         {
             const uint2 under = texel * 2u + uint2(child & 1u, child >> 1u);
 
             mean += GlimmerBrickUnpackLight(glimmerBrickRadiance[from + under.y * side * 2u + under.x]) * 0.25;
+
+            if (IsBrickGI())
+            {
+                arriving += GlimmerBrickUnpackLight(glimmerBrickArriving[from + under.y * side * 2u + under.x]) * 0.25;
+            }
+        }
+
+        if (IsBrickGI())
+        {
+            const uint arrivingIndex = base + GlimmerBrickCardMipOffset(level) + texelIndex;
+            const uint arrivingShare = clamp(uint(arriving.a * 7.0 + 0.5), 1u, 7u);
+
+            glimmerBrickArriving[arrivingIndex] = arriving.a == 0.0 ? 0u : GlimmerBrickPackLight(arriving.rgb / arriving.a * (float(arrivingShare) / 7.0), arrivingShare);
         }
     }
 
@@ -266,5 +423,6 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
         glimmerBrickRadiance[outIndex] = GlimmerBrickPackLight(mean.rgb / mean.a * (float(share) / 7.0), share);
     }
+#endif
 #endif
 }

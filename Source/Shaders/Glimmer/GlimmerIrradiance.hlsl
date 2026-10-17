@@ -67,14 +67,30 @@ DECLARE_SRV(DeferredPass, WorldsBuffer) StructuredBuffer<WorldShaderData> _world
 
 #include "GlimmerApply.hlsli"
 
+DECLARE_SRV(DeferredPass, GlimmerBrickTableBuffer) StructuredBuffer<uint> glimmerBrickTable;
+DECLARE_SRV(DeferredPass, GlimmerBrickIndexBuffer) StructuredBuffer<uint> glimmerBrickIndex;
+DECLARE_SRV(DeferredPass, GlimmerBrickCrossingsBuffer) StructuredBuffer<uint> glimmerBrickCrossings;
+DECLARE_SRV(DeferredPass, GlimmerBrickMaterialBuffer) StructuredBuffer<uint> glimmerBrickMaterial;
+DECLARE_SRV(DeferredPass, GlimmerBrickArrivingBuffer) StructuredBuffer<uint> glimmerBrickArriving;
+
+#define GLIMMER_BRICK_SAMPLED_BUFFER glimmerBrickArriving
+#define GLIMMER_BRICKS_WITH_LIGHT
+#include "Bricks/GlimmerBricks.hlsli"
+
 DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
 {
     GlimmerApply glimmer;
     uint4 irradianceParams; // xy = the pixel of each 2x2 quad HALF shades this frame
+    GlimmerBrickParams bricks; // origin.w = 0 without brick GI
 };
 
 #define GLIMMER_APPLY_WITH_SAMPLING
 #include "GlimmerApply.hlsli"
+
+//////////BRICK GI/////////////
+// columns across the card patch a pixel reads what arrives over: 8 is the first mip above the tiles, four tiles' slots
+#define GLIMMER_BRICK_GI_FOOTPRINT_COLUMNS 8.0
+//////////////////////////////
 
 //////////UPSAMPLE////////////
 #define GLIMMER_UPSAMPLE_PLANE_TOLERANCE 0.02
@@ -111,6 +127,42 @@ GlimmerSurface GlimmerLoadSurface(int2 pixel, uint2 dimensions)
     return surface;
 }
 
+// what arrives at the card under a static surface: rgb = irradiance / pi, a = how much the card covers it. 0 where the surface has no crossing of its own
+float4 GlimmerSampleBrickIrradiance(float3 P, float3 N)
+{
+    if (bricks.origin.w == 0)
+    {
+        return (float4)0.0;
+    }
+
+    const GlimmerBrickReceiver receiver = GlimmerFindBrickReceiver(bricks, P, N);
+
+    if (!receiver.found)
+    {
+        return (float4)0.0;
+    }
+
+    int3 cell;
+    uint axis;
+
+    if (!GlimmerLoadBrickPlace(receiver.brick, cell, axis))
+    {
+        return (float4)0.0;
+    }
+
+    const GlimmerBrickCrossing crossing = GlimmerLoadBrickCrossing(bricks, receiver.crossing);
+    const uint cardSlot = GlimmerBrickCardSlot(bricks, axis, crossing.normal, crossing.depth);
+
+    const float4 arriving = GlimmerSampleBrickLight(bricks, cell, axis, cardSlot, P, crossing.normal, GLIMMER_BRICK_GI_FOOTPRINT_COLUMNS * bricks.params.z);
+
+    if (arriving.a <= 1e-3)
+    {
+        return (float4)0.0;
+    }
+
+    return float4(arriving.rgb / arriving.a * glimmer.settings.x, saturate(arriving.a * 2.0));
+}
+
 PSOutput GlimmerEvaluateSurface(GlimmerSurface surface)
 {
     PSOutput output;
@@ -119,6 +171,17 @@ PSOutput GlimmerEvaluateSurface(GlimmerSurface surface)
     const float3 R = reflect(-V, surface.N);
 
     output.irradiance = EvaluateGlimmer(glimmer, surface.P, surface.N, R, output.specular, output.reflection);
+
+    // brick GI: static surfaces read their card, the rest keep the volumes' light
+    if (glimmer.params.w != 0u)
+    {
+        const float4 brickIrradiance = GlimmerSampleBrickIrradiance(surface.P, surface.N);
+
+        if (brickIrradiance.a > 0.0)
+        {
+            output.irradiance = float4(lerp(output.irradiance.rgb, brickIrradiance.rgb, brickIrradiance.a), max(output.irradiance.a, brickIrradiance.a));
+        }
+    }
 
     return output;
 }

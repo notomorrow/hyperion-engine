@@ -652,7 +652,12 @@ GlimmerBrickReceiver GlimmerFindBrickReceiver(GlimmerBrickParams bricks, float3 
 
 #ifdef GLIMMER_BRICKS_WITH_LIGHT
 
-// the light a card sends on over a patch footprint metres across: rgb = radiance times how much of the patch is surface, a = that share. expects glimmerBrickRadiance
+// the card buffer read: what the cards send on, or what arrives at them (brick GI)
+#ifndef GLIMMER_BRICK_SAMPLED_BUFFER
+#define GLIMMER_BRICK_SAMPLED_BUFFER glimmerBrickRadiance
+#endif
+
+// the light a card sends on over a patch footprint metres across: rgb = radiance times how much of the patch is surface, a = that share. expects GLIMMER_BRICK_SAMPLED_BUFFER
 // read across the same card of the cells beside as well, so that neither a texel's edge nor a card's shows
 // a surface sloping across a brick spreads over the cards of the layers its plane passes through: with its normal, every one of them is read; a zero normal reads the card alone
 float4 GlimmerSampleBrickLight(GlimmerBrickParams bricks, int3 cell, uint axis, uint cardSlot, float3 position, float3 normal, float footprint)
@@ -738,7 +743,7 @@ float4 GlimmerSampleBrickLight(GlimmerBrickParams bricks, int3 cell, uint axis, 
                 continue;
             }
 
-            sum += GlimmerBrickUnpackLight(glimmerBrickRadiance[card * uint(GLIMMER_BRICK_CARD_TEXELS) + mipOffset + uint(within.y * side + within.x)]) * (weights.x * weights.y);
+            sum += GlimmerBrickUnpackLight(GLIMMER_BRICK_SAMPLED_BUFFER[card * uint(GLIMMER_BRICK_CARD_TEXELS) + mipOffset + uint(within.y * side + within.x)]) * (weights.x * weights.y);
         }
     }
 

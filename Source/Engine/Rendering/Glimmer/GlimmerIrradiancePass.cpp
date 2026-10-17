@@ -11,6 +11,7 @@
 #include <Rendering/Glimmer/GlimmerTechnique.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
 #include <Rendering/Glimmer/Bricks/GlimmerBrickReflections.hpp>
+#include <Rendering/Glimmer/Bricks/GlimmerBrickWorld.hpp>
 #include <Rendering/Glimmer/Bricks/GlimmerBrickCVars.hpp>
 
 #include <Rendering/RenderInterface.hpp>
@@ -211,6 +212,17 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
 
     const GBufferTarget& opaquePass = m_gbuffer->GetPass(GBufferPass::Opaque);
 
+    // brick GI: static surfaces read what arrives at their cards
+    const GlimmerBrickWorld* brickWorld = technique->GetBrickWorld();
+    const bool hasBrickGI = g_cvGlimmerBrickGI.Get() && brickWorld && brickWorld->IsReady() && brickWorld->HasGI() && brickWorld->GetArrivingBuffer().IsValid();
+
+    GlimmerBrickShaderData brickShaderData {};
+
+    if (hasBrickGI)
+    {
+        brickShaderData = brickWorld->GetShaderData();
+    }
+
     const auto draw = [&](const StaticShaderPropertyId& modeProperty)
     {
         ShaderPropertySet shaderProperties;
@@ -226,6 +238,7 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
 
         const Vec4u irradianceParams { halfResPick.x, halfResPick.y, 0, 0 };
         RI.cbufferAllocator->Write(&irradianceParams);
+        RI.cbufferAllocator->Write(&brickShaderData);
 
         RI.cbufferAllocator->Commit(cbuffer, cbufferOffset, cbufferSize);
 
@@ -242,6 +255,24 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
         cr << SetShaderUniform(uniformIndex++, "CBuffer"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
 
         uniformIndex = glimmerPass->BindApplyResources(cr, uniformIndex, renderSetup.world);
+
+        if (hasBrickGI)
+        {
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickTableBuffer"_sh, brickWorld->GetTableBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickIndexBuffer"_sh, brickWorld->GetIndexBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingsBuffer"_sh, brickWorld->GetCrossingsBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickMaterialBuffer"_sh, brickWorld->GetMaterialBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickArrivingBuffer"_sh, brickWorld->GetArrivingBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+        }
+        else
+        {
+            // HACK: any structured buffer will do, as the zeroed brick constants keep them from being read
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickTableBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickIndexBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingsBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickMaterialBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
+            cr << SetShaderUniform(uniformIndex++, "GlimmerBrickArrivingBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
+        }
 
         cr << CommitDrawState();
 

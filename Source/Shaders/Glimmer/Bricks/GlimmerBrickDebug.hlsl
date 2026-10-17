@@ -14,6 +14,7 @@
 #define DEBUG_VIEW_RECEIVER 3
 #define DEBUG_VIEW_LIGHT 4
 #define DEBUG_VIEW_LIGHT_COARSE 5
+#define DEBUG_VIEW_ARRIVING 6
 
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickTableBuffer) StructuredBuffer<uint> glimmerBrickTable;
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickIndexBuffer) StructuredBuffer<uint> glimmerBrickIndex;
@@ -22,6 +23,7 @@ DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickMaterialBuffer) StructuredBuffer<uint
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickCountersBuffer) StructuredBuffer<uint> glimmerBrickCounters;
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickRadianceBuffer) StructuredBuffer<uint> glimmerBrickRadiance;
 DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickCrossingLightBuffer) StructuredBuffer<uint> glimmerBrickCrossingLight;
+DECLARE_SRV(GlimmerBrickDebug, GlimmerBrickArrivingBuffer) StructuredBuffer<uint> glimmerBrickArriving;
 
 #define GLIMMER_BRICKS_WITH_LIGHT
 #include "GlimmerBricks.hlsli"
@@ -105,6 +107,28 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
             // magenta: the card has nothing there
             result = light.a > 1e-3 ? light.rgb / light.a : float3(1.0, 0.0, 1.0);
+        }
+    }
+    else if (mode == DEBUG_VIEW_ARRIVING)
+    {
+        if (didHitBricks)
+        {
+            int3 cell;
+            uint axis;
+            GlimmerLoadBrickPlace(brickHit.brick, cell, axis);
+
+            const uint cardSlot = GlimmerBrickCardSlot(constants.bricks, brickHit.axis, brickHit.normal, brickHit.depth);
+            const uint card = glimmerBrickIndex[GlimmerBrickWord(brickHit.brick, uint(GLIMMER_BRICK_INDEX_CARDS) + cardSlot)];
+
+            const float2 across = GlimmerBrickAcross(axis, cameraPosition + direction * brickHit.t - GlimmerBrickCellLow(constants.bricks, cell)) * constants.bricks.params.w;
+            const uint2 tile = uint2(clamp(int2(floor(across)), 0, GLIMMER_BRICK_SIDE - 1)) / uint(GLIMMER_BRICK_TILE);
+
+            const float4 arriving = card == GLIMMER_BRICK_NONE
+                ? (float4)0.0
+                : GlimmerBrickUnpackLight(glimmerBrickArriving[card * uint(GLIMMER_BRICK_CARD_TEXELS) + tile.y * uint(GLIMMER_BRICK_CARD_SIDE) + tile.x]);
+
+            // magenta: nothing has arrived at the tile yet
+            result = arriving.a > 1e-3 ? arriving.rgb / arriving.a : float3(1.0, 0.0, 1.0);
         }
     }
     else if (mode == DEBUG_VIEW_RECEIVER)

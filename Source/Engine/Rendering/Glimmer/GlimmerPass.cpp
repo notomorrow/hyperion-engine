@@ -81,6 +81,7 @@ static constexpr Pair<StringHash, GlimmerRestartParts> StatefulShaders[] = {
     { "GlimmerHeightBounds"_sh, GlimmerRestartParts::SpanCache },
     { "GlimmerBrickBuild"_sh, GlimmerRestartParts::Bricks },
     { "GlimmerBrickLight"_sh, GlimmerRestartParts::Bricks },
+    { "GlimmerBrickGITrace"_sh, GlimmerRestartParts::Bricks },
     { "GlimmerProbeAlloc"_sh, GlimmerRestartParts::Lighting },
     { "GlimmerProbeTrace"_sh, GlimmerRestartParts::Lighting },
     { "GlimmerProbeBlend"_sh, GlimmerRestartParts::Lighting },
@@ -611,7 +612,7 @@ void GlimmerPass::WriteApplyShaderData(CBufferAllocator& cbufferAllocator, World
         const int debugView = g_cvGlimmerDebugView.Get();
         const bool isApplyView = debugView == int(GlimmerDebugView::Irradiance) || debugView == int(GlimmerDebugView::Coverage);
 
-        shaderData.params = Vec4u(isApplyView ? uint32(debugView) : 0u, 1u, uint32(MathUtil::Clamp(g_cvGlimmerDebugSH.Get(), 0, 3)), 0);
+        shaderData.params = Vec4u(isApplyView ? uint32(debugView) : 0u, 1u, uint32(MathUtil::Clamp(g_cvGlimmerDebugSH.Get(), 0, 3)), g_cvGlimmerBrickGI.Get() ? 1u : 0u);
         shaderData.settings = Vec4f(MathUtil::Max(g_cvGlimmerIntensity.Get(), 0.0f), 0.0f, 0.0f, 0.0f);
     }
 

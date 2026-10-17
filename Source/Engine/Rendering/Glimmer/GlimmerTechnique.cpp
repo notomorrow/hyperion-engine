@@ -298,7 +298,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         GlimmerLightShaderData light;
         GetGlimmerLightShaderData(context.skyProbe, light);
 
-        m_brickWorld->Update(context.frame, viewerPosition, lookAhead, budgetScale, sceneInstances, *context.triangleCache, this, light);
+        m_brickWorld->Update(context.frame, viewerPosition, lookAhead, budgetScale, sceneInstances, *context.triangleCache, context.surfaceCache, context.spanCache, this, light);
     }
 }
 

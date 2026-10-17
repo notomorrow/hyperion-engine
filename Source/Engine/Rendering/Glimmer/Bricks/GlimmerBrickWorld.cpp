@@ -12,6 +12,8 @@
 #include <Rendering/Glimmer/GlimmerPass.hpp>
 #include <Rendering/Glimmer/GlimmerSceneInstances.hpp>
 #include <Rendering/Glimmer/GlimmerTriangleCache.hpp>
+#include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
+#include <Rendering/Glimmer/GlimmerSpanCache.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
 
@@ -52,6 +54,7 @@ HYP_DECLARE_LOG_CHANNEL(Rendering);
 static EngineStatGpuTimer s_statGlimmerBrickBuild("Rendering/GPU/Glimmer/BrickBuild");
 static EngineStatGpuTimer s_statGlimmerBrickLight("Rendering/GPU/Glimmer/BrickLight");
 static EngineStatGpuTimer s_statGlimmerBrickDebug("Rendering/GPU/Glimmer/BrickDebug");
+static EngineStatGpuTimer s_statGlimmerBrickGITrace("Rendering/GPU/Glimmer/BrickGITrace");
 static EngineStatGpuTimer s_statGlimmerBrickPassClear("Rendering/GPU/Glimmer/BrickPasses/Clear");
 static EngineStatGpuTimer s_statGlimmerBrickPassBin("Rendering/GPU/Glimmer/BrickPasses/Bin");
 static EngineStatGpuTimer s_statGlimmerBrickPassAlloc("Rendering/GPU/Glimmer/BrickPasses/Alloc");
@@ -79,6 +82,7 @@ static StaticShaderPropertyId s_propBrickModes[] = {
 
 static StaticShaderPropertyId s_propBrickLightModeLight { ShaderProperty(NAME("MODE"), NAME("LIGHT")) };
 static StaticShaderPropertyId s_propBrickLightModeMips { ShaderProperty(NAME("MODE"), NAME("MIPS")) };
+static StaticShaderPropertyId s_propBrickLightModeGather { ShaderProperty(NAME("MODE"), NAME("GATHER")) };
 
 static constexpr uint32 BrickGroupSize = 64;
 static constexpr uint32 BrickTableSize = GlimmerBrickGridXZ * GlimmerBrickGridY * GlimmerBrickGridXZ * 3;
@@ -99,6 +103,8 @@ static constexpr double IdealCardsPerBrick = 2.5;
 static constexpr uint32 RelightBricksPerFrame = 128;
 static constexpr uint32 RelightTrickleBricks = 16;
 static constexpr float RelightBurstChange = 0.05f;
+
+static constexpr float GIRayBiasColumns = 0.5f;
 
 static_assert(InitialPoolBricks <= GlimmerBrickMaxPoolBricks && InitialPoolPages <= GlimmerBrickMaxPoolPages && InitialPoolCards <= GlimmerBrickMaxPoolCards);
 
@@ -152,7 +158,17 @@ struct GlimmerBrickLightConstants
 {
     GlimmerBrickShaderData bricks;
     Vec4u range;  // x = first place in the live list, y = bricks, z = 1 when they are the build list's, w = mip level
-    Vec4f params; // x = columns off its surface a shadow ray starts, y = how far a shadow ray looks
+    Vec4f params; // x = columns off its surface a shadow ray starts, y = how far a shadow ray looks, z = 1 when the indirect light is the slots' (brick GI)
+    GlimmerLightShaderData light;
+};
+
+struct GlimmerBrickGITraceConstants
+{
+    GlimmerBrickShaderData bricks;
+    Vec4u range;  // x = first place in the live list, y = bricks, z = 1 when they are the build list's, w = 1 when the ground and spans can be traced
+    Vec4f params; // x = columns off its surface a ray starts, y = how far a ray looks, z = foliage extinction, w = albedo where the ground's isn't known
+    GlimmerGroundShaderData ground;
+    GlimmerSpanShaderData spans;
 };
 
 struct GlimmerBrickDebugConstants
@@ -168,15 +184,17 @@ struct GlimmerBrickDebugConstants
 Vec3u GlimmerBrickWorld::s_largestPools = Vec3u::Zero();
 
 const GlimmerBrickWorld::PoolBuffer GlimmerBrickWorld::s_poolBuffers[] = {
-    { &GlimmerBrickWorld::m_indexBuffer, PoolBricks, GlimmerBrickIndexStride, false, NAME("GlimmerBrickIndex") },
-    { &GlimmerBrickWorld::m_freeListBuffer, PoolBricks, 1, false, NAME("GlimmerBrickFreeList") },
-    { &GlimmerBrickWorld::m_liveListBuffer, PoolBricks, 1, false, NAME("GlimmerBrickLiveList") },
-    { &GlimmerBrickWorld::m_crossingsBuffer, PoolPages, GlimmerBrickPageCrossings * 2, false, NAME("GlimmerBrickCrossings") },
-    { &GlimmerBrickWorld::m_materialBuffer, PoolPages, GlimmerBrickPageCrossings, false, NAME("GlimmerBrickMaterial") },
-    { &GlimmerBrickWorld::m_pageFreeListBuffer, PoolPages, 1, false, NAME("GlimmerBrickPageFreeList") },
-    { &GlimmerBrickWorld::m_crossingLightBuffer, PoolPages, GlimmerBrickPageCrossings, true, NAME("GlimmerBrickCrossingLight") },
-    { &GlimmerBrickWorld::m_cardFreeListBuffer, PoolCards, 1, false, NAME("GlimmerBrickCardFreeList") },
-    { &GlimmerBrickWorld::m_radianceBuffer, PoolCards, GlimmerBrickCardTexels, true, NAME("GlimmerBrickRadiance") }
+    { &GlimmerBrickWorld::m_indexBuffer, PoolBricks, GlimmerBrickIndexStride, PoolUse::Always, NAME("GlimmerBrickIndex") },
+    { &GlimmerBrickWorld::m_freeListBuffer, PoolBricks, 1, PoolUse::Always, NAME("GlimmerBrickFreeList") },
+    { &GlimmerBrickWorld::m_liveListBuffer, PoolBricks, 1, PoolUse::Always, NAME("GlimmerBrickLiveList") },
+    { &GlimmerBrickWorld::m_crossingsBuffer, PoolPages, GlimmerBrickPageCrossings * 2, PoolUse::Always, NAME("GlimmerBrickCrossings") },
+    { &GlimmerBrickWorld::m_materialBuffer, PoolPages, GlimmerBrickPageCrossings, PoolUse::Always, NAME("GlimmerBrickMaterial") },
+    { &GlimmerBrickWorld::m_pageFreeListBuffer, PoolPages, 1, PoolUse::Always, NAME("GlimmerBrickPageFreeList") },
+    { &GlimmerBrickWorld::m_crossingLightBuffer, PoolPages, GlimmerBrickPageCrossings, PoolUse::Lit, NAME("GlimmerBrickCrossingLight") },
+    { &GlimmerBrickWorld::m_cardFreeListBuffer, PoolCards, 1, PoolUse::Always, NAME("GlimmerBrickCardFreeList") },
+    { &GlimmerBrickWorld::m_radianceBuffer, PoolCards, GlimmerBrickCardTexels, PoolUse::Lit, NAME("GlimmerBrickRadiance") },
+    { &GlimmerBrickWorld::m_slotsBuffer, PoolCards, GlimmerBrickGITiles * GlimmerBrickGIRays, PoolUse::GI, NAME("GlimmerBrickSlots") },
+    { &GlimmerBrickWorld::m_arrivingBuffer, PoolCards, GlimmerBrickCardTexels, PoolUse::GI, NAME("GlimmerBrickArriving") }
 };
 
 GlimmerBrickWorld::GlimmerBrickWorld()
@@ -252,14 +270,19 @@ static float LightChange(const GlimmerLightShaderData& from, const GlimmerLightS
     return total > 1e-6f ? change / total : (change > 0.0f ? 1.0f : 0.0f);
 }
 
-// a crossing's light and a card's texels are only held while lit
-uint64 GlimmerBrickWorld::PoolBytes(const Vec3u& pools, bool isLit)
+// a crossing's light and a card's texels are only held while lit, and the GI's slots and what arrives only with brick GI
+bool GlimmerBrickWorld::IsPoolUseHeld(PoolUse use, bool isLit, bool isGI)
+{
+    return use == PoolUse::Always || (use == PoolUse::Lit && isLit) || (use == PoolUse::GI && isGI);
+}
+
+uint64 GlimmerBrickWorld::PoolBytes(const Vec3u& pools, bool isLit, bool isGI)
 {
     uint64 numWords = 0;
 
     for (const PoolBuffer& poolBuffer : s_poolBuffers)
     {
-        numWords += isLit || !poolBuffer.isLitOnly ? uint64(pools[poolBuffer.pool]) * poolBuffer.wordsPerItem : 0;
+        numWords += IsPoolUseHeld(poolBuffer.use, isLit, isGI) ? uint64(pools[poolBuffer.pool]) * poolBuffer.wordsPerItem : 0;
     }
 
     return numWords * sizeof(uint32);
@@ -290,7 +313,7 @@ Vec3u GlimmerBrickWorld::GetInitialPools() const
         {
             const uint32 middle = low + (high - low + 1) / 2;
 
-            if (PoolBytes(getIdeal(middle), true) <= initialBytes)
+            if (PoolBytes(getIdeal(middle), true, false) <= initialBytes)
             {
                 low = middle;
             }
@@ -332,30 +355,35 @@ void GlimmerBrickWorld::CreateResources()
 
     m_pools = GetInitialPools();
 
-    CreatePoolBuffers(false);
+    CreatePoolBuffers(PoolUse::Always);
 
     if (m_isLit)
     {
-        CreatePoolBuffers(true);
+        CreatePoolBuffers(PoolUse::Lit);
+    }
+
+    if (m_isGI)
+    {
+        CreatePoolBuffers(PoolUse::GI);
     }
 }
 
-void GlimmerBrickWorld::CreatePoolBuffers(bool isLitOnly)
+void GlimmerBrickWorld::CreatePoolBuffers(PoolUse use)
 {
     for (const PoolBuffer& poolBuffer : s_poolBuffers)
     {
-        if (poolBuffer.isLitOnly == isLitOnly)
+        if (poolBuffer.use == use)
         {
             this->*poolBuffer.buffer = CreateBrickBuffer(size_t(m_pools[poolBuffer.pool]) * poolBuffer.wordsPerItem, poolBuffer.name);
         }
     }
 }
 
-void GlimmerBrickWorld::ReleaseLitResources()
+void GlimmerBrickWorld::ReleasePoolBuffers(PoolUse use)
 {
     for (const PoolBuffer& poolBuffer : s_poolBuffers)
     {
-        if (poolBuffer.isLitOnly)
+        if (poolBuffer.use == use)
         {
             EnqueueDeletion(std::move(this->*poolBuffer.buffer));
         }
@@ -370,7 +398,7 @@ void GlimmerBrickWorld::GrowPoolResources(Frame* frame, const Vec3u& grown)
 
     for (const PoolBuffer& poolBuffer : s_poolBuffers)
     {
-        if (grown[poolBuffer.pool] == old[poolBuffer.pool] || (poolBuffer.isLitOnly && !m_isLit))
+        if (grown[poolBuffer.pool] == old[poolBuffer.pool] || !IsPoolUseHeld(poolBuffer.use, m_isLit, m_isGI))
         {
             continue;
         }
@@ -444,7 +472,7 @@ bool GlimmerBrickWorld::GrowPools(const Vec3u& needed)
             const uint32 middle = low + (high - low + 1) / 2;
             const Vec3u balanced = balancedAt(middle);
 
-            if (PoolBytes(balanced, m_isLit) <= budgetBytes)
+            if (PoolBytes(balanced, m_isLit, m_isGI) <= budgetBytes)
             {
                 low = middle;
             }
@@ -480,7 +508,7 @@ bool GlimmerBrickWorld::GrowPools(const Vec3u& needed)
             Vec3u candidate = grown;
             candidate[pool] = current[pool] + increase;
 
-            if (PoolBytes(candidate, m_isLit) <= budgetBytes)
+            if (PoolBytes(candidate, m_isLit, m_isGI) <= budgetBytes)
             {
                 grown = candidate;
 
@@ -497,7 +525,7 @@ bool GlimmerBrickWorld::GrowPools(const Vec3u& needed)
     if (grown != m_grownPools)
     {
         HYP_LOG(Rendering, Info, "Glimmer: brick pools ran short; growing to {} bricks, {} pages and {} cards ({} MB)",
-            grown.x, grown.y, grown.z, PoolBytes(grown, m_isLit) / (1024ull * 1024ull));
+            grown.x, grown.y, grown.z, PoolBytes(grown, m_isLit, m_isGI) / (1024ull * 1024ull));
     }
 
     m_grownPools = grown;
@@ -560,6 +588,13 @@ uint32 GlimmerBrickWorld::BindBuffers(CommandRecorder& cr, uint32 uniformIndex, 
     {
         cr << SetShaderUniform(uniformIndex++, "GlimmerBrickRadianceBuffer"_sh, (m_isLit ? m_radianceBuffer : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
         cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingLightBuffer"_sh, (m_isLit ? m_crossingLightBuffer : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+    }
+
+    // without brick GI, any buffer read only already will do for the slots, as nothing reads them
+    if (bindings & GlimmerBrickBindings::GI)
+    {
+        cr << SetShaderUniform(uniformIndex++, "GlimmerBrickSlotsBuffer"_sh, (m_isGI ? m_slotsBuffer : m_indexBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
+        cr << SetShaderUniform(uniformIndex++, "GlimmerBrickArrivingBuffer"_sh, (m_isGI ? m_arrivingBuffer : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
     }
 
     return uniformIndex;
@@ -854,6 +889,11 @@ void GlimmerBrickWorld::BuildChunks(Frame* frame, Chunk* const* chunks, uint32 n
             DispatchIndirect(frame, BuildPass::Tiles, BrickArgsTiles);
         }
 
+        if (m_isGI)
+        {
+            TraceSlots(frame, 0, 0, true);
+        }
+
         if (m_isLit)
         {
             ENGINE_STAT_GPU_SCOPE(&s_statGlimmerBrickPassLight);
@@ -1094,7 +1134,17 @@ bool GlimmerBrickWorld::MakeRoom(Frame* frame, const Chunk& requester, const Vec
     return true;
 }
 
-void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const Vec3f& lookAhead, float budgetScale, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache, const GlimmerTechnique* technique, const GlimmerLightShaderData& light)
+void GlimmerBrickWorld::Update(
+    Frame* frame,
+    const Vec3f& viewerPosition,
+    const Vec3f& lookAhead,
+    float budgetScale,
+    const GlimmerSceneInstances& sceneInstances,
+    const GlimmerTriangleCache& triangleCache,
+    const GlimmerSurfaceCache* surfaceCache,
+    const GlimmerSpanCache* spanCache,
+    const GlimmerTechnique* technique,
+    const GlimmerLightShaderData& light)
 {
     HYP_SCOPE;
 
@@ -1105,6 +1155,9 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
 
     m_sceneInstances = &sceneInstances;
     m_triangleCache = &triangleCache;
+    m_surfaceCache = surfaceCache;
+    m_spanCache = spanCache;
+    m_light = light;
 
     if (!m_tableBuffer.IsValid())
     {
@@ -1150,8 +1203,9 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
         MarkAllDirty();
     }
 
-    // only the reflections and the light debug views read the light
-    const bool wantsLight = g_cvGlimmerBricksReflections.Get() || m_framesSinceLightView < LightViewFrames;
+    // only the reflections, brick GI and the light debug views read the light
+    const bool wantsGI = g_cvGlimmerBrickGI.Get();
+    const bool wantsLight = g_cvGlimmerBricksReflections.Get() || wantsGI || m_framesSinceLightView < LightViewFrames;
 
     if (wantsLight != m_isLit)
     {
@@ -1159,7 +1213,7 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
 
         if (m_isLit)
         {
-            CreatePoolBuffers(true);
+            CreatePoolBuffers(PoolUse::Lit);
 
             // bricks only take cards while lit
             MarkAllDirty();
@@ -1168,7 +1222,28 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
         }
         else
         {
-            ReleaseLitResources();
+            ReleasePoolBuffers(PoolUse::Lit);
+        }
+    }
+
+    if (wantsGI != m_isGI)
+    {
+        m_isGI = wantsGI;
+
+        if (m_isGI)
+        {
+            CreatePoolBuffers(PoolUse::GI);
+
+            // every brick's slots are traced as it is built
+            MarkAllDirty();
+
+            m_hasRelitLight = false;
+        }
+        else
+        {
+            ReleasePoolBuffers(PoolUse::GI);
+
+            m_hasRelitLight = false;
         }
     }
 
@@ -1325,6 +1400,15 @@ void GlimmerBrickWorld::Update(Frame* frame, const Vec3f& viewerPosition, const 
         }
     }
 
+    const uint32 numRetraceBricks = uint32(MathUtil::Max(g_cvGlimmerBrickGIRetraceBricks.Get(), 0));
+
+    if (m_isGI && numRetraceBricks != 0)
+    {
+        TraceSlots(frame, m_retraceCursor, numRetraceBricks, false);
+
+        m_retraceCursor += numRetraceBricks;
+    }
+
     const uint32 numRelightBricks = MathUtil::Min(m_relightBurst != 0 ? RelightBricksPerFrame : RelightTrickleBricks, m_pools.x);
 
     m_relightBurst -= MathUtil::Min(m_relightBurst, numRelightBricks);
@@ -1365,7 +1449,8 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
         GlimmerBrickLightConstants constants {};
         constants.bricks = m_shaderData;
         constants.range = Vec4u(firstBrick, numBricks, isBuildList ? 1u : 0u, level);
-        constants.params = Vec4f(ShadowBiasColumns, ShadowDistance, 0.0f, 0.0f);
+        constants.params = Vec4f(ShadowBiasColumns, ShadowDistance, m_isGI ? 1.0f : 0.0f, 0.0f);
+        constants.light = m_light;
 
         GpuBuffer* cbuffer = nullptr;
         size_t cbufferOffset = 0;
@@ -1382,6 +1467,16 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
         cr << InsertBarrier(m_radianceBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
         cr << InsertBarrier(m_crossingLightBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
 
+        if (m_isGI)
+        {
+            cr << InsertBarrier(m_slotsBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
+            cr << InsertBarrier(m_arrivingBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+        }
+        else
+        {
+            cr << InsertBarrier(m_placeholderBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+        }
+
         cr << SetCurrentShader(ShaderDesc(NAME("GlimmerBrickLight"), shaderProperties));
 
         uint32 uniformIndex = 0;
@@ -1392,7 +1487,7 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
         cr << SetShaderUniform(uniformIndex++, "SamplerLinearMipmap"_sh, RI.placeholderData->GetSamplerLinearMipmap());
         cr << SetShaderUniform(uniformIndex++, "GlimmerBrickLiveListBuffer"_sh, m_liveListBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
 
-        uniformIndex = BindBuffers(cr, uniformIndex, GlimmerBrickBindings::Counters | GlimmerBrickBindings::Light);
+        uniformIndex = BindBuffers(cr, uniformIndex, GlimmerBrickBindings::Counters | GlimmerBrickBindings::Light | GlimmerBrickBindings::GI);
         uniformIndex = GlimmerTechnique::BindApplyResources(cr, uniformIndex, hasIndirect ? technique : nullptr);
 
         if (isBuildList)
@@ -1405,6 +1500,12 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
         }
     };
 
+    // what arrives at each tile from what its slots found as lit last, then the crossings lit with it
+    if (m_isGI)
+    {
+        dispatchPass(s_propBrickLightModeGather, GlimmerBrickCardFirstMip, GlimmerBrickCards * GlimmerBrickGITiles, BrickArgsMips);
+    }
+
     dispatchPass(s_propBrickLightModeLight, 0, BrickColumnsPerBrick, BrickArgsColumns);
 
     for (uint32 level = GlimmerBrickCardFirstMip; level < GlimmerBrickMips; level++)
@@ -1416,6 +1517,84 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
 
     cr << InsertBarrier(m_radianceBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
     cr << InsertBarrier(m_crossingLightBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
+
+    if (m_isGI)
+    {
+        cr << InsertBarrier(m_arrivingBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
+    }
+}
+
+void GlimmerBrickWorld::TraceSlots(Frame* frame, uint32 firstBrick, uint32 numBricks, bool isBuildList)
+{
+    HYP_SCOPE;
+
+    ENGINE_STAT_GPU_SCOPE(&s_statGlimmerBrickGITrace);
+
+    CommandRecorder& cr = frame->cr;
+
+    InsertBarriers(frame, false);
+
+    const bool hasHeightfield = m_surfaceCache && m_spanCache && m_spanCache->GetSpansBuffer().IsValid() && m_spanCache->GetHeightBoundsBuffer().IsValid()
+        && m_surfaceCache->GetGroundImageView().IsValid() && m_surfaceCache->GetGroundAlbedoImageView().IsValid();
+
+    GlimmerBrickGITraceConstants constants {};
+    constants.bricks = m_shaderData;
+    constants.range = Vec4u(firstBrick, numBricks, isBuildList ? 1u : 0u, hasHeightfield ? 1u : 0u);
+    constants.params = Vec4f(GIRayBiasColumns, GlimmerMaxRayDistance, GetGlimmerFoliageExtinction(), GlimmerDefaultGroundAlbedo);
+
+    if (hasHeightfield)
+    {
+        constants.ground = m_surfaceCache->GetGroundShaderData();
+        constants.spans = m_spanCache->GetShaderData();
+    }
+
+    GpuBuffer* cbuffer = nullptr;
+    size_t cbufferOffset = 0;
+    size_t cbufferSize = 0;
+
+    RI.cbufferAllocator->Write(&constants);
+    RI.cbufferAllocator->Commit(cbuffer, cbufferOffset, cbufferSize);
+
+    cr << InsertBarrier(m_slotsBuffer.Get(), ResourceState::UnorderedAccess, ShaderModuleType::Compute);
+
+    cr << SetCurrentShader(ShaderDesc(NAME("GlimmerBrickGITrace")));
+
+    uint32 uniformIndex = 0;
+
+    cr << SetShaderUniform(uniformIndex++, "CBuffer"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
+    cr << SetShaderUniform(uniformIndex++, "GlimmerBrickLiveListBuffer"_sh, m_liveListBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
+    cr << SetShaderUniform(uniformIndex++, "GlimmerBrickSlotsBuffer"_sh, m_slotsBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
+
+    uniformIndex = BindBuffers(cr, uniformIndex, GlimmerBrickBindings::Counters);
+
+    if (hasHeightfield)
+    {
+        cr << SetShaderUniform(uniformIndex++, "GlimmerGroundTexture"_sh, m_surfaceCache->GetGroundImageView());
+        cr << SetShaderUniform(uniformIndex++, "GlimmerGroundAlbedoTexture"_sh, m_surfaceCache->GetGroundAlbedoImageView());
+        cr << SetShaderUniform(uniformIndex++, "GlimmerSpansBuffer"_sh, m_spanCache->GetSpansBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+        cr << SetShaderUniform(uniformIndex++, "GlimmerHeightBoundsBuffer"_sh, m_spanCache->GetHeightBoundsBuffer().Get(), ShaderDataOffset(0, sizeof(float)));
+    }
+    else
+    {
+        cr << InsertBarrier(m_placeholderBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
+
+        cr << SetShaderUniform(uniformIndex++, "GlimmerGroundTexture"_sh, RI.placeholderData->GetImageView2D1x1R8Array());
+        cr << SetShaderUniform(uniformIndex++, "GlimmerGroundAlbedoTexture"_sh, RI.placeholderData->GetImageView2D1x1R8Array());
+        cr << SetShaderUniform(uniformIndex++, "GlimmerSpansBuffer"_sh, m_placeholderBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
+        cr << SetShaderUniform(uniformIndex++, "GlimmerHeightBoundsBuffer"_sh, m_placeholderBuffer.Get(), ShaderDataOffset(0, sizeof(float)));
+    }
+
+    // a row of groups per brick, as the light's columns
+    if (isBuildList)
+    {
+        cr << DispatchComputeIndirect(m_dispatchArgsBuffer.Get(), BrickArgsColumns * sizeof(uint32));
+    }
+    else
+    {
+        cr << DispatchCompute(Vec3u((BrickColumnsPerBrick + BrickGroupSize - 1) / BrickGroupSize, numBricks, 1));
+    }
+
+    cr << InsertBarrier(m_slotsBuffer.Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
 }
 
 void GlimmerBrickWorld::GetBuildingChunks(Vec4i& outOrigin, Vec4u (&outBits)[16]) const
@@ -1474,6 +1653,11 @@ bool GlimmerBrickWorld::RenderDebugView(const GlimmerDebugViewContext& context, 
         return false;
     }
 
+    if (debugView == GlimmerBrickDebugView::Arriving && !m_isGI)
+    {
+        return false;
+    }
+
 
     Framebuffer* gbufferFramebuffer = context.gbufferFramebuffer;
     const Vec2u extent = context.extent;
@@ -1501,6 +1685,7 @@ bool GlimmerBrickWorld::RenderDebugView(const GlimmerDebugViewContext& context, 
     InsertBarriers(context.frame, false);
     cr << InsertBarrier((m_isLit ? m_radianceBuffer : m_placeholderBuffer).Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
     cr << InsertBarrier((m_isLit ? m_crossingLightBuffer : m_placeholderBuffer).Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
+    cr << InsertBarrier((m_isGI ? m_arrivingBuffer : m_placeholderBuffer).Get(), ResourceState::ShaderResource, ShaderModuleType::Compute);
 
     cr << SetCurrentShader(ShaderDesc(NAME("GlimmerBrickDebug")));
 
@@ -1513,6 +1698,8 @@ bool GlimmerBrickWorld::RenderDebugView(const GlimmerDebugViewContext& context, 
     cr << SetShaderUniform(uniformIndex++, "CamerasBuffer"_sh, RI.namedBuffers[NamedBuffer::Cameras], Resources::GetBinding(context.view->GetCamera()));
 
     uniformIndex = BindBuffers(cr, uniformIndex, GlimmerBrickBindings::Counters | GlimmerBrickBindings::Light);
+
+    cr << SetShaderUniform(uniformIndex++, "GlimmerBrickArrivingBuffer"_sh, (m_isGI ? m_arrivingBuffer : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
 
     cr << DispatchCompute(Vec3u { (extent.x + 7) / 8, (extent.y + 7) / 8, 1 });
 

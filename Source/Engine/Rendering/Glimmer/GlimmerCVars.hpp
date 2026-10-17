@@ -52,4 +52,10 @@ extern CVar<bool> g_cvGlimmerLookAhead;
 extern CVar<float> g_cvGlimmerStartupBurstSeconds;
 extern CVar<int> g_cvGlimmerBuildThreads;
 
+// diffuse GI from the bricks' slots and cards in place of the SH grid
+extern CVar<bool> g_cvGlimmerBrickGI;
+
+// live bricks whose GI slots are traced again each frame, so ones that hit a place since given to another brick come right
+extern CVar<int> g_cvGlimmerBrickGIRetraceBricks;
+
 } // namespace Hyperion

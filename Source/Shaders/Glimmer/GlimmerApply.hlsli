@@ -6,7 +6,7 @@
 
 struct GlimmerApply
 {
-    uint4 params;    // x = GLIMMER_DEBUG_VIS_*, y = 1 when either volume can be sampled, z = GLIMMER_DEBUG_SH_*
+    uint4 params;    // x = GLIMMER_DEBUG_VIS_*, y = 1 when either volume can be sampled, z = GLIMMER_DEBUG_SH_*, w = 1 when brick GI is on
     float4 settings; // x = intensity
     GlimmerProbeVolume probes;
     GlimmerSHVolume sh;

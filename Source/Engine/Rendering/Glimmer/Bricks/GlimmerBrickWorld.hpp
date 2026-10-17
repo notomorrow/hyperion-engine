@@ -29,6 +29,8 @@ namespace Hyperion {
 class GlimmerSceneInstances;
 class GlimmerTriangleCache;
 class GlimmerTechnique;
+class GlimmerSurfaceCache;
+class GlimmerSpanCache;
 struct GlimmerDebugViewContext;
 
 static constexpr uint32 GlimmerBrickGridXZ = 128;
@@ -43,6 +45,10 @@ static constexpr uint32 GlimmerBrickMips = 6;
 static constexpr uint32 GlimmerBrickCardFirstMip = 2;
 static constexpr uint32 GlimmerBrickCardSide = GlimmerBrickSide >> GlimmerBrickCardFirstMip;
 static constexpr uint32 GlimmerBrickCardTexels = (4 * GlimmerBrickCardSide * GlimmerBrickCardSide - 1) / 3;
+
+// NOTE must match GlimmerBrickGI.hlsli
+static constexpr uint32 GlimmerBrickGIRays = 8;
+static constexpr uint32 GlimmerBrickGITiles = GlimmerBrickCardSide * GlimmerBrickCardSide;
 static constexpr uint32 GlimmerBrickIndexStride = 1 + GlimmerBrickMaxPages + GlimmerBrickCards + 6 + (GlimmerBrickSide / GlimmerBrickTile) * (GlimmerBrickSide / GlimmerBrickTile) + GlimmerBrickSide * GlimmerBrickSide;
 
 static constexpr uint32 GlimmerBrickMaxPoolBricks = 32768;
@@ -79,6 +85,7 @@ enum class GlimmerBrickDebugView : int
     Receiver,
     Light,
     LightCoarse,
+    Arriving,
 
     Max
 };
@@ -87,7 +94,8 @@ enum class GlimmerBrickBindings : uint8
 {
     None = 0x0,
     Counters = 0x1,
-    Light = 0x2
+    Light = 0x2,
+    GI = 0x4
 };
 
 HYP_MAKE_ENUM_FLAGS(GlimmerBrickBindings);
@@ -108,6 +116,8 @@ public:
      *  \param budgetScale      how much of the frame's build budget to use
      *  \param sceneInstances   the scene's instances
      *  \param triangleCache    the scene's triangles
+     *  \param surfaceCache     the ground, for brick GI's rays past the bricks; may be nullptr
+     *  \param spanCache        the spans, for the same; may be nullptr
      *  \param technique        where the cards indirect light comes from
      *  \param light             */
     void Update(
@@ -117,6 +127,8 @@ public:
         float budgetScale,
         const GlimmerSceneInstances& sceneInstances,
         const GlimmerTriangleCache& triangleCache,
+        const GlimmerSurfaceCache* surfaceCache,
+        const GlimmerSpanCache* spanCache,
         const GlimmerTechnique* technique,
         const GlimmerLightShaderData& light);
 
@@ -141,6 +153,11 @@ public:
     HYP_FORCE_INLINE bool IsLit() const
     {
         return m_isLit;
+    }
+
+    HYP_FORCE_INLINE bool HasGI() const
+    {
+        return m_isGI;
     }
 
     HYP_FORCE_INLINE const GlimmerBrickShaderData& GetShaderData() const
@@ -171,6 +188,12 @@ public:
     HYP_FORCE_INLINE const GpuBufferRef& GetMaterialBuffer() const
     {
         return m_materialBuffer;
+    }
+
+    // what arrives at each card texel; only valid while HasGI()
+    HYP_FORCE_INLINE const GpuBufferRef& GetArrivingBuffer() const
+    {
+        return m_arrivingBuffer;
     }
 
 private:
@@ -228,25 +251,33 @@ private:
         Max
     };
 
+    enum class PoolUse : uint8
+    {
+        Always,
+        Lit,
+        GI
+    };
+
     struct PoolBuffer
     {
         GpuBufferRef GlimmerBrickWorld::* buffer;
         uint32 pool;
         uint32 wordsPerItem;
-        bool isLitOnly;
+        PoolUse use;
         Name name;
     };
 
     static const PoolBuffer s_poolBuffers[];
     static Vec3u s_largestPools;
 
-    static uint64 PoolBytes(const Vec3u& pools, bool isLit);
+    static bool IsPoolUseHeld(PoolUse use, bool isLit, bool isGI);
+    static uint64 PoolBytes(const Vec3u& pools, bool isLit, bool isGI);
 
     Vec3u GetInitialPools() const;
 
     void CreateResources();
-    void CreatePoolBuffers(bool isLitOnly);
-    void ReleaseLitResources();
+    void CreatePoolBuffers(PoolUse use);
+    void ReleasePoolBuffers(PoolUse use);
     void GrowPoolResources(Frame* frame, const Vec3u& grown);
     bool GrowPools(const Vec3u& needed);
     void ListLiveBricks(Frame* frame);
@@ -256,6 +287,7 @@ private:
     void MarkOccupiedChunks();
     void BuildChunks(Frame* frame, Chunk* const* chunks, uint32 numChunks, const GlimmerTechnique* technique);
     void LightBricks(Frame* frame, const GlimmerTechnique* technique, uint32 firstBrick, uint32 numBricks, bool isBuildList);
+    void TraceSlots(Frame* frame, uint32 firstBrick, uint32 numBricks, bool isBuildList);
     void Dispatch(Frame* frame, BuildPass pass, const Box& box, uint32 numThreads, uint32 step = 0);
     void DispatchIndirect(Frame* frame, BuildPass pass, uint32 argsOffset);
     void SetBuildPass(Frame* frame, BuildPass pass, const Box& box, uint32 groupsX, uint32 step);
@@ -277,6 +309,8 @@ private:
     GpuBufferRef m_cardFreeListBuffer;
     GpuBufferRef m_radianceBuffer;
     GpuBufferRef m_crossingLightBuffer;
+    GpuBufferRef m_slotsBuffer;
+    GpuBufferRef m_arrivingBuffer;
     GpuBufferRef m_listNodesBuffer;
     GpuBufferRef m_liveListBuffer;
     GpuBufferRef m_dispatchArgsBuffer;
@@ -294,16 +328,21 @@ private:
 
     const GlimmerSceneInstances* m_sceneInstances = nullptr;
     const GlimmerTriangleCache* m_triangleCache = nullptr;
+    const GlimmerSurfaceCache* m_surfaceCache = nullptr;
+    const GlimmerSpanCache* m_spanCache = nullptr;
 
+    GlimmerLightShaderData m_light;
     GlimmerLightShaderData m_relitLight;
     float m_relitIntensity = 0.0f;
     uint32 m_relightBurst = 0;
     bool m_hasRelitLight = false;
     bool m_isLit = false;
+    bool m_isGI = false;
 
     Vec3i m_originChunk;
     Vec3u m_pools = Vec3u::Zero();
     uint32 m_relightCursor = 0;
+    uint32 m_retraceCursor = 0;
     uint32 m_seenGeneration = ~0u;
     uint32 m_occupancyGeneration = ~0u;
     uint32 m_numDirtyChunks = 0;

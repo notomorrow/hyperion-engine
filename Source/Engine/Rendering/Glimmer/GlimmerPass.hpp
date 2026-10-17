@@ -33,7 +33,7 @@ class GlimmerSpanCache;
 
 struct GlimmerApplyShaderData
 {
-    Vec4u params;   // x = 1 to show Glimmer's irradiance on its own, y = 1 when either volume can be sampled
+    Vec4u params;   // x = 1 to show Glimmer's irradiance on its own, y = 1 when either volume can be sampled, z = GLIMMER_DEBUG_SH_*, w = 1 when brick GI is on
     Vec4f settings; // x = intensity
 };
 

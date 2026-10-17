@@ -23,5 +23,7 @@ CVar<float> g_cvGlimmerVisibility("Rendering.Glimmer.Visibility", 1.0f);
 CVar<bool> g_cvGlimmerLookAhead("Rendering.Glimmer.LookAhead", true);
 CVar<float> g_cvGlimmerStartupBurstSeconds("Rendering.Glimmer.StartupBurstSeconds", 8.0f);
 CVar<int> g_cvGlimmerBuildThreads("Rendering.Glimmer.BuildThreads", 0);
+CVar<bool> g_cvGlimmerBrickGI("Rendering.Glimmer.BrickGI", false);
+CVar<int> g_cvGlimmerBrickGIRetraceBricks("Rendering.Glimmer.BrickGI.RetraceBricks", 2);
 
 } // namespace Hyperion

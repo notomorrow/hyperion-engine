@@ -12,7 +12,7 @@ namespace Hyperion {
 
 CVar<int> g_cvGlimmerProbesNearFieldCascades("Rendering.Glimmer.Probes.NearField.Cascades", 4);
 
-CVar<bool> g_cvGlimmerProbesEnabled("Rendering.Glimmer.Probes.Enabled", true);
+CVar<bool> g_cvGlimmerProbesEnabled("Rendering.Glimmer.Probes.Enabled", false);
 CVar<int> g_cvGlimmerProbesRaysPerFrame("Rendering.Glimmer.Probes.RaysPerFrame", 65536);
 CVar<int> g_cvGlimmerProbesPoolBlocks("Rendering.Glimmer.Probes.PoolBlocks", 512);
 CVar<bool> g_cvGlimmerProbesLogStats("Rendering.Glimmer.Probes.LogStats", false);
