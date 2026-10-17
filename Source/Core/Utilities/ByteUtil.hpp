@@ -88,7 +88,9 @@ public:
     template <class T>
     static constexpr inline T AlignAs(T value, uint32 alignment)
     {
-        return (value + alignment - 1) & ~(alignment - 1);
+        // mask has to be T wide, a uint32 mask would clear the upper bits of 64-bit values (addresses)
+        const T mask = T(alignment) - 1;
+        return (value + mask) & ~mask;
     }
 
     /*! \brief Gets the index of the lowest set bit in a 64-bit integer.
