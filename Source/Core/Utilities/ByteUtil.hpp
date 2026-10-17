@@ -29,33 +29,17 @@ public:
     /*! \brief Packs a float into a 32-bit integer.
      *  \param value The value to pack.
      *  \return The 32-bit integer packed from the value. */
-    static inline uint32 PackFloat(float value)
+    static constexpr inline uint32 PackFloat(float value)
     {
-        union
-        {
-            uint32 u;
-            float f;
-        };
-
-        f = value;
-
-        return u;
+        return std::bit_cast<uint32>(value);
     }
 
     /*! \brief Unpacks a 32-bit integer into a float.
      *  \param value The value to unpack.
      *  \return The float unpacked from the value. */
-    static inline float UnpackFloat(uint32 value)
+    static constexpr inline float UnpackFloat(uint32 value)
     {
-        union
-        {
-            uint32 u;
-            float f;
-        };
-
-        u = value;
-
-        return f;
+        return std::bit_cast<float>(value);
     }
 
     static inline uint32 QuantizeFloat(float f, uint8 bits)
@@ -73,18 +57,14 @@ public:
      *  \return The 32-bit integer packed from the vector. */
     static inline uint32 PackVec4f(const Vec4f& vec)
     {
-        union
-        {
-            uint8 bytes[4];
-            uint32 result;
+        uint8 bytes[4] = {
+            MathUtil::Round<float, uint8>(MathUtil::Clamp(vec.values[0], 0.0f, 1.0f) * 255.0f),
+            MathUtil::Round<float, uint8>(MathUtil::Clamp(vec.values[1], 0.0f, 1.0f) * 255.0f),
+            MathUtil::Round<float, uint8>(MathUtil::Clamp(vec.values[2], 0.0f, 1.0f) * 255.0f),
+            MathUtil::Round<float, uint8>(MathUtil::Clamp(vec.values[3], 0.0f, 1.0f) * 255.0f)
         };
 
-        bytes[0] = MathUtil::Round<float, uint8>(MathUtil::Clamp(vec.values[0], 0.0f, 1.0f) * 255.0f);
-        bytes[1] = MathUtil::Round<float, uint8>(MathUtil::Clamp(vec.values[1], 0.0f, 1.0f) * 255.0f);
-        bytes[2] = MathUtil::Round<float, uint8>(MathUtil::Clamp(vec.values[2], 0.0f, 1.0f) * 255.0f);
-        bytes[3] = MathUtil::Round<float, uint8>(MathUtil::Clamp(vec.values[3], 0.0f, 1.0f) * 255.0f);
-
-        return result;
+        return std::bit_cast<uint32>(bytes);
     }
 
     /*! \brief Unpacks a 32-bit integer into a 4-component vector.
@@ -106,9 +86,9 @@ public:
      *  \param alignment The alignment to use.
      *  \return The value aligned to the specified alignment. */
     template <class T>
-    static inline constexpr T AlignAs(T value, uint32 alignment)
+    static constexpr inline T AlignAs(T value, uint32 alignment)
     {
-        return ((value + alignment - 1) / alignment) * alignment;
+        return (value + alignment - 1) & ~(alignment - 1);
     }
 
     /*! \brief Gets the index of the lowest set bit in a 64-bit integer.
@@ -126,18 +106,15 @@ public:
      *  \return The number of bits set in the value. */
     static inline uint64 BitCount(uint64 value);
 
-    static inline bool IsBigEndian()
+    static constexpr inline bool IsBigEndian()
     {
-        constexpr union
-        {
-            uint32 i;
-            uint8 ch[sizeof(uint32)];
-        } u = { 0x01020304 };
+        uint32 i = 0x01020304u;
+        struct S { uint8 u[sizeof(uint32)]; };
 
-        return u.ch[0] == 1;
+        return std::bit_cast<S>(i).u[0] == 1;
     }
 
-    static inline bool IsLittleEndian()
+    static constexpr inline bool IsLittleEndian()
     {
         return !ByteUtil::IsBigEndian();
     }

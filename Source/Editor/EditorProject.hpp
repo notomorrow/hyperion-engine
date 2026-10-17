@@ -51,15 +51,11 @@ struct EditorWebSettings
     HYP_FIELD(Property = "Worlds", Serialize)
     String worlds;
 
-    HYP_FIELD(Property = "RecordSeconds", Serialize)
-    uint32 recordSeconds = 60;
-
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hashCode;
         hashCode.Add(maxTextureSize);
         hashCode.Add(worlds);
-        hashCode.Add(recordSeconds);
 
         return hashCode;
     }

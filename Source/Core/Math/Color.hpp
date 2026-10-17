@@ -7,6 +7,7 @@
 #pragma once
 
 #include <Core/Math/Vector4.hpp>
+#include <Core/Math/MathUtil.hpp>
 
 #include <Core/Defines.hpp>
 
@@ -54,11 +55,28 @@ public:
         uint32 color32;
     };
 
-    Color();
-    explicit Color(uint32 hex);
+    constexpr Color()
+        : bytes {} // all zero
+    {
+    }
 
-    Color(float r, float g, float b, float a = 1.0f);
-    Color(const Vec4f& vec);
+    constexpr Color(uint32 hex)
+        : Color(ByteUtil::UnpackVec4f(hex))
+    {
+    }
+
+    constexpr Color(float r, float g, float b, float a = 1.0f)
+        : Color(Vec4f(r, g, b, a))
+    {
+    }
+
+    constexpr Color(const Vec4f& vec)
+    {
+        bytes[0] = ubyte(MathUtil::Clamp(vec.x * 255.0f, 0.0f, 255.0f));
+        bytes[1] = ubyte(MathUtil::Clamp(vec.y * 255.0f, 0.0f, 255.0f));
+        bytes[2] = ubyte(MathUtil::Clamp(vec.z * 255.0f, 0.0f, 255.0f));
+        bytes[3] = ubyte(MathUtil::Clamp(vec.w * 255.0f, 0.0f, 255.0f));
+    }
 
     constexpr Color(const Color& other) = default;
     Color& operator=(const Color& other) = default;
@@ -72,7 +90,7 @@ public:
     HYP_METHOD(Property = "Red", Serialize = true)
     HYP_FORCE_INLINE Color& SetRed(float red)
     {
-        bytes[0] = static_cast<ubyte>(red * 255.0f);
+        bytes[0] = static_cast<ubyte>(MathUtil::Clamp(red * 255.0f, 0.0f, 255.0f));
         return *this;
     }
 
@@ -85,7 +103,7 @@ public:
     HYP_METHOD(Property = "Green", Serialize = true)
     HYP_FORCE_INLINE Color& SetGreen(float green)
     {
-        bytes[1] = static_cast<ubyte>(green * 255.0f);
+        bytes[1] = static_cast<ubyte>(MathUtil::Clamp(green * 255.0f, 0.0f, 255.0f));
         return *this;
     }
 
@@ -98,7 +116,7 @@ public:
     HYP_METHOD(Property = "Blue", Serialize = true)
     HYP_FORCE_INLINE Color& SetBlue(float blue)
     {
-        bytes[2] = static_cast<ubyte>(blue * 255.0f);
+        bytes[2] = static_cast<ubyte>(MathUtil::Clamp(blue * 255.0f, 0.0f, 255.0f));
         return *this;
     }
 
@@ -111,7 +129,7 @@ public:
     HYP_METHOD(Property = "Alpha", Serialize = true)
     HYP_FORCE_INLINE Color& SetAlpha(float alpha)
     {
-        bytes[3] = static_cast<ubyte>(alpha * 255.0f);
+        bytes[3] = static_cast<ubyte>(MathUtil::Clamp(alpha * 255.0f, 0.0f, 255.0f));
         return *this;
     }
 
@@ -132,16 +150,14 @@ public:
     bool operator==(const Color& other) const;
     bool operator!=(const Color& other) const;
 
-    HYP_FORCE_INLINE bool operator<(const Color& other) const
+    HYP_FORCE_INLINE constexpr bool operator<(const Color& other) const
     {
-        return Memory::Compare(bytes, other.bytes, NumComponents) < 0;
+        return color32 < other.color32;
     }
 
-    HYP_FORCE_INLINE explicit operator uint32() const
+    HYP_FORCE_INLINE constexpr explicit operator uint32() const
     {
-        uint32 result;
-        Memory::Copy(&result, bytes, NumComponents);
-        return result;
+        return color32;
     }
 
     HYP_FORCE_INLINE explicit operator Vec4f() const
@@ -149,76 +165,74 @@ public:
         return Vec4f(GetRed(), GetGreen(), GetBlue(), GetAlpha());
     }
 
-    HYP_FORCE_INLINE uint32 Packed() const
+    HYP_FORCE_INLINE constexpr uint32 Packed() const
     {
         return uint32(*this);
     }
 
     Color& Lerp(const Color& to, float amt);
 
-    HYP_FORCE_INLINE HashCode GetHashCode() const
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
-        HashCode hc;
-        hc.Add(uint32(*this));
-        return hc;
+        return HashCode::GetHashCode(color32);
     }
 
-    static Color Black()
+    static constexpr Color Black()
     {
         return { 0, 0, 0, 1 };
     }
 
-    static Color White()
+    static constexpr Color White()
     {
         return { 1, 1, 1, 1 };
     }
 
-    static Color Red()
+    static constexpr Color Red()
     {
         return { 1, 0, 0, 1 };
     }
 
-    static Color Green()
+    static constexpr  Color Green()
     {
         return { 0, 1, 0, 1 };
     }
 
-    static Color Blue()
+    static constexpr Color Blue()
     {
         return { 0, 0, 1, 1 };
     }
 
-    static Color Yellow()
+    static constexpr Color Yellow()
     {
         return { 1, 1, 0, 1 };
     }
 
-    static Color Cyan()
+    static constexpr Color Cyan()
     {
         return { 0, 1, 1, 1 };
     }
 
-    static Color Magenta()
+    static constexpr Color Magenta()
     {
         return { 1, 0, 1, 1 };
     }
 
-    static Color Gray()
+    static constexpr Color Gray()
     {
         return { 0.5f, 0.5f, 0.5f, 1 };
     }
 
-    static Color DarkGray()
+    static constexpr Color DarkGray()
     {
         return { 0.25f, 0.25f, 0.25f, 1 };
     }
 
-    static Color LightGray()
+    static constexpr  Color LightGray()
     {
         return { 0.75f, 0.75f, 0.75f, 1 };
     }
 
-    static Color Transparent()
+    static constexpr Color Transparent()
     {
         return { 0, 0, 0, 0 };
     }

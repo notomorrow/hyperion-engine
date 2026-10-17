@@ -603,7 +603,8 @@ endif()
 # .NET is necessary for the editor, but for a leaner build this is recommended to disable if not using C# for scripts.
 # set(HYP_DOTNET_ONLY_FOR_EDITOR true)
 
-if(NOT HYP_DOTNET_ONLY_FOR_EDITOR AND NOT DEFINED HYP_DOTNET_HOST)
+# the web has no .NET runtime, and its 32-bit pointers don't fit the interop structs
+if(NOT HYP_DOTNET_ONLY_FOR_EDITOR AND NOT DEFINED HYP_DOTNET_HOST AND NOT HYP_WEB)
   set(HYP_DOTNET_HOST 1)
 endif()
 
