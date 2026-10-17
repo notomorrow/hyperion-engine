@@ -21,9 +21,10 @@
 #include <Core/Threading/Threads.hpp>
 
 #include <Core/Utilities/EnumFlags.hpp>
+#include <Core/Utilities/ByteUtil.hpp>
 
-#include <new>
-#include <limits>
+#include <Core/Math/MathUtil.hpp>
+
 #include <cstring>
 
 namespace Hyperion {
@@ -70,15 +71,15 @@ public:
           m_ownerThreadId(ownerThreadId)
     {
         HYP_CORE_ASSERT(m_blocksPerSlab != 0);
-        HYP_CORE_ASSERT(IsPowerOfTwo(alignment));
+        HYP_CORE_ASSERT(MathUtil::IsPowerOfTwo(alignment));
 
         const size_t minBlock = sizeof(uint32) > sizeof(void*) ? sizeof(uint32) : sizeof(void*);
         const size_t reqBlock = blockSize < minBlock ? minBlock : blockSize;
 
         m_alignment = alignment < alignof(void*) ? alignof(void*) : alignment;
-        HYP_CORE_ASSERT(IsPowerOfTwo(m_alignment));
+        HYP_CORE_ASSERT(MathUtil::IsPowerOfTwo(m_alignment));
 
-        m_blockSize = AlignUp(reqBlock, m_alignment);
+        m_blockSize = ByteUtil::AlignAs(reqBlock, m_alignment);
     }
 
     TSlabAllocator(const TSlabAllocator&) = delete;
@@ -191,7 +192,7 @@ public:
             return nullptr;
         }
 
-        if (HYP_UNLIKELY(!IsPowerOfTwo(alignment)))
+        if (HYP_UNLIKELY(!MathUtil::IsPowerOfTwo(alignment)))
         {
             return nullptr;
         }
@@ -385,17 +386,6 @@ private:
     static HYP_FORCE_INLINE uint32 InvalidIndex()
     {
         return UINT32_MAX;
-    }
-
-    static HYP_FORCE_INLINE bool IsPowerOfTwo(size_t v)
-    {
-        return v && ((v & (v - 1)) == 0);
-    }
-
-    static HYP_FORCE_INLINE size_t AlignUp(size_t value, size_t alignment)
-    {
-        const size_t mask = alignment - 1;
-        return (value + mask) & ~mask;
     }
 
     HYP_FORCE_INLINE size_t TotalSlabBytes() const

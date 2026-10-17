@@ -132,7 +132,7 @@ public:
             s_definitions.Add(
                 "engine-assets",
                 "",
-                "File listing the Engine assets to cook, one Bucket/Name per line, as written by a run with --record-engine-assets (every Engine asset when empty)",
+                "A file listing Engine assets to cook besides what the project reaches, one Bucket/Name per line",
                 CommandLineArgumentFlags::NONE,
                 {},
                 JSON::Value(""));
