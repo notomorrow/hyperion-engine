@@ -601,8 +601,8 @@ endif()
 
 # Set to true if C# is not planned on being used for scripting
 # .NET is necessary for the editor, but for a leaner build this is recommended to disable if not using C# for scripts.
+# set(HYP_DOTNET_ONLY_FOR_EDITOR true)
 
-set(HYP_DOTNET_ONLY_FOR_EDITOR true)
 if(NOT HYP_DOTNET_ONLY_FOR_EDITOR AND NOT DEFINED HYP_DOTNET_HOST)
   set(HYP_DOTNET_HOST 1)
 endif()

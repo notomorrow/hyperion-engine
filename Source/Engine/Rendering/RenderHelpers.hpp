@@ -75,7 +75,7 @@ constexpr inline bool IsTerrainShader(StringHash shaderNameHash)
     return shaderNameHash == "Terrain"_sh;
 }
 
-bool IsEmissive(const MaterialParameters& materialParameters);
+ENGINE_API bool IsEmissive(const MaterialParameters& materialParameters);
 
 constexpr inline bool ShaderSupportsMorph(StringHash shaderNameHash)
 {

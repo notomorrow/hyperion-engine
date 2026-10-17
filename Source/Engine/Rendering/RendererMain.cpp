@@ -219,63 +219,49 @@ static StaticShaderPropertyId s_propHasRoughnessMap { ShaderProperty(s_nameHasRo
 
 } // namespace Props
 
-/// Set attributes, used to decide what shader variant + pipeline to use for rendering the given proxy.
-static void BuildAttributes(const RenderProxyMesh& proxy, RenderableAttributeSet& attributes, const RenderableAttributeSet* overrideAttributes = nullptr)
+void BuildMaterialAttributes(const DrawMaterialInputs& inputs, const MaterialAttributes* overrideMaterialAttributes, MaterialAttributes& outMaterialAttributes)
 {
-    Mesh* mesh = proxy.mesh;
-    AssertDebug(mesh != nullptr);
-
-    Material* material = proxy.material;
-    AssertDebug(material != nullptr);
-
-    attributes = proxy.attributes;
+    const MaterialAttributes& sourceMaterialAttributes = inputs.materialAttributes;
 
     // checked before the override is applied so passes like shadow maps still know they're drawing terrain
-    const StringHash sourceShaderNameHash = proxy.attributes.GetMaterialAttributes().shaderName;
-    const bool isTerrainMesh = RenderHelpers::IsTerrainShader(sourceShaderNameHash);
+    const bool isTerrainMesh = RenderHelpers::IsTerrainShader(sourceMaterialAttributes.shaderName);
 
-    if (overrideAttributes)
+    outMaterialAttributes = sourceMaterialAttributes;
+
+    if (overrideMaterialAttributes)
     {
-        const MaterialAttributes& sourceMaterialAttributes = attributes.GetMaterialAttributes();
-
-        MaterialAttributes newMaterialAttributes = overrideAttributes->GetMaterialAttributes();
+        outMaterialAttributes = *overrideMaterialAttributes;
         // do not override bucket!
-        newMaterialAttributes.bucket = sourceMaterialAttributes.bucket;
+        outMaterialAttributes.bucket = sourceMaterialAttributes.bucket;
 
         // cutouts and two sided geometry have to stay that way in depth only passes, or foliage
         // casts solid shadows and drops its back faces
-        newMaterialAttributes.flags |= (sourceMaterialAttributes.flags & MAF_ALPHA_DISCARD);
+        outMaterialAttributes.flags |= (sourceMaterialAttributes.flags & MAF_ALPHA_DISCARD);
 
         if (sourceMaterialAttributes.cullFaces == FaceCullMode::None)
         {
-            newMaterialAttributes.cullFaces = FaceCullMode::None;
+            outMaterialAttributes.cullFaces = FaceCullMode::None;
         }
-
-        attributes.SetMaterialAttributes(newMaterialAttributes);
     }
 
-    MaterialAttributes& mas = attributes.GetMaterialAttributes();
+    MaterialAttributes& mas = outMaterialAttributes;
 
     const StringHash shaderNameHash = mas.shaderName;
 
     const RenderBucket bucket = mas.bucket;
 
-    const MaterialParameters& materialParameters = material->GetParameters();
-
-    const bool isEmissive = RenderHelpers::IsEmissive(materialParameters);
-
     const bool hasForwardLighting = (bucket == RenderBucket::Translucent || bucket == RenderBucket::Sky || bucket == RenderBucket::Debug);
-    const bool hasLightmaps = (bucket == RenderBucket::Lightmapped) && g_cvLightmapVolumes.Get() && proxy.lightmapStencilValue != 0 && !isEmissive;
+    const bool hasLightmaps = (bucket == RenderBucket::Lightmapped) && inputs.lightmapVolumes && inputs.lightmapStencilValue != 0 && !inputs.isEmissive;
     const bool isSky = (bucket == RenderBucket::Sky);
     const bool isDebug = (bucket == RenderBucket::Debug);
 
     const bool hasDeferredLighting = !hasForwardLighting && !hasLightmaps;
 
-    const bool hasInstancing = proxy.enableAutoInstancing || proxy.numInstances;
+    const bool hasInstancing = inputs.hasInstancing;
     const bool hasAlphaDiscard = bool(mas.flags & MAF_ALPHA_DISCARD);
-    const bool hasSkinning = proxy.skeleton != nullptr && proxy.skeleton->GetRootBone() != nullptr;
+    const bool hasSkinning = inputs.hasSkinning;
 
-    const bool isPathTracer = g_cvPathTracing.Get();
+    const bool isPathTracer = inputs.pathTracing;
 
     const bool isCubemap = RenderHelpers::IsCubemapShader(shaderNameHash);
     const bool isGeometryPassOrSimilar = RenderHelpers::IsGeometryPassFamily(shaderNameHash);
@@ -299,7 +285,7 @@ static void BuildAttributes(const RenderProxyMesh& proxy, RenderableAttributeSet
     }
     else if (hasLightmaps && !isPathTracer)
     {
-        stencilReferenceValue = proxy.lightmapStencilValue & LightmapStencilMask;
+        stencilReferenceValue = inputs.lightmapStencilValue & LightmapStencilMask;
     }
     else if (mas.stencilReference & LightmapStencilMask)
     {
@@ -326,6 +312,45 @@ static void BuildAttributes(const RenderProxyMesh& proxy, RenderableAttributeSet
         // since they don't go through the deferred direct lighting pass
         shaderProperties.Set(s_propForwardShading, hasForwardLighting);
     }
+}
+
+ShaderPropertySet GetDrawShaderProperties(const MaterialAttributes& materialAttributes, bool clusteredForwardLighting, bool forwardDDGI)
+{
+    if (!clusteredForwardLighting
+        || materialAttributes.shaderName != "GeometryPass"_sh
+        || !materialAttributes.shaderProperties.Test(s_propShadingTypeForward))
+    {
+        return materialAttributes.shaderProperties;
+    }
+
+    ShaderPropertySet shaderProperties = materialAttributes.shaderProperties;
+    shaderProperties.Add(s_propForwardClustered);
+    shaderProperties.Set(s_propRayTracingGlobalIllumination, forwardDDGI);
+
+    return shaderProperties;
+}
+
+/// Set attributes, used to decide what shader variant + pipeline to use for rendering the given proxy.
+static void BuildAttributes(const RenderProxyMesh& proxy, RenderableAttributeSet& attributes, const RenderableAttributeSet* overrideAttributes = nullptr)
+{
+    AssertDebug(proxy.mesh != nullptr);
+    AssertDebug(proxy.material != nullptr);
+
+    DrawMaterialInputs inputs;
+    inputs.materialAttributes = proxy.attributes.GetMaterialAttributes();
+    inputs.isEmissive = RenderHelpers::IsEmissive(proxy.material->GetParameters());
+    inputs.hasInstancing = proxy.enableAutoInstancing || proxy.numInstances;
+    inputs.hasSkinning = proxy.skeleton != nullptr && proxy.skeleton->GetRootBone() != nullptr;
+    inputs.lightmapStencilValue = proxy.lightmapStencilValue;
+    inputs.lightmapVolumes = g_cvLightmapVolumes.Get();
+    inputs.pathTracing = g_cvPathTracing.Get();
+
+    attributes = proxy.attributes;
+
+    MaterialAttributes materialAttributes;
+    BuildMaterialAttributes(inputs, overrideAttributes ? &overrideAttributes->GetMaterialAttributes() : nullptr, materialAttributes);
+
+    attributes.SetMaterialAttributes(materialAttributes);
 }
 
 /// The global state BuildAttributes() reads besides the proxy; attributes built under other inputs are stale.
@@ -1538,23 +1563,9 @@ static void PerformRenderingImpl(Frame* frame, const TPerformRenderingPayload<TC
 
     cr << SetCurrentViewport(renderSetup.viewport);
 
-    if (isNormalDrawingPass
-        && mas.shaderName == "GeometryPass"_sh
-        && mas.shaderProperties.Test(s_propShadingTypeForward)
-        && dpd->gridTilesBuffer != nullptr)
-    {
-        // If we are in normal drawing (e.g NOT env probes, shadows, etc.) - we use clusters of lights and EnvProbe data
-        // Therefore we need to set FORWARD_CLUSTERED prop to true to choose the correct variant.
-        ShaderPropertySet shaderProperties = mas.shaderProperties;
-        shaderProperties.Add(s_propForwardClustered);
-        shaderProperties.Set(s_propRayTracingGlobalIllumination, UseForwardDDGI(dpd));
+    const bool clusteredForwardLighting = isNormalDrawingPass && dpd->gridTilesBuffer != nullptr;
 
-        cr << SetCurrentShader(ShaderDesc(mas.shaderName, shaderProperties), enableAsync);
-    }
-    else
-    {
-        cr << SetCurrentShader(ShaderDesc(mas.shaderName, mas.shaderProperties), enableAsync);
-    }
+    cr << SetCurrentShader(ShaderDesc(mas.shaderName, GeometryPass::GetDrawShaderProperties(mas, clusteredForwardLighting, clusteredForwardLighting && UseForwardDDGI(dpd))), enableAsync);
 
     // the depth prepass draws lines too, or it would leave depth behind where the geometry pass draws nothing
     const bool drawWireframe = dpd != nullptr && g_cvDrawWireframe.Get();

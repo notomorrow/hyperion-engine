@@ -20,6 +20,10 @@
 
 #include <Core/Name/Name.hpp>
 
+#include <Asset/AssetPath.hpp>
+
+#include <Rendering/RenderableAttributes.hpp>
+
 #include <Scripting/ScriptableDelegate.hpp>
 
 #include <Baking/BakeLayer.hpp>
@@ -66,13 +70,18 @@ struct EditorCookSettings
 {
     HYP_STRUCT_BODY(EditorCookSettings);
 
-    // what the world walk can't find, such as assets game code loads by name: "Bucket/Name", or "Bucket" for all of one
-    HYP_FIELD(Property = "AlwaysCook", Serialize)
-    Array<String> alwaysCook;
+    HYP_FIELD(Property = "AdditionalAssets", Serialize)
+    Array<AssetPath> additionalAssets;
+
+    HYP_FIELD(Property = "RuntimeMaterials", Serialize)
+    Array<MaterialAttributes> runtimeMaterials;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
-        return alwaysCook.GetHashCode();
+        HashCode hashCode = additionalAssets.GetHashCode();
+        hashCode.Add(runtimeMaterials.GetHashCode());
+
+        return hashCode;
     }
 };
 

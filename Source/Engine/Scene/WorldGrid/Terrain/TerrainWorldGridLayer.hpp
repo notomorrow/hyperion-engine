@@ -20,6 +20,8 @@
 
 #include <Asset/AssetObject.hpp>
 
+#include <Rendering/RenderableAttributes.hpp>
+
 #include <Core/Reflection/Handle.hpp>
 
 #include <Core/Memory/SharedPtr.hpp>
@@ -172,6 +174,9 @@ public:
     /// Discards all edits and regenerates the tiles procedurally
     HYP_METHOD(EditorAction = "Regenerate")
     void Regenerate();
+
+    // the terrain's material is made at run time, so a cook takes its attributes from here
+    static MaterialAttributes GetTerrainMaterialAttributes();
 
     /// Generate all tiles in the layer's defined range
     HYP_METHOD(EditorAction = "Generate All", EditCondition = "HasDiscreteRange")

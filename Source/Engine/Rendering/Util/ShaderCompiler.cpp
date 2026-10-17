@@ -721,6 +721,42 @@ static bool SatisfiesRequested(
                                : (requestedProperties & candidate.properties) == candidate.properties);
 }
 
+static Name GetTargetPlatformPropertyValue(ShaderCompileTargetPlatform platform)
+{
+    switch (platform)
+    {
+    case ShaderCompileTargetPlatform::Windows:
+        return NAME("WINDOWS");
+    case ShaderCompileTargetPlatform::Mac:
+        return NAME("MAC");
+    case ShaderCompileTargetPlatform::Linux:
+        return NAME("LINUX");
+    case ShaderCompileTargetPlatform::Android:
+        return NAME("ANDROID");
+    case ShaderCompileTargetPlatform::IOS:
+        return NAME("IOS");
+    case ShaderCompileTargetPlatform::Web:
+        return NAME("WEB");
+    default:
+        return Name::Invalid();
+    }
+}
+
+static Name GetTargetBackendPropertyValue(ShaderCompileTargetBackend backend)
+{
+    switch (backend)
+    {
+    case ShaderCompileTargetBackend::Vulkan:
+        return NAME("VULKAN");
+    case ShaderCompileTargetBackend::DX12:
+        return NAME("DX12");
+    case ShaderCompileTargetBackend::WebGPU:
+        return NAME("WEBGPU");
+    default:
+        return Name::Invalid();
+    }
+}
+
 #pragma endregion Helpers
 
 #pragma region DescriptorUsageSet
@@ -3248,7 +3284,26 @@ bool ShaderCompiler::CompileBundle(
 
     // grab each defined property, and iterate over each combination
     ShaderVariantPerms declaredPerms;
-    MergeGlobalShaderProperties(m_isPrecompilingShaders, declaredPerms);
+
+    if (m_variantTargetPlatform.IsValid())
+    {
+        ShaderPropertySet sharedGlobalProperties;
+        MergeGlobalShaderProperties(/* isPrecompilingShaders */ true, sharedGlobalProperties);
+
+        for (const ShaderPropertyId propertyId : sharedGlobalProperties.ToArray())
+        {
+            ShaderProperty property;
+
+            if (GetShaderPropertyById(propertyId, property))
+            {
+                declaredPerms.Set(property);
+            }
+        }
+    }
+    else
+    {
+        MergeGlobalShaderProperties(m_isPrecompilingShaders, declaredPerms);
+    }
 
     ShaderVariantPerms permsToCompile = declaredPerms;
 
@@ -3315,11 +3370,6 @@ bool ShaderCompiler::CompileBundle(
         activePlatform = NAME("IOS");
 #endif
 
-        if (activePlatform.IsValid())
-        {
-            declaredPerms.Set(ShaderProperty(NAME("TARGET"), activePlatform));
-        }
-
         Name graphicsApi;
 #if HYP_WEBGPU
         graphicsApi = NAME("WEBGPU");
@@ -3328,6 +3378,17 @@ bool ShaderCompiler::CompileBundle(
 #elif HYP_DX12
         graphicsApi = NAME("DX12");
 #endif
+
+        if (m_variantTargetPlatform.IsValid())
+        {
+            activePlatform = m_variantTargetPlatform;
+            graphicsApi = m_variantTargetBackend;
+        }
+
+        if (activePlatform.IsValid())
+        {
+            declaredPerms.Set(ShaderProperty(NAME("TARGET"), activePlatform));
+        }
 
         if (graphicsApi.IsValid())
         {
@@ -4124,6 +4185,52 @@ bool ShaderCompiler::RequestShader(
 #endif
 
     return true;
+}
+
+bool ShaderCompiler::CompileVariantForTarget(
+    Name name,
+    const ShaderPropertySet& properties,
+    const VertexInputLayoutDesc& inputLayout,
+    ShaderCompileTargetPlatform platform,
+    ShaderCompileTargetBackend backend)
+{
+    const Name platformValue = GetTargetPlatformPropertyValue(platform);
+    const Name backendValue = GetTargetBackendPropertyValue(backend);
+
+    if (!platformValue.IsValid() || !backendValue.IsValid())
+    {
+        return false;
+    }
+
+    ShaderPropertySet targetProperties = properties;
+    targetProperties.Add(s_propNumGBufferTextures);
+    targetProperties.Add(InternShaderProperty(ShaderProperty(NAME("TARGET"), platformValue)));
+    targetProperties.Add(InternShaderProperty(ShaderProperty(NAME("BACKEND"), backendValue)));
+
+    Mutex::Guard guard(m_variantTargetMutex);
+
+    m_variantTargetPlatform = platformValue;
+    m_variantTargetBackend = backendValue;
+
+    HYP_DEFER({
+        m_variantTargetPlatform = Name::Invalid();
+        m_variantTargetBackend = Name::Invalid();
+    });
+
+    // a cook may not run the task system's own worker threads, so the permutations get a pool like precompiling does
+    PrecompileShadersWorkerPool pool;
+    s_precompileShadersPool = &pool;
+
+    pool.Start();
+
+    HYP_DEFER({
+        pool.Stop();
+        s_precompileShadersPool = nullptr;
+    });
+
+    Handle<ShaderBundle> bundle;
+
+    return LoadBundle(name, ShaderRequest { targetProperties, inputLayout }, bundle);
 }
 
 bool ShaderCompiler::HasShaderBundle(Name name) const

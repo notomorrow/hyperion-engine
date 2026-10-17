@@ -731,6 +731,13 @@ public:
         VertexInputLayoutDesc inputLayout,
         Shader*& outShader);
 
+    bool CompileVariantForTarget(
+        Name name,
+        const ShaderPropertySet& properties,
+        const VertexInputLayoutDesc& inputLayout,
+        ShaderCompileTargetPlatform platform,
+        ShaderCompileTargetBackend backend);
+
     bool HasShaderBundle(Name name) const;
     bool IsGraphicsShaderBundle(Name name) const;
 
@@ -795,6 +802,11 @@ private:
     ShaderCompileParams m_compileParams;
 
     Mutex m_initMutex;
+
+    Mutex m_variantTargetMutex;
+    Name m_variantTargetPlatform;
+    Name m_variantTargetBackend;
+    
     Mutex m_compiledShadersMutex;
 };
 
