@@ -30,32 +30,35 @@
 
 #include <Rendering/GpuTimerBackend.hpp>
 
+#include <Rendering/Util/MeshBuilder.hpp>
+
 #include <Framework/CVarManager.hpp>
 #include <Framework/View.hpp>
 
 #include <Core/Reflection/Enum.hpp>
 
-#include <Rendering/Util/MeshBuilder.hpp>
-
 namespace Hyperion {
 
 CVar<bool> g_cvAsyncShaderLoading("Rendering.AsyncShaderLoading", false);
 
-static Handle<Mesh> g_quadMesh;
+namespace {
 
-static inline void EndCurrentPass(CommandBuffer* commandBuffer)
+Handle<Mesh> g_quadMesh;
+
+void EndCurrentPass(CommandBuffer* commandBuffer)
 {
     RenderInterface::State& state = RI.state;
 
-    /// It is possible that boundFramebuffer will be non-null, yet  `commandBuffer` may be a transient acquired framebuffer.
+    /// It is possible that boundFramebuffer will be non-null, yet `commandBuffer` may be a transient acquired framebuffer.
     /// If Submit() is called on that, we don't want to doom the world ending the RP!!!
     if (state.boundFramebuffer != nullptr && commandBuffer == RI.GetCurrentCommandBuffer())
     {
-        //HYP_LOG(Rendering, Warning, "Ending render pass on framebuffer {} for command buffer {} !!!", (void*)state.boundFramebuffer, (void*)commandBuffer);
         state.boundFramebuffer->EndCapture(commandBuffer);
         state.boundFramebuffer = nullptr;
     }
 }
+
+} // namespace
 
 void MergeGlobalShaderProperties(ShaderPropertySet& out);
 
@@ -629,11 +632,12 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer, bo
                     break;
                 }
 
-                Array<GpuImageView*, RenderAllocator> inputViews;
-                Array<GpuImageView*, RenderAllocator> outputViews;
-                Array<GpuBuffer*, RenderAllocator> cbuffers;
-                Array<size_t, RenderAllocator> cbufferOffsets;
-                Array<size_t, RenderAllocator> cbufferSizes;
+                Array<GpuImageView*, RenderTempAllocator> inputViews;
+                Array<GpuImageView*, RenderTempAllocator> outputViews;
+                Array<GpuBuffer*, RenderTempAllocator> cbuffers;
+
+                Array<size_t, RenderTempAllocator> cbufferOffsets;
+                Array<size_t, RenderTempAllocator> cbufferSizes;
 
                 inputViews.Reserve(numMips - 1);
                 outputViews.Reserve(numMips - 1);
@@ -700,6 +704,7 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer, bo
                         GpuBuffer* mipCBuffer = nullptr;
                         size_t mipCBufferOffset = 0;
                         size_t mipCBufferSize = 0;
+
                         RI.cbufferAllocator->Commit(mipCBuffer, mipCBufferOffset, mipCBufferSize);
 
                         cbuffers.PushBack(mipCBuffer);
@@ -740,6 +745,7 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer, bo
                         RI.CommitPipelineState(PSO_Compute, commandBuffer);
 
                         ComputePipeline* pipeline = state.boundComputePipeline;
+                        
                         if (!pipeline)
                         {
                             HYP_LOG(RenderingBackend, Error, "GenerateMipmaps: Failed to get compute pipeline for mip {}. "
