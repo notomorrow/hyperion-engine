@@ -63,6 +63,9 @@ public:
 
     void Invalidate();
 
+    // every texel of every window again, keeping what is there meanwhile
+    void RelightAll();
+
     HYP_FORCE_INLINE const GlimmerRelightShaderData& GetShaderData() const
     {
         return m_shaderData;

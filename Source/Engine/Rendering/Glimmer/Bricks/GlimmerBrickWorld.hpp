@@ -31,6 +31,7 @@ class GlimmerTriangleCache;
 class GlimmerTechnique;
 class GlimmerSurfaceCache;
 class GlimmerSpanCache;
+class GlimmerGroundGI;
 struct GlimmerDebugViewContext;
 
 static constexpr uint32 GlimmerBrickGridXZ = 128;
@@ -118,6 +119,7 @@ public:
      *  \param triangleCache    the scene's triangles
      *  \param surfaceCache     the ground, for brick GI's rays past the bricks; may be nullptr
      *  \param spanCache        the spans, for the same; may be nullptr
+     *  \param groundGI         the ground's light, for brick GI's rays that land on the ground; may be nullptr
      *  \param technique        where the cards indirect light comes from
      *  \param light             */
     void Update(
@@ -129,6 +131,7 @@ public:
         const GlimmerTriangleCache& triangleCache,
         const GlimmerSurfaceCache* surfaceCache,
         const GlimmerSpanCache* spanCache,
+        const GlimmerGroundGI* groundGI,
         const GlimmerTechnique* technique,
         const GlimmerLightShaderData& light);
 
@@ -188,6 +191,12 @@ public:
     HYP_FORCE_INLINE const GpuBufferRef& GetMaterialBuffer() const
     {
         return m_materialBuffer;
+    }
+
+    // the light each crossing sends on; only valid while IsLit()
+    HYP_FORCE_INLINE const GpuBufferRef& GetCrossingLightBuffer() const
+    {
+        return m_crossingLightBuffer;
     }
 
     // what arrives at each card texel; only valid while HasGI()
@@ -330,6 +339,7 @@ private:
     const GlimmerTriangleCache* m_triangleCache = nullptr;
     const GlimmerSurfaceCache* m_surfaceCache = nullptr;
     const GlimmerSpanCache* m_spanCache = nullptr;
+    const GlimmerGroundGI* m_groundGI = nullptr;
 
     GlimmerLightShaderData m_light;
     GlimmerLightShaderData m_relitLight;

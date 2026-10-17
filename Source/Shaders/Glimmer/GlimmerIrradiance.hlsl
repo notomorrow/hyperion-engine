@@ -77,12 +77,33 @@ DECLARE_SRV(DeferredPass, GlimmerBrickArrivingBuffer) StructuredBuffer<uint> gli
 #define GLIMMER_BRICKS_WITH_LIGHT
 #include "Bricks/GlimmerBricks.hlsli"
 
+DECLARE_SRV(DeferredPass, GlimmerGroundTexture) Texture2DArray<float> glimmerGround;
+DECLARE_SRV(DeferredPass, GlimmerGroundGIBuffer) StructuredBuffer<uint> glimmerGroundGI;
+DECLARE_SRV(DeferredPass, GlimmerSpansBuffer) StructuredBuffer<uint> glimmerSpans;
+DECLARE_SRV(DeferredPass, GlimmerHeightBoundsBuffer) StructuredBuffer<float> glimmerHeightBounds;
+
+#include "GlimmerRelight.hlsli"
+
 DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
 {
     GlimmerApply glimmer;
-    uint4 irradianceParams; // xy = the pixel of each 2x2 quad HALF shades this frame
+    uint4 irradianceParams; // xy = the pixel of each 2x2 quad HALF shades this frame, z = 1 when the ground cache can be read
+    float4 groundParams;    // x = foliage extinction
     GlimmerBrickParams bricks; // origin.w = 0 without brick GI
+    GlimmerGroundParams ground;
+    GlimmerSpanParams spans;
+    GlimmerRelightParams groundLit; // the ground cache's lit windows
 };
+
+// nothing is traced here; the canopy's light is read from the ground cache
+GlimmerLight GlimmerCanopyRadiance(float3 P, float3 weightedAlbedo)
+{
+    return GlimmerNoLight();
+}
+
+#include "GlimmerGround.hlsli"
+#include "GlimmerHeightfield.hlsli"
+#include "GlimmerGroundGI.hlsli"
 
 #define GLIMMER_APPLY_WITH_SAMPLING
 #include "GlimmerApply.hlsli"
@@ -163,6 +184,50 @@ float4 GlimmerSampleBrickIrradiance(float3 P, float3 N)
     return float4(arriving.rgb / arriving.a * glimmer.settings.x, saturate(arriving.a * 2.0));
 }
 
+// what arrives at the ground under a surface on or just above it, facing up: rgb = irradiance / pi, a = 1 where the cache has it
+float4 GlimmerSampleGroundIrradiance(float3 P, float3 N)
+{
+    if (irradianceParams.z == 0u || N.y < 0.3)
+    {
+        return (float4)0.0;
+    }
+
+    float height;
+    uint level;
+
+    if (!GlimmerSampleGround(ground, P.xz, 0u, height, level) || abs(P.y - height) > 0.5 + 0.5 * ground.levels[level].params.x)
+    {
+        return (float4)0.0;
+    }
+
+    float3 arriving;
+
+    if (!GlimmerSampleGroundGI(groundLit, ground, P.xz, GLIMMER_GROUND_GI_ARRIVING, arriving))
+    {
+        return (float4)0.0;
+    }
+
+    return float4(arriving * glimmer.settings.x, 1.0);
+}
+
+// what lights leaves in the canopy, read from the ground cache's canopy over the point: rgb = irradiance / pi, a = 1 where it has it
+float4 GlimmerSampleCanopyIrradiance(float3 P, float3 N)
+{
+    if (irradianceParams.z == 0u)
+    {
+        return (float4)0.0;
+    }
+
+    float3 irradiance;
+
+    // without the sun: the direct pass lights the leaves with it
+    if (!GlimmerSampleCanopyGI(groundLit, ground, spans, P, N, groundParams.x, float3(0.0, 1.0, 0.0), (float3)0.0, irradiance))
+    {
+        return (float4)0.0;
+    }
+    return float4(irradiance * glimmer.settings.x, 1.0);
+}
+
 PSOutput GlimmerEvaluateSurface(GlimmerSurface surface)
 {
     PSOutput output;
@@ -172,10 +237,24 @@ PSOutput GlimmerEvaluateSurface(GlimmerSurface surface)
 
     output.irradiance = EvaluateGlimmer(glimmer, surface.P, surface.N, R, output.specular, output.reflection);
 
-    // brick GI: static surfaces read their card, the rest keep the volumes' light
+    // brick GI: static surfaces read their card, the ground its cache, the rest keep the volumes' light
     if (glimmer.params.w != 0u)
     {
-        const float4 brickIrradiance = GlimmerSampleBrickIrradiance(surface.P, surface.N);
+        float4 brickIrradiance = GlimmerSampleBrickIrradiance(surface.P, surface.N);
+
+        if (brickIrradiance.a < 1.0)
+        {
+            float4 groundIrradiance = GlimmerSampleGroundIrradiance(surface.P, surface.N);
+
+            // leaves, and anything else in the canopy that is neither a crossing nor the ground
+            if (groundIrradiance.a <= 0.0)
+            {
+                groundIrradiance = GlimmerSampleCanopyIrradiance(surface.P, surface.N);
+            }
+
+            brickIrradiance = float4(lerp(groundIrradiance.rgb * groundIrradiance.a, brickIrradiance.rgb, brickIrradiance.a), max(groundIrradiance.a, brickIrradiance.a));
+            brickIrradiance.rgb /= max(brickIrradiance.a, 1e-4);
+        }
 
         if (brickIrradiance.a > 0.0)
         {

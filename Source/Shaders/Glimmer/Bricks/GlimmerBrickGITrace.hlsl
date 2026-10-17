@@ -23,7 +23,7 @@ DECLARE_SRV(GlimmerBrickGITrace, GlimmerHeightBoundsBuffer) StructuredBuffer<flo
 struct GlimmerBrickGITraceConstants
 {
     GlimmerBrickParams bricks;
-    uint4 range;   // x = first place in the live list, y = bricks, z = 1 when they are the build list's, w = 1 when the ground and spans can be traced
+    uint4 range;   // x = first place in the live list, y = bricks, z = 1 when they are the build list's, w = 1 when the ground and spans can be traced, 2 when the ground also has its cache
     float4 params; // x = columns off its surface a ray starts, y = how far a ray looks, z = foliage extinction, w = albedo where the ground's isn't known
     GlimmerGroundParams ground;
     GlimmerSpanParams spans;
@@ -139,6 +139,12 @@ uint TraceSlot(uint brick, int3 cell, uint axis, uint cardSlot, uint2 tile, uint
         if (GlimmerTraceHeightfield(constants.ground, constants.spans, origin, direction, maxDistance, 0u, bricksExit, constants.params.z, false, heightfieldHit))
         {
             const float3 hitPosition = origin + direction * heightfieldHit.t;
+
+            // the ground is read from its cache where the ray landed; without one, by its albedo
+            if (heightfieldHit.kind == GLIMMER_HEIGHTFIELD_GROUND && constants.range.w > 1u)
+            {
+                return GlimmerBrickEncodeGroundSlot(hitPosition.xz, heightfieldHit.transmittance);
+            }
 
             const float3 albedo = heightfieldHit.kind == GLIMMER_HEIGHTFIELD_GROUND
                 ? GlimmerSampleGroundAlbedo(glimmerGroundAlbedo, constants.ground, hitPosition.xz, heightfieldHit.level, (float3)constants.params.w)

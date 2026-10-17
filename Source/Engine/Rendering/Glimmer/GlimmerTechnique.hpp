@@ -36,6 +36,7 @@ class GlimmerSHOccupancy;
 class GlimmerSHVolume;
 class GlimmerRelight;
 class GlimmerBrickWorld;
+class GlimmerGroundGI;
 struct GlimmerChannelState;
 
 struct GlimmerSceneRegionParams
@@ -120,6 +121,11 @@ public:
         return m_brickWorld.Get();
     }
 
+    HYP_FORCE_INLINE const GlimmerGroundGI* GetGroundGI() const
+    {
+        return m_groundGI.Get();
+    }
+
     bool IsSHReady() const;
     bool IsProbesReady() const;
 
@@ -130,6 +136,7 @@ private:
     UniquePtr<GlimmerSHVolume> m_shVolume;
     UniquePtr<GlimmerRelight> m_relight;
     UniquePtr<GlimmerBrickWorld> m_brickWorld;
+    UniquePtr<GlimmerGroundGI> m_groundGI;
 
     GpuBufferRef m_scratchBuffer;
 };

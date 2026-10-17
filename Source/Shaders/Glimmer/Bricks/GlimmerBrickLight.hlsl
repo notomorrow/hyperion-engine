@@ -34,17 +34,27 @@ DECLARE_UAV(DeferredPass, GlimmerBrickCrossingLightBuffer) RWStructuredBuffer<ui
 DECLARE_SRV(DeferredPass, GlimmerBrickSlotsBuffer) StructuredBuffer<uint> glimmerBrickSlots;
 DECLARE_UAV(DeferredPass, GlimmerBrickArrivingBuffer) RWStructuredBuffer<uint> glimmerBrickArriving;
 
+DECLARE_SRV(DeferredPass, GlimmerGroundGIBuffer) StructuredBuffer<uint> glimmerGroundGI;
+DECLARE_SRV(DeferredPass, GlimmerGroundTexture) Texture2DArray<float> glimmerGround;
+DECLARE_SRV(DeferredPass, GlimmerSpansBuffer) StructuredBuffer<uint> glimmerSpans;
+DECLARE_SRV(DeferredPass, GlimmerHeightBoundsBuffer) StructuredBuffer<float> glimmerHeightBounds;
+
 #include "../GlimmerApply.hlsli"
 #include "../GlimmerLight.hlsli"
 #include "GlimmerBricks.hlsli"
 #include "GlimmerBrickGI.hlsli"
+#include "../GlimmerGroundGI.hlsli"
 
 struct GlimmerBrickLightConstants
 {
     GlimmerBrickParams bricks;
     uint4 range;   // x = first place in the live list, y = bricks, z = 1 when they are the build list's, w = mip level
-    float4 params; // x = columns off its surface a shadow ray starts, y = how far a shadow ray looks, z = 1 when the indirect light is the slots' (brick GI)
+    float4 params; // x = columns off its surface a shadow ray starts, y = how far a shadow ray looks, z = 1 when the indirect light is the slots' (brick GI), w = foliage extinction
+    uint4 info;    // x = 1 when the ground cache can be read, y = 1 when a shadow ray goes on through the heightfield
     GlimmerLightParams light;
+    GlimmerGroundParams ground;
+    GlimmerSpanParams spans;
+    GlimmerRelightParams lit; // the ground cache's lit windows
 };
 
 DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
@@ -59,6 +69,15 @@ DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #include "../GlimmerMaterial.hlsli"
+
+// canopy is only counted as transmittance in a shadow ray
+GlimmerLight GlimmerCanopyRadiance(float3 P, float3 weightedAlbedo)
+{
+    return GlimmerNoLight();
+}
+
+#include "../GlimmerGround.hlsli"
+#include "../GlimmerHeightfield.hlsli"
 
 #define GROUP_SIZE 64
 
@@ -183,7 +202,19 @@ void LightColumn(uint brick, int2 column)
 
             if (!TraceGlimmerBricks(constants.bricks, shadowOrigin, toSun, 0.0, constants.params.y, shadowHit))
             {
-                sun = sunIrradiance * (NdotL / HYP_FMATH_PI);
+                float visibility = 1.0;
+
+                // past the bricks: the terrain, the spans' solids and the canopy
+                if (constants.info.y != 0u)
+                {
+                    GlimmerHeightfieldHit heightfieldHit;
+
+                    visibility = GlimmerTraceHeightfield(constants.ground, constants.spans, shadowOrigin, toSun, constants.params.y, 0u, GlimmerBrickWindowExit(constants.bricks, shadowOrigin, toSun), constants.params.w, false, heightfieldHit)
+                        ? 0.0
+                        : heightfieldHit.transmittance;
+                }
+
+                sun = sunIrradiance * (visibility * NdotL / HYP_FMATH_PI);
             }
         }
 
@@ -237,7 +268,8 @@ float4 TileLight(uint brick, uint axis, uint cardSlot, uint2 tile)
 }
 
 // radiance coming back along a slot's ray, false for a slot with nothing to say: not traced, or its crossing's place since taken by another
-bool SlotRadiance(uint slot, float3 toSun, float3 sunIrradiance, out float3 outRadiance)
+// near is the xz of the slot's brick, to place a ground slot's hit
+bool SlotRadiance(uint slot, float2 near, float3 toSun, float3 sunIrradiance, out float3 outRadiance)
 {
     outRadiance = (float3)0.0;
 
@@ -276,6 +308,28 @@ bool SlotRadiance(uint slot, float3 toSun, float3 sunIrradiance, out float3 outR
         return true;
     }
 
+    if (GlimmerBrickIsGroundSlot(slot))
+    {
+        if (constants.info.x == 0u)
+        {
+            return false;
+        }
+
+        float transmittance;
+        const float2 xz = GlimmerBrickDecodeGroundSlot(slot, near, transmittance);
+
+        float3 sent;
+
+        if (!GlimmerSampleGroundGI(constants.lit, constants.ground, xz, GLIMMER_GROUND_GI_SENT, sent))
+        {
+            return false;
+        }
+
+        outRadiance = sent * transmittance;
+
+        return true;
+    }
+
     // past the bricks: lit by the sun, with nothing in its way counted, and the open sky
     const float3 albedo = GlimmerBrickUnpackColor(slot & 0xFFFFu);
     const float3 N = GlimmerBrickUnpackOctahedral((slot >> 16u) & 0xFFFu, 6u);
@@ -285,7 +339,7 @@ bool SlotRadiance(uint slot, float3 toSun, float3 sunIrradiance, out float3 outR
     return true;
 }
 
-void GatherTile(uint card, uint tile)
+void GatherTile(uint card, uint tile, float2 near)
 {
     float3 toSun;
     const float3 sunIrradiance = SunIrradiance(toSun);
@@ -302,7 +356,7 @@ void GatherTile(uint card, uint tile)
 
         float3 radiance;
 
-        if (SlotRadiance(slot, toSun, sunIrradiance, radiance))
+        if (SlotRadiance(slot, near, toSun, sunIrradiance, radiance))
         {
             sum += radiance;
             numKnown++;
@@ -370,7 +424,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     }
 
 #if defined(MODE_GATHER)
-    GatherTile(card, texelIndex);
+    GatherTile(card, texelIndex, GlimmerBrickCellLow(constants.bricks, cell).xz + 0.5 * constants.bricks.params.x);
 #else
     const uint base = card * uint(GLIMMER_BRICK_CARD_TEXELS);
     const uint2 texel = uint2(texelIndex % side, texelIndex / side);

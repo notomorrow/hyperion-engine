@@ -424,6 +424,20 @@ void GlimmerRelight::Invalidate()
     m_hasProbeWindows = false;
 }
 
+void GlimmerRelight::RelightAll()
+{
+    for (Level& level : m_levels)
+    {
+        if (!level.hasWindow)
+        {
+            continue;
+        }
+
+        level.pending.Clear();
+        level.pending.PushBack(GetGlimmerGroundWindow(level.windowOrigin));
+    }
+}
+
 #pragma endregion GlimmerRelight
 
 } // namespace Hyperion

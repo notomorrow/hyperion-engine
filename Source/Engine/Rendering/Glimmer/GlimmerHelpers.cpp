@@ -379,6 +379,29 @@ void GetGlimmerLightShaderData(EnvProbe* skyProbe, GlimmerLightShaderData& outLi
     }
 }
 
+float GetGlimmerLightChange(const GlimmerLightShaderData& from, const GlimmerLightShaderData& to)
+{
+    float change = 0.0f;
+    float total = 0.0f;
+
+    const auto addTerm = [&](const Vec4f& fromWeight, const Vec4f& toWeight)
+    {
+        for (int channel = 0; channel < 3; channel++)
+        {
+            change += MathUtil::Abs(toWeight[channel] - fromWeight[channel]);
+            total += MathUtil::Abs(toWeight[channel]);
+        }
+    };
+
+    for (uint32 term = 0; term < GlimmerLightTerms; term++)
+    {
+        addTerm(from.bounceWeights[term], to.bounceWeights[term]);
+        addTerm(from.directWeights[term], to.directWeights[term]);
+    }
+
+    return total > 1e-6f ? change / total : (change > 0.0f ? 1.0f : 0.0f);
+}
+
 float GetGlimmerFoliageExtinction()
 {
     // leaves bunch up in crowns with gaps between them, so a texel's leaf area blocks less than if it were spread evenly

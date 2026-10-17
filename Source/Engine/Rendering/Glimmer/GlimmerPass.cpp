@@ -82,6 +82,7 @@ static constexpr Pair<StringHash, GlimmerRestartParts> StatefulShaders[] = {
     { "GlimmerBrickBuild"_sh, GlimmerRestartParts::Bricks },
     { "GlimmerBrickLight"_sh, GlimmerRestartParts::Bricks },
     { "GlimmerBrickGITrace"_sh, GlimmerRestartParts::Bricks },
+    { "GlimmerGroundGI"_sh, GlimmerRestartParts::Lighting },
     { "GlimmerProbeAlloc"_sh, GlimmerRestartParts::Lighting },
     { "GlimmerProbeTrace"_sh, GlimmerRestartParts::Lighting },
     { "GlimmerProbeBlend"_sh, GlimmerRestartParts::Lighting },

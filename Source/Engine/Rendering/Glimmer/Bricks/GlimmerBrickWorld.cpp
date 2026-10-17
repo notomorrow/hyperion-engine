@@ -14,6 +14,7 @@
 #include <Rendering/Glimmer/GlimmerTriangleCache.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/GlimmerSpanCache.hpp>
+#include <Rendering/Glimmer/GlimmerGroundGI.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
 
@@ -158,8 +159,12 @@ struct GlimmerBrickLightConstants
 {
     GlimmerBrickShaderData bricks;
     Vec4u range;  // x = first place in the live list, y = bricks, z = 1 when they are the build list's, w = mip level
-    Vec4f params; // x = columns off its surface a shadow ray starts, y = how far a shadow ray looks, z = 1 when the indirect light is the slots' (brick GI)
+    Vec4f params; // x = columns off its surface a shadow ray starts, y = how far a shadow ray looks, z = 1 when the indirect light is the slots' (brick GI), w = foliage extinction
+    Vec4u info;   // x = 1 when the ground cache can be read, y = 1 when a shadow ray goes on through the heightfield
     GlimmerLightShaderData light;
+    GlimmerGroundShaderData ground;
+    GlimmerSpanShaderData spans;
+    GlimmerRelightShaderData lit; // the ground cache's lit windows
 };
 
 struct GlimmerBrickGITraceConstants
@@ -244,30 +249,6 @@ static GpuBufferRef CreateBrickBuffer(size_t numWords, Name name)
 #endif
 
     return buffer;
-}
-
-// how far the sun and sky have moved from one to the other, as a share of all of the other
-static float LightChange(const GlimmerLightShaderData& from, const GlimmerLightShaderData& to)
-{
-    float change = 0.0f;
-    float total = 0.0f;
-
-    const auto addTerm = [&](const Vec4f& fromWeight, const Vec4f& toWeight)
-    {
-        for (int channel = 0; channel < 3; channel++)
-        {
-            change += MathUtil::Abs(toWeight[channel] - fromWeight[channel]);
-            total += MathUtil::Abs(toWeight[channel]);
-        }
-    };
-
-    for (uint32 term = 0; term < GlimmerLightTerms; term++)
-    {
-        addTerm(from.bounceWeights[term], to.bounceWeights[term]);
-        addTerm(from.directWeights[term], to.directWeights[term]);
-    }
-
-    return total > 1e-6f ? change / total : (change > 0.0f ? 1.0f : 0.0f);
 }
 
 // a crossing's light and a card's texels are only held while lit, and the GI's slots and what arrives only with brick GI
@@ -1143,6 +1124,7 @@ void GlimmerBrickWorld::Update(
     const GlimmerTriangleCache& triangleCache,
     const GlimmerSurfaceCache* surfaceCache,
     const GlimmerSpanCache* spanCache,
+    const GlimmerGroundGI* groundGI,
     const GlimmerTechnique* technique,
     const GlimmerLightShaderData& light)
 {
@@ -1157,6 +1139,7 @@ void GlimmerBrickWorld::Update(
     m_triangleCache = &triangleCache;
     m_surfaceCache = surfaceCache;
     m_spanCache = spanCache;
+    m_groundGI = groundGI;
     m_light = light;
 
     if (!m_tableBuffer.IsValid())
@@ -1386,7 +1369,7 @@ void GlimmerBrickWorld::Update(
     // otherwise a trickle follows the bounce, and the sky's small drift, as they settle
     const float intensity = g_cvGlimmerIntensity.Get();
 
-    if (!m_hasRelitLight || intensity != m_relitIntensity || LightChange(m_relitLight, light) > RelightBurstChange)
+    if (!m_hasRelitLight || intensity != m_relitIntensity || GetGlimmerLightChange(m_relitLight, light) > RelightBurstChange)
     {
         m_relitLight = light;
         m_relitIntensity = intensity;
@@ -1439,6 +1422,11 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
 
     const bool hasIndirect = technique && technique->IsReady();
 
+    // past the bricks a shadow ray goes on through the heightfield, and slots that landed on the ground read its cache
+    const bool hasHeightfield = m_surfaceCache && m_spanCache && m_spanCache->GetSpansBuffer().IsValid() && m_spanCache->GetHeightBoundsBuffer().IsValid()
+        && m_surfaceCache->GetGroundImageView().IsValid();
+    const bool hasGroundGI = m_isGI && hasHeightfield && m_groundGI && m_groundGI->IsReady();
+
     // a row of groups per brick: the build list's sized by the args pass, the live list's here
     const auto dispatchPass = [&](const StaticShaderPropertyId& modeProperty, uint32 level, uint32 threadsPerBrick, uint32 argsOffset)
     {
@@ -1449,8 +1437,20 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
         GlimmerBrickLightConstants constants {};
         constants.bricks = m_shaderData;
         constants.range = Vec4u(firstBrick, numBricks, isBuildList ? 1u : 0u, level);
-        constants.params = Vec4f(ShadowBiasColumns, ShadowDistance, m_isGI ? 1.0f : 0.0f, 0.0f);
+        constants.params = Vec4f(ShadowBiasColumns, ShadowDistance, m_isGI ? 1.0f : 0.0f, GetGlimmerFoliageExtinction());
+        constants.info = Vec4u(hasGroundGI ? 1u : 0u, hasHeightfield ? 1u : 0u, 0u, 0u);
         constants.light = m_light;
+
+        if (hasHeightfield)
+        {
+            constants.ground = m_surfaceCache->GetGroundShaderData();
+            constants.spans = m_spanCache->GetShaderData();
+        }
+
+        if (hasGroundGI)
+        {
+            constants.lit = m_groundGI->GetShaderData();
+        }
 
         GpuBuffer* cbuffer = nullptr;
         size_t cbufferOffset = 0;
@@ -1489,6 +1489,12 @@ void GlimmerBrickWorld::LightBricks(Frame* frame, const GlimmerTechnique* techni
 
         uniformIndex = BindBuffers(cr, uniformIndex, GlimmerBrickBindings::Counters | GlimmerBrickBindings::Light | GlimmerBrickBindings::GI);
         uniformIndex = GlimmerTechnique::BindApplyResources(cr, uniformIndex, hasIndirect ? technique : nullptr);
+
+        // HACK: any buffer or texture read only already will do in place of those not there, as the constants keep them from being read
+        cr << SetShaderUniform(uniformIndex++, "GlimmerGroundGIBuffer"_sh, hasGroundGI ? m_groundGI->GetBuffer().Get() : m_indexBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
+        cr << SetShaderUniform(uniformIndex++, "GlimmerGroundTexture"_sh, hasHeightfield ? m_surfaceCache->GetGroundImageView() : RI.placeholderData->GetImageView2D1x1R8Array());
+        cr << SetShaderUniform(uniformIndex++, "GlimmerSpansBuffer"_sh, hasHeightfield ? m_spanCache->GetSpansBuffer().Get() : m_indexBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
+        cr << SetShaderUniform(uniformIndex++, "GlimmerHeightBoundsBuffer"_sh, hasHeightfield ? m_spanCache->GetHeightBoundsBuffer().Get() : m_indexBuffer.Get(), ShaderDataOffset(0, sizeof(float)));
 
         if (isBuildList)
         {
@@ -1539,7 +1545,9 @@ void GlimmerBrickWorld::TraceSlots(Frame* frame, uint32 firstBrick, uint32 numBr
 
     GlimmerBrickGITraceConstants constants {};
     constants.bricks = m_shaderData;
-    constants.range = Vec4u(firstBrick, numBricks, isBuildList ? 1u : 0u, hasHeightfield ? 1u : 0u);
+    const bool hasGroundGI = hasHeightfield && m_groundGI && m_groundGI->IsReady();
+
+    constants.range = Vec4u(firstBrick, numBricks, isBuildList ? 1u : 0u, hasHeightfield ? (hasGroundGI ? 2u : 1u) : 0u);
     constants.params = Vec4f(GIRayBiasColumns, GlimmerMaxRayDistance, GetGlimmerFoliageExtinction(), GlimmerDefaultGroundAlbedo);
 
     if (hasHeightfield)

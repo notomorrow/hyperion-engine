@@ -17,6 +17,7 @@
 #include <Rendering/Glimmer/SH/GlimmerSHOccupancy.hpp>
 #include <Rendering/Glimmer/GlimmerRelight.hpp>
 #include <Rendering/Glimmer/Bricks/GlimmerBrickWorld.hpp>
+#include <Rendering/Glimmer/GlimmerGroundGI.hpp>
 #include <Rendering/Glimmer/Bricks/GlimmerBrickCVars.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
@@ -152,7 +153,8 @@ GlimmerTechnique::GlimmerTechnique()
       m_shOccupancy(MakeUnique<GlimmerSHOccupancy>()),
       m_shVolume(MakeUnique<GlimmerSHVolume>()),
       m_relight(MakeUnique<GlimmerRelight>()),
-      m_brickWorld(MakeUnique<GlimmerBrickWorld>())
+      m_brickWorld(MakeUnique<GlimmerBrickWorld>()),
+      m_groundGI(MakeUnique<GlimmerGroundGI>())
 {
 }
 
@@ -168,6 +170,7 @@ void GlimmerTechnique::ResetLighting()
     m_shOccupancy = MakeUnique<GlimmerSHOccupancy>();
     m_shVolume = MakeUnique<GlimmerSHVolume>();
     m_relight = MakeUnique<GlimmerRelight>();
+    m_groundGI = MakeUnique<GlimmerGroundGI>();
 }
 
 bool GlimmerTechnique::IsReady() const
@@ -298,7 +301,19 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         GlimmerLightShaderData light;
         GetGlimmerLightShaderData(context.skyProbe, light);
 
-        m_brickWorld->Update(context.frame, viewerPosition, lookAhead, budgetScale, sceneInstances, *context.triangleCache, context.surfaceCache, context.spanCache, this, light);
+        const bool hasGroundGI = g_cvGlimmerBrickGI.Get() && context.updateLighting && context.channelState && context.surfaceCache && context.spanCache;
+
+        m_brickWorld->Update(context.frame, viewerPosition, lookAhead, budgetScale, sceneInstances, *context.triangleCache, context.surfaceCache, context.spanCache, hasGroundGI ? m_groundGI.Get() : nullptr, this, light);
+
+        // after the bricks, so the ground gathers from crossings lit this frame; the bricks read the ground's light a frame behind
+        if (hasGroundGI)
+        {
+            m_groundGI->Update(context.frame, *context.channelState, *context.surfaceCache, *context.spanCache, m_brickWorld.Get(), light);
+        }
+        else
+        {
+            m_groundGI->Reset();
+        }
     }
 }
 

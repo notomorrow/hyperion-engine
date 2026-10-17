@@ -292,6 +292,10 @@ ShaderDefinitions "ShaderDefinitions" {
             Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/Bricks/GlimmerBrickGITrace.hlsl"
         }
+        ShaderDefinition "GlimmerGroundGI" {
+            Condition = "Rendering.Glimmer.Enabled"
+            CS = "Glimmer/GlimmerGroundGI.hlsl"
+        }
         ShaderDefinition "GlimmerBrickReflections" {
             Condition = "Rendering.Glimmer.Enabled"
             CS = "Glimmer/Bricks/GlimmerBrickReflections.hlsl"

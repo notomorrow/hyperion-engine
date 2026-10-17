@@ -13,6 +13,10 @@
 #include <Rendering/Glimmer/Bricks/GlimmerBrickReflections.hpp>
 #include <Rendering/Glimmer/Bricks/GlimmerBrickWorld.hpp>
 #include <Rendering/Glimmer/Bricks/GlimmerBrickCVars.hpp>
+#include <Rendering/Glimmer/GlimmerGroundGI.hpp>
+#include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
+#include <Rendering/Glimmer/GlimmerSpanCache.hpp>
+#include <Rendering/PlaceholderData.hpp>
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/RenderProxy.hpp>
@@ -223,6 +227,27 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
         brickShaderData = brickWorld->GetShaderData();
     }
 
+    // and the ground its cache
+    const GlimmerGroundGI* groundGI = technique->GetGroundGI();
+    const GlimmerSurfaceCache* surfaceCache = brickScene ? brickScene->surfaceCache.Get() : nullptr;
+    const GlimmerSpanCache* spanCache = brickScene ? brickScene->spanCache.Get() : nullptr;
+
+    const bool hasGroundGI = g_cvGlimmerBrickGI.Get() && groundGI && groundGI->IsReady() && surfaceCache && surfaceCache->GetGroundImageView().IsValid()
+        && spanCache && spanCache->GetSpansBuffer().IsValid() && spanCache->GetHeightBoundsBuffer().IsValid();
+
+    GlimmerGroundShaderData groundShaderData {};
+    GlimmerSpanShaderData spanShaderData {};
+    GlimmerRelightShaderData groundLitShaderData {};
+
+    if (hasGroundGI)
+    {
+        groundShaderData = surfaceCache->GetGroundShaderData();
+        spanShaderData = spanCache->GetShaderData();
+        groundLitShaderData = groundGI->GetShaderData();
+    }
+
+    const Vec4f groundParams { GetGlimmerFoliageExtinction(), 0.0f, 0.0f, 0.0f };
+
     const auto draw = [&](const StaticShaderPropertyId& modeProperty)
     {
         ShaderPropertySet shaderProperties;
@@ -236,9 +261,13 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
 
         glimmerPass->WriteApplyShaderData(*RI.cbufferAllocator, renderSetup.world);
 
-        const Vec4u irradianceParams { halfResPick.x, halfResPick.y, 0, 0 };
+        const Vec4u irradianceParams { halfResPick.x, halfResPick.y, hasGroundGI ? 1u : 0u, 0 };
         RI.cbufferAllocator->Write(&irradianceParams);
+        RI.cbufferAllocator->Write(&groundParams);
         RI.cbufferAllocator->Write(&brickShaderData);
+        RI.cbufferAllocator->Write(&groundShaderData);
+        RI.cbufferAllocator->Write(&spanShaderData);
+        RI.cbufferAllocator->Write(&groundLitShaderData);
 
         RI.cbufferAllocator->Commit(cbuffer, cbufferOffset, cbufferSize);
 
@@ -272,6 +301,21 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
             cr << SetShaderUniform(uniformIndex++, "GlimmerBrickCrossingsBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
             cr << SetShaderUniform(uniformIndex++, "GlimmerBrickMaterialBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
             cr << SetShaderUniform(uniformIndex++, "GlimmerBrickArrivingBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
+        }
+
+        if (hasGroundGI)
+        {
+            cr << SetShaderUniform(uniformIndex++, "GlimmerGroundTexture"_sh, surfaceCache->GetGroundImageView());
+            cr << SetShaderUniform(uniformIndex++, "GlimmerGroundGIBuffer"_sh, groundGI->GetBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerSpansBuffer"_sh, spanCache->GetSpansBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
+            cr << SetShaderUniform(uniformIndex++, "GlimmerHeightBoundsBuffer"_sh, spanCache->GetHeightBoundsBuffer().Get(), ShaderDataOffset(0, sizeof(float)));
+        }
+        else
+        {
+            cr << SetShaderUniform(uniformIndex++, "GlimmerGroundTexture"_sh, RI.placeholderData->GetImageView2D1x1R8Array());
+            cr << SetShaderUniform(uniformIndex++, "GlimmerGroundGIBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
+            cr << SetShaderUniform(uniformIndex++, "GlimmerSpansBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
+            cr << SetShaderUniform(uniformIndex++, "GlimmerHeightBoundsBuffer"_sh, RI.namedBuffers[NamedBuffer::Worlds]);
         }
 
         cr << CommitDrawState();

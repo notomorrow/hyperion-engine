@@ -124,6 +124,9 @@ void GetGlimmerSkyShaderData(EnvProbe* skyProbe, GlimmerSkyShaderData& outSky, E
 
 void GetGlimmerLightShaderData(EnvProbe* skyProbe, GlimmerLightShaderData& outLight);
 
+// how far the sun and sky have moved from one to the other, as a share of all of the other
+float GetGlimmerLightChange(const GlimmerLightShaderData& from, const GlimmerLightShaderData& to);
+
 float GetGlimmerFoliageExtinction();
 
 struct GlimmerLightmapPages

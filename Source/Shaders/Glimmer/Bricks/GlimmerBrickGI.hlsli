@@ -8,7 +8,8 @@
 ///     0: not traced, or the tile has no surface
 ///     1: a crossing: its index, and 6 bits of a hash of its first word to tell when its place was reused
 ///     2: the sky, possibly through canopy: the direction, octahedral 10 + 10 bits, and the transmittance, 8 bits
-///     3: something past the bricks (ground, span solids): albedo times the transmittance to it, 5:6:5, and normal, octahedral 6 + 6 bits; bit 28 = dark (a back face)
+///     3: something past the bricks (span solids): albedo times the transmittance to it, 5:6:5, and normal, octahedral 6 + 6 bits; bit 28 = dark (a back face)
+///        with bit 29: the ground, read from the ground cache where it was hit: x and z in metres modulo 4096, 12 bits each, and the transmittance to it in 3 bits
 
 // NOTE must match GlimmerBrickWorld.hpp
 #define GLIMMER_BRICK_GI_RAYS 8
@@ -64,6 +65,32 @@ uint GlimmerBrickEncodeSkySlot(float3 direction, float transmittance)
 uint GlimmerBrickEncodeOutsideSlot(float3 albedo, float3 normal)
 {
     return (GLIMMER_BRICK_SLOT_OUTSIDE << 30u) | (GlimmerBrickPackOctahedral(normal, 6u) << 16u) | GlimmerBrickPackColor(albedo);
+}
+
+#define GLIMMER_BRICK_SLOT_GROUND_BIT (1u << 29u)
+
+bool GlimmerBrickIsGroundSlot(uint slot)
+{
+    return GlimmerBrickSlotKind(slot) == GLIMMER_BRICK_SLOT_OUTSIDE && (slot & GLIMMER_BRICK_SLOT_GROUND_BIT) != 0u;
+}
+
+uint GlimmerBrickEncodeGroundSlot(float2 xz, float transmittance)
+{
+    const uint2 metres = uint2(int2(floor(xz))) & 0xFFFu;
+
+    return (GLIMMER_BRICK_SLOT_OUTSIDE << 30u) | GLIMMER_BRICK_SLOT_GROUND_BIT | (uint(saturate(transmittance) * 7.0 + 0.5) << 24u) | (metres.y << 12u) | metres.x;
+}
+
+// where a ground slot's ray landed, taken to be the one of its places modulo 4096 m nearest `near` (rays reach well under 2 km)
+float2 GlimmerBrickDecodeGroundSlot(uint slot, float2 near, out float outTransmittance)
+{
+    outTransmittance = float((slot >> 24u) & 7u) / 7.0;
+
+    const int2 metres = int2(uint2(slot & 0xFFFu, (slot >> 12u) & 0xFFFu));
+    const int2 nearMetres = int2(floor(near));
+    const int2 offset = ((metres - nearMetres) % 4096 + 4096 + 2048) % 4096 - 2048;
+
+    return float2(nearMetres + offset) + 0.5;
 }
 
 uint GlimmerBrickGIHash(uint x)
