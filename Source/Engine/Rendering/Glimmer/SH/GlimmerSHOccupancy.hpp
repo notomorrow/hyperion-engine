@@ -84,6 +84,18 @@ private:
     {
         Vec3i min;
         Vec3i max; // exclusive
+
+        HYP_FORCE_INLINE int64 Volume() const
+        {
+            return int64(max.x - min.x) * int64(max.y - min.y) * int64(max.z - min.z);
+        }
+
+        static Box Union(const Box& a, const Box& b)
+        {
+            return Box {
+                Vec3i(MathUtil::Min(a.min.x, b.min.x), MathUtil::Min(a.min.y, b.min.y), MathUtil::Min(a.min.z, b.min.z)),
+                Vec3i(MathUtil::Max(a.max.x, b.max.x), MathUtil::Max(a.max.y, b.max.y), MathUtil::Max(a.max.z, b.max.z)) };
+        }
     };
 
     void SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const Box& box, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache);

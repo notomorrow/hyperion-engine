@@ -12,7 +12,7 @@
 
 namespace Hyperion {
 
-struct PathTracerBVHNode
+struct SAHBVHNode
 {
     float leftMin[3];
     uint32 leftIndex;   //!< Child node index, or first primitive when the child is a leaf
@@ -27,9 +27,9 @@ struct PathTracerBVHNode
     uint32 rightCount;
 };
 
-static_assert(sizeof(PathTracerBVHNode) == 64);
+static_assert(sizeof(SAHBVHNode) == 64);
 
-struct PathTracerBVHBuildParams
+struct SAHBVHBuildParams
 {
     uint32 minLeafSize = 2;
     uint32 maxLeafSize = 8;
@@ -40,19 +40,19 @@ struct PathTracerBVHBuildParams
 };
 
 /// @TODO Make namespace? since its only static functions
-class ENGINE_API PathTracerBVHBuilder
+class ENGINE_API SAHBVHBuilder
 {
 public:
     /// Instantiated for DynamicAllocator
     template <class AllocatorType>
     static void Build(
         Span<const BoundingBox> primitiveBounds,
-        const PathTracerBVHBuildParams& params,
-        Array<PathTracerBVHNode, AllocatorType>& outNodes,
+        const SAHBVHBuildParams& params,
+        Array<SAHBVHNode, AllocatorType>& outNodes,
         Array<uint32, AllocatorType>& outPrimitiveOrder);
 
     /*! \brief Deepest root-to-leaf path, for sizing traversal stacks. */
-    static uint32 CalculateDepth(Span<const PathTracerBVHNode> nodes);
+    static uint32 CalculateDepth(Span<const SAHBVHNode> nodes);
 };
 
 } // namespace Hyperion

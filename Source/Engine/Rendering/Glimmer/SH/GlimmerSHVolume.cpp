@@ -49,7 +49,6 @@ static StaticShaderPropertyId s_propSHModeUpdate { ShaderProperty(NAME("MODE"), 
 static StaticShaderPropertyId s_propSHModeCompose { ShaderProperty(NAME("MODE"), NAME("COMPOSE")) };
 
 static constexpr int32 VoxelsPerFrame = 512;
-static constexpr int32 IdleRefreshVoxelsPerFrame = 64;
 
 // lines the windows up with GlimmerSHOccupancy's, which snap to 8 of its half spaced voxels
 static constexpr int32 WindowSnapVoxels = 4;
@@ -86,6 +85,7 @@ struct GlimmerSHUpdateConstants
     GlimmerSkyShaderData sky;
     EnvProbeShaderData skyProbe;
     GlimmerLightShaderData light;
+    Vec4u options;     // x = 1 to light hits from the nearest voxel, rather than the volume's filtered sample
 };
 
 GlimmerSHVolume::Box GlimmerSHVolume::Box::Intersect(const Box& a, const Box& b)
@@ -357,6 +357,7 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
     GetGlimmerSkyShaderData(inputs.skyProbe, constants.sky, constants.skyProbe);
 
     constants.light = inputs.light;
+    constants.options = Vec4u(g_cvGlimmerSHNearestHitLight.Get() ? 1u : 0u, 0u, 0u, 0u);
 
     GpuBuffer* cbuffer = nullptr;
     size_t cbufferOffset = 0;
@@ -695,7 +696,9 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
         spend(cascadeIndex, budget);
     }
 
-    m_refreshBudget = MathUtil::Min(m_refreshBudget + IdleRefreshVoxelsPerFrame, MathUtil::Max(IdleRefreshVoxelsPerFrame, RefreshSliceVoxels) * 2);
+    const int32 refreshVoxels = MathUtil::Max(g_cvGlimmerSHRefreshVoxelsPerFrame.Get(), 0);
+
+    m_refreshBudget = MathUtil::Min(m_refreshBudget + refreshVoxels, MathUtil::Max(refreshVoxels, RefreshSliceVoxels) * 2);
 
     for (uint32 attempt = 0; attempt < 2 * GlimmerSHCascades && m_refreshBudget >= RefreshSliceVoxels; attempt++)
     {

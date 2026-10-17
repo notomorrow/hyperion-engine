@@ -67,6 +67,9 @@ static EngineStatCounter<uint32> s_statGlimmerResidentMeshes("Rendering/Glimmer/
 static EngineStatCounter<uint32> s_statGlimmerBuildingMeshes("Rendering/Glimmer/BuildingMeshes", false);
 static EngineStatCounter<uint32> s_statGlimmerMeshesWaitingForRoom("Rendering/Glimmer/MeshesWaitingForRoom", false);
 static EngineStatCounter<uint32> s_statGlimmerPoolTriangles("Rendering/Glimmer/PoolTriangles", false);
+static EngineStatCounter<uint32> s_statGlimmerBLASNodes("Rendering/Glimmer/BLASNodes", false);
+static EngineStatCounter<uint32> s_statGlimmerTracedInstances("Rendering/Glimmer/TracedInstances", false);
+static EngineStatCounter<uint32> s_statGlimmerTLASBuilds("Rendering/Glimmer/TLASBuilds", false);
 static EngineStatCounter<uint32> s_statGlimmerLodErrorScalePercent("Rendering/Glimmer/LodErrorScalePercent", false);
 static EngineStatCounter<uint32> s_statGlimmerSceneInstancesBuilds("Rendering/Glimmer/InstanceBuilds", false);
 static EngineStatCounter<uint32> s_statGlimmerSceneInstancesEverywhereBuilds("Rendering/Glimmer/InstanceEverywhereBuilds", false);
@@ -510,12 +513,15 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     s_statGlimmerBuildingMeshes = triangleStats.numBuilding + triangleStats.numPendingUpload;
     s_statGlimmerMeshesWaitingForRoom = triangleStats.numWaitingForRoom;
     s_statGlimmerPoolTriangles = triangleStats.trianglesUsed;
+    s_statGlimmerBLASNodes = triangleStats.nodesUsed;
+    s_statGlimmerTracedInstances = scene->sceneInstances->GetNumTracedInstances();
     s_statGlimmerLodErrorScalePercent = uint32(scene->triangleCache->GetLodErrorScale() * 100.0f + 0.5f);
 
     const GlimmerSceneInstancesStats& instancesStats = scene->sceneInstances->GetStats();
 
     s_statGlimmerSceneInstancesBuilds = instancesStats.numBuilds;
     s_statGlimmerSceneInstancesEverywhereBuilds = instancesStats.numEverywhereBuilds;
+    s_statGlimmerTLASBuilds = instancesStats.numTLASBuilds;
     s_statGlimmerSceneInstancesChanges = instancesStats.numChanges;
     s_statGlimmerSceneInstancesLodOnlyChanges = instancesStats.numLodOnlyChanges;
 

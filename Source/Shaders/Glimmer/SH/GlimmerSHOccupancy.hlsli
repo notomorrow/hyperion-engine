@@ -57,6 +57,20 @@ uint GlimmerSHOccupancyLightmapIndex(uint cascadeIndex, int3 voxel)
     return GLIMMER_SH_OCCUPANCY_LIGHTMAP_BASE + ((texel.z * uint(GLIMMER_SH_OCCUPANCY_GRID_Y * GLIMMER_SH_OCCUPANCY_TRACED_CASCADES) + texel.y) * uint(GLIMMER_SH_OCCUPANCY_GRID_XZ) + texel.x) * GLIMMER_SH_OCCUPANCY_LIGHTMAP_FACES;
 }
 
+#define GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT 2
+#define GLIMMER_SH_OCCUPANCY_BLOCK_VOXELS (1 << GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT)
+#define GLIMMER_SH_OCCUPANCY_BLOCKS_XZ (GLIMMER_SH_OCCUPANCY_GRID_XZ >> GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT)
+#define GLIMMER_SH_OCCUPANCY_BLOCKS_Y (GLIMMER_SH_OCCUPANCY_GRID_Y >> GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT)
+#define GLIMMER_SH_OCCUPANCY_CASCADE_BLOCKS uint(GLIMMER_SH_OCCUPANCY_BLOCKS_XZ * GLIMMER_SH_OCCUPANCY_BLOCKS_Y * GLIMMER_SH_OCCUPANCY_BLOCKS_XZ)
+#define GLIMMER_SH_OCCUPANCY_BLOCK_BASE (GLIMMER_SH_OCCUPANCY_LIGHTMAP_BASE + uint(GLIMMER_SH_OCCUPANCY_GRID_XZ * GLIMMER_SH_OCCUPANCY_GRID_XZ * GLIMMER_SH_OCCUPANCY_GRID_Y * GLIMMER_SH_OCCUPANCY_TRACED_CASCADES) * GLIMMER_SH_OCCUPANCY_LIGHTMAP_FACES)
+
+uint GlimmerSHOccupancyBlockIndex(uint cascadeIndex, int3 voxel)
+{
+    const uint3 block = uint3((voxel >> GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT) & int3(GLIMMER_SH_OCCUPANCY_BLOCKS_XZ - 1, GLIMMER_SH_OCCUPANCY_BLOCKS_Y - 1, GLIMMER_SH_OCCUPANCY_BLOCKS_XZ - 1));
+
+    return GLIMMER_SH_OCCUPANCY_BLOCK_BASE + cascadeIndex * GLIMMER_SH_OCCUPANCY_CASCADE_BLOCKS + (block.z * uint(GLIMMER_SH_OCCUPANCY_BLOCKS_Y) + block.y) * uint(GLIMMER_SH_OCCUPANCY_BLOCKS_XZ) + block.x;
+}
+
 bool GlimmerSHOccupancyContains(GlimmerSHOccupancyCascade cascade, float3 P)
 {
     const int3 localVoxel = int3(floor(P * cascade.params.y)) - cascade.origin.xyz;
@@ -263,6 +277,8 @@ bool GlimmerSHTraceOccupancy(GlimmerSHOccupancyParams params, float3 origin, flo
 
         float3 enteredNormal = -direction;
 
+        const float nudge = 1e-4 * spacing;
+
         [loop]
         for (uint stepIndex = 0; stepIndex < uint(GLIMMER_SH_OCCUPANCY_GRID_XZ * 2 + GLIMMER_SH_OCCUPANCY_GRID_Y); stepIndex++)
         {
@@ -271,6 +287,29 @@ bool GlimmerSHTraceOccupancy(GlimmerSHOccupancyParams params, float3 origin, flo
             if (any(localVoxel < 0) || any(localVoxel >= GlimmerSHOccupancyGridSize))
             {
                 break;
+            }
+
+            if (glimmerSHOccupancyMask[GlimmerSHOccupancyBlockIndex(cascadeIndex, voxel)] == 0u)
+            {
+                const int3 blockMin = (voxel >> GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT) << GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT;
+                const float3 blockExit = (float3(blockMin + select(stepDirection > 0, GLIMMER_SH_OCCUPANCY_BLOCK_VOXELS, 0)) * spacing - origin) * invDirection;
+                const float tExit = min(blockExit.x, min(blockExit.y, blockExit.z));
+
+                enteredNormal = blockExit.x <= blockExit.y && blockExit.x <= blockExit.z
+                    ? float3(-float(stepDirection.x), 0.0, 0.0)
+                    : (blockExit.y <= blockExit.z ? float3(0.0, -float(stepDirection.y), 0.0) : float3(0.0, 0.0, -float(stepDirection.z)));
+
+                t = max(tExit, t);
+
+                if (t >= tMax)
+                {
+                    break;
+                }
+
+                voxel = int3(floor((origin + direction * (t + nudge)) * cascade.params.y));
+                tNext = max((float3(voxel + max(stepDirection, 0)) * spacing - origin) * invDirection, (float3)t);
+
+                continue;
             }
 
             const float4 occupancy = glimmerSHOccupancy.Load(int4(GlimmerSHOccupancyTexel(cascadeIndex, voxel), 0));

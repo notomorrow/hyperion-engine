@@ -7,7 +7,10 @@
 #pragma once
 
 #include <Rendering/RenderTypes.hpp>
+
 #include <Rendering/Glimmer/GlimmerMemory.hpp>
+
+#include <Rendering/Util/SAHBVHBuilder.hpp>
 
 #include <Core/Containers/Array.hpp>
 #include <Core/Containers/Map.hpp>
@@ -32,18 +35,33 @@ enum GlimmerInstanceFlags : uint32
 
 struct GlimmerSpanInstanceShaderData
 {
-    float objectToWorld[12]; // the mesh's quantization grid space to world, first three rows, row major
+    float objectToWorld[12];
+
     uint32 triangleBase;
     uint32 triangleCount;
     uint32 materialIndex;
     uint32 flags;
-    uint32 lightmapUVBase; // ~0u when it has no lightmap to take its indirect light from
+    uint32 lightmapUVBase;      // ~0u when it has no lightmap to take its indirect light from
     uint32 lightmapRectOffset;
     uint32 lightmapRectSize;
-    uint32 texcoordBase; // ~0u when the triangle pool had no room for its UV0
+    uint32 texcoordBase;        // ~0u when the triangle pool had no room for its UV0
 };
 
 static_assert(sizeof(GlimmerSpanInstanceShaderData) == 80);
+
+struct GlimmerTracedInstanceShaderData
+{
+    float worldToObject[12];
+
+    uint32 blasNodeBase;
+    uint32 blasTriangleBase;
+
+    uint32 materialIndex;
+    
+    uint32 flags;
+};
+
+static_assert(sizeof(GlimmerTracedInstanceShaderData) == 64);
 
 static constexpr uint32 GlimmerSpanChunkTriangles = 256;
 
@@ -103,6 +121,7 @@ struct GlimmerSceneInstancesStats
     uint32 numChanges = 0;        // num changes of the last build, before merging
     uint32 numLodOnlyChanges = 0;
     uint32 numEverywhereBuilds = 0;
+    uint32 numTLASBuilds = 0;
 };
 
 class GlimmerSceneInstances final
@@ -143,6 +162,31 @@ public:
     HYP_FORCE_INLINE const GpuBufferRef& GetSpanInstancesBuffer() const
     {
         return m_spanInstancesBuffer;
+    }
+
+    HYP_FORCE_INLINE const GpuBufferRef& GetTLASNodesBuffer() const
+    {
+        return m_tlasNodesBuffer;
+    }
+
+    HYP_FORCE_INLINE const GpuBufferRef& GetTracedInstancesBuffer() const
+    {
+        return m_tracedInstancesBuffer;
+    }
+
+    HYP_FORCE_INLINE bool HasTLAS() const
+    {
+        return m_tlasNodesBuffer.IsValid() && m_numTracedInstances != 0;
+    }
+
+    HYP_FORCE_INLINE uint32 GetNumTracedInstances() const
+    {
+        return m_numTracedInstances;
+    }
+
+    HYP_FORCE_INLINE uint32 GetTLASDepth() const
+    {
+        return m_tlasDepth;
     }
 
     HYP_FORCE_INLINE const GpuBufferRef& GetSpanChunksBuffer() const
@@ -223,31 +267,60 @@ private:
     struct BuildInput
     {
         BoundingBox region;
+        
         Vec3f regionCenter;
+        
         Array<SpanKey, GlimmerAllocator> previousSpanKeys; // sorted; empty for the first build
         Array<InstanceRecord, GlimmerAllocator> previousInstanceRecords; // sorted
+        
         Array<InstanceRecord, GlimmerAllocator> instanceRecords;
+        
         bool hasPrevious = false;
+        
         Array<GlimmerSpanInstanceShaderData, GlimmerAllocator> spanInstances;
         Array<BoundingBox, GlimmerAllocator> spanInstanceBounds;
+        
+        Array<GlimmerTracedInstanceShaderData, GlimmerAllocator> tracedInstances;
+        Array<BoundingBox, GlimmerAllocator> tracedBounds;
+
+        uint64 previousTLASHash = ~0ull;
+
         Array<uint64, GlimmerAllocator> meshKeys; // unique
     };
 
     struct BuildResult
     {
         BoundingBox region;
+        
         Array<GlimmerSpanInstanceShaderData, GlimmerAllocator> spanInstances;
+        
         Array<GlimmerSpanChunkShaderData, GlimmerAllocator> spanChunks;
+        
         uint32 numSpanTriangles = 0;
+        
         Array<uint64, GlimmerAllocator> meshKeys;
+        
         double buildMs = 0.0;
+
         uint64 inputHash = 0; // of the gathered instances, so a rebuild that changed nothing can be dropped
+        
         Array<SpanKey, GlimmerAllocator> spanKeys; // sorted
         Array<BoundingBox, GlimmerAllocator> spanDirtyBounds;
         bool spanFullyDirty = true;
+        
         Array<InstanceRecord, GlimmerAllocator> instanceRecords; // sorted
+        
         GlimmerSceneChanges changes;
+
         uint32 numLodOnlyChanges = 0;
+        
+        Array<SAHBVHNode, GlimmerAllocator> tlasNodes; // empty without traced instances
+        
+        Array<GlimmerTracedInstanceShaderData, GlimmerAllocator> tracedInstances; // in TLAS leaf order
+
+        uint32 tlasDepth = 0;
+        uint64 tlasHash = 0;        // of the traced instances as gathered
+        bool isTLASUnchanged = false; // the uploaded TLAS is already this one, so nothing above was built
     };
 
     void Gather(
@@ -261,9 +334,18 @@ private:
     static BuildResult Build(BuildInput&& input);
 
     void Upload(Frame* frame, BuildResult& result);
+    void UploadTLAS(Frame* frame, BuildResult& result);
 
     GpuBufferRef m_spanInstancesBuffer;
     GpuBufferRef m_spanChunksBuffer;
+    
+    GpuBufferRef m_tlasNodesBuffer;
+    
+    GpuBufferRef m_tracedInstancesBuffer;
+    uint32 m_numTracedInstances = 0;
+
+    uint32 m_tlasDepth = 0;
+    uint64 m_activeTLASHash = ~0ull;
 
     Array<uint64, GlimmerAllocator> m_activeMeshKeys;
 
