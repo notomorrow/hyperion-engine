@@ -62,15 +62,21 @@ bool DX12DescriptorIndexAllocator::ContainsRange(uint32 startIndex, uint32 count
     TSharedLock lock(m_mutex);
 
     if (count == 0)
+    {
         return false;
+    }
 
     if (startIndex + count > idCounter)
+    {
         return false;
+    }
 
     for (uint32 i = 0; i < count; ++i)
     {
         if (m_freeIndices.Test(startIndex + i))
+        {
             return false;
+        }
     }
 
     return true;
@@ -79,7 +85,8 @@ bool DX12DescriptorIndexAllocator::ContainsRange(uint32 startIndex, uint32 count
 uint32 DX12DescriptorIndexAllocator::Allocate(uint32 count)
 {
     if (count == 0)
-        return InvalidIndex;
+    {
+    }
 
     TUniqueLock lock(m_mutex);
 
@@ -123,7 +130,9 @@ uint32 DX12DescriptorIndexAllocator::Allocate(uint32 count)
 
     // out of slots!
     if (idCounter + count > maxSize)
+    {
         return InvalidIndex;
+    }
 
     uint32 start = idCounter;
     idCounter += count;
@@ -261,16 +270,22 @@ DX12DescriptorHandle DX12DescriptorAllocator::Allocate(uint32 count)
     uint32 allocationOffset = m_indexAllocator.Allocate(count);
 
     if (allocationOffset == DX12DescriptorIndexAllocator::InvalidIndex)
+    {
         return DX12DescriptorHandle();
+    }
 
     DX12DescriptorHandle descriptorHandle;
     descriptorHandle.count = count;
     descriptorHandle.cpuHandle = { cpuStart.ptr + (incrementSize * allocationOffset) };
 
     if (gpuStart.ptr != 0)
+    {
         descriptorHandle.gpuHandle = { gpuStart.ptr + (incrementSize * allocationOffset) };
+    }
     else
+    {
         descriptorHandle.gpuHandle = { 0 };
+    }
 
     return descriptorHandle;
 }
@@ -278,7 +293,9 @@ DX12DescriptorHandle DX12DescriptorAllocator::Allocate(uint32 count)
 void DX12DescriptorAllocator::Free(DX12DescriptorHandle&& handle)
 {
     if (!handle.IsValid())
+    {
         return;
+    }
 
     ptrdiff_t startIndex = (handle.cpuHandle.ptr - cpuStart.ptr) / incrementSize;
     Assert(startIndex >= 0 && startIndex + handle.count <= m_indexAllocator.maxSize);

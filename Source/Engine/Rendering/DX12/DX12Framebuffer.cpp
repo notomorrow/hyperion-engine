@@ -135,7 +135,9 @@ RendererResult DX12Framebuffer::Create()
         m_rtvDescriptorHandle = RI.descriptorHeapManager->Allocate(DX12DescriptorHeapType::RTV, numRTVs);
 
         if (!m_rtvDescriptorHandle.IsValid())
+        {
             return HYP_MAKE_ERROR(RendererError, "Failed to allocate RTV descriptors");
+        }
     }
 
     if (hasDepth)
@@ -143,7 +145,9 @@ RendererResult DX12Framebuffer::Create()
         m_dsvDescriptorHandle = RI.descriptorHeapManager->Allocate(DX12DescriptorHeapType::DSV, 1);
 
         if (!m_dsvDescriptorHandle.IsValid())
+        {
             return HYP_MAKE_ERROR(RendererError, "Failed to allocate DSV descriptors");
+        }
     }
 
     // Create Views
