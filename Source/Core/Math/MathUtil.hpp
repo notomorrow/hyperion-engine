@@ -514,13 +514,9 @@ static HYP_FORCE_INLINE T Exp(T a)
 template <class T>
 static HYP_FORCE_INLINE constexpr T Mod(T a, T b)
 {
-    if constexpr (std::is_same_v<T, double>)
+    if constexpr (std::is_floating_point_v<T>)
     {
         return std::fmod(a, b);
-    }
-    else if constexpr (std::is_same_v<T, float>)
-    {
-        return std::fmodf(a, b);
     }
     else
     {

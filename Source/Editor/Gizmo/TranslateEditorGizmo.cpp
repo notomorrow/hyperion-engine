@@ -503,11 +503,11 @@ bool TranslateEditorGizmo::OnKeyPress(const Handle<Camera>& camera, const Keyboa
 
         int dominantAxis;
 
-        if (std::fabsf(moveVec.x) >= std::fabsf(moveVec.y) && std::fabsf(moveVec.x) >= std::fabsf(moveVec.z))
+        if (std::abs(moveVec.x) >= std::abs(moveVec.y) && std::abs(moveVec.x) >= std::abs(moveVec.z))
         {
             dominantAxis = 0;
         }
-        else if (std::fabsf(moveVec.y) >= std::fabsf(moveVec.z) && std::fabsf(moveVec.y) >= std::fabsf(moveVec.x))
+        else if (std::abs(moveVec.y) >= std::abs(moveVec.z) && std::abs(moveVec.y) >= std::abs(moveVec.x))
         {
             dominantAxis = 1;
         }
@@ -532,7 +532,7 @@ bool TranslateEditorGizmo::OnKeyPress(const Handle<Camera>& camera, const Keyboa
         if (snapMovement)
         {
             /// \todo : Configurable snap value
-            worldTranslation[dominantAxis] = std::fmodf(worldTranslation[dominantAxis], 1.0f);
+            worldTranslation[dominantAxis] = std::fmod(worldTranslation[dominantAxis], 1.0f);
         }
 
         node->SetWorldTranslation(worldTranslation);
