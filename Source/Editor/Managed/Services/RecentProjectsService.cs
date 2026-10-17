@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Avalonia.Threading;
 using Hyperion;
 
 namespace Hyperion.Editor.Services
 {
+    public sealed record RecentProjectEntry(string FilePath, DateTime? LastOpened, bool IsPinned);
+
     public sealed class RecentProjectsService
     {
         private static RecentProjectsService? _instance;
@@ -27,23 +30,32 @@ namespace Hyperion.Editor.Services
             });
         }
 
-        public IReadOnlyList<string> RecentProjects
+        public IReadOnlyList<string> RecentProjects => RecentProjectEntries.Select(entry => entry.FilePath).ToList();
+
+        public IReadOnlyList<RecentProjectEntry> RecentProjectEntries
         {
             get
             {
                 EditorState editorState = EditorState.Instance;
 
                 int count = editorState.GetNumRecentProjects();
-                List<string> recentProjects = new List<string>(count);
+                List<RecentProjectEntry> recentProjects = new List<RecentProjectEntry>(count);
 
                 for (int index = 0; index < count; index++)
                 {
                     string projectFilepath = editorState.GetRecentProject(index);
 
-                    if (!string.IsNullOrEmpty(projectFilepath))
+                    if (string.IsNullOrEmpty(projectFilepath))
                     {
-                        recentProjects.Add(projectFilepath);
+                        continue;
                     }
+
+                    long lastOpened = editorState.GetRecentProjectLastOpened(index);
+
+                    recentProjects.Add(new RecentProjectEntry(
+                        projectFilepath,
+                        lastOpened > 0 ? DateTimeOffset.FromUnixTimeSeconds(lastOpened).LocalDateTime : null,
+                        editorState.IsRecentProjectPinned(index)));
                 }
 
                 return recentProjects;
@@ -60,6 +72,9 @@ namespace Hyperion.Editor.Services
         public bool WillOpenLastProjectOnStartup => !string.IsNullOrEmpty(EditorState.Instance.GetStartupProjectPath());
 
         public static string GetProjectName(string projectFilepath) => Path.GetFileNameWithoutExtension(projectFilepath);
+
+        public static string GetThumbnailPath(string projectFilepath) =>
+            Path.Combine(Path.GetDirectoryName(projectFilepath) ?? string.Empty, "Saved", "Thumbnail.png");
 
         public static bool IsSameProject(string projectFilepath, string? otherProjectFilepath)
         {
@@ -103,6 +118,11 @@ namespace Hyperion.Editor.Services
         public void Remove(string projectFilepath)
         {
             EditorState.Instance.RemoveRecentProject(projectFilepath);
+        }
+
+        public void SetPinned(string projectFilepath, bool pinned)
+        {
+            EditorState.Instance.SetRecentProjectPinned(projectFilepath, pinned);
         }
 
         public void Clear()

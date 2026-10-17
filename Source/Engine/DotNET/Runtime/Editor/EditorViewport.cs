@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace Hyperion
 {
     [ClassBinding(Name = "EditorViewportType")]
-    public enum EditorViewportType : uint
+    public enum EditorViewportType : byte
     {
         Perspective = 0,
         Top = 1,
