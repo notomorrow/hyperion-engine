@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -18,6 +19,8 @@ namespace Hyperion.Editor.Services
 
         private static readonly Regex StepLineRegex = new Regex(@"^==> \[(\d+)%\] (.*)$", RegexOptions.Compiled);
 
+        private static readonly HashSet<string> IgnoredProjectFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Binaries", "Build" };
+
         private int _isBuilding;
 
         private WebGameBuildService()
@@ -26,36 +29,8 @@ namespace Hyperion.Editor.Services
 
         public async Task<bool> BuildAsync(string? projectFilePath, bool run)
         {
-            if (!OperatingSystem.IsWindows())
+            if (!TryFindBuildScript(projectFilePath, out string projectDirectory, out string scriptPath))
             {
-                Logger.Log(BuildLogChannel, LogLevel.Error, "Building for the web from the editor is only supported on Windows for now");
-
-                return false;
-            }
-
-            string? projectDirectory = string.IsNullOrEmpty(projectFilePath) ? null : Path.GetDirectoryName(Path.GetFullPath(projectFilePath));
-
-            if (projectDirectory == null)
-            {
-                ShowMessage(MessageBox.Info("Save the project first", "The project needs to be saved before it can be built for the web.").Button("OK", () => { }));
-
-                return false;
-            }
-
-            if (ManagedGameBuildService.FindProjectFile(projectFilePath) != null)
-            {
-                ShowMessage(MessageBox.Info("Not available for C# projects", "C# games can't be built for the web yet.").Button("OK", () => { }));
-
-                return false;
-            }
-
-            string editorDirectory = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
-            string scriptPath = Path.GetFullPath(Path.Combine(editorDirectory, "..", "..", "..", "Tools", "Scripts", "BuildWebGame.ps1"));
-
-            if (!File.Exists(scriptPath))
-            {
-                ShowMessage(MessageBox.Info("Not available in this editor", "Building for the web needs an editor built from the engine's source for now.").Button("OK", () => { }));
-
                 return false;
             }
 
@@ -66,7 +41,7 @@ namespace Hyperion.Editor.Services
                 return false;
             }
 
-            string projectName = Path.GetFileNameWithoutExtension(projectFilePath) ?? Path.GetFileName(projectDirectory);
+            string projectName = GetProjectName(projectFilePath, projectDirectory);
 
             ExternalEditorTask task = new ExternalEditorTask($"Building {projectName} for Web", "Starting");
             task.SetIsForegroundTask(true);
@@ -79,7 +54,9 @@ namespace Hyperion.Editor.Services
                 string? firstError = null;
                 bool isCancelled = false;
 
-                int exitCode = await RunAsync(scriptPath, projectDirectory, run, line =>
+                string[] arguments = run ? new[] { "-Run", "-FastLink" } : Array.Empty<string>();
+
+                int exitCode = await RunScriptAsync(scriptPath, projectDirectory, arguments, line =>
                 {
                     Match stepMatch = StepLineRegex.Match(line);
 
@@ -142,7 +119,206 @@ namespace Hyperion.Editor.Services
             }
         }
 
-        private static async Task<int> RunAsync(string scriptPath, string projectDirectory, bool run, Action<string> onOutputLine, Action<Process> onStarted)
+        public async Task RunInBrowserAsync(string? projectFilePath, bool hasUnsavedChanges)
+        {
+            if (!TryFindBuildScript(projectFilePath, out string projectDirectory, out string scriptPath))
+            {
+                return;
+            }
+
+            if (Volatile.Read(ref _isBuilding) != 0)
+            {
+                Logger.Log(BuildLogChannel, LogLevel.Warning, "A web build is already running");
+
+                return;
+            }
+
+            string projectName = GetProjectName(projectFilePath, projectDirectory);
+            DateTime? builtTime = GetBuiltTime(projectDirectory);
+
+            if (builtTime == null)
+            {
+                ShowMessage(MessageBox.Info("Not built for the web yet", $"{projectName} hasn't been built for the web yet. Build it now and run it in the browser?")
+                    .Button("Build and Run", BuildAndRun)
+                    .Button("Cancel", () => { }));
+
+                return;
+            }
+
+            string? outOfDateReason = GetOutOfDateReason(projectDirectory, scriptPath, builtTime.Value, hasUnsavedChanges);
+
+            if (outOfDateReason != null)
+            {
+                ShowMessage(MessageBox.Warning("Web build out of date", $"{outOfDateReason} since {projectName} was last built for the web. Rebuild it before running?")
+                    .Button("Rebuild and Run", BuildAndRun)
+                    .Button("Run Anyway", () => _ = Task.Run(() => ServeAsync(scriptPath, projectDirectory)))
+                    .Button("Cancel", () => { }));
+
+                return;
+            }
+
+            await ServeAsync(scriptPath, projectDirectory).ConfigureAwait(false);
+        }
+
+        private static void BuildAndRun()
+        {
+            EngineManager.EditorGame?.EditorSubsystem?.ExecuteCommandByName(new Name("EditorCommandBuildWebGame"), "--run");
+        }
+
+        private static async Task ServeAsync(string scriptPath, string projectDirectory)
+        {
+            string? firstError = null;
+
+            int exitCode = await RunScriptAsync(scriptPath, projectDirectory, new[] { "-ServeOnly" }, line =>
+            {
+                if (firstError == null && ErrorLineRegex.IsMatch(line))
+                {
+                    firstError = line;
+                }
+            }, _ => { }).ConfigureAwait(false);
+
+            if (exitCode != 0)
+            {
+                ShowMessage(MessageBox.Critical("Couldn't run in the browser", firstError ?? "See the log for details.").Button("OK", () => { }));
+            }
+        }
+
+        private static DateTime? GetBuiltTime(string projectDirectory)
+        {
+            string pagePath = Path.Combine(projectDirectory, "Binaries", "Web", "index.html");
+
+            if (!File.Exists(pagePath))
+            {
+                return null;
+            }
+
+            string stampPath = Path.Combine(projectDirectory, "Build", "Web", "Built.stamp");
+
+            // builds from before the stamp existed go by when the page was made
+            return File.Exists(stampPath) ? File.GetLastWriteTimeUtc(stampPath) : File.GetLastWriteTimeUtc(pagePath);
+        }
+
+        private static string? GetOutOfDateReason(string projectDirectory, string scriptPath, DateTime builtTime, bool hasUnsavedChanges)
+        {
+            if (hasUnsavedChanges)
+            {
+                return "The project has unsaved changes";
+            }
+
+            if (GetNewestProjectFileTime(projectDirectory) > builtTime)
+            {
+                return "The project has changed";
+            }
+
+            string engineRoot = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(scriptPath)!, "..", ".."));
+            string webSdkDirectory = Path.Combine(engineRoot, "Binaries", "Web", "Release", "Sdk");
+
+            if (GetNewestFileTime(webSdkDirectory) > builtTime)
+            {
+                return "The engine has been rebuilt";
+            }
+
+            return null;
+        }
+
+        private static DateTime GetNewestProjectFileTime(string projectDirectory)
+        {
+            DateTime newest = GetNewestFileTime(projectDirectory, recursive: false);
+
+            foreach (string folder in Directory.EnumerateDirectories(projectDirectory))
+            {
+                string folderName = Path.GetFileName(folder);
+
+                if (IgnoredProjectFolders.Contains(folderName) || folderName.StartsWith('.'))
+                {
+                    continue;
+                }
+
+                DateTime folderNewest = GetNewestFileTime(folder);
+
+                if (folderNewest > newest)
+                {
+                    newest = folderNewest;
+                }
+            }
+
+            return newest;
+        }
+
+        private static DateTime GetNewestFileTime(string directory, bool recursive = true)
+        {
+            DateTime newest = DateTime.MinValue;
+
+            if (!Directory.Exists(directory))
+            {
+                return newest;
+            }
+
+            EnumerationOptions options = new EnumerationOptions
+            {
+                RecurseSubdirectories = recursive,
+                IgnoreInaccessible = true,
+                AttributesToSkip = FileAttributes.Hidden | FileAttributes.System
+            };
+
+            foreach (FileInfo file in new DirectoryInfo(directory).EnumerateFiles("*", options))
+            {
+                if (file.LastWriteTimeUtc > newest)
+                {
+                    newest = file.LastWriteTimeUtc;
+                }
+            }
+
+            return newest;
+        }
+
+        private static bool TryFindBuildScript(string? projectFilePath, out string projectDirectory, out string scriptPath)
+        {
+            projectDirectory = string.Empty;
+            scriptPath = string.Empty;
+
+            if (!OperatingSystem.IsWindows())
+            {
+                Logger.Log(BuildLogChannel, LogLevel.Error, "Building for the web from the editor is only supported on Windows for now");
+
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(projectFilePath))
+            {
+                ShowMessage(MessageBox.Info("Save the project first", "The project needs to be saved before it can be built for the web.").Button("OK", () => { }));
+
+                return false;
+            }
+
+            if (ManagedGameBuildService.FindProjectFile(projectFilePath) != null)
+            {
+                ShowMessage(MessageBox.Info("Not available for C# projects", "C# games can't be built for the web yet.").Button("OK", () => { }));
+
+                return false;
+            }
+
+            string editorDirectory = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+
+            projectDirectory = Path.GetDirectoryName(Path.GetFullPath(projectFilePath))!;
+            scriptPath = Path.GetFullPath(Path.Combine(editorDirectory, "..", "..", "..", "Tools", "Scripts", "BuildWebGame.ps1"));
+
+            if (!File.Exists(scriptPath))
+            {
+                ShowMessage(MessageBox.Info("Not available in this editor", "Building for the web needs an editor built from the engine's source for now.").Button("OK", () => { }));
+
+                return false;
+            }
+
+            return true;
+        }
+
+        private static string GetProjectName(string? projectFilePath, string projectDirectory)
+        {
+            return Path.GetFileNameWithoutExtension(projectFilePath) ?? Path.GetFileName(projectDirectory);
+        }
+
+        private static async Task<int> RunScriptAsync(string scriptPath, string projectDirectory, string[] arguments, Action<string> onOutputLine, Action<Process> onStarted)
         {
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
@@ -162,10 +338,9 @@ namespace Hyperion.Editor.Services
             startInfo.ArgumentList.Add("-Project");
             startInfo.ArgumentList.Add(projectDirectory);
 
-            if (run)
+            foreach (string argument in arguments)
             {
-                startInfo.ArgumentList.Add("-Run");
-                startInfo.ArgumentList.Add("-FastLink");
+                startInfo.ArgumentList.Add(argument);
             }
 
             using Process process = new Process { StartInfo = startInfo };

@@ -200,7 +200,9 @@ public:
 
     virtual void Execute(EditorSubsystem* subsystem) override
     {
-        RequestWebBuild(subsystem, /* run */ false);
+        const bool run = GetArguments().Any() && GetArgument(0) == "--run";
+
+        RequestWebBuild(subsystem, run);
     }
 
     static void RequestWebBuild(EditorSubsystem* subsystem, bool run)
@@ -246,7 +248,20 @@ public:
 
     virtual void Execute(EditorSubsystem* subsystem) override
     {
-        EditorCommandBuildWebGame::RequestWebBuild(subsystem, /* run */ true);
+        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
+
+        if (!currentProject.IsValid() || !currentProject->IsSaved())
+        {
+            SystemMessageBox(MessageBoxType::INFO)
+                .Title("Save the project first")
+                .Text("The project needs to be saved and built for the web before it can run in a browser.")
+                .Button("OK", NoOpFunction<void> {})
+                .Show();
+
+            return;
+        }
+
+        g_editorState->OnRunWebGameRequested(currentProject->IsDirty());
     }
 };
 

@@ -28,7 +28,7 @@
                 </StackPanel>
                 <TextBlock
                     Classes="hint-text"
-                    Text="Hold Shift while sculpting to invert the direction." />
+                    Text="Invert direction: Hold Shift" />
             </StackPanel>
 
             <Separator />
