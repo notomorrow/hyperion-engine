@@ -1230,6 +1230,7 @@
                                         IsVisible="{Binding CanChangeGameProjectLanguage}" />
                                     <Separator />
                                     <MenuItem Command="{Binding BuildNativeGame}" Header="Build Game" />
+                                    <MenuItem Command="{Binding ReloadGameModule}" Header="Reload Game" />
                                     <MenuItem Command="{Binding PackageGame}" Header="Package Game" />
                                     <Separator />
                                     <MenuItem Command="{Binding BuildWebGame}" Header="Build for Web" />

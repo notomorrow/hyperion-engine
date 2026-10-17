@@ -3558,6 +3558,8 @@ void EditorSubsystem::Update(float delta)
 
     m_editorDelegates->Update();
 
+    UpdateGameModules(this);
+
     PollViewportWindowInput();
 
     for (const Handle<EditorViewport>& viewport : m_editorViewports)

@@ -14,6 +14,7 @@
 #include <Core/Reflection/ObjectFwd.hpp>
 #include <Core/Reflection/ScriptObjectFunctions.hpp>
 
+#include <Core/Containers/Array.hpp>
 #include <Core/Containers/SparsePagedArray.hpp>
 
 #include <Core/Utilities/IndexAllocator.hpp>
@@ -78,6 +79,8 @@ public:
     virtual void Release(ObjectHeader* header);
 
     virtual void ForEachHeader(const ProcRef<void(const ObjectHeader*)>& callback);
+
+    bool HasObjects();
 
 protected:
     enum PoolFlags : uint8
@@ -291,6 +294,8 @@ public:
         TypeId typeId,
         const Class* cls,
         ObjectContainerBase* (*createFn)(const Class* cls));
+
+    Array<ObjectContainerBase*> Detach(const Array<const Class*>& classes);
 
     template <class T>
     ObjectContainer<T>& GetOrCreate(const Class* cls)

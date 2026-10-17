@@ -124,6 +124,11 @@ static void InvokeManagedHook(Game* game, ANSIStringView methodName, Args&&... a
 #endif
 }
 
+void Game::ReleaseManagedObject()
+{
+    InvokeManagedHook(this, "ReleaseNativeObject");
+}
+
 bool Game::IsManagedGame() const
 {
 #ifdef HYP_DOTNET
@@ -283,6 +288,20 @@ void Game::Shutdown(bool shutdownWorld)
 
     m_isInitialized = false;
     m_isLaunched.Set(false, MemoryOrder::RELEASE);
+}
+
+Handle<AssetRegistry> Game::DetachAssetRegistry()
+{
+    m_syncState.Wait();
+
+    if (m_assetRegistryActive)
+    {
+        PopAssetRegistry(m_assetRegistry);
+
+        m_assetRegistryActive = false;
+    }
+
+    return std::move(m_assetRegistry);
 }
 
 void Game::SetAssetRegistry(const Handle<AssetRegistry>& assetRegistry)

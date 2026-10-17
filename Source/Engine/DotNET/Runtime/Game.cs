@@ -31,6 +31,11 @@ namespace Hyperion
 
         public UISubsystem? UISubsystem => this.GetUISubsystem();
 
+        private void ReleaseNativeObject()
+        {
+            Dispose();
+        }
+
         /// <summary>
         /// Called on the sim thread once the World is ready, before the engine sets up a View for the
         /// primary camera

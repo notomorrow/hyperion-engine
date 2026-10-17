@@ -37,6 +37,8 @@ public:
 
     UIntPtr GetFunction(const char* name) const;
 
+    bool GetImageRange(UIntPtr& outBegin, UIntPtr& outEnd) const;
+
 private:
     Pimpl<struct DynamicLibraryImpl> m_impl;
 };
@@ -47,6 +49,7 @@ public:
     static DynamicLibraryCache& GetInstance();
 
     DynamicLibrary* LoadLibrary(PlatformStringView path);
+    bool UnloadLibrary(PlatformStringView path);
 
 private:
     DynamicLibraryCache();

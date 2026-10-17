@@ -169,6 +169,8 @@ CORE_API extern TypeInfo* TypeInfo_Alloc(
     TypeId typeId, uint16 typeSize, uint16 typeAlignment,
     Mutex::Guard* pGuard);
 
+CORE_API extern void TypeInfo_EvictForLibrary(UIntPtr begin, UIntPtr end, const Array<TypeId>& typeIds);
+
 /*! \brief Initialize the TypeInfo system, must be called before any other TypeInfo functions */
 CORE_API extern void TypeInfo_Initialize();
 
@@ -2858,5 +2860,6 @@ using utilities::TypeOf;
 using utilities::TypeInfo;
 using utilities::TypeInfo_Initialize;
 using utilities::TypeInfo_Shutdown;
+using utilities::TypeInfo_EvictForLibrary;
 
 } // namespace Hyperion

@@ -233,6 +233,29 @@ ObjectContainerBase& ObjectContainerMap::Get(TypeId typeId)
     return *it->second;
 }
 
+Array<ObjectContainerBase*> ObjectContainerMap::Detach(const Array<const Class*>& classes)
+{
+    Array<ObjectContainerBase*> containers;
+
+    Mutex::Guard guard(m_mutex);
+
+    for (auto it = m_map.Begin(); it != m_map.End();)
+    {
+        if (it->second == nullptr || !classes.Contains(it->second->GetClass()))
+        {
+            ++it;
+
+            continue;
+        }
+
+        containers.PushBack(it->second);
+
+        it = m_map.Erase(it);
+    }
+
+    return containers;
+}
+
 ObjectContainerBase* ObjectContainerMap::TryGet(TypeId typeId)
 {
     Mutex::Guard guard(m_mutex);
@@ -381,6 +404,22 @@ void ObjectContainerBase::ForEachHeader(const ProcRef<void(const ObjectHeader*)>
             callback(header_ptr);
         }
     }
+}
+
+bool ObjectContainerBase::HasObjects()
+{
+    TLockGuard<AtomicFlag> guard;
+    LockIfNeeded(guard, PF_NONE);
+
+    for (ObjectHeader* header : m_headers)
+    {
+        if (header != nullptr)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 #pragma endregion ObjectContainerBase

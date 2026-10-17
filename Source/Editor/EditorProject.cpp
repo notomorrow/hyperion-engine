@@ -653,6 +653,11 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
 
     if (moduleGameResult.GetValue().IsValid())
     {
+        if (project->m_gameInstance.IsValid())
+        {
+            project->m_gameInstance->ReleaseManagedObject();
+        }
+
         project->m_gameInstance = std::move(moduleGameResult.GetValue());
     }
 

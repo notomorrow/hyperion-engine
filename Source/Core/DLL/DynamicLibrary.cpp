@@ -109,7 +109,7 @@ bool DynamicLibrary::Open()
 
 void DynamicLibrary::Close()
 {
-    if (!m_impl)
+    if (!m_impl || !m_impl->handle)
     {
         return;
     }
@@ -136,6 +136,28 @@ UIntPtr DynamicLibrary::GetFunction(const char* name) const
     return reinterpret_cast<UIntPtr>(dlsym(reinterpret_cast<void*>(m_impl->handle), name));
 #else
     return 0;
+#endif
+}
+
+bool DynamicLibrary::GetImageRange(UIntPtr& outBegin, UIntPtr& outEnd) const
+{
+    if (!m_impl || !m_impl->handle)
+    {
+        return false;
+    }
+
+#if HYP_WINDOWS
+    const UIntPtr base = reinterpret_cast<UIntPtr>(m_impl->handle);
+
+    const IMAGE_DOS_HEADER* dosHeader = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+    const IMAGE_NT_HEADERS* ntHeaders = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dosHeader->e_lfanew);
+
+    outBegin = base;
+    outEnd = base + ntHeaders->OptionalHeader.SizeOfImage;
+
+    return true;
+#else
+    return false;
 #endif
 }
 
@@ -186,6 +208,29 @@ DynamicLibrary* DynamicLibraryCache::LoadLibrary(PlatformStringView path)
     auto insertResult = m_impl->libraries.Insert(path, std::move(library));
 
     return insertResult.first->second.Get();
+}
+
+bool DynamicLibraryCache::UnloadLibrary(PlatformStringView path)
+{
+    UniquePtr<DynamicLibrary> library;
+
+    {
+        Mutex::Guard guard(m_impl->mutex);
+
+        auto it = m_impl->libraries.FindAs(path);
+
+        if (it == m_impl->libraries.End())
+        {
+            return false;
+        }
+
+        library = std::move(it->second);
+        m_impl->libraries.Erase(it);
+    }
+
+    library.Reset();
+
+    return true;
 }
 
 } // namespace Hyperion

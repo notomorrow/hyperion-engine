@@ -146,6 +146,7 @@ namespace Hyperion
                 NativeInterop_SetAddObjectToCacheFunction(Marshal.GetFunctionPointerForDelegate<AddObjectToCacheDelegate>(s_addObjectToCacheDelegate));
                 NativeInterop_SetSetKeepAliveFunction((delegate* unmanaged<IntPtr, int*, void>)&SetKeepAlive);
                 NativeInterop_SetTriggerGCFunction((delegate* unmanaged<void>)&TriggerGC);
+                NativeInterop_SetCollectGarbageAndWaitFunction((delegate* unmanaged<void>)&CollectGarbageAndWait);
                 NativeInterop_SetGetAssemblyPointerFunction((delegate* unmanaged<IntPtr, IntPtr, void>)&GetAssemblyPointer);
                 NativeInterop_SetCleanupOnShutdownFunction((delegate* unmanaged<void>)&CleanupOnShutdown);
                 NativeInterop_SetRemoveObjectFromCacheFunction((delegate* unmanaged<IntPtr, void>)&RemoveObjectFromCache);
@@ -1052,6 +1053,16 @@ namespace Hyperion
             GC.Collect();
         }
 
+        // Finalizers release native objects, so a second collection picks up what only they kept alive
+        [UnmanagedCallersOnly]
+        public static unsafe void CollectGarbageAndWait()
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+
         [UnmanagedCallersOnly]
         public static unsafe void GetAssemblyPointer(IntPtr assemblyObjectReferencePtr, IntPtr outAssemblyPtr)
         {
@@ -1189,6 +1200,9 @@ namespace Hyperion
 
         [DllImport("hyperion", EntryPoint = "NativeInterop_SetTriggerGCFunction")]
         private static extern unsafe void NativeInterop_SetTriggerGCFunction(void* setTriggerGcFunctionFunction);
+
+        [DllImport("hyperion", EntryPoint = "NativeInterop_SetCollectGarbageAndWaitFunction")]
+        private static extern unsafe void NativeInterop_SetCollectGarbageAndWaitFunction(void* collectGarbageAndWaitFunction);
 
         [DllImport("hyperion", EntryPoint = "NativeInterop_SetGetAssemblyPointerFunction")]
         private static extern unsafe void NativeInterop_SetGetAssemblyPointerFunction(void* getAssemblyPointerFunction);

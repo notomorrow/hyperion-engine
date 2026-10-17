@@ -116,6 +116,11 @@ extern "C"
         DotNETHost::GetInstance().GetGlobalFunctions().triggerGcFunction = triggerGcFunction;
     }
 
+    HYP_EXPORT void NativeInterop_SetCollectGarbageAndWaitFunction(TriggerGCFunction collectGarbageAndWaitFunction)
+    {
+        DotNETHost::GetInstance().GetGlobalFunctions().collectGarbageAndWaitFunction = collectGarbageAndWaitFunction;
+    }
+
     HYP_EXPORT void NativeInterop_SetGetAssemblyPointerFunction(GetAssemblyPointerFunction getAssemblyPointerFunction)
     {
         DotNETHost::GetInstance().GetGlobalFunctions().getAssemblyPointerFunction = getAssemblyPointerFunction;

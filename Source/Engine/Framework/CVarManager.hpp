@@ -372,7 +372,9 @@ public:
 
     /*! \brief Publishes the cvar states so they're visible to other threads */
     void Publish(uint8 ringIndex);
-    
+
+    void UnregisterVarsInRange(UIntPtr begin, UIntPtr end);
+
     HYP_FORCE_INLINE const CVarSnapshot& GetCurrentSnapshot() const
     {
         if constexpr (UseRingBuffer)
@@ -395,6 +397,9 @@ private:
     HYP_NODISCARD int FindVarIndex(StringHash nameHash) const;
 
     CVarSnapshot m_snapshots[RingBufferDepth];
+
+public:
+    Array<Name> retiredCVarNames;
 };
 
 #pragma endregion CVarManager
