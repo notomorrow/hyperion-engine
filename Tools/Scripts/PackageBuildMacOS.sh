@@ -25,7 +25,10 @@ echo "Running PrecompileShaders commandlet..."
 
 echo "Running Cook commandlet..."
 
-read -r -p "Enter the project name (folder under Projects/): " PROJECT_NAME
+PROJECT_NAME="${1:-}"
+if [[ -z "$PROJECT_NAME" ]]; then
+    read -r -p "Enter the project name (folder under Projects/): " PROJECT_NAME
+fi
 if [[ -z "$PROJECT_NAME" ]]; then
     echo "No project name entered, aborting packaged build."
     exit 1
@@ -40,7 +43,7 @@ echo "Creating packaged build at: $OUT_DIR"
 "$BIN_DIR_RELEASE/BlobStorageCookCommandlet" --project=Projects/"$PROJECT_NAME" --out-cache="$OUT_DIR/Cache" --out-content="$OUT_DIR/Content"
 
 
-mkdir -p "$OUT_DIR/Source/Shaders"
+mkdir -p "$OUT_DIR/Source/Shaders" "$OUT_DIR/Config"
 
 echo "Copying executable..."
 find "$BIN_DIR" -maxdepth 1 -type f -perm -u+x ! -name "*.dylib" -exec cp {} "$OUT_DIR/" \;

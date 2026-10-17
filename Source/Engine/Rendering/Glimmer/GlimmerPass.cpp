@@ -491,6 +491,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
         scene->surfaceCache->Update(frame, channelState, newGroundUploads, terrainPatches.ToSpan());
         scene->isReplayingGroundUploads = false;
+        
         scene->spanCache->Update(frame, channelState, *scene->sceneInstances, *scene->triangleCache, *scene->surfaceCache);
 
         context.channelState = &channelState;

@@ -17,7 +17,7 @@ REBUILD=false
 INC_FILE="$WORKING_DIR/Source/Generated/CodeGenOutput.inc"
 
 # Check if both the build tool and version file exist
-if [ ! -f ./build/hyperion-codegen ]; then
+if [ ! -f ./Build/hyperion-codegen ]; then
     echo "Hyperion build tool not found. Running BuildCodeGen.sh ..."
     REBUILD=true
 else

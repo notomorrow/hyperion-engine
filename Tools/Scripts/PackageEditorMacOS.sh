@@ -36,46 +36,40 @@ step "Packaging Hyperion editor preview $VERSION (macOS arm64)"
 rm -rf "$STAGE_DIR"
 mkdir -p "$STAGE_DIR"
 
-# --- Binaries ---------------------------------------------------------------------------------------------------------
+# --- Managed editor ---------------------------------------------------------------------------------------------------
 
-step "Staging binaries"
+# self-contained, so running the editor doesn't need a .NET install (same as the Windows package)
+step "Publishing self-contained editor"
+
+EDITOR_PROJECT="$ROOT_DIR/Build/CSharpProjects-Distribution/Hyperion.Editor/Hyperion.Editor.csproj"
+if [[ ! -f "$EDITOR_PROJECT" ]]; then
+    echo "Editor project not found at $EDITOR_PROJECT" >&2
+    exit 1
+fi
+
+PUBLISH_ROOT="$OUTPUT_DIR/publish-intermediate"
+rm -rf "$PUBLISH_ROOT"
+
+env -u MSBuildSdksPath dotnet publish "$EDITOR_PROJECT" --configuration Release --runtime osx-arm64 --self-contained true --disable-build-servers \
+    -p:DebugType=none "-p:OutputPath=$PUBLISH_ROOT/build/" --output "$PUBLISH_ROOT/publish"
+
+cp -R "$PUBLISH_ROOT/publish/." "$STAGE_DIR/"
+rm -rf "$PUBLISH_ROOT"
+
+# script projects compile against these; at runtime the published copies are used
+mkdir -p "$STAGE_DIR/ref"
+for name in Hyperion.NET.Shared.dll Hyperion.NET.Runtime.dll Hyperion.NET.Interop.dll; do
+    cp "$BIN_DIR/$name" "$STAGE_DIR/ref/"
+done
+
+# --- Native binaries --------------------------------------------------------------------------------------------------
+
+step "Staging native libraries"
 
 is_macho() { file -b "$1" | grep -q "Mach-O"; }
 
-# sample, commandlets and Strata tools are not part of the editor preview
-is_excluded_executable() {
-    case "$(basename "$1")" in
-        hyperion-sample*|CSharpGame|stratac|*Commandlet|PrecompileShaders|GenerateBlueNoiseBlob|*_test|*_demo|opt_bench|strata_tests) return 0 ;;
-    esac
-    return 1
-}
-
-for path in "$BIN_DIR"/*; do
-    [[ -f "$path" ]] || continue
-    name="$(basename "$path")"
-
-    case "$name" in
-        *.dylib|*.dll|*.json) cp "$path" "$STAGE_DIR/" ;;
-        *.pdb|*.xml|*.a|*.dSYM) ;;
-        *)
-            if [[ -x "$path" ]] && is_macho "$path" && ! is_excluded_executable "$path"; then
-                cp "$path" "$STAGE_DIR/"
-            fi
-            ;;
-    esac
-done
-
-# managed dependencies ship their native libraries (Skia, HarfBuzz, ANGLE) under runtimes/
-for rid_dir in "$BIN_DIR"/runtimes/osx "$BIN_DIR"/runtimes/osx-arm64; do
-    [[ -d "$rid_dir" ]] || continue
-    mkdir -p "$STAGE_DIR/runtimes"
-    cp -R "$rid_dir" "$STAGE_DIR/runtimes/"
-done
-
-# script projects compile against these (same layout as the Windows package)
-mkdir -p "$STAGE_DIR/ref"
-for name in Hyperion.NET.Shared.dll Hyperion.NET.Runtime.dll Hyperion.NET.Interop.dll; do
-    [[ -f "$BIN_DIR/$name" ]] && cp "$BIN_DIR/$name" "$STAGE_DIR/ref/"
+for path in "$BIN_DIR"/*.dylib; do
+    cp "$path" "$STAGE_DIR/"
 done
 
 # --- Bundle non-system libraries --------------------------------------------------------------------------------------
@@ -88,8 +82,59 @@ macho_files() {
     done
 }
 
+# install_name_tool warns on every edit that the signature is now invalid; everything is re-signed below
+relink() {
+    install_name_tool "$@" 2> >(grep -v "invalidate the code signature" >&2)
+}
+
+# otool prints a header line per architecture of a universal binary, and lists a dylib's own install name first
+linked_libraries() {
+    local own_id
+    own_id="$(otool -D "$1" | grep -v ':$' | head -n 1)"
+    otool -L "$1" | grep -v ':$' | awk '{print $1}' | sort -u | grep -v -x -F "${own_id:-/dev/null}" || true
+}
+
 external_dependencies() {
-    otool -L "$1" | tail -n +2 | awk '{print $1}' | grep -Ev '^(/usr/lib/|/System/|@rpath/|@loader_path/|@executable_path/)' || true
+    linked_libraries "$1" | grep -Ev '^(/usr/lib/|/System/|@rpath/|@loader_path/|@executable_path/)' || true
+}
+
+rpath_dependencies() {
+    linked_libraries "$1" | sed -n 's#^@rpath/\([^/]*\)$#\1#p'
+}
+
+all_rpaths() {
+    otool -l "$1" | awk '/LC_RPATH/ { getline; getline; print $2 }'
+}
+
+absolute_rpaths() {
+    all_rpaths "$1" | grep -v '^@' || true
+}
+
+# where each bundled library was copied from, so its @loader_path rpaths (common in Homebrew) can be followed
+ORIGINS_DIR="$(mktemp -d)"
+trap 'rm -rf "$ORIGINS_DIR"' EXIT
+
+original_dir() {
+    local origin_file="$ORIGINS_DIR/$(basename "$1")"
+    if [[ -f "$origin_file" ]]; then cat "$origin_file"; else echo "$BIN_DIR"; fi
+}
+
+rpath_search_dirs() {
+    local rpath
+    for rpath in $(all_rpaths "$1"); do
+        case "$rpath" in
+            @loader_path*) echo "$(original_dir "$1")${rpath#@loader_path}" ;;
+            @*) ;;
+            *) echo "$rpath" ;;
+        esac
+    done
+}
+
+stage_library() {
+    echo "    $2  (from $1)"
+    cp -L "$1" "$STAGE_DIR/$2"
+    chmod u+w "$STAGE_DIR/$2"
+    dirname "$1" > "$ORIGINS_DIR/$2"
 }
 
 # copying a library in can pull in more, so repeat until nothing external is left
@@ -100,22 +145,31 @@ for pass in 1 2 3 4 5 6; do
         for dependency in $(external_dependencies "$binary"); do
             dependency_name="$(basename "$dependency")"
 
-            if [[ "$dependency_name" == "$(basename "$binary")" ]]; then
-                continue
-            fi
-
             if [[ ! -e "$STAGE_DIR/$dependency_name" ]]; then
                 if [[ ! -e "$dependency" ]]; then
                     warn "$(basename "$binary") links $dependency, which does not exist on this machine"
                     continue
                 fi
-                echo "    $dependency_name  (from $dependency)"
-                cp -L "$dependency" "$STAGE_DIR/$dependency_name"
-                chmod u+w "$STAGE_DIR/$dependency_name"
+                stage_library "$dependency" "$dependency_name"
                 changed=1
             fi
 
-            install_name_tool -change "$dependency" "@rpath/$dependency_name" "$binary"
+            relink -change "$dependency" "@rpath/$dependency_name" "$binary"
+        done
+
+        # @rpath/ libraries already resolve next to the binary, but have to be found through the build machine's rpaths first
+        for dependency_name in $(rpath_dependencies "$binary"); do
+            [[ -e "$STAGE_DIR/$dependency_name" ]] && continue
+
+            for rpath in $(rpath_search_dirs "$binary"); do
+                if [[ -e "$rpath/$dependency_name" ]]; then
+                    stage_library "$rpath/$dependency_name" "$dependency_name"
+                    changed=1
+                    break
+                fi
+            done
+
+            [[ -e "$STAGE_DIR/$dependency_name" ]] || warn "$(basename "$binary") links @rpath/$dependency_name, which is not in any of its rpaths"
         done
     done < <(macho_files)
 
@@ -123,24 +177,28 @@ for pass in 1 2 3 4 5 6; do
 done
 
 while read -r binary; do
+    # the package is arm64 only, so drop the x86_64 half of universal libraries
+    if [[ "$(lipo -archs "$binary")" == *" "* ]]; then
+        lipo -thin arm64 "$binary" -output "$binary.thin" && mv "$binary.thin" "$binary"
+    fi
+
     if [[ "$binary" == *.dylib ]]; then
-        install_name_tool -id "@rpath/$(basename "$binary")" "$binary"
+        relink -id "@rpath/$(basename "$binary")" "$binary"
     fi
 
     # resolve @rpath/ next to the binary itself, and drop the build machine's absolute search paths
-    for rpath in $(otool -l "$binary" | awk '/LC_RPATH/ { getline; getline; print $2 }'); do
-        if [[ "$rpath" != @* ]]; then
-            install_name_tool -delete_rpath "$rpath" "$binary" 2>/dev/null || true
-        fi
+    for rpath in $(absolute_rpaths "$binary"); do
+        relink -delete_rpath "$rpath" "$binary" 2>/dev/null || true
     done
-    install_name_tool -add_rpath "@loader_path" "$binary" 2>/dev/null || true
+    relink -add_rpath "@loader_path" "$binary" 2>/dev/null || true
 done < <(macho_files)
 
 # --- Vulkan driver ----------------------------------------------------------------------------------------------------
 
 # The Vulkan loader finds MoltenVK through a driver manifest; point it at the bundled copy from the launcher.
+# prefer the MoltenVK that ships with the Vulkan install the engine was built against; the checked-in copy lags behind
 MOLTENVK_SOURCE=""
-for candidate in "$STAGE_DIR/libMoltenVK.dylib" "$ROOT_DIR/External/ThirdParty/Binaries/Mac/Release/libMoltenVK.dylib" /opt/homebrew/lib/libMoltenVK.dylib; do
+for candidate in "$STAGE_DIR/libMoltenVK.dylib" "${VULKAN_SDK:-/nonexistent}/lib/libMoltenVK.dylib" /usr/local/lib/libMoltenVK.dylib /opt/homebrew/lib/libMoltenVK.dylib "$ROOT_DIR/External/ThirdParty/Binaries/Mac/Release/libMoltenVK.dylib"; do
     if [[ -e "$candidate" ]]; then MOLTENVK_SOURCE="$candidate"; break; fi
 done
 
@@ -195,7 +253,7 @@ for config_file in "$ROOT_DIR"/Config/*; do
     name="$(basename "$config_file")"
 
     case "$name" in
-        *.IOS.json|*.Android.json|*.Windows.json|*.Mac.json|*.Linux.json) continue ;;
+        *.IOS.json|*.Android.json|*.Windows.json|*.Mac.json|*.Linux.json|*.Web.json) continue ;;
         *.json)
             mac_variant="$ROOT_DIR/Config/${name%.json}.Mac.json"
             if [[ -f "$mac_variant" ]]; then cp "$mac_variant" "$STAGE_DIR/Config/$name"; else cp "$config_file" "$STAGE_DIR/Config/$name"; fi
@@ -229,6 +287,9 @@ copy_tracked Content/Engine Content/Editor
 step "Staging shader sources"
 copy_tracked Source/Shaders
 
+step "Staging project templates"
+copy_tracked Source/Templates Source/Engine/DotNET/Sdk
+
 if [[ -d "$ROOT_DIR/Data/Scripts/Strata" ]]; then
     step "Staging generated Strata bindings"
     mkdir -p "$STAGE_DIR/Data/Scripts"
@@ -251,6 +312,10 @@ while read -r binary; do
     if [[ -n "$leftover" ]]; then
         warn "$(basename "$binary") still links: $(echo $leftover)"
     fi
+
+    for dependency_name in $(rpath_dependencies "$binary"); do
+        [[ -e "$STAGE_DIR/$dependency_name" ]] || warn "$(basename "$binary") links @rpath/$dependency_name, which is not in the package"
+    done
 done < <(macho_files)
 
 if grep -q -a -F "$ROOT_DIR" "$STAGE_DIR"/libhyperion*.dylib 2>/dev/null; then

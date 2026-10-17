@@ -1,8 +1,7 @@
 name: Release Editor
 
+# Manual only. Run it from a v* tag to publish under that tag, otherwise the draft release is tagged v<engine version>.
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
     inputs:
       draft-release:
@@ -14,8 +13,34 @@ permissions:
   contents: read
 
 jobs:
+  # CodeGen output is the same for every platform, so generate it once and skip it in the build jobs
+  codegen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y zlib1g-dev
+
+      - name: Run CodeGen
+        run: |
+          version="$(grep -oE '^RunCodeGen\([0-9]+ [0-9]+\)' Source/CMakeLists.txt | grep -oE '[0-9]+ [0-9]+')"
+          if [ -z "$version" ]; then echo "RunCodeGen(<major> <minor>) not found in Source/CMakeLists.txt"; exit 1; fi
+          bash Tools/Scripts/RunCodeGen.sh $version
+          test -f Source/Generated/CodeGenOutput.inc
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: codegen
+          path: |
+            Source/Generated
+            Data/Scripts/Strata
+          if-no-files-found: error
+
   build:
     name: build (${{ matrix.backend }})
+    needs: codegen
     runs-on: windows-2025
     timeout-minutes: 120
     strategy:
@@ -32,6 +57,10 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: codegen
 
       - name: Read engine version
         id: version
@@ -82,6 +111,8 @@ jobs:
 
       - name: Build
         shell: cmd
+        env:
+          HYP_SKIP_CODEGEN: 1
         run: Tools\Scripts\BuildHyperion.bat Release ninja distribution ${{ matrix.backend }} regenerate
 
       - name: Package
@@ -103,9 +134,61 @@ jobs:
           path: Packaged/symbols
           if-no-files-found: error
 
+  build-macos:
+    name: build (macos-arm64)
+    needs: codegen
+    runs-on: macos-15
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: codegen
+
+      - name: Read engine version
+        id: version
+        run: |
+          version=""
+          for c in MAJOR MINOR PATCH; do
+            part="$(sed -nE "s/^set\(HYP_VERSION_$c[[:space:]]+([0-9]+)\).*/\1/p" Source/CMakeLists.txt | head -n 1)"
+            if [ -z "$part" ]; then echo "HYP_VERSION_$c not found"; exit 1; fi
+            version="${version:+$version.}$part"
+          done
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: |
+          brew install ninja molten-vk vulkan-headers vulkan-loader curl freetype
+          echo "VULKAN_SDK=$(brew --prefix)" >> "$GITHUB_ENV"
+
+      # the runner has 7 GB of memory, which 8 parallel compiles of the engine can exhaust
+      - name: Build
+        env:
+          HYP_BUILD_JOBS: 4
+          HYP_SKIP_CODEGEN: 1
+        run: bash Tools/Scripts/BuildHyperion.sh distribution ninja regenerate
+
+      - name: Package
+        run: bash Tools/Scripts/PackageEditorMacOS.sh "$GITHUB_WORKSPACE/Packaged"
+
+      # the tarball keeps the executable bits, which a plain artifact upload would drop
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Hyperion-Editor-${{ steps.version.outputs.version }}-macos-arm64
+          path: Packaged/*.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+
   release:
-    needs: build
-    if: ${{ github.event_name == 'push' || inputs.draft-release }}
+    needs: [build, build-macos]
+    if: ${{ inputs.draft-release }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -130,7 +213,11 @@ jobs:
         run: |
           tag="v$VERSION"
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then tag="$GITHUB_REF_NAME"; fi
-          gh release create "$tag" *.zip \
+          gh release create "$tag" *.zip *.tar.gz \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --prerelease \
             --title "Hyperion Editor $VERSION (preview)" \
-            --notes "No .NET install is needed to run the editor. C# scripting requires the .NET 10 SDK."
+            --notes-file - <<'EOF'
+          No .NET install is needed to run the editor. C# scripting requires the .NET 10 SDK.
+
+          macOS (Apple Silicon): the build is not notarized. After extracting, run `xattr -dr com.apple.quarantine <folder>` and start the editor with `Hyperion Editor.command`.
+          EOF
