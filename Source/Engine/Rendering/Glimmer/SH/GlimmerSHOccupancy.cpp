@@ -39,8 +39,12 @@ static EngineStatGpuTimer s_statGlimmerSHOccupancy("Rendering/GPU/Glimmer/SHOccu
 static StaticShaderPropertyId s_propOccupancyModeClear { ShaderProperty(NAME("MODE"), NAME("CLEAR")) };
 static StaticShaderPropertyId s_propOccupancyModeSplat { ShaderProperty(NAME("MODE"), NAME("SPLAT")) };
 static StaticShaderPropertyId s_propOccupancyModeResolve { ShaderProperty(NAME("MODE"), NAME("RESOLVE")) };
+static StaticShaderPropertyId s_propOccupancyModeBlocks { ShaderProperty(NAME("MODE"), NAME("BLOCKS")) };
 
 static constexpr uint32 OccupancyGroupSize = 64;
+static constexpr int32 OccupancyBlockShift = 2;
+static constexpr int32 OccupancyBlockVoxels = 1 << OccupancyBlockShift;
+
 static constexpr int32 WindowSnapVoxels = 8;
 static constexpr uint32 AlbedoSumWords = 4;
 static constexpr uint32 LightmapSumWords = GlimmerSHOccupancyLightmapFaces * 4;
@@ -109,8 +113,9 @@ void GlimmerSHOccupancy::CreateResources()
     const size_t numCascadeVoxels = size_t(GlimmerSHOccupancyGridXZ) * GlimmerSHOccupancyGridY * GlimmerSHOccupancyGridXZ;
     const size_t numVoxels = numCascadeVoxels * GlimmerSHCascades;
 
-    // the mask words, then the traced cascades' lightmap words
-    const size_t numMaskWords = numVoxels * GlimmerSHOccupancyMaskWords + numCascadeVoxels * GlimmerSHOccupancyTracedCascades * GlimmerSHOccupancyLightmapFaces;
+    // the mask words, then the traced cascades' lightmap words, then a word per block of their voxels
+    const size_t numMaskWords = numVoxels * GlimmerSHOccupancyMaskWords + numCascadeVoxels * GlimmerSHOccupancyTracedCascades * GlimmerSHOccupancyLightmapFaces
+        + (numCascadeVoxels / (OccupancyBlockVoxels * OccupancyBlockVoxels * OccupancyBlockVoxels)) * GlimmerSHOccupancyTracedCascades;
 
     m_maskBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, numMaskWords * sizeof(uint32), alignof(uint32));
     Check(m_maskBuffer->Create());
@@ -203,6 +208,20 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
         insertWriteBarriers();
 
         dispatchPass(s_propOccupancyModeResolve, numBoxVoxels);
+    }
+
+    if (cascadeIndex < GlimmerSHOccupancyTracedCascades)
+    {
+        insertWriteBarriers();
+
+        const Vec3i blockMin = Vec3i(box.min.x >> OccupancyBlockShift, box.min.y >> OccupancyBlockShift, box.min.z >> OccupancyBlockShift);
+        const Vec3i blockMax = Vec3i(
+            (box.max.x + OccupancyBlockVoxels - 1) >> OccupancyBlockShift,
+            (box.max.y + OccupancyBlockVoxels - 1) >> OccupancyBlockShift,
+            (box.max.z + OccupancyBlockVoxels - 1) >> OccupancyBlockShift);
+        const Vec3i blockExtent = blockMax - blockMin;
+
+        dispatchPass(s_propOccupancyModeBlocks, uint32(blockExtent.x * blockExtent.y * blockExtent.z));
     }
 
     cr << InsertBarrier(m_texture->GetGpuImage(), ResourceState::ShaderResource, ShaderModuleType::Compute);

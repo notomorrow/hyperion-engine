@@ -19,6 +19,8 @@ CVar<float> g_cvGlimmerIntensity("Rendering.Glimmer.Intensity", 1.0f);
 CVar<int> g_cvGlimmerDebugView("Rendering.Glimmer.DebugView", 0);
 CVar<bool> g_cvGlimmerHalfRes("Rendering.Glimmer.HalfRes", true);
 CVar<int> g_cvGlimmerDebugSH("Rendering.Glimmer.DebugSH", 0);
+CVar<bool> g_cvGlimmerSHNearestHitLight("Rendering.Glimmer.SH.NearestHitLight", true);
+CVar<int> g_cvGlimmerSHRefreshVoxelsPerFrame("Rendering.Glimmer.SH.RefreshVoxelsPerFrame", 64);
 CVar<float> g_cvGlimmerVisibility("Rendering.Glimmer.Visibility", 1.0f);
 CVar<bool> g_cvGlimmerLookAhead("Rendering.Glimmer.LookAhead", true);
 CVar<float> g_cvGlimmerStartupBurstSeconds("Rendering.Glimmer.StartupBurstSeconds", 8.0f);

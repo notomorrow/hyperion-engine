@@ -4,6 +4,10 @@
 
 PERMUTE(MODE, UPDATE, COMPOSE)
 
+#define GLIMMER_SH_PROFILE 0
+
+
+
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 #include "../../Include/Material.hlsli"
 #include "../../Include/Scene.hlsli"
@@ -34,6 +38,7 @@ struct GlimmerSHUpdateConstants
     GlimmerSkyParams sky;
     EnvProbe skyProbe;         // textureIndices is ~0 without a sky probe
     GlimmerLightParams light;
+    uint4 options;             // x = 1 to light hits from the nearest voxel, rather than the volume's filtered sample
 };
 
 #include "../../Include/Clouds.hlsli"
@@ -156,6 +161,7 @@ DECLARE_SRV(GlimmerSHUpdate, GlimmerSHOccupancyMaskBuffer) StructuredBuffer<uint
 
 #include "GlimmerSHOccupancy.hlsli"
 
+
 #define GLIMMER_SH_HIT_OCCUPANCY 3u
 
 #define GLIMMER_SH_GROUP_SIZE 64
@@ -167,6 +173,9 @@ groupshared float4 gsVisibility[GLIMMER_SH_GROUP_SIZE]; // visible, visible * di
 groupshared float3 gsRayLight[GLIMMER_SH_RAYS * GLIMMER_LIGHT_PARTS];
 groupshared float3 gsRayDirections[GLIMMER_SH_RAYS];
 groupshared float gsRayEscapes[GLIMMER_SH_RAYS];
+groupshared float gsRayBasis[GLIMMER_SH_RAYS * GLIMMER_LIGHT_TERMS]; // each ray's light basis, times how much of it got out
+groupshared float4 gsSums[GLIMMER_LIGHT_PARTS * 3 + GLIMMER_LIGHT_TERMS];
+groupshared uint gsOctantFree[8];
 groupshared float gsAxisDepths[GLIMMER_SH_AXIS_DEPTHS]; // in voxels
 
 #define GLIMMER_SH_VOXEL_TRACED 0u
@@ -186,9 +195,22 @@ bool GlimmerSHTraceScene(float3 origin, float3 direction, float tMax, uint start
     GlimmerSHOccupancyHit occupancyHit;
     float coveredT;
 
+#if GLIMMER_SH_PROFILE == 1 || GLIMMER_SH_PROFILE == 3
+    occupancyHit = (GlimmerSHOccupancyHit)0;
+    coveredT = 0.0;
+    const bool hitOccupancy = false;
+#else
     const bool hitOccupancy = GlimmerSHTraceOccupancy(constants.occupancy, origin, direction, tMax, occupancyHit, coveredT);
+#endif
 
+#if GLIMMER_SH_PROFILE == 2 || GLIMMER_SH_PROFILE == 3
+    hit = (GlimmerHeightfieldHit)0;
+    hit.transmittance = 1.0;
+    hit.inscatter = GlimmerNoLight();
+    if (false)
+#else
     if (GlimmerTraceHeightfield(constants.ground, constants.spans, origin, direction, hitOccupancy ? occupancyHit.t : tMax, startLevel, coveredT, constants.params.x, accumulateCanopy, hit))
+#endif
     {
         return true;
     }
@@ -308,6 +330,13 @@ GlimmerLight GlimmerSHShadeHit(float3 P, GlimmerHeightfieldHit hit, float3 albed
         return GlimmerShade(albedo, GlimmerRestLight(lightmap.rgb));
     }
 
+    // the filtered sample loads every light entry of up to 8 voxels a cascade.
+    // lighting a hit from the one voxel, half a voxel off it, is a fraction of the cost
+    if (constants.options.x != 0u)
+    {
+        return GlimmerShade(albedo, GlimmerIndirectNearest(P + hit.normal * (0.5 * constants.volume.cascades[0].params.x), hit.normal));
+    }
+
     return GlimmerShadeSurface(P, hit.normal, albedo);
 }
 
@@ -339,6 +368,16 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     const uint3 texel = GlimmerSHTexel(cascadeIndex, voxel);
     const float3 center = GlimmerSHVoxelCenter(cascade, voxel);
 
+    // the octants' burial tests, one a thread
+    if (groupIndex < 8u)
+    {
+        const float3 octantOffset = float3(groupIndex & 1u, (groupIndex >> 1) & 1u, (groupIndex >> 2) & 1u) * 0.5 - 0.25;
+
+        gsOctantFree[groupIndex] = GlimmerSHIsBuried(center + octantOffset * spacing) ? 0u : 1u;
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+
     if (groupIndex == 0u)
     {
         float3 originOffset = (float3)0.0;
@@ -352,7 +391,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         {
             const float3 octantOffset = float3(octant & 1u, (octant >> 1) & 1u, (octant >> 2) & 1u) * 0.5 - 0.25;
 
-            if (!GlimmerSHIsBuried(center + octantOffset * spacing))
+            if (gsOctantFree[octant] != 0u)
             {
                 firstFree = freeCount == 0.0 ? octantOffset : firstFree;
                 freeSum += octantOffset;
@@ -451,7 +490,11 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
                 ? GlimmerSampleGroundAlbedo(glimmerGroundAlbedo, constants.ground, P.xz, hit.level, (float3)constants.params.z)
                 : hit.albedo;
 
+#if GLIMMER_SH_PROFILE == 4
+            light = GlimmerNoLight();
+#else
             light = GlimmerSHShadeHit(P, hit, albedo, hitLightmap);
+#endif
         }
         else
         {
@@ -472,6 +515,15 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         const float visible = didHit ? 0.0 : hit.transmittance;
 
         gsRayEscapes[groupIndex] = visible;
+
+        float basis[GLIMMER_LIGHT_TERMS];
+        GlimmerLightBasis(rayDirection, basis);
+
+        [unroll]
+        for (uint term = 0; term < GLIMMER_LIGHT_TERMS; term++)
+        {
+            gsRayBasis[groupIndex * GLIMMER_LIGHT_TERMS + term] = basis[term] * visible;
+        }
 
         visibilitySample = float4(visible, visible * rayDirection);
     }
@@ -517,6 +569,37 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         GroupMemoryBarrierWithGroupSync();
     }
 
+    if (!isBuried && groupIndex < uint(GLIMMER_LIGHT_PARTS * 3 + GLIMMER_LIGHT_TERMS))
+    {
+        float4 sum = (float4)0.0;
+
+        if (groupIndex < uint(GLIMMER_LIGHT_PARTS * 3))
+        {
+            const uint part = groupIndex / 3u;
+            const uint channel = groupIndex % 3u;
+
+            for (uint rayIndex = 0; rayIndex < GLIMMER_SH_RAYS; rayIndex++)
+            {
+                const float value = gsRayLight[rayIndex * GLIMMER_LIGHT_PARTS + part][channel];
+
+                sum += float4(value, value * gsRayDirections[rayIndex]);
+            }
+        }
+        else
+        {
+            const uint term = groupIndex - uint(GLIMMER_LIGHT_PARTS * 3);
+
+            for (uint rayIndex = 0; rayIndex < GLIMMER_SH_RAYS; rayIndex++)
+            {
+                sum += float4(1.0, gsRayDirections[rayIndex]) * gsRayBasis[rayIndex * GLIMMER_LIGHT_TERMS + term];
+            }
+        }
+
+        gsSums[groupIndex] = sum;
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+
     if (isBuried || groupIndex != 0u)
     {
         return;
@@ -528,44 +611,17 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     [unroll]
     for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
     {
-        float4 sumR = (float4)0.0;
-        float4 sumG = (float4)0.0;
-        float4 sumB = (float4)0.0;
-
-        for (uint rayIndex = 0; rayIndex < GLIMMER_SH_RAYS; rayIndex++)
-        {
-            const float3 value = gsRayLight[rayIndex * GLIMMER_LIGHT_PARTS + part];
-            const float3 direction = gsRayDirections[rayIndex];
-
-            sumR += float4(value.r, value.r * direction);
-            sumG += float4(value.g, value.g * direction);
-            sumB += float4(value.b, value.b * direction);
-        }
-
-        GlimmerSetBounceEntry(light, part, 0u, GlimmerSHProjectSum(sumR));
-        GlimmerSetBounceEntry(light, part, 1u, GlimmerSHProjectSum(sumG));
-        GlimmerSetBounceEntry(light, part, 2u, GlimmerSHProjectSum(sumB));
+        GlimmerSetBounceEntry(light, part, 0u, GlimmerSHProjectSum(gsSums[part * 3u + 0u]));
+        GlimmerSetBounceEntry(light, part, 1u, GlimmerSHProjectSum(gsSums[part * 3u + 1u]));
+        GlimmerSetBounceEntry(light, part, 2u, GlimmerSHProjectSum(gsSums[part * 3u + 2u]));
     }
 
     // a ray that got out brings the distant light along it straight in
     [unroll]
     for (uint term = 0; term < GLIMMER_LIGHT_TERMS; term++)
     {
-        float4 sum = (float4)0.0;
-
-        for (uint rayIndex = 0; rayIndex < GLIMMER_SH_RAYS; rayIndex++)
-        {
-            const float3 direction = gsRayDirections[rayIndex];
-
-            float basis[GLIMMER_LIGHT_TERMS];
-            GlimmerLightBasis(direction, basis);
-
-            sum += float4(1.0, direction) * (basis[term] * gsRayEscapes[rayIndex]);
-        }
-
-        light[GLIMMER_LIGHT_DIRECT_ENTRY + term] = GlimmerSHProjectSum(sum);
+        light[GLIMMER_LIGHT_DIRECT_ENTRY + term] = GlimmerSHProjectSum(gsSums[GLIMMER_LIGHT_PARTS * 3 + term]);
     }
-
     if (hasHistory)
     {
         visibility = lerp(visibility, previousVisibility, GLIMMER_SH_HYSTERESIS);

@@ -12,7 +12,7 @@
 #define GLIMMER_SH_OCCUPANCY_NO_TRACE
 #include "GlimmerSHOccupancy.hlsli"
 
-PERMUTE(MODE, CLEAR, SPLAT, RESOLVE)
+PERMUTE(MODE, CLEAR, SPLAT, RESOLVE, BLOCKS)
 
 struct GlimmerSHOccupancySplatConstants
 {
@@ -445,6 +445,31 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         }
     }
 #endif
+#elif defined(MODE_BLOCKS)
+    const int3 blockMin = constants.boxMin.xyz >> GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT;
+    const int3 blockMax = (constants.boxMax.xyz + (GLIMMER_SH_OCCUPANCY_BLOCK_VOXELS - 1)) >> GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT;
+    const uint3 blockExtent = uint3(blockMax - blockMin);
+
+    if (threadIndex >= blockExtent.x * blockExtent.y * blockExtent.z)
+    {
+        return;
+    }
+
+    const int3 block = blockMin + int3(threadIndex % blockExtent.x, (threadIndex / blockExtent.x) % blockExtent.y, threadIndex / (blockExtent.x * blockExtent.y));
+    const int3 firstVoxel = block << GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT;
+
+    uint solid = 0u;
+
+    for (uint inner = 0; inner < uint(GLIMMER_SH_OCCUPANCY_BLOCK_VOXELS * GLIMMER_SH_OCCUPANCY_BLOCK_VOXELS * GLIMMER_SH_OCCUPANCY_BLOCK_VOXELS); inner++)
+    {
+        const uint side = uint(GLIMMER_SH_OCCUPANCY_BLOCK_VOXELS - 1);
+        const int3 voxel = firstVoxel + int3(inner & side, (inner >> GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT) & side, inner >> (2 * GLIMMER_SH_OCCUPANCY_BLOCK_SHIFT));
+        const uint maskIndex = GlimmerSHOccupancyMaskIndex(cascadeIndex, voxel);
+
+        solid |= OutOccupancyMask[maskIndex] | OutOccupancyMask[maskIndex + 1u];
+    }
+
+    OutOccupancyMask[GlimmerSHOccupancyBlockIndex(cascadeIndex, firstVoxel)] = solid != 0u ? 1u : 0u;
 #elif defined(MODE_SPLAT)
     const uint chunkIndex = groupId.y * constants.counts.z + groupId.x;
 

@@ -46,6 +46,8 @@ extern CVar<bool> g_cvGlimmerHalfRes; // irradiance evaluated for one pixel of e
 // 2 = sky visibility
 // 3 = sky visibility of the single voxel (no interpolation)
 extern CVar<int> g_cvGlimmerDebugSH;
+extern CVar<bool> g_cvGlimmerSHNearestHitLight;              // SH rays light their hits from the nearest voxel (cheap) rather than the filtered volume
+extern CVar<int> g_cvGlimmerSHRefreshVoxelsPerFrame;         // SH voxels traced again a frame while nothing changes, in slices of half a cascade column
 
 extern CVar<float> g_cvGlimmerVisibility;
 extern CVar<bool> g_cvGlimmerLookAhead;
