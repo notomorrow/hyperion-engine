@@ -39,10 +39,14 @@ static EngineStatGpuTimer s_statGTAO("Rendering/GPU/GTAO");
 
 // 0 = low, 1 = medium, 2 = high, 3 = ultra
 static CVar<int> s_cvGTAOQuality("Rendering.GTAO.Quality", 2);
-static CVar<float> s_cvGTAORadius("Rendering.GTAO.Radius", 1.0f);
+
+static CVar<float> s_cvGTAORadius("Rendering.GTAO.Radius", 3.0f);
 static CVar<float> s_cvGTAOPower("Rendering.GTAO.Power", 2.2f);
+
 static CVar<float> s_cvGTAOThinOccluderCompensation("Rendering.GTAO.ThinOccluderCompensation", 0.0f);
+
 static CVar<int> s_cvGTAODenoisePasses("Rendering.GTAO.DenoisePasses", 1);
+
 static CVar<bool> s_cvGTAOTemporal("Rendering.GTAO.Temporal", true);
 static CVar<int> s_cvGTAOTemporalFrames("Rendering.GTAO.TemporalFrames", 16);
 

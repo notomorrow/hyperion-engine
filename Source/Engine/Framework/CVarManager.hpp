@@ -19,6 +19,8 @@
 
 #include <Core/Name/Name.hpp>
 
+#include <Core/Reflection/BoxedValue.hpp>
+
 #include <Core/Utilities/StringUtil.hpp>
 
 #include <type_traits>

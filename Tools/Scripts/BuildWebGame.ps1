@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Project,
     [switch]$Run,
+    [switch]$ServeOnly,
     [switch]$FastLink,
     [int]$MaxTextureSize = 0,
     [string]$Worlds = "",
@@ -10,8 +11,11 @@ param(
 # Builds a project for the browser into <project>/Binaries/Web, a folder any static host can serve as it is.
 # Intermediates go to <project>/Build/Web. Settings come from the project's PlatformSettings.Web, the arguments override.
 #
-#   -Run       serve Binaries/Web on localhost afterwards and open it in the browser
-#   -FastLink  link at -O1: minutes faster, for testing locally; a build to host links at -O3
+#   -Run        serve Binaries/Web on localhost afterwards and open it in the browser
+#   -ServeOnly  skip the build: serve the last one and open it in the browser
+#   -FastLink   link at -O1: minutes faster, for testing locally; a build to host links at -O3
+#
+# Build/Web/Built.stamp is written by a finished build, dated when that build started.
 
 $ErrorActionPreference = "Stop"
 
@@ -108,8 +112,51 @@ $packageDir = Join-Path $buildDir "Package"
 $cmakeDir = Join-Path $buildDir "CMake"
 $pageDir = Join-Path $buildDir "Page"
 $outputDir = Join-Path $Project "Binaries\Web"
+$buildingStamp = Join-Path $buildDir "Building.stamp"
+$builtStamp = Join-Path $buildDir "Built.stamp"
+
+function Start-WebServer
+{
+    if (-not (Get-Command python -ErrorAction SilentlyContinue))
+    {
+        Fail "python not found on PATH, which serving the page needs"
+    }
+
+    $serverPidFile = Join-Path $buildDir "server.pid"
+
+    if (Test-Path $serverPidFile)
+    {
+        $previousServer = Get-Process -Id ([int](Get-Content $serverPidFile -TotalCount 1)) -ErrorAction SilentlyContinue
+
+        if ($previousServer -and $previousServer.ProcessName -match "python")
+        {
+            Stop-Process -Id $previousServer.Id -Force
+        }
+    }
+
+    $server = Start-Process -FilePath python -ArgumentList @("`"$(Join-Path $PSScriptRoot 'ServeWeb.py')`"", "`"$outputDir`"", "`"$outputDir`"", $Port, "`"$(Join-Path $buildDir 'MissingShaders.txt')`"") -WindowStyle Hidden -PassThru
+    Set-Content $serverPidFile $server.Id -Encoding ascii
+
+    Start-Sleep -Milliseconds 800
+    Start-Process "http://localhost:$Port/"
+
+    Write-Host "Serving $outputDir at http://localhost:$Port/ (server pid $($server.Id))"
+}
 
 New-Item -ItemType Directory -Force $buildDir | Out-Null
+
+if ($ServeOnly)
+{
+    if (-not (Test-Path (Join-Path $outputDir "index.html")) -or -not (Test-Path (Join-Path $outputDir "$name.wasm")))
+    {
+        Fail "$name hasn't been built for the web yet"
+    }
+
+    Start-WebServer
+    exit 0
+}
+
+Set-Content $buildingStamp "" -Encoding ascii
 
 Write-Host "Building $name for the web: worlds $($worldList -join ', '), textures up to $MaxTextureSize"
 
@@ -257,29 +304,14 @@ foreach ($file in Get-ChildItem $outputDir -Recurse -File)
 $totalBytes = (Get-ChildItem $outputDir -Recurse -File | Measure-Object Length -Sum).Sum
 Write-Host ("Built {0} for the web: {1} ({2:N0} MB)" -f $name, $outputDir, ($totalBytes / 1MB))
 
+# moving keeps the time the build started, so anything saved during the build still counts as newer
+Move-Item $buildingStamp $builtStamp -Force
+
 # 5. serve it, when asked
 
 if ($Run)
 {
-    $serverPidFile = Join-Path $buildDir "server.pid"
-
-    if (Test-Path $serverPidFile)
-    {
-        $previousServer = Get-Process -Id ([int](Get-Content $serverPidFile -TotalCount 1)) -ErrorAction SilentlyContinue
-
-        if ($previousServer -and $previousServer.ProcessName -match "python")
-        {
-            Stop-Process -Id $previousServer.Id -Force
-        }
-    }
-
-    $server = Start-Process -FilePath python -ArgumentList @("`"$(Join-Path $PSScriptRoot 'ServeWeb.py')`"", "`"$outputDir`"", "`"$outputDir`"", $Port, "`"$(Join-Path $buildDir 'MissingShaders.txt')`"") -WindowStyle Hidden -PassThru
-    Set-Content $serverPidFile $server.Id -Encoding ascii
-
-    Start-Sleep -Milliseconds 800
-    Start-Process "http://localhost:$Port/"
-
-    Write-Host "Serving $outputDir at http://localhost:$Port/ (server pid $($server.Id))"
+    Start-WebServer
 }
 
 exit 0
