@@ -51,14 +51,13 @@ void WebGPUFrame::WriteCommandBuffer(CommandBuffer* commandBuffer)
 {
     AssertOnThread(g_renderThread);
 
-    Array<CommandRecorder*, RenderAllocator> commandRecorders;
-    commandRecorders.Reserve(5);
-
-    commandRecorders.PushBack(&preRenderCommands);
-    commandRecorders.PushBack(&RI.commandRecorderAllocator.rootPreRender);
-    commandRecorders.PushBack(&cr);
-    commandRecorders.PushBack(&RI.commandRecorderAllocator.root);
-    commandRecorders.PushBack(&postRenderCommands);
+    CommandRecorder* commandRecorders[] = {
+        &preRenderCommands,
+        &RI.commandRecorderAllocator.rootPreRender,
+        &cr,
+        &RI.commandRecorderAllocator.root,
+        &postRenderCommands
+    };
 
     if (OnPresent.AnyBound())
     {
@@ -66,19 +65,18 @@ void WebGPUFrame::WriteCommandBuffer(CommandBuffer* commandBuffer)
         OnPresent.RemoveAllDetached();
     }
 
-    // See WebGPUPipelineCompileMode::WithFrame. A pass that had to start compiling pipelines left their draws out, so
-    // once they are in, what it encoded is thrown away and the commands are executed again. The last pass allowed
-    // compiles the plain way, which leaves nothing out.
-    static constexpr uint32 maxNumPasses = 3;
+    // A pass that had to start compiling pipelines executed no draws so once they are in, commands are replayed.
+    // The last pass allowed compiles as normal, which leaves nothing out.
+    static constexpr uint32 MaxNumPasses = 3;
 
     WebGPUPipelineCompiler& pipelineCompiler = RI.GetPipelineCompiler();
 
     const WebGPUCommandBuffer::SectionMark sectionMark = commandBuffer->BeginDiscardableSection();
     const RenderInterface::State stateBefore = RI.state;
 
-    for (uint32 passIndex = 0; passIndex < maxNumPasses; passIndex++)
+    for (uint32 passIndex = 0; passIndex < MaxNumPasses; passIndex++)
     {
-        pipelineCompiler.BeginFramePass(/* allowCompilingWithFrame */ passIndex + 1 != maxNumPasses);
+        pipelineCompiler.BeginFramePass(/* allowCompilingWithFrame */ passIndex + 1 != MaxNumPasses);
 
         for (CommandRecorder* commandRecorder : commandRecorders)
         {
