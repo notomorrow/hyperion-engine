@@ -52,14 +52,13 @@ void DX12Frame::WriteCommandBuffer(CommandBuffer* commandBuffer)
 {
     AssertOnThread(g_renderThread);
 
-    Array<CommandRecorder*, RenderAllocator> commandRecorders;
-    commandRecorders.Reserve(5);
-
-    commandRecorders.PushBack(&preRenderCommands);
-    commandRecorders.PushBack(&RI.commandRecorderAllocator.rootPreRender);
-    commandRecorders.PushBack(&cr);
-    commandRecorders.PushBack(&RI.commandRecorderAllocator.root);
-    commandRecorders.PushBack(&postRenderCommands);
+    CommandRecorder* commandRecorders[] = {
+        &preRenderCommands,
+        &RI.commandRecorderAllocator.rootPreRender,
+        &cr,
+        &RI.commandRecorderAllocator.root,
+        &postRenderCommands
+    };
 
     if (OnPresent.AnyBound())
     {
@@ -67,12 +66,10 @@ void DX12Frame::WriteCommandBuffer(CommandBuffer* commandBuffer)
         OnPresent.RemoveAllDetached();
     }
 
+    for (CommandRecorder* commandRecorder : commandRecorders)
     {
-        for (CommandRecorder* commandRecorder : commandRecorders)
-        {
-            commandRecorder->Execute(commandBuffer);
-            commandRecorder->Reset(/* freeMemory */ false);
-        }
+        commandRecorder->Execute(commandBuffer);
+        commandRecorder->Reset(/* freeMemory */ false);
     }
 }
 
