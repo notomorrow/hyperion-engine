@@ -229,15 +229,16 @@ namespace Hyperion.Editor.ViewModels
 
         private void OnCurrentProjectChanged(bool isSaved)
         {
-            if (!_awaitingProjectOpen)
-            {
-                return;
-            }
-
+            // a project opened from anywhere (this screen, an editor command) takes the editor past the start screen
             if (isSaved)
             {
                 Finish();
 
+                return;
+            }
+
+            if (!_awaitingProjectOpen)
+            {
                 return;
             }
 
