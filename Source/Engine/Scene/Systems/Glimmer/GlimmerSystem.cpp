@@ -28,6 +28,7 @@
 #include <Core/Math/MathUtil.hpp>
 
 #include <Core/Threading/Threads.hpp>
+#include <Core/Threading/AtomicVar.hpp>
 
 #include <Core/Profiling/ProfileScope.hpp>
 
@@ -36,6 +37,8 @@
 namespace Hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Rendering);
+
+extern AtomicVar<uint32> g_currentFrameRateLimit;
 
 namespace /* Helpers */ {
 
@@ -411,8 +414,12 @@ void GlimmerSystem::UpdateViewerMotion(const Vec3f& viewerPosition, float delta,
 
     const bool isBursting = m_timeSinceStart < g_cvGlimmerStartupBurstSeconds.Get();
 
+    // only a frame rate cap earns a bigger budget: frames slowed by the GPU would get slower still
+    const uint32 frameRateLimit = g_currentFrameRateLimit.Get(MemoryOrder::RELAXED);
+    const float cappedScale = frameRateLimit > 0 ? 60.0f / float(frameRateLimit) : 1.0f;
+
     outState.lookAhead = lookAhead;
-    outState.budgetScale = isBursting ? StartupBudgetScale : MathUtil::Clamp(delta * 60.0f, 1.0f, MaxBudgetScale);
+    outState.budgetScale = isBursting ? StartupBudgetScale : MathUtil::Clamp(MathUtil::Min(delta * 60.0f, cappedScale), 1.0f, MaxBudgetScale);
 }
 
 void GlimmerSystem::UpdateProbeDebugRecords(float delta)

@@ -109,6 +109,9 @@ $cmakeDir = Join-Path $buildDir "CMake"
 $pageDir = Join-Path $buildDir "Page"
 $outputDir = Join-Path $Project "Binaries\Web"
 
+# the pipelines the game compiled when it last ran from the local server, compiled ahead of use by the next build
+$pipelineManifest = Join-Path $buildDir "pipelinevariants.bin"
+
 New-Item -ItemType Directory -Force $buildDir | Out-Null
 
 Write-Host "Building $name for the web: worlds $($worldList -join ', '), textures up to $MaxTextureSize"
@@ -193,6 +196,11 @@ Copy-Item $webConfig (Join-Path $configDir "EngineConfig.json")
 Copy-Item (Join-Path $rootDir "Config\GlobalConfig.Web.json") (Join-Path $configDir "GlobalConfig.json")
 Copy-Item (Join-Path $rootDir "Config\Shaders.hmf"), (Join-Path $rootDir "Config\DeviceTiers.hmf") $configDir
 
+if (Test-Path $pipelineManifest)
+{
+    Copy-Item $pipelineManifest (Join-Path $packageDir "Cache\pipelinevariants.bin") -Force
+}
+
 # 3. the page: the launch layer and the project's game code, linked against the engine's web build
 
 Step 40 "Building the page"
@@ -273,7 +281,7 @@ if ($Run)
         }
     }
 
-    $server = Start-Process -FilePath python -ArgumentList @("`"$(Join-Path $PSScriptRoot 'ServeWeb.py')`"", "`"$outputDir`"", "`"$outputDir`"", $Port, "`"$(Join-Path $buildDir 'MissingShaders.txt')`"") -WindowStyle Hidden -PassThru
+    $server = Start-Process -FilePath python -ArgumentList @("`"$(Join-Path $PSScriptRoot 'ServeWeb.py')`"", "`"$outputDir`"", "`"$outputDir`"", $Port, "`"$(Join-Path $buildDir 'MissingShaders.txt')`"", "`"$pipelineManifest`"") -WindowStyle Hidden -PassThru
     Set-Content $serverPidFile $server.Id -Encoding ascii
 
     Start-Sleep -Milliseconds 800

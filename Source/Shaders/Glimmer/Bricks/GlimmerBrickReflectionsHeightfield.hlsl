@@ -83,19 +83,10 @@ DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
 // the spans' solids start no nearer than this many texels, so a ray doesn't hit the column it starts in
 #define SOLIDS_SLACK_TEXELS 1.5
 
-static float3 g_canopyLight;
-static bool g_hasCanopyLight = false;
-
 // the canopy is lit by what reaches the first of it the ray comes to
-GlimmerLight GlimmerCanopyRadiance(float3 P, float3 albedo, float depthBelowTop, float extinction)
+GlimmerLight GlimmerCanopyRadiance(float3 P, float3 weightedAlbedo)
 {
-    if (!g_hasCanopyLight)
-    {
-        g_canopyLight = max(EvaluateGlimmer(glimmer, P, float3(0.0, 1.0, 0.0)).rgb, (float3)0.0);
-        g_hasCanopyLight = true;
-    }
-
-    return GlimmerRestLight(min(albedo, (float3)MAX_ALBEDO) * g_canopyLight);
+    return GlimmerRestLight(weightedAlbedo * max(EvaluateGlimmer(glimmer, P, float3(0.0, 1.0, 0.0)).rgb, (float3)0.0));
 }
 
 #include "../GlimmerHeightfield.hlsli"
@@ -106,8 +97,6 @@ float4 TraceHeightfield(float3 origin, float3 direction, out float outT, out uin
     const float solidsFromT = max(GlimmerBrickWindowExit(constants.bricks, origin, direction), SOLIDS_SLACK_TEXELS * constants.spans.levels[0].params.x);
 
     GlimmerHeightfieldHit hit;
-
-    g_hasCanopyLight = false;
 
     const bool isHit = GlimmerTraceHeightfield(constants.ground, constants.spans, origin, direction, HEIGHTFIELD_RAY_DISTANCE, 0u, solidsFromT, constants.params.x, true, hit);
 

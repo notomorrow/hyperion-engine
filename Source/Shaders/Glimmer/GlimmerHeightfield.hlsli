@@ -244,6 +244,8 @@ struct GlimmerHeightfieldHit
 
 #define GLIMMER_HEIGHTFIELD_MAX_STEPS 128
 
+#define GLIMMER_CANOPY_MAX_ALBEDO 0.9
+
 #define GLIMMER_HEIGHTFIELD_LEVEL_TEXELS 24.0
 
 float GlimmerHeightfieldEscapeHeight(uint level)
@@ -310,6 +312,12 @@ bool GlimmerTraceHeightfield(
 
     float t = 0.0;
 
+    bool isHit = false;
+
+    float3 canopyPoint = (float3)0.0;
+    float3 canopyAlbedo = (float3)0.0;
+    bool hasCanopy = false;
+
     [loop]
     for (uint stepIndex = 0; stepIndex < GLIMMER_HEIGHTFIELD_MAX_STEPS && t < tMax; stepIndex++)
     {
@@ -324,7 +332,7 @@ bool GlimmerTraceHeightfield(
 
         if (direction.y >= 0.0 && previousPosition.y > escapeHeight)
         {
-            return false;
+            break;
         }
 
         const float texelSize = groundParams.levels[stepLevel].params.x;
@@ -390,14 +398,13 @@ bool GlimmerTraceHeightfield(
 
                 if (accumulateCanopy)
                 {
-                    const float3 midpoint = origin + direction * (0.5 * (previousT + t));
-                    const GlimmerLight radiance = GlimmerCanopyRadiance(
-                        midpoint,
-                        spanSample.canopyAlbedo,
-                        max(spanSample.canopyMax - midpoint.y, 0.0),
-                        canopy.opticalDepth / canopy.length);
+                    if (!hasCanopy)
+                    {
+                        canopyPoint = origin + direction * (0.5 * (previousT + t));
+                        hasCanopy = true;
+                    }
 
-                    GlimmerAddLight(hit.inscatter, radiance, (float3)(hit.transmittance * (1.0 - segmentTransmittance)));
+                    canopyAlbedo += min(spanSample.canopyAlbedo, (float3)GLIMMER_CANOPY_MAX_ALBEDO) * (hit.transmittance * (1.0 - segmentTransmittance));
                 }
 
                 hit.transmittance *= segmentTransmittance;
@@ -431,7 +438,9 @@ bool GlimmerTraceHeightfield(
                         : (side < 0 ? float3(0.0, -1.0, 0.0) : -normalize(float3(direction.x, 0.0, direction.z) + float3(1e-5, 0.0, 0.0)));
                     hit.albedo = spanSample.solidAlbedo;
 
-                    return true;
+                    isHit = true;
+
+                    break;
                 }
 
                 hit.transmittance *= exp(-solid.opticalDepth);
@@ -442,14 +451,14 @@ bool GlimmerTraceHeightfield(
                 hit.t = t;
                 hit.transmittance = 0.0;
 
-                return false;
+                break;
             }
         }
 
         if (!GlimmerSampleGround(groundParams, position.xz, stepLevel, groundHeight, level))
         {
             // off the heightfield: nothing left to hit
-            return false;
+            break;
         }
 
         if (position.y <= groundHeight)
@@ -457,7 +466,7 @@ bool GlimmerTraceHeightfield(
             float lowT = previousT;
             float highT = t;
 
-            [unroll]
+            [loop]
             for (uint refineIndex = 0; refineIndex < 6; refineIndex++)
             {
                 const float midT = 0.5 * (lowT + highT);
@@ -481,11 +490,18 @@ bool GlimmerTraceHeightfield(
             hit.level = level;
             hit.normal = GlimmerGroundNormal(groundParams, (origin + direction * highT).xz, level);
 
-            return true;
+            isHit = true;
+
+            break;
         }
     }
 
-    return false;
+    if (hasCanopy)
+    {
+        hit.inscatter = GlimmerCanopyRadiance(canopyPoint, canopyAlbedo);
+    }
+
+    return isHit;
 }
 
 #endif

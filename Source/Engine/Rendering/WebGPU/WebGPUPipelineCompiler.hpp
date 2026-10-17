@@ -91,7 +91,7 @@ private:
 
     Map<Name, BackgroundCompileStatus, WebGPUAllocator> m_backgroundCompiles;
 
-    bool m_isBackgroundCompileRunning = false;
+    uint32 m_numBackgroundCompilesRunning = 0;
     uint32 m_numQuietFrames = 0;
 };
 

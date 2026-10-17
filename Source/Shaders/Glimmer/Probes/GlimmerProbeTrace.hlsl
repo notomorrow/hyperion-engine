@@ -363,8 +363,6 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
         GlimmerHeightfieldHit heightfieldHit;
 
-        g_hasCanopySurroundings = false;
-
         const bool hitHeightfield = GlimmerTraceHeightfield(
             constants.ground,
             constants.spans,
