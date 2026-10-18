@@ -68,7 +68,7 @@
 #if HYP_CLANG
 #define HYP_NOTNULL __attribute__((nonnull))
 #elif HYP_GCC
-#define HYP_NOTNULL __attribute__((nonnull))
+#define HYP_NOTNULL
 #elif HYP_MSVC
 #define HYP_NOTNULL
 #else
