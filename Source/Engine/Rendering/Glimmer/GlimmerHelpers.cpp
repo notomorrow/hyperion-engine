@@ -281,10 +281,13 @@ void CollectGlimmerTerrainPatches(
         patch.boundsXZ = Vec4f(worldBounds.min.x, worldBounds.min.z, worldBounds.max.x, worldBounds.max.z);
         patch.data = Vec4u(materialIndex, 0, 0, 0);
 
-        GlimmerTerrainPatchShaderData* existing = outPatches.FindIf([&patch](const GlimmerTerrainPatchShaderData& other)
-                                                                    {
-                                                                        return other.data.x == patch.data.x && other.worldToObject0 == patch.worldToObject0 && other.worldToObject2 == patch.worldToObject2;
-                                                                    });
+        GlimmerTerrainPatchShaderData* existing = outPatches.FindIf(
+            [&patch](const GlimmerTerrainPatchShaderData& other)
+            {
+                return other.data.x == patch.data.x
+                    && other.worldToObject0 == patch.worldToObject0
+                    && other.worldToObject2 == patch.worldToObject2;
+            });
 
         if (existing != outPatches.End())
         {

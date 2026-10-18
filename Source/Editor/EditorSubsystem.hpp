@@ -176,6 +176,12 @@ public:
         return m_editorScene;
     }
 
+    /*! \brief Holds the selected gizmo, kept apart from the editor scene so only the active viewport draws it. */
+    HYP_FORCE_INLINE const Handle<Scene>& GetGizmoScene() const
+    {
+        return m_gizmoScene;
+    }
+
     /// The editor scene node that stands in for one instance of \p group, so it can be selected and moved like any other node
     Handle<InstanceHandleNode> GetOrCreateInstanceHandle(const Handle<InstanceGroup>& group, InstanceId instanceId);
 
@@ -975,6 +981,7 @@ private:
     ////////////////////
 
     Handle<Scene> m_editorScene;
+    Handle<Scene> m_gizmoScene;
 
     // keyed by group id and instance id
     Map<uint64, WeakHandle<InstanceHandleNode>> m_instanceHandles;

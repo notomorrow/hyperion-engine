@@ -49,8 +49,9 @@ void GlimmerGroundClipmap::MoveWindow(uint32 levelIndex, const Vec2i& desiredOri
     if (isJump)
     {
         level.valid = Rect { desiredOrigin, desiredOrigin };
-        level.pending.Clear();
-        level.pending.PushBack(newWindow);
+        
+        level.pending.Resize(1);
+        level.pending[0] = newWindow;
     }
     else
     {
@@ -98,7 +99,8 @@ void GlimmerGroundClipmap::AddDirtyRect(uint32 levelIndex, const Vec4f& worldRec
     const Rect rect = Rect::Intersect(
         Rect {
             Vec2i(int32(MathUtil::Floor(worldRect.x * invTexelSize)) - 1, int32(MathUtil::Floor(worldRect.y * invTexelSize)) - 1),
-            Vec2i(int32(MathUtil::Floor(worldRect.z * invTexelSize)) + 2, int32(MathUtil::Floor(worldRect.w * invTexelSize)) + 2) },
+            Vec2i(int32(MathUtil::Floor(worldRect.z * invTexelSize)) + 2, int32(MathUtil::Floor(worldRect.w * invTexelSize)) + 2)
+        },
         window);
 
     if (rect.IsEmpty())
@@ -108,8 +110,8 @@ void GlimmerGroundClipmap::AddDirtyRect(uint32 levelIndex, const Vec4f& worldRec
 
     if (level.pending.Size() >= MaxPendingRects)
     {
-        level.pending.Clear();
-        level.pending.PushBack(window);
+        level.pending.Resize(1);
+        level.pending[0] = window;
 
         return;
     }
@@ -201,7 +203,6 @@ void GlimmerGroundClipmap::Update(
             level = Level {};
         }
     }
-
     
     for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)
     {

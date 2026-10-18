@@ -348,7 +348,9 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
         }
     }
 
-    const EnumFlags<GlimmerRestartParts> restartedParts = numCompiling == 0 ? scene->pendingRestart : EnumFlags<GlimmerRestartParts>(GlimmerRestartParts::None);
+    const EnumFlags<GlimmerRestartParts> restartedParts = numCompiling == 0
+        ? scene->pendingRestart
+        : EnumFlags<GlimmerRestartParts>(GlimmerRestartParts::None);
 
     if (restartedParts)
     {

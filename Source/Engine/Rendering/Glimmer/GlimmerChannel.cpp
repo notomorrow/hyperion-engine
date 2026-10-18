@@ -48,11 +48,13 @@ void GlimmerChannel::Publish(const GlimmerChannelState& state, Array<GlimmerGrou
     if (state.groundGeneration != m_state.groundGeneration)
     {
         // uploads for the old generation would be written over the new window
-        m_pendingGroundUploads.Clear();
+        m_pendingGroundUploads.Resize(0);
     }
 
     m_state = state;
 
+    m_pendingGroundUploads.Reserve(m_pendingGroundUploads.Size() + groundUploads.Size());
+    
     for (GlimmerGroundUpload& upload : groundUploads)
     {
         m_pendingGroundUploads.PushBack(std::move(upload));
@@ -65,7 +67,8 @@ void GlimmerChannel::Consume(GlimmerChannelState& outState, Array<GlimmerGroundU
 
     outState = m_state;
     outGroundUploads = std::move(m_pendingGroundUploads);
-    m_pendingGroundUploads = Array<GlimmerGroundUpload, GlimmerAllocator>();
+    
+    m_pendingGroundUploads = {};
 }
 
 void GlimmerChannel::PublishProbeDebug(Array<GlimmerProbeDebugRecord, GlimmerAllocator>&& records)
@@ -86,7 +89,8 @@ bool GlimmerChannel::ConsumeProbeDebug(Array<GlimmerProbeDebugRecord, GlimmerAll
     }
 
     outRecords = std::move(m_probeDebugRecords);
-    m_probeDebugRecords = Array<GlimmerProbeDebugRecord, GlimmerAllocator>();
+    
+    m_probeDebugRecords = {};
     m_hasProbeDebugRecords = false;
 
     return true;

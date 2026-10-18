@@ -712,7 +712,9 @@ bool CocoaApplicationWindow::HandleNSEvent(NSEvent* nsEvent, Event& event)
             const Vec2f position = Vec2f(float(location.x * scale), float(location.y * scale));
             const Vec2f delta = position - Vec2f(m_mousePosition);
 
-            event.GetEventData().Set(MotionData { position, delta, /* isAbsolute */ false });
+            m_mousePosition = Vec2i(position);
+
+            event.GetEventData().Set(MotionData { position, delta, /* isAbsolute */ true });
         }
 
         return true;
