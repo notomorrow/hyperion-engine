@@ -32,6 +32,12 @@ struct BitField
     template <bool IsConst>
     struct IteratorBase
     {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = size_t;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const size_t*;
+        using reference = size_t;
+
         std::conditional_t<IsConst, const BitField&, BitField&> ref;
         size_t index;
 

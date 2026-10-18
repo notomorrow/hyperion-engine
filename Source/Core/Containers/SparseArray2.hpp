@@ -53,6 +53,12 @@ public:
         using PointerType = std::conditional_t<IsConst, const T*, T*>;
         using ReferenceType = std::conditional_t<IsConst, const T&, T&>;
 
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = T;
+        using difference_type = std::ptrdiff_t;
+        using pointer = PointerType;
+        using reference = ReferenceType;
+
         struct BeginTag
         {
         };

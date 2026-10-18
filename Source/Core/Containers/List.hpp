@@ -49,6 +49,12 @@ public:
 
     struct Iterator
     {
+        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type = T;
+        using difference_type = std::ptrdiff_t;
+        using pointer = T*;
+        using reference = T&;
+
         Node* node;
 
         HYP_FORCE_INLINE T& operator*()
@@ -152,6 +158,12 @@ public:
 
     struct ConstIterator
     {
+        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type = T;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const T*;
+        using reference = const T&;
+
         const Node* node;
 
         HYP_FORCE_INLINE const T& operator*() const

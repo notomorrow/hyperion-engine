@@ -73,6 +73,12 @@ public:
     template <class Derived, bool IsConst>
     struct IteratorBase
     {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = T;
+        using difference_type = std::ptrdiff_t;
+        using pointer = T*;
+        using reference = T&;
+
         std::conditional_t<IsConst, const SparsePagedArray*, SparsePagedArray*> array;
         uint32 page;
         uint32 elem;

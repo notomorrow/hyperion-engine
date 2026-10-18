@@ -90,6 +90,12 @@ private:
     template <bool IsConst>
     struct IteratorBase
     {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = BitIndex;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const BitIndex*;
+        using reference = BitIndex;
+
         std::conditional_t<IsConst, const TBitset*, TBitset*> ptr;
         BitIndex bitIndex;
 
