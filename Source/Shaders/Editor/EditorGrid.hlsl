@@ -63,9 +63,9 @@ DECLARE_SRV(EditorGrid, GlyphAtlas) Texture2D GlyphAtlas;
 
 #include "GridLabels.hlsli"
 
-static const float3 LabelColor = float3(0.85, 0.85, 0.85);
+static const float3 LabelColor = float3(1.0, 1.0, 1.0);
 static const float3 LabelOutlineColor = float3(0.0, 0.0, 0.0);
-static const float LabelOutlineOpacity = 0.75;
+static const float LabelOutlineOpacity = 0.3;
 
 static const float3 XAxisNameColor = float3(0.9, 0.25, 0.25);
 static const float3 ZAxisNameColor = float3(0.3, 0.3, 0.95);
@@ -186,7 +186,8 @@ float2 SampleAxisLabels(
     float lineOffset,
     bool skipOrigin,
     float3 hitPosition,
-    float2 planeWorldPerPixel,
+    float2 planeDdx,
+    float2 planeDdy,
     LabelTextFrame textFrame,
     ScreenMapping mapping)
 {
@@ -204,8 +205,6 @@ float2 SampleAxisLabels(
     {
         return coverage;
     }
-
-    const float2 planeWorldPerPixelAlongText = abs(textFrame.right.x) > 0.5 ? planeWorldPerPixel : planeWorldPerPixel.yx;
 
     const float3 nearestOnAxis = float3(axisDirection.x * alongAxis, hitPosition.y, axisDirection.y * alongAxis);
     const float nearestWorldPerPixel = GetAxisWorldPerPixel(nearestOnAxis, axisDirection3, mapping);
@@ -244,13 +243,18 @@ float2 SampleAxisLabels(
 
             const float labelUnitsPerWorld = GlyphHeight / (labelWorldHeight * labelScale);
 
-            const float2 fromCrossing = (hitPosition.xz - crossing.xz) * labelUnitsPerWorld;
-            const float2 labelOffset = float2(dot(fromCrossing, textFrame.right), -dot(fromCrossing, textFrame.up)) - LabelPadding;
-
-            const float fade = saturate(1.0 - length(crossing - camera.position.xyz) / camera.far);
             const GridLabel label = MakeGridLabel(lineAlongAxis, GetLabelDecimals(labelStep, lineOffset));
 
-            coverage = max(coverage, SampleGridLabel(label, labelOffset, planeWorldPerPixelAlongText * labelUnitsPerWorld) * fade * fade);
+            const float2 fromCrossing = (hitPosition.xz - crossing.xz) * labelUnitsPerWorld;
+            const float2 labelOffset = float2(dot(fromCrossing, textFrame.right), -dot(fromCrossing, textFrame.up))
+                + float2(GetGridLabelWidth(label), GlyphHeight) * 0.5;
+
+            const float2 footprintX = float2(dot(planeDdx, textFrame.right), -dot(planeDdx, textFrame.up)) * labelUnitsPerWorld;
+            const float2 footprintY = float2(dot(planeDdy, textFrame.right), -dot(planeDdy, textFrame.up)) * labelUnitsPerWorld;
+
+            const float fade = saturate(1.0 - length(crossing - camera.position.xyz) / camera.far);
+
+            coverage = max(coverage, SampleGridLabel(label, labelOffset, footprintX, footprintY) * fade * fade);
         }
     }
 
@@ -272,7 +276,7 @@ float2 SampleAxisName(float3 axisDirection, uint glyph, ScreenMapping mapping, f
         LabelMargin + GlyphOutlineRadius,
         viewportSize - LabelMargin - GlyphOutlineRadius - glyphSize);
 
-    return SampleGlyph(glyph, mapping.pixel - glyphPosition, float2(1.0, 1.0));
+    return SampleGlyph(glyph, mapping.pixel - glyphPosition, float2(1.0, 0.0), float2(0.0, 1.0));
 }
 
 float4 BlendOver(float4 top, float4 bottom)
@@ -345,6 +349,8 @@ PSOutput PSMain(PSInput i)
     gridColor.a *= fade * fade;
 
     float2 axisDerivative = fwidth(hitPos.xz);
+    const float2 planeDdx = ddx(hitPos.xz);
+    const float2 planeDdy = ddy(hitPos.xz);
 
     float xAxis = 1.0 - saturate(abs(hitPos.z) / max(axisDerivative.y, 1e-6) - 1.0);
     float zAxis = 1.0 - saturate(abs(hitPos.x) / max(axisDerivative.x, 1e-6) - 1.0);
@@ -364,8 +370,8 @@ PSOutput PSMain(PSInput i)
         {
             const LabelTextFrame textFrame = GetLabelTextFrame();
 
-            float2 labelCoverage = SampleAxisLabels(float2(1.0, 0.0), gridOffset.x, false, hitPos, axisDerivative, textFrame, mapping);
-            labelCoverage = max(labelCoverage, SampleAxisLabels(float2(0.0, 1.0), gridOffset.z, true, hitPos, axisDerivative, textFrame, mapping));
+            float2 labelCoverage = SampleAxisLabels(float2(1.0, 0.0), gridOffset.x, false, hitPos, planeDdx, planeDdy, textFrame, mapping);
+            labelCoverage = max(labelCoverage, SampleAxisLabels(float2(0.0, 1.0), gridOffset.z, true, hitPos, planeDdx, planeDdy, textFrame, mapping));
 
             color = BlendOver(float4(LabelOutlineColor, labelCoverage.y * LabelOutlineOpacity), color);
             color = BlendOver(float4(LabelColor, labelCoverage.x), color);

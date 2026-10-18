@@ -42,7 +42,7 @@ float SampleGlyphTap(float4 uvRect, float4 pixelRect, float2 offset)
     return GlyphAtlas.SampleLevel(SamplerLinear, uvRect.xy + glyphCoord * uvRect.zw, 0.0).r;
 }
 
-float2 SampleGlyph(uint glyph, float2 offset, float2 footprint)
+float2 SampleGlyph(uint glyph, float2 offset, float2 footprintX, float2 footprintY)
 {
     [branch]
     if (glyph >= NumGlyphs)
@@ -53,7 +53,7 @@ float2 SampleGlyph(uint glyph, float2 offset, float2 footprint)
     const float4 uvRect = glyphUvRects[glyph];
     const float4 pixelRect = glyphPixelRects[glyph];
 
-    const float2 reach = footprint * 0.5 + GlyphOutlineRadius;
+    const float2 reach = (abs(footprintX) + abs(footprintY)) * 0.5 + GlyphOutlineRadius;
 
     if (any(pixelRect.zw <= 0.0)
         || any(offset + reach < pixelRect.xy)
@@ -70,7 +70,8 @@ float2 SampleGlyph(uint glyph, float2 offset, float2 footprint)
         [unroll]
         for (uint x = 0u; x < GlyphSamplesPerAxis; x++)
         {
-            const float2 tapOffset = offset + ((float2(x, y) + 0.5) / float(GlyphSamplesPerAxis) - 0.5) * footprint;
+            const float2 tapPosition = (float2(x, y) + 0.5) / float(GlyphSamplesPerAxis) - 0.5;
+            const float2 tapOffset = offset + footprintX * tapPosition.x + footprintY * tapPosition.y;
 
             coverage += SampleGlyphTap(uvRect, pixelRect, tapOffset);
         }
@@ -156,7 +157,19 @@ uint GetGridLabelGlyph(GridLabel label, uint charIndex)
     return (label.scaledValue / Pow10(numDigits - 1u - digitIndex)) % 10u;
 }
 
-float2 SampleGridLabel(GridLabel label, float2 offset, float2 footprint)
+float GetGridLabelWidth(GridLabel label)
+{
+    float width = 0.0;
+
+    for (uint charIndex = 0u; charIndex < label.numChars; charIndex++)
+    {
+        width += GetGlyphAdvance(GetGridLabelGlyph(label, charIndex));
+    }
+
+    return width;
+}
+
+float2 SampleGridLabel(GridLabel label, float2 offset, float2 footprintX, float2 footprintY)
 {
     float2 coverage = float2(0.0, 0.0);
     float penX = 0.0;
@@ -165,7 +178,7 @@ float2 SampleGridLabel(GridLabel label, float2 offset, float2 footprint)
     {
         const uint glyph = GetGridLabelGlyph(label, charIndex);
 
-        coverage = max(coverage, SampleGlyph(glyph, float2(offset.x - penX, offset.y), footprint));
+        coverage = max(coverage, SampleGlyph(glyph, float2(offset.x - penX, offset.y), footprintX, footprintY));
 
         penX += GetGlyphAdvance(glyph);
     }
