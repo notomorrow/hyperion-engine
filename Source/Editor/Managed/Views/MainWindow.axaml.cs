@@ -115,6 +115,8 @@ namespace Hyperion.Editor
 
             InitializeComponent();
 
+            viewModel.SceneHierarchy.PropertyChanged += OnSceneHierarchyPropertyChanged;
+
             foreach (Control entry in BuildAddSceneMenuEntries(viewModel))
             {
                 AddSceneContextMenu.Items.Add(entry);
@@ -840,6 +842,16 @@ namespace Hyperion.Editor
                     rootDock.Window = windowModel;
                 }
             }
+
+            // Dock builds each Tool's content from its template, so the new layout gets new controls -
+            // drop the cached ones and locate them again once the dock has laid out.
+            ReleaseSceneHierarchyTree();
+            _contentBrowserAssetList = null;
+            _viewportDropTarget = null;
+            _editorViewport = null;
+
+            DockControl.LayoutUpdated -= OnDockControlLayoutUpdated;
+            DockControl.LayoutUpdated += OnDockControlLayoutUpdated;
         }
 
         /// <summary>
@@ -1340,17 +1352,39 @@ namespace Hyperion.Editor
 
             _sceneTree.SelectionChanged += OnSceneTreeSelectionChanged;
 
-            if (DataContext is MainWindowViewModel mvm)
-            {
-                mvm.SceneHierarchy.PropertyChanged += OnSceneHierarchyPropertyChanged;
-            }
-
             // Lazily find the internal ScrollViewer once the template is applied.
-            _sceneTree.TemplateApplied += (_, _) =>
+            TreeView sceneTree = _sceneTree;
+            sceneTree.TemplateApplied += (_, _) =>
             {
-                _sceneTreeScrollViewer = _sceneTree.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
+                if (ReferenceEquals(sceneTree, _sceneTree))
+                {
+                    _sceneTreeScrollViewer = sceneTree.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
+                }
             };
+
+            // a rebuilt tree starts out with nothing selected
+            SyncTreeSelectionFromViewModel();
+
             return true;
+        }
+
+        private void ReleaseSceneHierarchyTree()
+        {
+            if (_sceneTree == null)
+                return;
+
+            _sceneTree.RemoveHandler(InputElement.PointerPressedEvent, OnSceneTreePointerPressed);
+            _sceneTree.RemoveHandler(InputElement.PointerMovedEvent, OnSceneTreePointerMoved);
+            _sceneTree.RemoveHandler(InputElement.PointerReleasedEvent, OnSceneTreePointerReleased);
+            _sceneTree.RemoveHandler(DragDrop.DragOverEvent, OnSceneTreeDragOver);
+            _sceneTree.RemoveHandler(DragDrop.DragLeaveEvent, OnSceneTreeDragLeave);
+            _sceneTree.RemoveHandler(DragDrop.DropEvent, OnSceneTreeDrop);
+
+            // the torn down tree would otherwise keep pushing its own selection changes to the engine
+            _sceneTree.SelectionChanged -= OnSceneTreeSelectionChanged;
+
+            _sceneTree = null;
+            _sceneTreeScrollViewer = null;
         }
 
         private void OnSceneTreePointerPressed(object? sender, PointerPressedEventArgs e)

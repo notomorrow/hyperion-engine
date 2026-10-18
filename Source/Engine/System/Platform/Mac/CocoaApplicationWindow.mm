@@ -5,6 +5,7 @@
 */
 
 #import <AppKit/AppKit.h>
+#include <algorithm>
 #import <Cocoa/Cocoa.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <QuartzCore/CAMetalLayer.h>
@@ -319,6 +320,50 @@ namespace Hyperion {
 
 CORE_API HYP_DECLARE_LOG_CHANNEL(Core);
 
+namespace {
+
+bool g_physicalKeyStateVerified = false;
+
+struct ReverseKeyMap
+{
+    int32 cocoaKeyCodes[NumKeyboardKeys];
+
+    ReverseKeyMap()
+    {
+        std::fill(std::begin(cocoaKeyCodes), std::end(cocoaKeyCodes), -1);
+
+        for (unsigned short cocoaKeyCode = 0; cocoaKeyCode < 128; cocoaKeyCode++)
+        {
+            const KeyCode mappedKey = PlatformUtils::MapCocoaKeyCodeToKeyCode(cocoaKeyCode);
+
+            if (mappedKey != KeyCode::KEY_UNKNOWN && uint32(mappedKey) < NumKeyboardKeys && cocoaKeyCodes[uint32(mappedKey)] == -1)
+            {
+                cocoaKeyCodes[uint32(mappedKey)] = cocoaKeyCode;
+            }
+        }
+    }
+};
+
+const ReverseKeyMap g_reverseKeyMap;
+
+int32 MapKeyCodeToCocoaKeyCode(KeyCode key)
+{
+    return uint32(key) < NumKeyboardKeys ? g_reverseKeyMap.cocoaKeyCodes[uint32(key)] : -1;
+}
+
+bool IsMouseEventInContentArea(const CocoaApplicationWindow* window, NSPoint locationInWindow)
+{
+    NSView* contentView = (NSView*)window->GetNSView();
+    if (!contentView)
+    {
+        return true;
+    }
+
+    NSPoint viewPoint = [contentView convertPoint:locationInWindow fromView:nil];
+    return NSPointInRect(viewPoint, [contentView bounds]);
+}
+} // namespace
+
 CocoaApplicationWindow::CocoaApplicationWindow(ANSIString title, Vec2i size)
     : ApplicationWindow(std::move(title), size),
       m_windowDelegate(nullptr),
@@ -629,18 +674,6 @@ void CocoaApplicationWindow::HandleNativeWindowClosed()
     OnClose.Fire(this);
 }
 
-static bool IsMouseEventInContentArea(const CocoaApplicationWindow* window, NSPoint locationInWindow)
-{
-    NSView* contentView = (NSView*)window->GetNSView();
-    if (!contentView)
-    {
-        return true;
-    }
-
-    NSPoint viewPoint = [contentView convertPoint:locationInWindow fromView:nil];
-    return NSPointInRect(viewPoint, [contentView bounds]);
-}
-
 bool CocoaApplicationWindow::HandleNSEvent(NSEvent* nsEvent, Event& event)
 {
     HYP_SCOPE;
@@ -658,6 +691,11 @@ bool CocoaApplicationWindow::HandleNSEvent(NSEvent* nsEvent, Event& event)
     case NSEventTypeKeyDown:        [[fallthrough]];
     case NSEventTypeKeyUp:          [[fallthrough]];
     case NSEventTypeFlagsChanged:
+        if (!g_physicalKeyStateVerified && [nsEvent type] == NSEventTypeKeyDown)
+        {
+            g_physicalKeyStateVerified = CGEventSourceKeyState(kCGEventSourceStateCombinedSessionState, [nsEvent keyCode]);
+        }
+
         event = Event(PlatformUtils::IsKeyUpEvent(nsEvent) ? EventType::KEYUP : EventType::KEYDOWN, this, platformEvent);
         event.GetEventData().Set(PlatformUtils::MapCocoaKeyCodeToKeyCode([nsEvent keyCode]));
         return true;
@@ -957,6 +995,26 @@ void CocoaApplicationWindow::SetIsMouseLocked(bool locked)
         CGAssociateMouseAndMouseCursorPosition(true);
         [NSCursor unhide];
     }
+}
+
+bool CocoaApplicationWindow::QueryPhysicalKeyState(KeyCode key, bool& outIsDown) const
+{
+    // caps lock is treated as held while toggled on, so its physical state doesn't apply
+    if (!g_physicalKeyStateVerified || key == KeyCode::KEY_CAPSLOCK)
+    {
+        return false;
+    }
+
+    const int32 cocoaKeyCode = MapKeyCodeToCocoaKeyCode(key);
+
+    if (cocoaKeyCode < 0)
+    {
+        return false;
+    }
+
+    outIsDown = CGEventSourceKeyState(kCGEventSourceStateCombinedSessionState, CGKeyCode(cocoaKeyCode));
+
+    return true;
 }
 
 bool CocoaApplicationWindow::HasMouseFocus() const
