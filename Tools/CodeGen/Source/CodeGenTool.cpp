@@ -35,7 +35,7 @@
 
 #include <analyzer/Analyzer.hpp>
 
-#include <Util/Util.hpp>
+#include <util/Util.hpp>
 
 #if !defined(HYP_CODEGEN_VERSION_MAJOR) || !defined(HYP_CODEGEN_VERSION_MINOR) || !defined(HYP_CODEGEN_VERSION_PATCH)
 #error "HYP_CODEGEN_VERSION_MAJOR, HYP_CODEGEN_VERSION_MINOR, and HYP_CODEGEN_VERSION_PATCH must be defined"

@@ -23,7 +23,7 @@
 
 #include <Core/Utilities/StringUtil.hpp>
 
-#include <Util/Util.hpp>
+#include <util/Util.hpp>
 
 namespace Hyperion {
 namespace CodeGen {

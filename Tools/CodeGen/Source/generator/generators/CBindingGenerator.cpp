@@ -12,7 +12,7 @@
 
 #include <parser/Parser.hpp>
 
-#include <Util/Util.hpp>
+#include <util/Util.hpp>
 
 #include <Core/Name/Name.hpp>
 

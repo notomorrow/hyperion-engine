@@ -4,7 +4,7 @@
  *  @licence MIT
 */
 
-#include <Util/Util.hpp>
+#include <util/Util.hpp>
 
 #include <Core/Defines.hpp>
 

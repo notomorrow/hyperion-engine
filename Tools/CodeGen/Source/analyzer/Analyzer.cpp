@@ -4,7 +4,6 @@
  *  @licence MIT
 */
 
-#include "Core/Reflection/Class.hpp"
 #include <analyzer/Analyzer.hpp>
 #include <analyzer/Module.hpp>
 
@@ -18,17 +17,19 @@
 #include <Core/Containers/Set.hpp>
 #include <Core/Containers/Forest.hpp>
 
+#include <Core/Reflection/Class.hpp>
+
 #include <Core/Functional/Proc.hpp>
 
 #include <Core/Logging/Logger.hpp>
 
-#include <Core/math/MathUtil.hpp>
+#include <Core/Math/MathUtil.hpp>
 
 #include <Core/IO/BufferedByteReader.hpp>
 
 #include <Core/DataProcessing/JSON/JSON.hpp>
 
-#include <Util/Util.hpp>
+#include <util/Util.hpp>
 
 namespace Hyperion {
 namespace CodeGen {
