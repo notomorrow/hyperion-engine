@@ -63,6 +63,7 @@ VSOutput VSMain(VSInput input, uint instanceId : SV_InstanceID)
     }
 
     output.position_cs = mul(camera.viewProjMat, float4(worldPos, 1.0));
+    output.position_cs.xy += camera.jitter.xy * output.position_cs.w;
     output.texcoord0 = input.a_texcoord0;
     output.color = instance.color;
     output.textureIndex = instance.flags.y;

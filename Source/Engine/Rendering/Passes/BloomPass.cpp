@@ -192,11 +192,7 @@ void BloomPass::Render(Frame* frame, const RenderSetup& renderSetup)
 
     DeferredPassData* dpd = DynamicCast<DeferredPassData>(renderSetup.passData);
     AssertDebug(dpd != nullptr);
-
-    // the composited scene (lit opaque + sky, clouds, translucents, particles) - same input the tonemap pass adds bloom onto
-    const FramebufferRef& inputsFramebuffer = dpd->view.GetUnsafe()->GetOutputTarget().GetFramebuffer(GBufferPass::Translucent);
-
-    ExtractBrightAreas(frame, renderSetup, inputsFramebuffer, dpd);
+    ExtractBrightAreas(frame, renderSetup, dpd->GetSceneColorView());
     Downsample(frame, renderSetup);
     Upsample(frame, renderSetup);
 }
@@ -207,7 +203,7 @@ ShaderPropertySet BloomPass::GetShaderProperties() const
     return shaderProperties;
 }
 
-void BloomPass::ExtractBrightAreas(Frame* frame, const RenderSetup& renderSetup, const FramebufferRef& inputsFramebuffer, DeferredPassData* dpd)
+void BloomPass::ExtractBrightAreas(Frame* frame, const RenderSetup& renderSetup, const GpuImageViewRef& sceneColorView)
 {
     CommandRecorder& cr = frame->cr;
 
@@ -239,7 +235,7 @@ void BloomPass::ExtractBrightAreas(Frame* frame, const RenderSetup& renderSetup,
     cr << SetShaderUniform(numShaderUniforms++, "OutImage"_sh, RI.textureViewCache->GetOrCreate(m_brightExtractTexture));
     cr << SetShaderUniform(numShaderUniforms++, "CBuffer"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
 
-    cr << SetShaderUniform(numShaderUniforms++, "DeferredShadingTexture"_sh, inputsFramebuffer->GetAttachment(GBufferTarget::Color)->GetImageView());
+    cr << SetShaderUniform(numShaderUniforms++, "DeferredShadingTexture"_sh, sceneColorView);
 
     cr << SetShaderUniform(numShaderUniforms++, "SamplerLinear"_sh, m_samplerClampToEdge);
     cr << SetShaderUniform(numShaderUniforms++, "SamplerNearest"_sh, RI.placeholderData->GetSamplerNearest());

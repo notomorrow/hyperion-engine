@@ -57,6 +57,7 @@ VSOutput VSMain(VSInput input, uint instanceId : SV_InstanceID)
 
     float4 worldPos = mul(instance.transform, float4(localPos, 1.0f));
     output.position_cs = mul(camera.viewProjMat, worldPos);
+    output.position_cs.xy += camera.jitter.xy * output.position_cs.w;
 
     output.texcoord0 = float2(
         lerp(instance.texcoordStart.x, instance.texcoordEnd.x, input.a_texcoord0.x),

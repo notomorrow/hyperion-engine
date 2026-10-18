@@ -69,10 +69,7 @@ void TonemapPass::Render(Frame* frame, const RenderSetup& rs)
     cr << SetShaderUniform(numShaderUniforms++, "GBufferVelocityTexture"_sh, inputsFramebuffer->GetAttachment(GBufferTarget::Velocity)->GetImageView());
     cr << SetShaderUniform(numShaderUniforms++, "GBufferDepthTexture"_sh, inputsFramebuffer->GetAttachment(GBufferTarget::Depth)->GetImageView());
 
-    Framebuffer* translucentPassFramebuffer = dpd->view.GetUnsafe()->GetOutputTarget().GetFramebuffer(GBufferPass::Translucent);
-    AssertDebug(translucentPassFramebuffer != nullptr);
-
-    cr << SetShaderUniform(numShaderUniforms++, "DeferredResult"_sh, translucentPassFramebuffer->GetAttachment(GBufferTarget::Color)->GetImageView());
+    cr << SetShaderUniform(numShaderUniforms++, "DeferredResult"_sh, dpd->GetSceneColorView());
 
     // Debug draws are composited over the tonemapped result - we don't want them tonemapped or with bloom applied.
     Framebuffer* debugPassFramebuffer = dpd->view.GetUnsafe()->GetOutputTarget().GetFramebuffer(GBufferPass::Debug);
@@ -94,15 +91,6 @@ void TonemapPass::Render(Frame* frame, const RenderSetup& rs)
     else
     {
         cr << SetShaderUniform(numShaderUniforms++, "BloomResultTexture"_sh, RI.placeholderData->GetImageView2D1x1R8());
-    }
-
-    if (dpd->taaPass)
-    {
-        cr << SetShaderUniform(numShaderUniforms++, "TAAResultTexture"_sh, RI.textureViewCache->GetOrCreate(dpd->taaPass->GetResultTexture()));
-    }
-    else
-    {
-        cr << SetShaderUniform(numShaderUniforms++, "TAAResultTexture"_sh, RI.placeholderData->GetImageView2D1x1R8());
     }
 
     cr << SetShaderUniform(numShaderUniforms++, "DeferredIndirectResultTexture"_sh, dpd->lightingFramebuffer->GetAttachment(0)->GetImageView());

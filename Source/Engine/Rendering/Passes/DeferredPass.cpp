@@ -159,7 +159,7 @@ CVar<bool> g_cvTAA { "Rendering.TAA", true };
 // max sub-pixel camera offset, in pixels. dithered alpha cutouts rely on it to resolve into soft edges
 CVar<float> g_cvTAAJitterRadius { "Rendering.TAA.JitterRadius", 0.5f };
 // most of the history kept per frame; the resolve drops up to 0.1 below this where luminance disagrees
-CVar<float> g_cvTAAFeedback { "Rendering.TAA.Feedback", 0.85f };
+CVar<float> g_cvTAAFeedback { "Rendering.TAA.Feedback", 0.95f };
 // used instead of Rendering.TAA.Feedback on dithered alpha cutouts, which need a longer history to resolve
 CVar<float> g_cvTAACutoutFeedback { "Rendering.TAA.CutoutFeedback", 0.95f };
 // 1 dithers alpha cutouts per pixel, 0 gives each triangle one random threshold instead
@@ -375,6 +375,18 @@ DeferredPassData::~DeferredPassData()
     rayTracingReflections.Reset();
     ddgi.Reset();
 }
+
+const GpuImageViewRef& DeferredPassData::GetSceneColorView() const
+{
+    if (taaPass != nullptr && g_cvTAA.Get())
+    {
+        return RI.textureViewCache->GetOrCreate(taaPass->GetResultTexture());
+    }
+
+    return view.GetUnsafe()->GetOutputTarget().GetFramebuffer(GBufferPass::Translucent)
+        ->GetAttachment(GBufferTarget::Color)->GetImageView();
+}
+
 
 #pragma endregion DeferredPassData
 
@@ -1151,7 +1163,7 @@ PassData* DeferredPass::CreateViewPassData(View* view, PassDataExt&)
         passData.editorGridPass->Create();
 #endif // HYP_EDITOR
 
-        passData.taaPass = MakeUnique<TAAPass>(passData.tonemapPass->GetFinalImageView(), gbuffer->GetExtent(), gbuffer);
+        passData.taaPass = MakeUnique<TAAPass>(gbuffer->GetExtent(), gbuffer);
         passData.taaPass->Create();
 
         CreateViewRayTracingPasses(view, passData);
@@ -1378,7 +1390,7 @@ void DeferredPass::ResizeView(Viewport viewport, View* view, DeferredPassData& p
     passData.editorGridPass->Create();
 #endif
 
-    passData.taaPass = MakeUnique<TAAPass>(passData.tonemapPass->GetFinalImageView(), newSize, gbuffer);
+    passData.taaPass = MakeUnique<TAAPass>(newSize, gbuffer);
     passData.taaPass->Create();
 
     CreateViewRayTracingPasses(view, passData);
@@ -2258,6 +2270,12 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
     frame->cr << SetAsyncShaderLoadingEnabled(false);
 
+    // TAA resolves the HDR scene first, so bloom and tonemap only ever see the stable result
+    if (passData.taaPass != nullptr && g_cvTAA.Get())
+    {
+        passData.taaPass->Render(frame, rs);
+    }
+
     if (g_cvBloom.Get())
     {
         passData.bloomPass->Render(frame, rs);
@@ -2267,19 +2285,12 @@ void DeferredPass::RenderFrameForView(Frame* frame, const RenderSetup& rs)
 
     passData.tonemapPass->Render(frame, rs);
 
-    if (passData.taaPass != nullptr && g_cvTAA.Get())
-    {
-        passData.taaPass->Render(frame, rs);
-    }
-
     frame->cr << SetAsyncShaderLoadingEnabled(true);
 
     // depth of field
     // m_dofBlur->Render(frame);
 
-    GpuImageViewRef finalImageView = (passData.taaPass != nullptr && g_cvTAA.Get())
-        ? RI.textureViewCache->GetOrCreate(passData.taaPass->GetResultTexture())
-        : passData.tonemapPass->GetFinalImageView();
+    GpuImageViewRef finalImageView = passData.tonemapPass->GetFinalImageView();
 
     { // Glimmer debug views replace the final image
         GpuImageViewRef glimmerDebugImageView;

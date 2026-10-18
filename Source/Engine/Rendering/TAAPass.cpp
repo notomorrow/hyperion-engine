@@ -41,9 +41,8 @@ extern CVar<float> g_cvTAACutoutFeedback;
 
 static EngineStatGpuTimer s_statTAA("Rendering/GPU/TAA");
 
-TAAPass::TAAPass(const GpuImageViewRef& inputImageView, const Vec2u& extent, GBuffer* gbuffer)
-    : m_inputImageView(inputImageView),
-      m_extent(extent),
+TAAPass::TAAPass(const Vec2u& extent, GBuffer* gbuffer)
+    : m_extent(extent),
       m_gbuffer(gbuffer),
       m_pingPongIndex(0),
       m_isInitialized(false)
@@ -52,7 +51,6 @@ TAAPass::TAAPass(const GpuImageViewRef& inputImageView, const Vec2u& extent, GBu
 
 TAAPass::~TAAPass()
 {
-    EnqueueDeletion(std::move(m_inputImageView));
 }
 
 void TAAPass::Create()
@@ -136,7 +134,6 @@ void TAAPass::Render(Frame* frame, const RenderSetup& renderSetup)
         {
             Vec4u dimensions;
             Vec4f jitter;
-            Vec2f nearFarClip;
             float feedback;
             float cutoutFeedback;
         };
@@ -144,7 +141,6 @@ void TAAPass::Render(Frame* frame, const RenderSetup& renderSetup)
         TAAConstants constants {};
         constants.dimensions = Vec4u { m_extent, depthTextureDimensions.GetXY() };
         constants.jitter = cameraProxy->bufferData.jitter;
-        constants.nearFarClip = Vec2f { cameraProxy->bufferData.cameraNear, cameraProxy->bufferData.cameraFar };
         constants.feedback = MathUtil::Clamp(g_cvTAAFeedback.Get(), 0.1f, 0.98f);
         constants.cutoutFeedback = MathUtil::Clamp(g_cvTAACutoutFeedback.Get(), 0.1f, 0.98f);
 
@@ -163,7 +159,8 @@ void TAAPass::Render(Frame* frame, const RenderSetup& renderSetup)
 
     frame->cr << SetCurrentShader(ShaderDesc(NAME("TAA")));
 
-    frame->cr << SetShaderUniform(0, "InColorTexture"_sh, m_inputImageView);
+    // HDR composited scene (lit opaque, sky, translucents, particles) - resolved before bloom and tonemap
+    frame->cr << SetShaderUniform(0, "InColorTexture"_sh, m_gbuffer->GetPass(GBufferPass::Translucent).GetAttachment(GBufferTarget::Color)->GetImageView());
     frame->cr << SetShaderUniform(1, "InPrevColorTexture"_sh, RI.textureViewCache->GetOrCreate(prevTexture));
     frame->cr << SetShaderUniform(2, "InVelocityTexture"_sh, m_gbuffer->GetPass(GBufferPass::Opaque).GetAttachment(GBufferTarget::Velocity)->GetImageView());
     frame->cr << SetShaderUniform(3, "InDepthTexture"_sh, m_gbuffer->GetPass(GBufferPass::Opaque).GetAttachment(GBufferTarget::Depth)->GetImageView());

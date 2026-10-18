@@ -64,6 +64,7 @@ VSOutput VSMain(VSInput input, uint instanceId : SV_InstanceID)
     output.color = instance.color;
 
     output.position_cs = mul(camera.viewProjMat, position);
+    output.position_cs.xy += camera.jitter.xy * output.position_cs.w;
 
     return output;
 }

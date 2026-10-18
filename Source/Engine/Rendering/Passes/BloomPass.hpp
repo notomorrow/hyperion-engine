@@ -20,6 +20,8 @@ class GBuffer;
 
 class BloomPass final : public FullScreenPass
 {
+    static constexpr uint32 NumMipLevels = 6;
+
 public:
     BloomPass(Vec2u extent, GBuffer* gbuffer);
     BloomPass(const BloomPass& other) = delete;
@@ -48,11 +50,13 @@ protected:
     ShaderPropertySet GetShaderProperties() const;
 
 private:
-    void ExtractBrightAreas(Frame* frame, const RenderSetup& renderSetup, const FramebufferRef& inputsFramebuffer, class DeferredPassData* dpd);
+    void ExtractBrightAreas(
+        Frame* frame,
+        const RenderSetup& renderSetup,
+        const GpuImageViewRef& sceneColorView);
+
     void Downsample(Frame* frame, const RenderSetup& renderSetup);
     void Upsample(Frame* frame, const RenderSetup& renderSetup);
-
-    static constexpr uint32 NumMipLevels = 6;
 
     Handle<Texture> m_brightExtractTexture;
     FixedArray<UniquePtr<FullScreenPass>, NumMipLevels - 1> m_downsamplePasses;

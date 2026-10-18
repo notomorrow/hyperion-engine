@@ -179,7 +179,12 @@ VSOutput VSMain(VSInput input, uint instanceId : SV_InstanceID, uint vertexId : 
     output.previous_position_ndc = mul(camera.prevViewProjMat, previous_position);
 
     output.position_cs = output.position_ndc;
-    output.position_cs.xy += camera.jitter.xy * output.position_cs.w;
+
+    // debug draws are composited after TAA
+    if (GetEntityBucket(currentEntity) != HYP_OBJECT_BUCKET_DEBUG)
+    {
+        output.position_cs.xy += camera.jitter.xy * output.position_cs.w;
+    }
 
     output.color = float4(1.0, 1.0, 1.0, 1.0);
 
