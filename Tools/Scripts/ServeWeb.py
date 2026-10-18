@@ -1,8 +1,10 @@
 """Serves a web build for local testing.
 
-   python ServeWeb.py <binaries dir> <package dir> [port] [missing shaders file]
+   python ServeWeb.py <binaries dir> <package dir> [port] [missing shaders file] [pipeline manifest file]
 
 The page posts each shader variant the package is missing; they are kept in the missing shaders file when one is given.
+The engine posts the pipeline variants it has compiled; they are kept in the pipeline manifest file when one is given, for
+the next build to compile ahead of use.
 """
 
 import gzip
@@ -17,6 +19,8 @@ package_dir = os.path.abspath(sys.argv[2])
 port = int(sys.argv[3]) if len(sys.argv) > 3 else 8080
 missing_shaders_path = os.path.abspath(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4] else None
 missing_shaders_lock = threading.Lock()
+pipeline_manifest_path = os.path.abspath(sys.argv[5]) if len(sys.argv) > 5 and sys.argv[5] else None
+pipeline_manifest_lock = threading.Lock()
 
 sends_isolation_headers = os.environ.get("HYP_SERVE_WITHOUT_ISOLATION") != "1"
 
@@ -140,9 +144,26 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0"))
-        line = self.rfile.read(length).decode("utf-8", "replace").strip()
+        body = self.rfile.read(length)
+        path = self.path.split("?", 1)[0]
 
-        if self.path.split("?", 1)[0] != "/missing-shaders" or missing_shaders_path is None or not line:
+        if path.endswith("/pipeline-manifest") and pipeline_manifest_path is not None and body:
+            with pipeline_manifest_lock:
+                os.makedirs(os.path.dirname(pipeline_manifest_path), exist_ok=True)
+
+                with open(pipeline_manifest_path, "wb") as file:
+                    file.write(body)
+
+            print("Pipeline manifest: %d bytes" % len(body), flush=True)
+
+            self.send_response(204)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        line = body.decode("utf-8", "replace").strip()
+
+        if path != "/missing-shaders" or missing_shaders_path is None or not line:
             self.send_response(404)
             self.send_header("Content-Length", "0")
             self.end_headers()

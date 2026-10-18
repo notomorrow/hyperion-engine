@@ -93,18 +93,9 @@ bool GlimmerShadeRelitHit(float3 P, float3 albedo, float3 N, bool isGroundHit, u
 
 #endif
 
-static GlimmerLight g_canopySurroundings;
-static bool g_hasCanopySurroundings = false;
-
-GlimmerLight GlimmerCanopyRadiance(float3 P, float3 albedo, float depthBelowTop, float extinction)
+GlimmerLight GlimmerCanopyRadiance(float3 P, float3 weightedAlbedo)
 {
-    if (!g_hasCanopySurroundings)
-    {
-        g_canopySurroundings = GlimmerIndirectNearest(P, float3(0.0, 1.0, 0.0));
-        g_hasCanopySurroundings = true;
-    }
-
-    return GlimmerShade(albedo, g_canopySurroundings);
+    return GlimmerScaleLight(GlimmerIndirectNearest(P, float3(0.0, 1.0, 0.0)), weightedAlbedo);
 }
 
 #endif

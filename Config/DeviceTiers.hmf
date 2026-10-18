@@ -40,6 +40,13 @@ TierProfile "DeviceTiers" {
                 "Rendering.Glimmer.Bricks.InitialPoolMB" = 96
             }
         }
+        TierRule "Glimmer.Web" {
+            When = { DevicePlatform = Web }
+            Set = {
+                "Rendering.Glimmer.Probes.Enabled" = false
+                "Rendering.Glimmer.Bricks.Reflections" = false
+            }
+        }
         TierRule "Glimmer.LaptopUltraCap" {
             When = { DeviceType = Laptop, DeviceGrade = Ultra }
             Set = {

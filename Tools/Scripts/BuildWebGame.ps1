@@ -134,7 +134,7 @@ function Start-WebServer
         }
     }
 
-    $server = Start-Process -FilePath python -ArgumentList @("`"$(Join-Path $PSScriptRoot 'ServeWeb.py')`"", "`"$outputDir`"", "`"$outputDir`"", $Port, "`"$(Join-Path $buildDir 'MissingShaders.txt')`"") -WindowStyle Hidden -PassThru
+    $server = Start-Process -FilePath python -ArgumentList @("`"$(Join-Path $PSScriptRoot 'ServeWeb.py')`"", "`"$outputDir`"", "`"$outputDir`"", $Port, "`"$(Join-Path $buildDir 'MissingShaders.txt')`"", "`"$pipelineManifest`"") -WindowStyle Hidden -PassThru
     Set-Content $serverPidFile $server.Id -Encoding ascii
 
     Start-Sleep -Milliseconds 800
@@ -142,6 +142,9 @@ function Start-WebServer
 
     Write-Host "Serving $outputDir at http://localhost:$Port/ (server pid $($server.Id))"
 }
+
+# the pipelines the game compiled when it last ran from the local server, compiled ahead of use by the next build
+$pipelineManifest = Join-Path $buildDir "pipelinevariants.bin"
 
 New-Item -ItemType Directory -Force $buildDir | Out-Null
 
@@ -239,6 +242,11 @@ New-Item -ItemType Directory -Force $configDir | Out-Null
 Copy-Item $webConfig (Join-Path $configDir "EngineConfig.json")
 Copy-Item (Join-Path $rootDir "Config\GlobalConfig.Web.json") (Join-Path $configDir "GlobalConfig.json")
 Copy-Item (Join-Path $rootDir "Config\Shaders.hmf"), (Join-Path $rootDir "Config\DeviceTiers.hmf") $configDir
+
+if (Test-Path $pipelineManifest)
+{
+    Copy-Item $pipelineManifest (Join-Path $packageDir "Cache\pipelinevariants.bin") -Force
+}
 
 # 3. the page: the launch layer and the project's game code, linked against the engine's web build
 

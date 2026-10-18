@@ -3,6 +3,7 @@
 #include "../../Include/Packing.hlsli"
 
 PERMUTE(MODE, UPDATE, COMPOSE)
+PERMUTE(PROBES);
 
 #define GLIMMER_SH_PROFILE 0
 
@@ -123,6 +124,8 @@ DECLARE_SRV(GlimmerSHUpdate, EnvProbesColorTexture) TextureCubeArray envProbesCo
 DECLARE_SRV(GlimmerSHUpdate, CloudWeatherMapTexture) Texture2DArray cloudWeatherMapTexture;
 DECLARE_SRV(GlimmerSHUpdate, CloudShadowMapTexture) Texture2D cloudShadowMapTexture;
 
+#if defined(PROBES)
+
 DECLARE_SRV(GlimmerSHUpdate, GlimmerProbeBlockTableBuffer) StructuredBuffer<uint> glimmerProbeBlockTable;
 DECLARE_SRV(GlimmerSHUpdate, GlimmerProbeLightBuffer) StructuredBuffer<float4> glimmerProbeLight;
 DECLARE_SRV(GlimmerSHUpdate, GlimmerProbeStatesBuffer) StructuredBuffer<uint4> glimmerProbeStates;
@@ -130,6 +133,24 @@ DECLARE_SRV(GlimmerSHUpdate, GlimmerProbeVisibilityBuffer) StructuredBuffer<uint
 
 #define GLIMMER_PROBES_SPLIT
 #include "../Probes/GlimmerProbes.hlsli"
+
+#else
+
+float SampleGlimmerProbesLight(GlimmerProbeVolume volume, float3 P, float3 N, out GlimmerLight outLight)
+{
+    outLight = GlimmerNoLight();
+
+    return 0.0;
+}
+
+bool SampleGlimmerNearestProbeLight(GlimmerProbeVolume volume, float3 P, float3 N, out GlimmerLight outLight)
+{
+    outLight = GlimmerNoLight();
+
+    return false;
+}
+
+#endif
 
 DECLARE_UAV(GlimmerSHUpdate, OutData) RWTexture3D<float4> OutData;
 DECLARE_UAV(GlimmerSHUpdate, OutState) RWTexture3D<uint4> OutState;
@@ -386,7 +407,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         float freeCount = 0.0;
         float3 firstFree = (float3)0.0;
 
-        [unroll]
+        [loop]
         for (uint octant = 0; octant < 8; octant++)
         {
             const float3 octantOffset = float3(octant & 1u, (octant >> 1) & 1u, (octant >> 2) & 1u) * 0.5 - 0.25;
@@ -458,28 +479,46 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     float4 visibilitySample = (float4)0.0;
     float3 rayDirection = (float3)0.0;
 
-    if (isBuried)
-    {
-    }
-    else if (groupIndex < GLIMMER_SH_RAYS)
-    {
-        rayDirection = normalize(GlimmerRotateByQuaternion(constants.rayRotation, GlimmerSphericalFibonacci(groupIndex, GLIMMER_SH_RAYS)));
+    const bool isRayThread = groupIndex < GLIMMER_SH_RAYS;
+    const bool isAxisThread = !isRayThread && groupIndex < GLIMMER_SH_RAYS + GLIMMER_SH_AXIS_DEPTHS;
+    const uint axisIndex = groupIndex - GLIMMER_SH_RAYS;
 
-        g_hasCanopySurroundings = false;
+    GlimmerHeightfieldHit hit = (GlimmerHeightfieldHit)0;
+    hit.kind = GLIMMER_HEIGHTFIELD_MISS;
+    hit.transmittance = 1.0;
 
-        GlimmerHeightfieldHit hit;
-        float4 hitLightmap = (float4)0.0;
-        bool didHit;
+    float4 hitLightmap = (float4)0.0;
+    bool didHit = false;
+
+    if (!isBuried && (isRayThread || isAxisThread))
+    {
+        if (isRayThread)
+        {
+            rayDirection = normalize(GlimmerRotateByQuaternion(constants.rayRotation, GlimmerSphericalFibonacci(groupIndex, GLIMMER_SH_RAYS)));
+        }
 
         if (isAir)
         {
-            didHit = GlimmerSHTraceAirRay(origin, rayDirection, hit);
+            if (isRayThread)
+            {
+                didHit = GlimmerSHTraceAirRay(origin, rayDirection, hit);
+            }
         }
         else
         {
-            didHit = GlimmerSHTraceScene(origin, rayDirection, constants.params.y, startLevel, true, hit, hitLightmap);
-        }
+            // leaves don't count for the axis depths: light through a canopy isn't a leak
+            const float3 direction = isRayThread ? rayDirection : GlimmerSHAxisDirection(axisIndex);
+            const float tMax = isRayThread ? constants.params.y : GLIMMER_SH_DEPTH_RANGE * spacing;
 
+            didHit = GlimmerSHTraceScene(origin, direction, tMax, startLevel, isRayThread, hit, hitLightmap);
+        }
+    }
+
+    if (isBuried)
+    {
+    }
+    else if (isRayThread)
+    {
         GlimmerLight light;
 
         if (didHit)
@@ -527,10 +566,8 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
         visibilitySample = float4(visible, visible * rayDirection);
     }
-    else if (groupIndex < GLIMMER_SH_RAYS + GLIMMER_SH_AXIS_DEPTHS)
+    else if (isAxisThread)
     {
-        const uint axisIndex = groupIndex - GLIMMER_SH_RAYS;
-
         if (isAir)
         {
             // nothing is near but the ground under it
@@ -540,12 +577,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         }
         else
         {
-            // leaves don't count: light through a canopy isn't a leak
-            GlimmerHeightfieldHit axisHit;
-            float4 axisHitLightmap;
-            const bool didHit = GlimmerSHTraceScene(origin, GlimmerSHAxisDirection(axisIndex), GLIMMER_SH_DEPTH_RANGE * spacing, startLevel, false, axisHit, axisHitLightmap);
-
-            gsAxisDepths[axisIndex] = didHit ? min(axisHit.t / spacing, GLIMMER_SH_DEPTH_RANGE) : GLIMMER_SH_DEPTH_RANGE;
+            gsAxisDepths[axisIndex] = didHit ? min(hit.t / spacing, GLIMMER_SH_DEPTH_RANGE) : GLIMMER_SH_DEPTH_RANGE;
         }
     }
 
