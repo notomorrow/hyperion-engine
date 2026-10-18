@@ -518,7 +518,7 @@ Result AssetObject::PersistBlobData(
         }
     }
 
-    if (!EngineGlobals::IsCooking() && localBlobDirectory.HasValue())
+    if ((!EngineGlobals::IsCooking() || m_flags[AssetObjectFlags::CreatedByCook]) && localBlobDirectory.HasValue())
     {
         // Save the blob data locally as well, as other users may not have the blob data or have mismatched blob data
         // and we need to "import" it via individual blobs upon fail.

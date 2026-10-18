@@ -194,6 +194,27 @@ if (-not (Test-Path $webSdk))
     Fail "The engine's web build is missing ($webSdk). Build it: Tools\Scripts\BuildHyperion.bat web"
 }
 
+# the cook compiles shaders from today's source while the page links the prebuilt engine, so engine source changed
+# since that build can leave the two disagreeing on buffer layouts, which renders wrong rather than failing
+$sdkLibraries = [regex]::Match((Get-Content $webSdk -Raw), "HYPERION_WEB_LIBRARIES \[==\[(.*?)\]==\]").Groups[1].Value -split ";" |
+    Where-Object { $_ -like "*.a" -and (Test-Path $_) }
+$engineSourceDirs = @("Core", "Engine") | ForEach-Object { Join-Path $rootDir "Source\$_" } | Where-Object { Test-Path $_ }
+
+if ($sdkLibraries -and $engineSourceDirs)
+{
+    $sdkBuiltAt = ($sdkLibraries | ForEach-Object { (Get-Item $_).LastWriteTime } | Measure-Object -Maximum).Maximum
+    $sourceExtensions = @(".cpp", ".hpp", ".h", ".inl", ".c")
+
+    $newerSource = Get-ChildItem $engineSourceDirs -Recurse -File |
+        Where-Object { $sourceExtensions -contains $_.Extension -and $_.LastWriteTime -gt $sdkBuiltAt } |
+        Select-Object -First 1
+
+    if ($newerSource)
+    {
+        Fail "The engine's web build is older than its source ($($newerSource.FullName) changed since $sdkBuiltAt). Rebuild it first: Tools\Scripts\BuildHyperion.bat web"
+    }
+}
+
 $cookDir = Join-Path $rootDir "Binaries\Windows\Release"
 $cookExe = Join-Path $cookDir "BlobStorageCookCommandlet.exe"
 
@@ -284,6 +305,13 @@ foreach ($fileName in $pageFiles)
     }
 
     Copy-Item $source $outputDir -Force
+}
+
+# a file named after the game that this build didn't write is left from an older build, and the page could load it
+foreach ($staleFile in Get-ChildItem $outputDir -File -Filter "$name.*" | Where-Object { $pageFiles -notcontains $_.Name })
+{
+    Write-Host "Removing $($staleFile.Name), left from an earlier build"
+    Remove-Item $staleFile.FullName -Force
 }
 
 $outputCacheDir = Join-Path $outputDir "Cache"

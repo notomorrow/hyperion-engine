@@ -395,6 +395,7 @@ private:
     static inline uint32 s_maxTextureSize = 0;
     static inline Set<const AssetObject*> s_dataOnlyTextures;
 
+#ifdef HYP_EDITOR
     static bool IsDataTextureSlot(uint32 slotIndex)
     {
         const MaterialTextureKey key = MaterialTextureKey(1ull << slotIndex);
@@ -446,6 +447,7 @@ private:
             }
         }
     }
+#endif // HYP_EDITOR
 
     static bool HaveSameContent(const CollectedBlob& a, const CollectedBlob& b)
     {
@@ -639,8 +641,15 @@ private:
         {
             BlobDataReference* reference = tup.GetElement<2>();
 
-            if (!reference->raw || reference->size == 0)
+            if (reference->size == 0)
             {
+                continue;
+            }
+
+            if (!reference->raw)
+            {
+                HYP_LOG(Assets, Warning, "Blob data '{}' of {} could not be paged in and is left out of the cook; delete its manifest to have it rebuilt", tup.GetElement<0>(), assetObject->GetPath());
+
                 continue;
             }
 

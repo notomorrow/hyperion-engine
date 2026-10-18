@@ -3,7 +3,7 @@
   <img width="250" src="Documentation/Images/hyperion_light.png">
 </div>
 <p align="center">
-    <a href="https://hyperionengine.dev">Website</a> • <a href="https://hyperionengine.dev/docs">Documentation</a> • <a href="https://discord.gg/Fv8PwMJEUb">Discord</a>
+    <a href="https://hyperionengine.dev">Website</a> • <a href="https://hyperionengine.dev/docs">Documentation</a> • <a href="https://discord.gg/Fv8PwMJEUb">Discord</a> • <a href="https://hyperionengine.dev/GlideSample">Sample Game (WebGPU)</a>
 </p>
 
 <div align="center">
@@ -15,6 +15,7 @@
 Hyperion is a full-featured, general-purpose game engine built from the ground up in C++. It has been developed continuously since 2016, with a focus on high-fidelity rendering and scalable worlds without requiring high-end hardware.
 
 The engine is built around a set of tightly integrated subsystems that share common reflection, resource, serialization, tooling, and runtime infrastructure.
+
 
 ## Why Hyperion?
 

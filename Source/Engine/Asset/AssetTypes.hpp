@@ -31,7 +31,8 @@ enum class AssetObjectFlags : uint8
 {
     None = 0x0,
     Persistent = 0x1,       //!< Asset is persistently loaded in memory
-    Transient = 0x2         //!< Asset is not saved to disk
+    Transient = 0x2,        //!< Asset is not saved to disk
+    CreatedByCook = 0x4     //!< Asset was made during a cook rather than loaded, so its blob data is saved locally
 };
 
 HYP_MAKE_ENUM_FLAGS(AssetObjectFlags);

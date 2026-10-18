@@ -81,6 +81,14 @@ static Array<Handle<AssetRegistry>>& GetAssetRegistryStack()
     return s_stack;
 }
 
+static void MarkIfCreatedByCook(AssetObject& assetObject)
+{
+    if (EngineGlobals::IsCooking() && !IsGlobalContextActive<AssetLoadingContext>())
+    {
+        assetObject.m_flags |= AssetObjectFlags::CreatedByCook;
+    }
+}
+
 ENGINE_API Handle<AssetRegistry> GetCurrentAssetRegistry()
 {
     // try getting thread-local registry override.
@@ -1034,6 +1042,8 @@ void AssetRegistry::PutAsset(const AssetBucket& bucket, const Handle<AssetObject
 
     data.SetAsset(assetDesc, assetObject);
 
+    MarkIfCreatedByCook(*assetObject);
+
     if (!IsGlobalContextActive<AssetLoadingContext>())
     {
         // Blob data must be persisted before it can be unpaged on last read scope release
@@ -1112,6 +1122,8 @@ void AssetRegistry::PutAssetUnique(const AssetBucket& bucket, const Handle<Asset
     assetObject->m_name = assetDesc.name;
 
     data.SetAsset(assetDesc, assetObject);
+
+    MarkIfCreatedByCook(*assetObject);
 
     // Blob data must be persisted before it can be unpaged (last read scope release),
     // otherwise unpaging a never-saved asset would lose its data.
