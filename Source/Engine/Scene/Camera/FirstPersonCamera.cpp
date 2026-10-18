@@ -87,10 +87,7 @@ bool FirstPersonCameraInputHandler::OnMouseMove(const MouseEvent& evt)
 
     const Vec2f mouseDelta = (evt.relativePos - evt.relativePrevPos) * mouseSensitivity;
 
-    const Vec3f dirCrossY = camera->GetSideVector();
-
-    camera->Rotate(Vec3f::UnitY(), MathUtil::DegToRad(mouseDelta.x));
-    camera->Rotate(dirCrossY, CameraUtils::ClampPitchDelta(*camera, MathUtil::DegToRad(mouseDelta.y), 0.98f));
+    CameraUtils::ApplyYawPitch(*camera, MathUtil::DegToRad(mouseDelta.x), MathUtil::DegToRad(mouseDelta.y), 0.98f);
 
     return true;
 }
@@ -139,10 +136,7 @@ bool FirstPersonCameraInputHandler::OnTouchMove(const TouchEvent& evt)
     static constexpr float TouchSensitivity = 80.0f;
     Vec2f touchDelta = evt.relativeDelta * TouchSensitivity;
 
-    const Vec3f dirCrossY = camera->GetSideVector();
-
-    camera->Rotate(Vec3f::UnitY(), MathUtil::DegToRad(touchDelta.x));
-    camera->Rotate(dirCrossY, CameraUtils::ClampPitchDelta(*camera, MathUtil::DegToRad(touchDelta.y), 0.98f));
+    CameraUtils::ApplyYawPitch(*camera, MathUtil::DegToRad(touchDelta.x), MathUtil::DegToRad(touchDelta.y), 0.98f);
 
     return true;
 }
@@ -308,9 +302,7 @@ void FirstPersonCameraController::UpdateLogic(double delta)
     {
         const Vec2f lookDelta = controllerLook * ControllerLookSensitivity * float(delta);
 
-        const Vec3f lookDirCrossY = m_camera->GetSideVector();
-        m_camera->Rotate(Vec3f::UnitY(), MathUtil::DegToRad(lookDelta.x));
-        m_camera->Rotate(lookDirCrossY, CameraUtils::ClampPitchDelta(*m_camera, MathUtil::DegToRad(lookDelta.y), 0.98f));
+        CameraUtils::ApplyYawPitch(*m_camera, MathUtil::DegToRad(lookDelta.x), MathUtil::DegToRad(lookDelta.y), 0.98f);
     }
 
     if (!m_movementEnabled)

@@ -8,7 +8,9 @@
 
 #include <Rendering/RenderTypes.hpp>
 #include <Rendering/CommandRecorder.hpp>
+
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
+#include <Rendering/Glimmer/GlimmerMemory.hpp>
 
 #include <Core/Memory/UniquePtr.hpp>
 
@@ -124,12 +126,12 @@ public:
     bool IsProbesReady() const;
 
 private:
-    UniquePtr<GlimmerProbeVolume> m_probeVolume;
-    UniquePtr<GlimmerProbeDebug> m_probeDebug;
-    UniquePtr<GlimmerSHOccupancy> m_shOccupancy;
-    UniquePtr<GlimmerSHVolume> m_shVolume;
-    UniquePtr<GlimmerRelight> m_relight;
-    UniquePtr<GlimmerBrickWorld> m_brickWorld;
+    UniquePtr<GlimmerProbeVolume, GlimmerAllocator> m_probeVolume;
+    UniquePtr<GlimmerProbeDebug, GlimmerAllocator> m_probeDebug;
+    UniquePtr<GlimmerSHOccupancy, GlimmerAllocator> m_shOccupancy;
+    UniquePtr<GlimmerSHVolume, GlimmerAllocator> m_shVolume;
+    UniquePtr<GlimmerRelight, GlimmerAllocator> m_relight;
+    UniquePtr<GlimmerBrickWorld, GlimmerAllocator> m_brickWorld;
 
     GpuBufferRef m_scratchBuffer;
 };

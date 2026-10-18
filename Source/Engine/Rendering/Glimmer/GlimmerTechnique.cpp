@@ -151,12 +151,8 @@ uint32 GlimmerTechnique::BindApplyResources(CommandRecorder& cr, uint32 uniformI
 }
 
 GlimmerTechnique::GlimmerTechnique()
-    : m_probeVolume(MakeUnique<GlimmerProbeVolume>()),
-      m_probeDebug(MakeUnique<GlimmerProbeDebug>()),
-      m_shOccupancy(MakeUnique<GlimmerSHOccupancy>()),
-      m_shVolume(MakeUnique<GlimmerSHVolume>()),
-      m_relight(MakeUnique<GlimmerRelight>())
 {
+    ResetLighting();
 }
 
 GlimmerTechnique::~GlimmerTechnique()
@@ -166,11 +162,11 @@ GlimmerTechnique::~GlimmerTechnique()
 
 void GlimmerTechnique::ResetLighting()
 {
-    m_probeVolume = MakeUnique<GlimmerProbeVolume>();
-    m_probeDebug = MakeUnique<GlimmerProbeDebug>();
-    m_shOccupancy = MakeUnique<GlimmerSHOccupancy>();
-    m_shVolume = MakeUnique<GlimmerSHVolume>();
-    m_relight = MakeUnique<GlimmerRelight>();
+    m_probeVolume = MakeUniqueWithAllocator<GlimmerProbeVolume, GlimmerAllocator>();
+    m_probeDebug = MakeUniqueWithAllocator<GlimmerProbeDebug, GlimmerAllocator>();
+    m_shOccupancy = MakeUniqueWithAllocator<GlimmerSHOccupancy, GlimmerAllocator>();
+    m_shVolume = MakeUniqueWithAllocator<GlimmerSHVolume, GlimmerAllocator>();
+    m_relight = MakeUniqueWithAllocator<GlimmerRelight, GlimmerAllocator>();
 }
 
 bool GlimmerTechnique::IsReady() const
@@ -199,7 +195,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
 
     if (shouldUseBricks && !m_brickWorld)
     {
-        m_brickWorld = MakeUnique<GlimmerBrickWorld>();
+        m_brickWorld = MakeUniqueWithAllocator<GlimmerBrickWorld, GlimmerAllocator>();
     }
     else if (!shouldUseBricks && m_brickWorld)
     {

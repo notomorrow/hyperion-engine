@@ -191,8 +191,11 @@ bool EditorCameraInputHandler::OnMouseDrag(const MouseEvent& evt)
     }
     else if (evt.mouseButtons & MouseButtonState::LEFT)
     {
-        camera->Rotate(Vec3f::UnitY(), MathUtil::DegToRad(mouseDeltaX * lookMultiplier));
-        camera->Rotate(dirCrossY, CameraUtils::ClampPitchDelta(*camera, MathUtil::DegToRad(mouseDeltaY * lookMultiplier), 0.98f));
+        CameraUtils::ApplyYawPitch(
+            *camera,
+            MathUtil::DegToRad(mouseDeltaX * lookMultiplier),
+            MathUtil::DegToRad(mouseDeltaY * lookMultiplier),
+            0.98f);
     }
 
     return true;

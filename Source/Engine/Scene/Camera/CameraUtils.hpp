@@ -27,6 +27,23 @@ static inline float ClampPitchDelta(const Camera& camera, float deltaRadians, fl
     return currentPitch - clampedPitch;
 }
 
+static inline void ApplyYawPitch(
+    Camera& camera,
+    float yawRadians,
+    float pitchRadians,
+    float maxPitchSin)
+{
+    const float pitchDelta = ClampPitchDelta(camera, pitchRadians, maxPitchSin);
+
+    Vec3f direction = Quat4f::AxisAngles(Vec3f::UnitY(), yawRadians)
+        .RotateVector(camera.GetDirection());
+
+    const Vec3f side = Vec3f::UnitY().Cross(direction).Normalized();
+    direction = Quat4f::AxisAngles(side, pitchDelta).RotateVector(direction);
+
+    camera.SetDirection(direction.Normalized());
+}
+
 } // namespace CameraUtils
 
 } // namespace Hyperion
