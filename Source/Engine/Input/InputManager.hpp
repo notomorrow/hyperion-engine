@@ -137,6 +137,25 @@ public:
     }
 
     HYP_METHOD()
+    HYP_FORCE_INLINE bool IsSuperDown() const
+    {
+        return IsKeyDown(KeyCode::KEY_LSUPER) || IsKeyDown(KeyCode::KEY_RSUPER);
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE bool IsShortcutModifierDown() const
+    {
+#if HYP_APPLE
+        return IsSuperDown();
+#elif defined(HYP_WEB) && HYP_WEB
+        // Host OS isn't known at compile time; accept either
+        return IsCtrlDown() || IsSuperDown();
+#else
+        return IsCtrlDown();
+#endif
+    }
+
+    HYP_METHOD()
     bool IsButtonDown(MouseButtonKey btn) const;
 
     HYP_METHOD()
@@ -180,6 +199,8 @@ public:
     }
 
     ENGINE_API void ProcessEvent(Event&& event);
+
+    ENGINE_API void ReleaseHeldKeys();
 
     void MainThreadUpdate();
     void BufferSwap();

@@ -62,9 +62,11 @@ namespace Hyperion
         LeftCtrl = 224,
         LeftShift = 225,
         LeftAlt = 226,
+        LeftSuper = 227,
         RightCtrl = 228,
         RightShift = 229,
         RightAlt = 230,
+        RightSuper = 231,
 
         Space = 32,
         Apostrophe = 39,

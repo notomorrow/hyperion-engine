@@ -34,6 +34,7 @@ static const WebKeyMapping g_keyMappings[] = {
     { "ShiftLeft", KeyCode::KEY_LSHIFT }, { "ShiftRight", KeyCode::KEY_RSHIFT },
     { "ControlLeft", KeyCode::KEY_LCTRL }, { "ControlRight", KeyCode::KEY_RCTRL },
     { "AltLeft", KeyCode::KEY_LALT }, { "AltRight", KeyCode::KEY_RALT },
+    { "MetaLeft", KeyCode::KEY_LSUPER }, { "MetaRight", KeyCode::KEY_RSUPER },
     { "ArrowLeft", KeyCode::KEY_LEFT }, { "ArrowRight", KeyCode::KEY_RIGHT }, { "ArrowUp", KeyCode::KEY_UP }, { "ArrowDown", KeyCode::KEY_DOWN },
     { "Quote", KeyCode::KEY_APOSTROPHE }, { "Comma", KeyCode::KEY_COMMA }, { "Minus", KeyCode::KEY_DASH }, { "Period", KeyCode::KEY_PERIOD },
     { "Slash", KeyCode::KEY_SLASH }, { "Semicolon", KeyCode::KEY_SEMICOLON }, { "Equal", KeyCode::KEY_EQUALS }, { "Backquote", KeyCode::KEY_TILDE }

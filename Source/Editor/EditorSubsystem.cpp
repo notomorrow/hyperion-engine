@@ -4362,8 +4362,8 @@ void EditorSubsystem::InitViewport()
 
                         InputManager* inputManager = GetActiveInputManager();
 
-                        // If CTRL key is down, add/remove from current selection.
-                        if (inputManager->IsCtrlDown())
+                        // If CTRL (CMD on macOS) key is down, add/remove from current selection.
+                        if (inputManager->IsShortcutModifierDown())
                         {
                             shouldMutateSelection = true;
                         }
@@ -4821,7 +4821,7 @@ void EditorSubsystem::InitViewport()
             InputManager* shortcutInputManager = GetActiveInputManager();
 
             if (shortcutInputManager != nullptr
-                && shortcutInputManager->IsCtrlDown()
+                && shortcutInputManager->IsShortcutModifierDown()
                 && !IsSimulating()
                 && !IsMeshEditDragActive())
             {
