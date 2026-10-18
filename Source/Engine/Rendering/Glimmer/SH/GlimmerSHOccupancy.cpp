@@ -111,7 +111,11 @@ void GlimmerSHOccupancy::CreateResources()
     m_texture = GlimmerHelpers::CreateGlimmerStorageTexture(
         TextureType::Texture3D,
         TextureFormat::RGBA8,
-        Vec3u(GlimmerSHOccupancyGridXZ, GlimmerSHOccupancyGridY * GlimmerSHCascades, GlimmerSHOccupancyGridXZ),
+        Vec3u {
+            GlimmerSHOccupancyGridXZ,
+            GlimmerSHOccupancyGridY * GlimmerSHCascades,
+            GlimmerSHOccupancyGridXZ
+        },
         1,
         NAME("GlimmerSHOccupancy"),
         TextureWrapMode::ClampToEdge);
@@ -243,7 +247,7 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
 void GlimmerSHOccupancy::SetBuilt(uint32 cascadeIndex, const Vec3i& origin)
 {
     m_builtOrigins[cascadeIndex] = origin;
-    m_shaderData.cascades[cascadeIndex].origin = Vec4i(origin.x, origin.y, origin.z, 1);
+    m_shaderData.cascades[cascadeIndex].origin = Vec4i(origin, 1);
 }
 
 void GlimmerSHOccupancy::ScrollWindow(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache)
@@ -318,7 +322,9 @@ void GlimmerSHOccupancy::Update(
 
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
     {
-        if (m_builtGenerations[cascadeIndex] == generation || m_builtGenerations[cascadeIndex] == ~0u || sceneInstances.IsSpanFullyDirty())
+        if (m_builtGenerations[cascadeIndex] == generation
+            || m_builtGenerations[cascadeIndex] == ~0u
+            || sceneInstances.IsSpanFullyDirty())
         {
             continue;
         }
@@ -330,7 +336,6 @@ void GlimmerSHOccupancy::Update(
 
         // a cascade too far behind the journal is rebuilt below
         GlimmerSceneChanges changes;
-
         if (!sceneInstances.GetChangesSince(m_builtGenerations[cascadeIndex], changes))
         {
             continue;
@@ -412,10 +417,11 @@ void GlimmerSHOccupancy::Update(
             lookAhead,
             Vec3f(float(GlimmerSHOccupancyGridXZ), float(GlimmerSHOccupancyGridY), float(GlimmerSHOccupancyGridXZ)) * spacing);
 
-        const Vec3i origin = Vec3i(
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.x / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2), WindowSnapVoxels),
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.y / spacing)) - int32(GlimmerSHOccupancyGridY / 2), WindowSnapVoxels),
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.z / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2), WindowSnapVoxels));
+        const Vec3i origin = {
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.x / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2) + WindowSnapVoxels / 2, WindowSnapVoxels),
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.y / spacing)) - int32(GlimmerSHOccupancyGridY / 2) + WindowSnapVoxels / 2, WindowSnapVoxels),
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.z / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2) + WindowSnapVoxels / 2, WindowSnapVoxels)
+        };
 
         Array<Box, GlimmerAllocator>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
 
@@ -512,7 +518,9 @@ void GlimmerSHOccupancy::Update(
             m_builtGenerations[cascadeIndex] = m_rebuildGenerations[cascadeIndex];
         }
 
-        if (m_rebuildSlices[cascadeIndex] >= 0 || builtOrigin != origin || m_builtGenerations[cascadeIndex] != generation)
+        if (m_rebuildSlices[cascadeIndex] >= 0
+            || builtOrigin != origin
+            || m_builtGenerations[cascadeIndex] != generation)
         {
             m_isSettled = false;
         }

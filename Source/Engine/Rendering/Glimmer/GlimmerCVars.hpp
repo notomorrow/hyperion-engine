@@ -48,6 +48,9 @@ extern CVar<bool> g_cvGlimmerHalfRes; // irradiance evaluated for one pixel of e
 extern CVar<int> g_cvGlimmerDebugSH;
 extern CVar<bool> g_cvGlimmerSHNearestHitLight;              // SH rays light their hits from the nearest voxel (cheap) rather than the filtered volume
 extern CVar<int> g_cvGlimmerSHRefreshVoxelsPerFrame;         // SH voxels traced again a frame while nothing changes, in slices of half a cascade column
+extern CVar<int> g_cvGlimmerSHPasses;                        // traces a voxel gets once something changes it, the first from the budget and the rest from what it leaves
+extern CVar<float> g_cvGlimmerSHHysteresis;                  // how much of a voxel's history (or for one without, the coarser cascades') each trace keeps
+extern CVar<float> g_cvGlimmerSHLightEaseSeconds;            // time constant the sun and sky the SH and probes are composed with ease toward a change with
 
 extern CVar<float> g_cvGlimmerVisibility;
 extern CVar<bool> g_cvGlimmerLookAhead;

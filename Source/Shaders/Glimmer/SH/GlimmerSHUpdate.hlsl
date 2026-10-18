@@ -186,7 +186,8 @@ DECLARE_SRV(GlimmerSHUpdate, GlimmerSHOccupancyMaskBuffer) StructuredBuffer<uint
 #define GLIMMER_SH_GROUP_SIZE 64
 #define GLIMMER_SH_RAYS 32
 
-#define GLIMMER_SH_HYSTERESIS 0.5
+// every light entry, then the visibility
+#define GLIMMER_SH_SEEDS (GLIMMER_LIGHT_ENTRIES + 1)
 
 groupshared float4 gsVisibility[GLIMMER_SH_GROUP_SIZE]; // visible, visible * direction
 groupshared float3 gsRayLight[GLIMMER_SH_RAYS * GLIMMER_LIGHT_PARTS];
@@ -206,6 +207,8 @@ groupshared float3 gsOriginOffset;
 groupshared uint gsHasGround;
 groupshared float gsGroundHeight;
 groupshared uint gsGroundLevel;
+groupshared float4 gsSeeds[GLIMMER_SH_SEEDS];
+groupshared float gsSeedCoverage;
 
 bool GlimmerSHTraceScene(float3 origin, float3 direction, float tMax, uint startLevel, bool accumulateCanopy, out GlimmerHeightfieldHit hit, out float4 outLightmap)
 {
@@ -249,12 +252,12 @@ bool GlimmerSHTraceScene(float3 origin, float3 direction, float tMax, uint start
     return false;
 }
 
-bool GlimmerSHIsBuried(float3 P)
+bool GlimmerSHIsBuried(float3 P, uint minGroundLevel)
 {
     float groundHeight;
     uint groundLevel;
 
-    if (GlimmerSampleGround(constants.ground, P.xz, 0u, groundHeight, groundLevel) && P.y < groundHeight + 0.1)
+    if (GlimmerSampleGround(constants.ground, P.xz, minGroundLevel, groundHeight, groundLevel) && P.y < groundHeight + 0.1)
     {
         return true;
     }
@@ -279,7 +282,7 @@ bool GlimmerSHIsAir(GlimmerSHCascade cascade, int3 voxel)
     const float spacing = cascade.params.x;
 
     const float tileSize = float(GLIMMER_HEIGHT_BOUNDS_TILE_TEXELS) * constants.ground.levels[0].params.x;
-    const uint level = uint(clamp(int(ceil(log2(max(3.0 * spacing / tileSize, 1.0)))), 0, GLIMMER_GROUND_LEVELS - 1));
+    const uint level = max(uint(clamp(int(ceil(log2(max(3.0 * spacing / tileSize, 1.0)))), 0, GLIMMER_GROUND_LEVELS - 1)), uint(cascade.params.w));
 
     const float2 footprintMin = (float2(voxel.xz) - 1.0) * spacing + 1e-3;
     const float2 footprintMax = (float2(voxel.xz) + 2.0) * spacing - 1e-3;
@@ -299,7 +302,7 @@ bool GlimmerSHIsAir(GlimmerSHCascade cascade, int3 voxel)
 
 // a voxel well above everything only sees the sky over it and the ground under it, so its rays skip the march and hit the ground
 // as a plane at its height under the voxel
-bool GlimmerSHTraceAirRay(float3 origin, float3 direction, out GlimmerHeightfieldHit hit)
+bool GlimmerSHTraceAirRay(float3 origin, float3 direction, uint minGroundLevel, out GlimmerHeightfieldHit hit)
 {
     hit = (GlimmerHeightfieldHit)0;
     hit.kind = GLIMMER_HEIGHTFIELD_MISS;
@@ -322,7 +325,7 @@ bool GlimmerSHTraceAirRay(float3 origin, float3 direction, out GlimmerHeightfiel
     float groundHeight;
     uint groundLevel;
 
-    if (!GlimmerSampleGround(constants.ground, xz, 0u, groundHeight, groundLevel))
+    if (!GlimmerSampleGround(constants.ground, xz, minGroundLevel, groundHeight, groundLevel))
     {
         groundLevel = gsGroundLevel;
     }
@@ -375,6 +378,53 @@ float4 GlimmerSHProjectSum(float4 sum)
     return float4(sum.x * invNumRays, sum.yzw * (2.0 * invNumRays));
 }
 
+float GlimmerSHSampleCoarse(uint cascadeIndex, float3 P, uint seedIndex, out float4 outValue)
+{
+    outValue = (float4)0.0;
+
+    float remaining = 1.0;
+
+    [loop]
+    for (uint coarserIndex = cascadeIndex + 1u; coarserIndex < GLIMMER_SH_CASCADES && remaining > 1e-3; coarserIndex++)
+    {
+        GlimmerSHTaps taps;
+        const float cascadeWeight = GlimmerSHGatherTaps(constants.volume, coarserIndex, P, (float3)0.0, taps);
+
+        if (cascadeWeight <= 0.0)
+        {
+            continue;
+        }
+
+        float4 value = (float4)0.0;
+
+        [unroll]
+        for (uint tap = 0; tap < 8; tap++)
+        {
+            [branch]
+            if (taps.weights[tap] > 0.0)
+            {
+                const float4 tapValue = seedIndex < GLIMMER_LIGHT_ENTRIES
+                    ? GLIMMER_SH_LOAD_LIGHT(taps.texels[tap], seedIndex)
+                    : GLIMMER_SH_LOAD_DATA(taps.texels[tap]);
+
+                value += tapValue * taps.weights[tap];
+            }
+        }
+
+        outValue += value * (cascadeWeight * remaining / taps.weightSum);
+        remaining *= 1.0 - cascadeWeight;
+    }
+
+    const float coverage = 1.0 - remaining;
+
+    if (coverage > 1e-4)
+    {
+        outValue /= coverage;
+    }
+
+    return coverage;
+}
+
 [numthreads(GLIMMER_SH_GROUP_SIZE, 1, 1)]
 void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
@@ -382,6 +432,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     const GlimmerSHCascade cascade = constants.volume.cascades[cascadeIndex];
 
     const float spacing = cascade.params.x;
+    const uint minGroundLevel = uint(cascade.params.w);
 
     const int3 voxel = constants.boxMin.xyz + int3(groupId);
     const uint3 texel = GlimmerSHTexel(cascadeIndex, voxel);
@@ -392,7 +443,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     {
         const float3 octantOffset = float3(groupIndex & 1u, (groupIndex >> 1) & 1u, (groupIndex >> 2) & 1u) * 0.5 - 0.25;
 
-        gsOctantFree[groupIndex] = GlimmerSHIsBuried(center + octantOffset * spacing) ? 0u : 1u;
+        gsOctantFree[groupIndex] = GlimmerSHIsBuried(center + octantOffset * spacing, minGroundLevel) ? 0u : 1u;
     }
 
     GroupMemoryBarrierWithGroupSync();
@@ -424,7 +475,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         {
             originOffset = freeSum / freeCount;
 
-            if (GlimmerSHIsBuried(center + originOffset * spacing))
+            if (GlimmerSHIsBuried(center + originOffset * spacing, minGroundLevel))
             {
                 originOffset = firstFree;
             }
@@ -454,7 +505,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         float groundHeight;
         uint groundLevel;
 
-        gsHasGround = GlimmerSampleGround(constants.ground, center.xz, 0u, groundHeight, groundLevel) ? 1u : 0u;
+        gsHasGround = GlimmerSampleGround(constants.ground, center.xz, minGroundLevel, groundHeight, groundLevel) ? 1u : 0u;
         gsGroundHeight = groundHeight;
         gsGroundLevel = groundLevel;
 
@@ -499,7 +550,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         {
             if (isRayThread)
             {
-                didHit = GlimmerSHTraceAirRay(origin, rayDirection, hit);
+                didHit = GlimmerSHTraceAirRay(origin, rayDirection, minGroundLevel, hit);
             }
         }
         else
@@ -628,6 +679,21 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         gsSums[groupIndex] = sum;
     }
 
+    const uint seedIndex = groupIndex - uint(GLIMMER_SH_GROUP_SIZE - GLIMMER_SH_SEEDS);
+
+    if (!isBuried && !hasHistory && groupIndex >= uint(GLIMMER_SH_GROUP_SIZE - GLIMMER_SH_SEEDS))
+    {
+        float4 seed;
+        const float coverage = GlimmerSHSampleCoarse(cascadeIndex, origin, seedIndex, seed);
+
+        gsSeeds[seedIndex] = seed;
+
+        if (seedIndex == 0u)
+        {
+            gsSeedCoverage = coverage;
+        }
+    }
+
     GroupMemoryBarrierWithGroupSync();
 
     if (isBuried || groupIndex != 0u)
@@ -654,11 +720,22 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
     }
     if (hasHistory)
     {
-        visibility = lerp(visibility, previousVisibility, GLIMMER_SH_HYSTERESIS);
+        visibility = lerp(visibility, previousVisibility, constants.params.w);
 
         for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
         {
             light[entry] = lerp(light[entry], GLIMMER_SH_LOAD_LIGHT_FROM(OutLight, texel, entry), constants.params.w);
+        }
+    }
+    else if (gsSeedCoverage > 0.0)
+    {
+        const float seedKept = constants.params.w * saturate(gsSeedCoverage);
+
+        visibility = lerp(visibility, gsSeeds[GLIMMER_LIGHT_ENTRIES], seedKept);
+
+        for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
+        {
+            light[entry] = lerp(light[entry], gsSeeds[entry], seedKept);
         }
     }
 

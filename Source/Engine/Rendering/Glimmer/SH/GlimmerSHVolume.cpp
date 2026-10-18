@@ -61,7 +61,7 @@ static constexpr size_t MaxSolidChangeBoxes = 8;
 
 static constexpr int32 RefreshSliceVoxels = int32(GlimmerSHGridXZ * GlimmerSHGridY) / 2;
 
-static constexpr float RadianceHysteresis = 0.5f;
+static constexpr size_t MaxAccumulatingBoxes = 64;
 
 static constexpr uint32 RadianceSections = 3;
 
@@ -88,6 +88,18 @@ struct GlimmerSHUpdateConstants
     GlimmerLightShaderData light;
     Vec4u options;     // x = 1 to light hits from the nearest voxel, rather than the volume's filtered sample
 };
+
+namespace /* Helpers */ {
+
+uint32 GetCascadeGroundLevel(uint32 cascadeIndex)
+{
+    const float spacing = GlimmerHelpers::GetGlimmerSHCascadeSpacing(cascadeIndex);
+    const int32 startLevel = MathUtil::Clamp(int32(std::lround(std::log2(MathUtil::Max(spacing / GetGlimmerGroundTexelSize(0), 1.0f)))), 0, int32(GlimmerGroundLevels) - 1);
+
+    return uint32(MathUtil::Max(startLevel - 1, 0));
+}
+
+} // namespace
 
 GlimmerSHVolume::Box GlimmerSHVolume::Box::Intersect(const Box& a, const Box& b)
 {
@@ -139,7 +151,12 @@ GlimmerSHVolume::GlimmerSHVolume()
     {
         const float spacing = GlimmerHelpers::GetGlimmerSHCascadeSpacing(cascadeIndex);
 
-        m_shaderData.cascades[cascadeIndex].params = Vec4f(spacing, 1.0f / spacing, 0.0f, 0.0f);
+        m_shaderData.cascades[cascadeIndex].params = {
+            spacing,
+            1.0f / spacing,
+            0.0f,
+            float(GetCascadeGroundLevel(cascadeIndex))
+        };
     }
 
     m_shaderData.info = Vec4u(GlimmerSHCascades, 0, 0, 0);
@@ -227,6 +244,7 @@ void GlimmerSHVolume::MoveWindow(uint32 cascadeIndex, const Vec3i& origin)
     if (isJump)
     {
         cascade.pending.Clear();
+        cascade.accumulating.Clear();
         cascade.pending.PushBack(newWindow);
     }
     else
@@ -238,7 +256,14 @@ void GlimmerSHVolume::MoveWindow(uint32 cascadeIndex, const Vec3i& origin)
             pendingBox = Box::Intersect(pendingBox, newWindow);
         }
 
-        // what scrolled in, as up to three slabs: exposed x over the whole window, then exposed y and z over what's left
+        for (auto& elem : cascade.accumulating)
+        {
+            Box& box = elem.first;
+            box = Box::Intersect(box, newWindow);
+        }
+
+        // what scrolled in, as up to three slabs.
+        // exposed x over the whole window, then exposed y and z over what's left
         const Box kept = Box::Intersect(oldWindow, newWindow);
 
         Box remaining = newWindow;
@@ -314,9 +339,9 @@ void GlimmerSHVolume::AddPending(uint32 cascadeIndex, const Box& box)
     cascade.pending.PushBack(clipped);
 }
 
-void GlimmerSHVolume::AddPendingWorld(const Vec3f& worldMin, const Vec3f& worldMax, int32 marginVoxels)
+void GlimmerSHVolume::AddPendingWorld(const Vec3f& worldMin, const Vec3f& worldMax, int32 marginVoxels, uint32 numCascades)
 {
-    for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
+    for (uint32 cascadeIndex = 0; cascadeIndex < numCascades; cascadeIndex++)
     {
         const float invSpacing = 1.0f / GlimmerHelpers::GetGlimmerSHCascadeSpacing(cascadeIndex);
 
@@ -333,6 +358,25 @@ void GlimmerSHVolume::AddPendingWorld(const Vec3f& worldMin, const Vec3f& worldM
                     int32(MathUtil::Floor(worldMax.z * invSpacing)) + 1 + marginVoxels)
             });
     }
+}
+
+void GlimmerSHVolume::QueuePasses(uint32 cascadeIndex, const Box& box)
+{
+    const int32 passes = g_cvGlimmerSHPasses.Get() - 1;
+
+    if (passes <= 0 || box.IsEmpty())
+    {
+        return;
+    }
+
+    Cascade& cascade = m_cascades[cascadeIndex];
+
+    if (cascade.accumulating.Size() >= MaxAccumulatingBoxes)
+    {
+        cascade.accumulating.PopFront();
+    }
+
+    cascade.accumulating.EmplaceBack(box, passes);
 }
 
 void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& box, float radianceHysteresis, const GlimmerSHVolumeUpdateInputs& inputs, bool& inOutHasBarriers)
@@ -599,9 +643,11 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
             Vec3f(float(GlimmerSHGridXZ), float(GlimmerSHGridY), float(GlimmerSHGridXZ)) * spacing);
 
         const Vec3i origin = Vec3i(
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.x / spacing)) - int32(GlimmerSHGridXZ / 2), WindowSnapVoxels),
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.y / spacing)) - int32(GlimmerSHGridY / 2), WindowSnapVoxels),
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.z / spacing)) - int32(GlimmerSHGridXZ / 2), WindowSnapVoxels));
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.x / spacing)) - int32(GlimmerSHGridXZ / 2) + WindowSnapVoxels / 2, WindowSnapVoxels),
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.y / spacing)) - int32(GlimmerSHGridY / 2) + WindowSnapVoxels / 2, WindowSnapVoxels),
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.z / spacing)) - int32(GlimmerSHGridXZ / 2) + WindowSnapVoxels / 2, WindowSnapVoxels));
+
+        m_shaderData.cascades[cascadeIndex].center = Vec4f(center / spacing, 0.0f);
 
         MoveWindow(cascadeIndex, origin);
     }
@@ -655,10 +701,17 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
 
         const float texelSize = GetGlimmerGroundTexelSize(levelIndex);
 
+        uint32 numCascades = 0;
+        while (numCascades < GlimmerSHCascades && GetCascadeGroundLevel(numCascades) <= levelIndex)
+        {
+            numCascades++;
+        }
+
         AddPendingWorld(
             Vec3f(float(uploadedRect.min.x) * texelSize, -1e6f, float(uploadedRect.min.y) * texelSize),
             Vec3f(float(uploadedRect.max.x) * texelSize, 1e6f, float(uploadedRect.max.y) * texelSize),
-            1);
+            1,
+            numCascades);
     }
 
     // a viewer outrunning the occupancy's one rebuild a frame can't stall the far field for good
@@ -678,6 +731,8 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
     // counted per frame, so a low frame rate gets more a frame to keep the same pace
     int32 budget = int32(float(VoxelsPerFrame) * MathUtil::Clamp(inputs.budgetScale, 1.0f, 4.0f));
     bool hasBarriers = false;
+
+    const float hysteresis = MathUtil::Clamp(g_cvGlimmerSHHysteresis.Get(), 0.0f, 0.99f);
 
     const auto spend = [&](uint32 cascadeIndex, int32 allowance)
     {
@@ -706,7 +761,8 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
             Box chunk = box;
             chunk.max[axis] = chunk.min[axis] + slices;
 
-            DispatchBox(frame, cascadeIndex, chunk, RadianceHysteresis, inputs, hasBarriers);
+            DispatchBox(frame, cascadeIndex, chunk, hysteresis, inputs, hasBarriers);
+            QueuePasses(cascadeIndex, chunk);
 
             const int32 spent = sliceSize * slices;
 
@@ -730,6 +786,35 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
         spend(cascadeIndex, budget);
     }
 
+    for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades && budget > 0; cascadeIndex++)
+    {
+        Cascade& cascade = m_cascades[cascadeIndex];
+
+        const size_t numQueued = cascade.accumulating.Size();
+
+        for (size_t queuedIndex = 0; queuedIndex < numQueued && budget > 0; queuedIndex++)
+        {
+            auto accumulatingBox = cascade.accumulating.PopFront();
+
+            const Box& box = accumulatingBox.first;
+            int32& passesRemaining = accumulatingBox.second;
+
+            if (box.IsEmpty())
+            {
+                continue;
+            }
+
+            DispatchBox(frame, cascadeIndex, box, hysteresis, inputs, hasBarriers);
+
+            budget -= int32(box.Volume());
+
+            if (--passesRemaining > 0)
+            {
+                cascade.accumulating.PushBack(std::move(accumulatingBox));
+            }
+        }
+    }
+
     const int32 refreshVoxels = MathUtil::Max(g_cvGlimmerSHRefreshVoxelsPerFrame.Get(), 0);
 
     m_refreshBudget = MathUtil::Min(m_refreshBudget + refreshVoxels, MathUtil::Max(refreshVoxels, RefreshSliceVoxels) * 2);
@@ -747,7 +832,7 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
 
         bool hasFinishedCascade = false;
 
-        if (!DispatchRefreshSlice(frame, cascadeIndex, m_refreshSlices[cascadeIndex], RadianceHysteresis, hasFinishedCascade, inputs, hasBarriers))
+        if (!DispatchRefreshSlice(frame, cascadeIndex, m_refreshSlices[cascadeIndex], hysteresis, hasFinishedCascade, inputs, hasBarriers))
         {
             continue;
         }

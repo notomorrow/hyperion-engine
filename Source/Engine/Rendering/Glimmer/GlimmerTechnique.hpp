@@ -134,6 +134,10 @@ private:
     UniquePtr<GlimmerBrickWorld, GlimmerAllocator> m_brickWorld;
 
     GpuBufferRef m_scratchBuffer;
+
+    GlimmerLightShaderData m_light;
+    bool m_hasLight = false;
+    uint64 m_lightTime = 0;
 };
 
 } // namespace Hyperion

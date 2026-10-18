@@ -9,8 +9,13 @@
 
 struct GlimmerSHOccupancyCascade
 {
-    int4 origin;   // xyz = absolute voxel of the window's first voxel, w = 1 once built
-    float4 params; // x = voxel spacing, y = 1 / spacing
+    /// xyz = the window's first voxel position
+    /// w = 1 once built
+    int4 origin;
+
+    /// x = voxel spacing
+    /// y = 1 / spacing
+    float4 params;
 };
 
 struct GlimmerSHOccupancyParams
@@ -230,7 +235,13 @@ bool GlimmerSHTraceOccupancyMask(
     return false;
 }
 
-bool GlimmerSHTraceOccupancy(GlimmerSHOccupancyParams params, float3 origin, float3 direction, float tMax, out GlimmerSHOccupancyHit outHit, out float outCoveredT)
+bool GlimmerSHTraceOccupancy(
+    GlimmerSHOccupancyParams params,
+    float3 origin,
+    float3 direction,
+    float tMax,
+    out GlimmerSHOccupancyHit outHit,
+    out float outCoveredT)
 {
     outHit.t = tMax;
     outHit.normal = -direction;
@@ -319,7 +330,18 @@ bool GlimmerSHTraceOccupancy(GlimmerSHOccupancyParams params, float3 origin, flo
                 float3 hitNormal = enteredNormal;
                 float hitT;
 
-                if (GlimmerSHTraceOccupancyMask(cascadeIndex, voxel, spacing, origin, direction, invDirection, stepDirection, t, tMax, hitNormal, hitT))
+                if (GlimmerSHTraceOccupancyMask(
+                        cascadeIndex,
+                        voxel,
+                        spacing,
+                        origin,
+                        direction,
+                        invDirection,
+                        stepDirection,
+                        t,
+                        tMax,
+                        hitNormal,
+                        hitT))
                 {
                     outHit.t = hitT;
                     outHit.normal = hitNormal;

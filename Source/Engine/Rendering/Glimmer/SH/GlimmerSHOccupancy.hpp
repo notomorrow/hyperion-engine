@@ -32,8 +32,13 @@ static constexpr uint32 GlimmerSHOccupancyLightmapFaces = 6;
 
 struct GlimmerSHOccupancyCascadeShaderData
 {
-    Vec4i origin; // xyz = absolute voxel of the window's first voxel, w = 1 once built
-    Vec4f params; // x = voxel spacing, y = 1 / spacing
+    /// xyz = the window's first voxel position
+    /// w = 1 once built
+    Vec4i origin;
+
+    /// x = voxel spacing
+    /// y = 1 / spacing
+    Vec4f params;
 };
 
 struct GlimmerSHOccupancyShaderData

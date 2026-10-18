@@ -283,8 +283,6 @@ void CloudPass::WriteShaderData(CBufferAllocator& cbufferAllocator) const
     cbufferAllocator.Write(&shadowMapShaderData);
 }
 
-#pragma region Noise
-
 void CloudPass::CreateNoiseTextures()
 {
     const auto createNoiseTexture = [](uint32 dimensions, Name name)
@@ -438,10 +436,6 @@ const GpuImageViewRef& CloudPass::GetDetailNoiseView() const
 
     return RI.textureViewCache->GetOrCreate(m_detailNoise.Get());
 }
-
-#pragma endregion Noise
-
-#pragma region WeatherMap
 
 bool CloudPass::NeedsFullWeatherMapRebuild(const CloudVolumeShaderData& cloudData, const Vec2f& origin) const
 {
@@ -632,10 +626,6 @@ const GpuImageViewRef& CloudPass::GetWeatherMapView() const
     return RI.textureViewCache->GetOrCreate(m_weatherMap.Get());
 }
 
-#pragma endregion WeatherMap
-
-#pragma region ShadowMap
-
 void CloudPass::UpdateShadowMap(Frame* frame, const RenderProxyEffectVolume& cloudVolumeProxy, const Vec3f& directionToSun)
 {
     // marching placeholder noise would bake flat shadows that linger until the rows come around again
@@ -754,10 +744,6 @@ const GpuImageViewRef& CloudPass::GetShadowMapView() const
     return RI.textureViewCache->GetOrCreate(m_shadowMap.Get());
 }
 
-#pragma endregion ShadowMap
-
-#pragma region SkyProbe
-
 void CloudPass::CompositeSkyProbe(Texture* skyTexture, Texture* skyProbeTexture, const EnvProbeShaderData& skyProbeShaderData, const LightShaderData* sunShaderData)
 {
     HYP_SCOPE;
@@ -817,10 +803,6 @@ void CloudPass::CompositeSkyProbe(Texture* skyTexture, Texture* skyProbeTexture,
 
     cr << InsertBarrier(skyProbeTexture->GetGpuImage(), ResourceState::ShaderResource);
 }
-
-#pragma endregion SkyProbe
-
-#pragma region Sky
 
 void CloudPass::CreateTraceTextures()
 {
@@ -1139,6 +1121,6 @@ void CloudPass::Composite(Frame* frame, const RenderSetup& renderSetup)
     cr << SetCurrentFramebuffer(nullptr);
 }
 
-#pragma endregion Sky
+#pragma endregion CloudPass
 
 } // namespace Hyperion

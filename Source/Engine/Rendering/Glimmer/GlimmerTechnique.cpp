@@ -51,6 +51,7 @@
 #include <Core/Threading/Threads.hpp>
 
 #include <Core/Profiling/ProfileScope.hpp>
+#include <Core/Profiling/PerformanceClock.hpp>
 
 #include <Core/Logging/Logger.hpp>
 
@@ -73,6 +74,37 @@ HYP_FORCE_INLINE bool UseBrickTracer()
 {
     return g_cvGlimmerProbesEnabled.Get()
         && g_cvGlimmerProbesTracer.Get() == 0;
+}
+
+void EaseGlimmerLight(
+    GlimmerLightShaderData& inOutLight,
+    const GlimmerLightShaderData& target,
+    float amount)
+{
+    float maxDifference = 0.0f;
+    float maxValue = 0.0f;
+
+    const auto doEasing = [&](Vec4f& value, const Vec4f& targetValue)
+    {
+        value += (targetValue - value) * amount;
+
+        for (uint32 component = 0; component < 3; component++)
+        {
+            maxDifference = MathUtil::Max(maxDifference, MathUtil::Abs(targetValue[component] - value[component]));
+            maxValue = MathUtil::Max(maxValue, MathUtil::Abs(targetValue[component]));
+        }
+    };
+
+    for (uint32 term = 0; term < GlimmerLightTerms; term++)
+    {
+        doEasing(inOutLight.bounceWeights[term], target.bounceWeights[term]);
+        doEasing(inOutLight.directWeights[term], target.directWeights[term]);
+    }
+
+    if (maxDifference <= maxValue * 1e-3f)
+    {
+        inOutLight = target;
+    }
 }
 
 } // namespace
@@ -216,8 +248,25 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
 
         const bool probesEnabled = g_cvGlimmerProbesEnabled.Get();
 
-        GlimmerLightShaderData light;
-        GlimmerHelpers::GetGlimmerLightShaderData(context.skyProbe, light);
+        GlimmerLightShaderData targetLight;
+        GlimmerHelpers::GetGlimmerLightShaderData(context.skyProbe, targetLight);
+
+        const float deltaSeconds = m_lightTime != 0 ? float(PerformanceClock::TimeSince(m_lightTime)) * 0.001f : 0.0f;
+        m_lightTime = PerformanceClock::Now();
+
+        const float easeSeconds = g_cvGlimmerSHLightEaseSeconds.Get();
+
+        if (!m_hasLight || easeSeconds <= 0.0f)
+        {
+            m_light = targetLight;
+            m_hasLight = true;
+        }
+        else
+        {
+            EaseGlimmerLight(m_light, targetLight, 1.0f - MathUtil::Exp(-deltaSeconds / easeSeconds));
+        }
+
+        const GlimmerLightShaderData& light = m_light;
 
         if (probesEnabled)
         {

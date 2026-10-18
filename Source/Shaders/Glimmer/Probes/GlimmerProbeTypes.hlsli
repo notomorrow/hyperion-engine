@@ -74,8 +74,8 @@ struct GlimmerProbeVolume
 //      | 1 when its last update nudged it there from an offset it traced clear from (bit 30)
 // z = time of its last update (float bits)
 // w = the last offset it was traced from clear of any solid, packed like y (bits 0-29)
-//    | 1 when a nudge from there ended in a solid, so it is held there (bit 30)
-//    | 1 when there is one (bit 31)
+//      | 1 when a nudge from there ended in a solid, so it is held there (bit 30)
+//      | 1 when there is one (bit 31)
 uint GlimmerProbeStateOf(uint4 state)
 {
     return state.x & 0xFu;

@@ -40,14 +40,27 @@ static constexpr float GlimmerSHSpacing = 4.0f;
 
 struct GlimmerSHCascadeShaderData
 {
-    Vec4i origin; // xyz = absolute voxel of the window's first voxel, w = 1 once the cascade has a window
-    Vec4f params; // x = voxel spacing, y = 1 / spacing, z = how much visibility counts (Rendering.Glimmer.Visibility)
+    /// xyz = window's first voxel pos
+    /// w = cascade has a window?
+    Vec4i origin;
+
+    /// x = voxel spacing
+    /// y = 1 / spacing
+    /// z = Rendering.Glimmer.Visibility enabled?
+    /// w = finest ground level its traces read
+    Vec4f params;
+
+    /// xyz = the window's center before snapping, in voxels
+    Vec4f center;
 };
 
 struct GlimmerSHVolumeShaderData
 {
     GlimmerSHCascadeShaderData cascades[GlimmerSHCascades];
-    Vec4u info; // x = number of cascades, w = 1 when anything has been traced
+
+    /// x = number of cascades
+    /// w = 1 when anything has been traced
+    Vec4u info;
 };
 
 struct GlimmerSHVolumeUpdateInputs
@@ -135,6 +148,9 @@ private:
     {
         Optional<Vec3i> origin;
         Array<Box, GlimmerAllocator> pending;
+
+        ///        box, passesRemaining
+        Array<Pair<Box, int32>, GlimmerAllocator> accumulating; // traced once already, waiting for the rest of their passes
     };
 
     static Box GetWindow(const Vec3i& origin);
@@ -142,7 +158,8 @@ private:
     void CreateResources();
     void MoveWindow(uint32 cascadeIndex, const Vec3i& origin);
     void AddPending(uint32 cascadeIndex, const Box& box);
-    void AddPendingWorld(const Vec3f& worldMin, const Vec3f& worldMax, int32 marginVoxels);
+    void AddPendingWorld(const Vec3f& worldMin, const Vec3f& worldMax, int32 marginVoxels, uint32 numCascades = GlimmerSHCascades);
+    void QueuePasses(uint32 cascadeIndex, const Box& box);
     void DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& box, float radianceHysteresis, const GlimmerSHVolumeUpdateInputs& inputs, bool& inOutHasBarriers);
 
     /// returns false when nothing was dispatched: the cascade can't be refreshed yet, or what was left of its pass scrolled out

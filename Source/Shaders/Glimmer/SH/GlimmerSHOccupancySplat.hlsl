@@ -197,7 +197,11 @@ float3 SampleTriangleLightmap(TriangleLightmap lightmap, float3 position)
     const float toPosition1 = dot(toPosition, lightmap.edge1);
     const float toPosition2 = dot(toPosition, lightmap.edge2);
 
-    float2 barycentrics = float2(edge22 * toPosition1 - edge12 * toPosition2, edge11 * toPosition2 - edge12 * toPosition1) / max(edge11 * edge22 - edge12 * edge12, 1e-20);
+    float2 barycentrics = float2(
+        edge22 * toPosition1 - edge12 * toPosition2,
+        edge11 * toPosition2 - edge12 * toPosition1) / max(edge11 * edge22 - edge12 * edge12,
+        1e-20);
+    
     barycentrics = max(barycentrics, (float2)0.0);
     barycentrics /= max(barycentrics.x + barycentrics.y, 1.0);
 

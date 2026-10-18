@@ -14,14 +14,27 @@
 
 struct GlimmerSHCascade
 {
-    int4 origin;   // xyz = absolute voxel of the window's first voxel, w = 1 once the cascade has a window
-    float4 params; // x = voxel spacing, y = 1 / spacing, z = how much visibility counts
+    /// xyz = window's first voxel pos
+    /// w = cascade has a window?
+    int4 origin;
+
+    /// x = voxel spacing
+    /// y = 1 / spacing
+    /// z = Rendering.Glimmer.Visibility enabled?
+    /// w = finest ground level its traces read
+    float4 params;
+
+    /// xyz = the window's center before snapping, in voxels
+    float4 center;
 };
 
 struct GlimmerSHVolume
 {
     GlimmerSHCascade cascades[GLIMMER_SH_CASCADES];
-    uint4 info; // x = number of cascades, w = 1 when anything has been traced
+    
+    /// x = number of cascades
+    /// w = 1 when anything has been traced
+    uint4 info;
 };
 
 uint3 GlimmerSHTexel(uint cascadeIndex, int3 voxel)
