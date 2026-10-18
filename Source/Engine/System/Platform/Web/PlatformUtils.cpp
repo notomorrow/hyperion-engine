@@ -8,6 +8,7 @@
 
 #include <Core/Containers/String.hpp>
 
+#include <emscripten/em_asm.h>
 #include <emscripten/threading.h>
 #include <emscripten/heap.h>
 
@@ -27,6 +28,21 @@ ENGINE_API bool IsOnBatteryPower()
 ENGINE_API bool HasBattery()
 {
     return false;
+}
+
+ENGINE_API bool IsMobileBrowser()
+{
+    return MAIN_THREAD_EM_ASM_INT({
+        if (typeof navigator === 'undefined')
+        {
+            return 0;
+        }
+
+        const isMobileAgent = !!(navigator.userAgentData && navigator.userAgentData.mobile);
+        const isTouchOnly = typeof matchMedia === 'function' && matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+        return isMobileAgent || isTouchOnly ? 1 : 0;
+    }) != 0;
 }
 
 ENGINE_API uint64 GetSystemMemoryBytes()

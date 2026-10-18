@@ -1,8 +1,10 @@
 #include <Core/Logging/Logger.hpp>
+#include <Core/Utilities/Format.hpp>
 
 #include <Asset/BlobStorage.hpp>
 
 #include <Framework/EngineGlobals.hpp>
+#include <Framework/EngineStats.hpp>
 #include <Framework/Game.hpp>
 #include <Framework/Threads/SimThread.hpp>
 
@@ -178,6 +180,35 @@ EMSCRIPTEN_KEEPALIVE const char* HypWeb_GetConsoleNames()
     }
 
     return s_names.Data();
+}
+
+EMSCRIPTEN_KEEPALIVE const char* HypWeb_GetFrameStats()
+{
+    static String s_stats;
+
+    const Handle<EngineStats>& engineStats = EngineStats::GetInstance();
+
+    if (!engineStats.IsValid())
+    {
+        return "";
+    }
+
+    const auto average = [&engineStats](ANSIStringView path) -> float
+    {
+        EngineStatBase* stat = engineStats->GetStat(path);
+
+        return stat != nullptr ? engineStats->GetCurrentSnapshot()[*stat].avg : -1.0f;
+    };
+
+    s_stats = HYP_FORMAT("{} {} {} {} {} {}",
+        engineStats->GetFps(),
+        engineStats->GetMsPerFrame(),
+        average("Rendering/CPU/RenderThread"),
+        average("Sim/CPU/SimThread"),
+        average("Rendering/GPU/FrameTime"),
+        average("Rendering/GPU/ShadowMaps"));
+
+    return s_stats.Data();
 }
 
 } // extern "C"

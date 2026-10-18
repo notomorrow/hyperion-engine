@@ -54,7 +54,25 @@ TierProfile "DeviceTiers" {
             }
         }
 
-        TierRule "PreventThrottle" {
+        TierRule "Mobile" {
+            When = { DeviceType = Mobile }
+            Set = {
+                "Rendering.Glimmer.Enabled" = false
+                "Rendering.SSR" = false
+                "Rendering.GTAO" = false
+                "Rendering.Clouds" = false
+                "Rendering.FogVolumes" = false
+                "Rendering.Shadows.CSMMaxDistance" = 200
+                "Rendering.Shadows.CSMMaxStaleFrames" = 16
+                "Rendering.Shadows.Enabled" = false
+                "Rendering.Bloom" = false
+                "Rendering.DepthPrepass" = false
+                "Rendering.IndirectRendering" = false
+                "Rendering.ParallelRendering" = false
+            }
+        }
+
+        TierRule "LaptopLow" {
             When = { DeviceType = Laptop }
             AtMost = { DeviceGrade = Low }
             Set = {

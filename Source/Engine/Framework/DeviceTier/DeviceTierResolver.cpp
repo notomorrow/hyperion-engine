@@ -32,6 +32,11 @@ namespace PlatformUtils {
 ENGINE_API extern bool HasBattery();
 ENGINE_API extern uint64 GetSystemMemoryBytes();
 ENGINE_API extern uint32 GetLogicalCoreCount();
+
+#ifdef HYP_WEB
+ENGINE_API extern bool IsMobileBrowser();
+#endif
+
 } // namespace PlatformUtils
 
 static constexpr uint64 BytesPerMiB = 1024ull * 1024ull;
@@ -42,6 +47,8 @@ static DeviceFacts GatherPlatformFacts()
 
 #if defined(HYP_ANDROID) || defined(HYP_IOS)
     facts.isMobilePlatform = true;
+#elif defined(HYP_WEB)
+    facts.isMobilePlatform = PlatformUtils::IsMobileBrowser();
 #endif
 
     facts.hasBattery = PlatformUtils::HasBattery();
