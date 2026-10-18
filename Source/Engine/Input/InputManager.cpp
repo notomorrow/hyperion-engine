@@ -404,6 +404,24 @@ bool InputManager::IsKeyDown(KeyCode key) const
     return false;
 }
 
+void InputManager::ReleaseHeldKeys()
+{
+    AssertOnThread(g_mainThread);
+
+    for (uint32 i = 0; i < NumKeyboardKeys; i++)
+    {
+        if (!IsKeyDown(KeyCode(i)))
+        {
+            continue;
+        }
+
+        Event event(EventType::KEYUP, m_ownerWindow, PlatformEvent {});
+        event.GetEventData().Set(KeyCode(i));
+
+        ProcessEvent(std::move(event));
+    }
+}
+
 bool InputManager::IsButtonDown(MouseButtonKey btn) const
 {
     if (uint32(btn) < NumMouseButtons)

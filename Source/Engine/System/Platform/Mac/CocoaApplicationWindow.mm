@@ -107,6 +107,16 @@ bool IsKeyUpEvent(NSEvent* event);
     return YES;
 }
 
+- (BOOL)resignFirstResponder
+{
+    if (_hyperionWindow && _hyperionWindow->GetInputManager())
+    {
+        _hyperionWindow->GetInputManager()->ReleaseHeldKeys();
+    }
+
+    return [super resignFirstResponder];
+}
+
 - (NSView*)hitTest:(NSPoint)point
 {
     if (NSPointInRect(point, self.bounds))

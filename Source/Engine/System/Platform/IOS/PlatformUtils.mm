@@ -130,9 +130,11 @@ KeyCode MapIOSKeyCodeToKeyCode(unsigned short hidUsage)
         case 0xE0: return KeyCode::KEY_LCTRL;
         case 0xE1: return KeyCode::KEY_LSHIFT;
         case 0xE2: return KeyCode::KEY_LALT;
+        case 0xE3: return KeyCode::KEY_LSUPER;
         case 0xE4: return KeyCode::KEY_RCTRL;
         case 0xE5: return KeyCode::KEY_RSHIFT;
         case 0xE6: return KeyCode::KEY_RALT;
+        case 0xE7: return KeyCode::KEY_RSUPER;
         case 0x3A: return KeyCode::KEY_F1;
         case 0x3B: return KeyCode::KEY_F2;
         case 0x3C: return KeyCode::KEY_F3;

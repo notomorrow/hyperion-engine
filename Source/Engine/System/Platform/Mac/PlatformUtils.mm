@@ -163,8 +163,8 @@ KeyCode MapCocoaKeyCodeToKeyCode(unsigned short keyCode)
         case 0x33: return KeyCode::KEY_BACKSPACE;
         // 0x34: Enter (on Powerbook) - no mapping
         case 0x35: return KeyCode::KEY_ESCAPE;
-        // 0x36: Right Cmd - no mapping
-        // 0x37: Cmd (Apple) - no mapping
+        case 0x36: return KeyCode::KEY_RSUPER; // Right Cmd
+        case 0x37: return KeyCode::KEY_LSUPER; // Cmd
         case 0x38: return KeyCode::KEY_LSHIFT;
         case 0x39: return KeyCode::KEY_CAPSLOCK;
         case 0x3A: return KeyCode::KEY_LALT; // Option

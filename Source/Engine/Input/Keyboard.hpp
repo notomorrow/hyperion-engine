@@ -76,9 +76,11 @@ enum class KeyCode : uint16
     KEY_LCTRL = 224,
     KEY_LSHIFT = 225,
     KEY_LALT = 226,
+    KEY_LSUPER = 227, // Cmd / Win
     KEY_RCTRL = 228,
     KEY_RSHIFT = 229,
     KEY_RALT = 230,
+    KEY_RSUPER = 231,
 
     KEY_SPACE = 32,
     KEY_APOSTROPHE = 39,

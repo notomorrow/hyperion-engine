@@ -174,7 +174,14 @@ int CocoaAppContext::PollEvents(Event& event)
 
         if (shouldSendEvent)
         {
-            [NSApp sendEvent:nsEvent];
+            if (eventType == NSEventTypeKeyUp && ([nsEvent modifierFlags] & NSEventModifierFlagCommand) && nsWindow)
+            {
+                [nsWindow sendEvent:nsEvent];
+            }
+            else
+            {
+                [NSApp sendEvent:nsEvent];
+            }
         }
 
         [NSApp updateWindows];

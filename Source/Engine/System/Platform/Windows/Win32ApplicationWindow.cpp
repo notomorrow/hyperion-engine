@@ -725,6 +725,15 @@ LRESULT Win32ApplicationWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPAR
 
         return true;
     }
+    case WM_KILLFOCUS:
+    {
+        if (m_parentHwnd)
+        {
+            m_inputManager->ReleaseHeldKeys();
+        }
+
+        break;
+    }
     default:
         break;
     }
