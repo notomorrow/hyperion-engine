@@ -404,6 +404,19 @@ bool InputManager::IsKeyDown(KeyCode key) const
     return false;
 }
 
+// defined here as CodeGen can't parse preprocessor branches in reflected inline members
+bool InputManager::IsShortcutModifierDown() const
+{
+#if HYP_APPLE
+    return IsSuperDown();
+#elif defined(HYP_WEB) && HYP_WEB
+    // Host OS isn't known at compile time; accept either
+    return IsCtrlDown() || IsSuperDown();
+#else
+    return IsCtrlDown();
+#endif
+}
+
 void InputManager::ReleaseHeldKeys()
 {
     AssertOnThread(g_mainThread);
