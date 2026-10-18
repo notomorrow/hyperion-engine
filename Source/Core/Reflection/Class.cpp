@@ -168,6 +168,10 @@ CORE_API bool IsA(const Class* cls, const Class* instanceClass)
     }
 
     // slow path
+    
+    // @TODO: We could have a fixed-size array of `MaxClassNestingDepth` (not a constant right now but could be added, will need to ensure CodeGenTool checks this)
+    // then do a simple test again each elem in the array.
+    
     do
     {
         if (instanceClass == cls)

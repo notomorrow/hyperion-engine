@@ -2388,7 +2388,7 @@ EditorSubsystem::EditorSubsystem()
                           return;
                       }
 
-                      m_editorScene->GetRoot()->AddChild(newGizmo->GetNode());
+                      m_gizmoScene->GetRoot()->AddChild(newGizmo->GetNode());
                   }
               })
         .Detach();
@@ -2431,6 +2431,10 @@ void EditorSubsystem::OnAddedToWorld()
     m_editorScene = MakeHandle<Scene>(NAME("EditorScene"), SceneFlags::FOREGROUND | SceneFlags::EDITOR);
     m_editorScene->SetIsTransient(true);
     world->AddScene(m_editorScene);
+
+    m_gizmoScene = MakeHandle<Scene>(NAME("EditorGizmoScene"), SceneFlags::FOREGROUND | SceneFlags::EDITOR);
+    m_gizmoScene->SetIsTransient(true);
+    world->AddScene(m_gizmoScene);
 
     InitViewport();
 
@@ -2484,11 +2488,13 @@ void EditorSubsystem::OnRemovedFromWorld()
     for (const Handle<EditorViewport>& vp : m_editorViewports)
     {
         vp->OnSceneRemoved(m_editorScene);
+        vp->OnSceneRemoved(m_gizmoScene);
     }
-    
+
     World* world = Subsystem::GetWorld();
 
     world->RemoveScene(m_editorScene);
+    world->RemoveScene(m_gizmoScene);
 
     if (m_currentProject)
     {
@@ -3581,6 +3587,7 @@ void EditorSubsystem::Update(float delta)
         }
     }
 
+    m_gizmoController->UpdateGizmoViewport();
     m_gizmoController->UpdateGizmoScreenSize();
 
     UpdateGizmoProximityVisibility();
@@ -6234,6 +6241,8 @@ void EditorSubsystem::SetActiveViewport(EditorViewport* viewport)
     {
         SetHoveredGizmo(MouseEvent {}, nullptr, Handle<Node>::Null());
     }
+
+    m_gizmoController->UpdateGizmoViewport();
 
     OnActiveViewportChanged(MakeStrongRef(viewport));
 }

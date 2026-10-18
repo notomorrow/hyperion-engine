@@ -95,6 +95,7 @@ class ENGINE_API GlimmerChannel final
 {
 public:
     static SharedPtr<GlimmerChannel> Get(const World* world);
+    
     static void Register(const World* world, const SharedPtr<GlimmerChannel>& channel);
     static void Unregister(const World* world);
 

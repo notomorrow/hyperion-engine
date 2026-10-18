@@ -37,6 +37,8 @@
 
 namespace Hyperion {
 
+extern CVar<bool> g_cvTAA;
+
 static EngineStatGpuTimer s_statGlimmerIrradiance("Rendering/GPU/Glimmer/Irradiance");
 static EngineStatGpuTimer s_statGlimmerIrradianceHalf("Rendering/GPU/Glimmer/IrradianceHalf");
 static EngineStatGpuTimer s_statGlimmerIrradianceFull("Rendering/GPU/Glimmer/IrradianceFull");
@@ -207,7 +209,8 @@ void GlimmerIrradiancePass::Render(Frame* frame, const RenderSetup& renderSetup)
     ENGINE_STAT_GPU_SCOPE(&s_statGlimmerIrradiance);
 
     const bool isHalfRes = g_cvGlimmerHalfRes.Get() && !isDebugView;
-    const Vec2u& halfResPick = HalfResPicks[m_frameIndex++ % 4];
+    // without TAA nothing averages the four picks, so cycling them just shimmers
+    const Vec2u& halfResPick = g_cvTAA.Get() ? HalfResPicks[m_frameIndex++ % 4] : HalfResPicks[0];
 
     const GBufferTarget& opaquePass = m_gbuffer->GetPass(GBufferPass::Opaque);
 

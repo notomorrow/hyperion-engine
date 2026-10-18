@@ -15,6 +15,7 @@
 namespace Hyperion {
 
 class EditorSubsystem;
+class EditorViewport;
 class Node;
 
 struct MouseEvent;
@@ -65,6 +66,9 @@ public:
     /*! \brief Rescales the selected gizmo so it keeps a constant on-screen size in the active viewport. */
     void UpdateGizmoScreenSize();
 
+    /*! \brief Moves the gizmo scene over to the active viewport's view, so gizmos are only drawn (and sized) for one viewport at a time. */
+    void UpdateGizmoViewport();
+
     HYP_FORCE_INLINE bool AreGizmosHiddenByProximity() const
     {
         return m_gizmosHiddenByProximity;
@@ -108,6 +112,8 @@ private:
 
     WeakHandle<EditorGizmoBase> m_hoveredGizmo;
     WeakHandle<Node> m_hoveredGizmoNode;
+
+    WeakHandle<EditorViewport> m_gizmoViewport;
 
     bool m_gizmosHiddenByProximity = false;
     bool m_snapToGridEnabled = true;

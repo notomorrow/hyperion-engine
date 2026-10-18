@@ -19,6 +19,8 @@
 #include <Scene/Scene.hpp>
 #include <Scene/Camera/Camera.hpp>
 
+#include <Framework/View.hpp>
+
 #include <Input/Event.hpp>
 
 #include <Rendering/Passes/EditorGridPass.hpp>
@@ -182,9 +184,9 @@ void EditorGizmoController::UpdateGizmoProximityVisibility()
 
     const Handle<Node>& gizmoNode = gizmo->GetNode();
 
-    const Handle<Scene>& editorScene = m_subsystem->GetEditorScene();
+    const Handle<Scene>& gizmoScene = m_subsystem->GetGizmoScene();
 
-    if (!gizmoNode.IsValid() || !editorScene.IsValid())
+    if (!gizmoNode.IsValid() || !gizmoScene.IsValid())
     {
         return;
     }
@@ -232,7 +234,7 @@ void EditorGizmoController::UpdateGizmoProximityVisibility()
     }
     else
     {
-        editorScene->GetRoot()->AddChild(gizmoNode);
+        gizmoScene->GetRoot()->AddChild(gizmoNode);
     }
 }
 
@@ -255,6 +257,47 @@ void EditorGizmoController::UpdateGizmoScreenSize()
     }
 
     gizmo->UpdateScreenSpaceSize(activeViewport->GetCamera());
+}
+
+void EditorGizmoController::UpdateGizmoViewport()
+{
+    AssertOnThread(g_simThread);
+
+    if (m_subsystem == nullptr || !m_subsystem->GetGizmoScene().IsValid())
+    {
+        return;
+    }
+
+    const Handle<Scene>& gizmoScene = m_subsystem->GetGizmoScene();
+
+    EditorViewport* activeViewport = m_subsystem->GetActiveViewport();
+    const Handle<EditorViewport> previousViewport = m_gizmoViewport.Lock();
+
+    if (previousViewport.Get() == activeViewport)
+    {
+        return;
+    }
+
+    if (previousViewport.IsValid() && previousViewport->GetView().IsValid())
+    {
+        previousViewport->GetView()->RemoveScene(gizmoScene);
+        previousViewport->RequestRedraw();
+    }
+
+    m_gizmoViewport.Reset();
+
+    if (activeViewport == nullptr || !activeViewport->GetView().IsValid())
+    {
+        return;
+    }
+
+    activeViewport->GetView()->AddScene(gizmoScene);
+    activeViewport->RequestRedraw();
+
+    m_gizmoViewport = MakeWeakRef(activeViewport);
+
+    // resize right away, so hover tests in the same input event hit the gizmo as drawn in this viewport
+    UpdateGizmoScreenSize();
 }
 
 static float SnapToGridLine(float value, float gridOffset, float gridSize)
