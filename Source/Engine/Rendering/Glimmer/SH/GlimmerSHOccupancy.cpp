@@ -92,7 +92,7 @@ GlimmerSHOccupancy::GlimmerSHOccupancy()
     {
         const float spacing = GlimmerHelpers::GetGlimmerSHOccupancySpacing(cascadeIndex);
 
-        m_shaderData.cascades[cascadeIndex].params = Vec4f(spacing, 1.0f / spacing, 0.0f, 0.0f);
+        m_shaderData.cascades[cascadeIndex].params = { spacing, 1.0f / spacing, 0.0f, 0.0f };
         m_builtGenerations[cascadeIndex] = ~0u;
         m_rebuildSlices[cascadeIndex] = -1;
         m_rebuildGenerations[cascadeIndex] = ~0u;
@@ -133,10 +133,18 @@ void GlimmerSHOccupancy::CreateResources()
 
 const GpuImageViewRef& GlimmerSHOccupancy::GetImageView() const
 {
-    return m_texture.IsValid() ? RI.textureViewCache->GetOrCreate(m_texture) : RI.placeholderData->GetImageView3D1x1x1R8();
+    return m_texture.IsValid()
+        ? RI.textureViewCache->GetOrCreate(m_texture)
+        : RI.placeholderData->GetImageView3D1x1x1R8();
 }
 
-void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const Box& box, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache)
+void GlimmerSHOccupancy::SplatBox(
+    Frame* frame,
+    uint32 cascadeIndex,
+    const Vec3i& origin,
+    const GlimmerBox& box,
+    const GlimmerSceneInstances& sceneInstances,
+    const GlimmerTriangleCache& triangleCache)
 {
     HYP_SCOPE;
 
@@ -235,6 +243,7 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
             (box.max.x + OccupancyBlockVoxels - 1) >> OccupancyBlockShift,
             (box.max.y + OccupancyBlockVoxels - 1) >> OccupancyBlockShift,
             (box.max.z + OccupancyBlockVoxels - 1) >> OccupancyBlockShift);
+
         const Vec3i blockExtent = blockMax - blockMin;
 
         dispatchPass(s_propOccupancyModeBlocks, uint32(blockExtent.x * blockExtent.y * blockExtent.z));
@@ -250,16 +259,24 @@ void GlimmerSHOccupancy::SetBuilt(uint32 cascadeIndex, const Vec3i& origin)
     m_shaderData.cascades[cascadeIndex].origin = Vec4i(origin, 1);
 }
 
-void GlimmerSHOccupancy::ScrollWindow(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache)
+void GlimmerSHOccupancy::ScrollWindow(
+    Frame* frame,
+    uint32 cascadeIndex,
+    const Vec3i& origin,
+    const GlimmerSceneInstances& sceneInstances,
+    const GlimmerTriangleCache& triangleCache)
 {
     const Vec3i oldMin = m_builtOrigins[cascadeIndex];
     const Vec3i oldMax = oldMin + OccupancyGridSize;
 
-    Box remaining { origin, origin + OccupancyGridSize };
+    GlimmerBox remaining {
+        origin,
+        origin + OccupancyGridSize
+    };
 
     for (int axis = 0; axis < 3; axis++)
     {
-        Box entering = remaining;
+        GlimmerBox entering = remaining;
 
         if (origin[axis] > oldMin[axis])
         {
@@ -276,7 +293,13 @@ void GlimmerSHOccupancy::ScrollWindow(Frame* frame, uint32 cascadeIndex, const V
             continue;
         }
 
-        SplatBox(frame, cascadeIndex, origin, entering, sceneInstances, triangleCache);
+        SplatBox(
+            frame,
+            cascadeIndex,
+            origin,
+            entering,
+            sceneInstances,
+            triangleCache);
     }
 
     SetBuilt(cascadeIndex, origin);
@@ -346,7 +369,7 @@ void GlimmerSHOccupancy::Update(
         const Vec3i windowMin = m_builtOrigins[cascadeIndex];
         const Vec3i windowMax = windowMin + Vec3i(int32(GlimmerSHOccupancyGridXZ), int32(GlimmerSHOccupancyGridY), int32(GlimmerSHOccupancyGridXZ));
 
-        Array<Box, GlimmerAllocator>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
+        Array<GlimmerBox, GlimmerAllocator>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
 
         for (const GlimmerSceneChange& change : changes)
         {
@@ -358,12 +381,12 @@ void GlimmerSHOccupancy::Update(
 
             const BoundingBox& bounds = change.bounds;
 
-            const Vec3i boundsMin = Vec3i(int32(MathUtil::Floor(bounds.min.x * invSpacing)), int32(MathUtil::Floor(bounds.min.y * invSpacing)), int32(MathUtil::Floor(bounds.min.z * invSpacing)));
-            const Vec3i boundsMax = Vec3i(int32(MathUtil::Floor(bounds.max.x * invSpacing)), int32(MathUtil::Floor(bounds.max.y * invSpacing)), int32(MathUtil::Floor(bounds.max.z * invSpacing)));
+            const Vec3i boundsMin = Vec3i(MathUtil::Floor(bounds.min * invSpacing));
+            const Vec3i boundsMax = Vec3i(MathUtil::Floor(bounds.max * invSpacing));
 
-            const Box box {
-                Vec3i(MathUtil::Max(boundsMin.x - 1, windowMin.x), MathUtil::Max(boundsMin.y - 1, windowMin.y), MathUtil::Max(boundsMin.z - 1, windowMin.z)),
-                Vec3i(MathUtil::Min(boundsMax.x + 2, windowMax.x), MathUtil::Min(boundsMax.y + 2, windowMax.y), MathUtil::Min(boundsMax.z + 2, windowMax.z))
+            const GlimmerBox box {
+                MathUtil::Max(boundsMin - 1, windowMin),
+                MathUtil::Min(boundsMax + 2, windowMax)
             };
 
             if (box.max.x > box.min.x && box.max.y > box.min.y && box.max.z > box.min.z)
@@ -383,7 +406,8 @@ void GlimmerSHOccupancy::Update(
             {
                 for (size_t b = a + 1; b < dirtyBoxes.Size(); b++)
                 {
-                    const Box merged = Box::Union(dirtyBoxes[a], dirtyBoxes[b]);
+                    const GlimmerBox merged = GlimmerBox::Union(dirtyBoxes[a], dirtyBoxes[b]);
+
                     const int64 growth = merged.Volume() - dirtyBoxes[a].Volume() - dirtyBoxes[b].Volume();
 
                     if (growth < bestGrowth)
@@ -395,7 +419,7 @@ void GlimmerSHOccupancy::Update(
                 }
             }
 
-            dirtyBoxes[bestA] = Box::Union(dirtyBoxes[bestA], dirtyBoxes[bestB]);
+            dirtyBoxes[bestA] = GlimmerBox::Union(dirtyBoxes[bestA], dirtyBoxes[bestB]);
             dirtyBoxes.EraseAt(bestB);
         }
 
@@ -415,7 +439,11 @@ void GlimmerSHOccupancy::Update(
         const Vec3f center = GlimmerHelpers::GetGlimmerWindowCenter(
             viewerPosition,
             lookAhead,
-            Vec3f(float(GlimmerSHOccupancyGridXZ), float(GlimmerSHOccupancyGridY), float(GlimmerSHOccupancyGridXZ)) * spacing);
+            Vec3f {
+                float(GlimmerSHOccupancyGridXZ),
+                float(GlimmerSHOccupancyGridY),
+                float(GlimmerSHOccupancyGridXZ)
+            } * spacing);
 
         const Vec3i origin = {
             MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.x / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2) + WindowSnapVoxels / 2, WindowSnapVoxels),
@@ -423,7 +451,7 @@ void GlimmerSHOccupancy::Update(
             MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.z / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2) + WindowSnapVoxels / 2, WindowSnapVoxels)
         };
 
-        Array<Box, GlimmerAllocator>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
+        Array<GlimmerBox, GlimmerAllocator>& dirtyBoxes = m_dirtyBoxes[cascadeIndex];
 
         const Vec3i builtOrigin = m_builtOrigins[cascadeIndex];
 
@@ -450,11 +478,11 @@ void GlimmerSHOccupancy::Update(
                 hasRebuilt = true;
             }
 
-            for (const Box& dirtyBox : dirtyBoxes)
+            for (const GlimmerBox& dirtyBox : dirtyBoxes)
             {
-                const Box box {
-                    Vec3i(MathUtil::Max(dirtyBox.min.x, origin.x), MathUtil::Max(dirtyBox.min.y, origin.y), MathUtil::Max(dirtyBox.min.z, origin.z)),
-                    Vec3i(MathUtil::Min(dirtyBox.max.x, origin.x + OccupancyGridSize.x), MathUtil::Min(dirtyBox.max.y, origin.y + OccupancyGridSize.y), MathUtil::Min(dirtyBox.max.z, origin.z + OccupancyGridSize.z))
+                const GlimmerBox box {
+                    MathUtil::Max(dirtyBox.min, origin),
+                    MathUtil::Min(dirtyBox.max, origin + OccupancyGridSize)
                 };
 
                 if (box.max.x > box.min.x && box.max.y > box.min.y && box.max.z > box.min.z)
@@ -488,7 +516,13 @@ void GlimmerSHOccupancy::Update(
 
             if (!overlapsBuilt)
             {
-                SplatBox(frame, cascadeIndex, origin, Box { origin, origin + OccupancyGridSize }, sceneInstances, triangleCache);
+                SplatBox(
+                    frame,
+                    cascadeIndex,
+                    origin,
+                    GlimmerBox { origin, origin + OccupancyGridSize },
+                    sceneInstances,
+                    triangleCache);
 
                 s_statGlimmerSHOccupancyFullBuilds += 1;
 
@@ -504,7 +538,7 @@ void GlimmerSHOccupancy::Update(
         // in place, a slice a frame: the window stays where it was built and scrolls to the viewer once it's done
         const int32 sliceDepth = OccupancyGridSize.z / RebuildSlices;
 
-        Box slice { builtOrigin, builtOrigin + OccupancyGridSize };
+        GlimmerBox slice { builtOrigin, builtOrigin + OccupancyGridSize };
         slice.min.z += m_rebuildSlices[cascadeIndex] * sliceDepth;
         slice.max.z = slice.min.z + sliceDepth;
 

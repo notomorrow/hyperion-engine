@@ -85,29 +85,12 @@ public:
 
 private:
     void CreateResources();
-    struct Box
-    {
-        Vec3i min;
-        Vec3i max; // exclusive
-
-        HYP_FORCE_INLINE int64 Volume() const
-        {
-            return int64(max.x - min.x) * int64(max.y - min.y) * int64(max.z - min.z);
-        }
-
-        static Box Union(const Box& a, const Box& b)
-        {
-            return Box {
-                Vec3i(MathUtil::Min(a.min.x, b.min.x), MathUtil::Min(a.min.y, b.min.y), MathUtil::Min(a.min.z, b.min.z)),
-                Vec3i(MathUtil::Max(a.max.x, b.max.x), MathUtil::Max(a.max.y, b.max.y), MathUtil::Max(a.max.z, b.max.z)) };
-        }
-    };
 
     void SplatBox(
         Frame* frame,
         uint32 cascadeIndex,
         const Vec3i& origin,
-        const Box& box,
+        const GlimmerBox& box,
         const GlimmerSceneInstances& sceneInstances,
         const GlimmerTriangleCache& triangleCache);
 
@@ -130,7 +113,7 @@ private:
     FixedArray<uint32, GlimmerSHCascades> m_builtGenerations;
     FixedArray<int32, GlimmerSHCascades> m_rebuildSlices; // next slice of a rebuild spread over frames, -1 when there's none
     FixedArray<uint32, GlimmerSHCascades> m_rebuildGenerations;
-    FixedArray<Array<Box, GlimmerAllocator>, GlimmerSHCascades> m_dirtyBoxes;
+    FixedArray<Array<GlimmerBox, GlimmerAllocator>, GlimmerSHCascades> m_dirtyBoxes;
 
     GlimmerSHOccupancyShaderData m_shaderData;
     bool m_isSettled;

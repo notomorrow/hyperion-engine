@@ -96,6 +96,26 @@ struct GlimmerLightmapPages
     Vec4u stencilValues;
 };
 
+struct GlimmerBox
+{
+    Vec3i min;
+    Vec3i max; // exclusive
+
+    HYP_FORCE_INLINE int64 Volume() const
+    {
+        return int64(max.x - min.x) * int64(max.y - min.y) * int64(max.z - min.z);
+    }
+
+    static GlimmerBox Union(const GlimmerBox& a, const GlimmerBox& b)
+    {
+        return GlimmerBox {
+            MathUtil::Min(a.min, b.min),
+            MathUtil::Max(a.max, b.max)
+        };
+    }
+};
+
+
 namespace GlimmerHelpers {
 
 GlimmerTexelRect GetGlimmerGroundWindow(const Vec2i& origin);
