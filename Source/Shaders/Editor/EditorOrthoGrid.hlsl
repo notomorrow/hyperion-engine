@@ -81,189 +81,9 @@ float AxisLine(float value, float derivative)
 }
 
 static const float3 LabelColor = float3(0.2, 0.2, 0.22);
-static const float MinLabelSpacingPixels = 90.0;
-static const float LabelMargin = 4.0;
-static const float LabelPadding = 3.0;
-
-// digit height the pass scales the font to
-static const float GlyphHeight = 10.0;
 static const float LeftLabelsWidth = 56.0;
 
-// the atlas is drawn far below its baked size and has no mips, so each pixel averages a grid of taps
-static const uint GlyphSamplesPerAxis = 4u;
-
-static const uint NumGlyphs = 15u;
-
-static const uint GlyphMinus = 10u;
-static const uint GlyphDot = 11u;
-static const uint GlyphX = 12u;
-static const uint GlyphY = 13u;
-static const uint GlyphZ = 14u;
-
-float GetGlyphAdvance(uint glyph)
-{
-    return glyphAdvances[glyph / 4u][glyph % 4u];
-}
-
-// offset is in pixels from the pen position at the top of the label
-float SampleGlyph(uint glyph, float2 offset)
-{
-    if (glyph >= NumGlyphs)
-    {
-        return 0.0;
-    }
-
-    const float4 uvRect = glyphUvRects[glyph];
-    const float4 pixelRect = glyphPixelRects[glyph];
-
-    if (any(pixelRect.zw <= 0.0)
-        || any(offset + 0.5 < pixelRect.xy)
-        || any(offset - 0.5 > pixelRect.xy + pixelRect.zw))
-    {
-        return 0.0;
-    }
-
-    float coverage = 0.0;
-
-    for (uint y = 0u; y < GlyphSamplesPerAxis; y++)
-    {
-        for (uint x = 0u; x < GlyphSamplesPerAxis; x++)
-        {
-            const float2 tapOffset = offset + (float2(x, y) + 0.5) / float(GlyphSamplesPerAxis) - 0.5;
-            const float2 glyphCoord = (tapOffset - pixelRect.xy) / pixelRect.zw;
-
-            if (all(glyphCoord >= 0.0) && all(glyphCoord <= 1.0))
-            {
-                coverage += GlyphAtlas.SampleLevel(SamplerLinear, uvRect.xy + glyphCoord * uvRect.zw, 0.0).r;
-            }
-        }
-    }
-
-    return coverage / float(GlyphSamplesPerAxis * GlyphSamplesPerAxis);
-}
-
-uint Pow10(uint exponent)
-{
-    uint result = 1u;
-
-    for (uint i = 0u; i < exponent; i++)
-    {
-        result *= 10u;
-    }
-
-    return result;
-}
-
-struct GridLabel
-{
-    uint scaledValue;
-    uint numIntegerDigits;
-    uint numDecimals;
-    uint numChars;
-    bool isNegative;
-};
-
-GridLabel MakeGridLabel(float value, uint numDecimals)
-{
-    GridLabel label;
-    label.numDecimals = numDecimals;
-    label.scaledValue = uint(min(round(abs(value) * float(Pow10(numDecimals))), 999999999.0));
-    label.isNegative = value < 0.0 && label.scaledValue != 0u;
-
-    uint integerPart = label.scaledValue / Pow10(numDecimals);
-    label.numIntegerDigits = 1u;
-
-    while (integerPart >= 10u)
-    {
-        integerPart /= 10u;
-        label.numIntegerDigits++;
-    }
-
-    label.numChars = (label.isNegative ? 1u : 0u)
-        + label.numIntegerDigits
-        + (numDecimals > 0u ? numDecimals + 1u : 0u);
-
-    return label;
-}
-
-uint GetGridLabelGlyph(GridLabel label, uint charIndex)
-{
-    if (label.isNegative)
-    {
-        if (charIndex == 0u)
-        {
-            return GlyphMinus;
-        }
-
-        charIndex--;
-    }
-
-    if (label.numDecimals > 0u && charIndex == label.numIntegerDigits)
-    {
-        return GlyphDot;
-    }
-
-    const uint digitIndex = charIndex > label.numIntegerDigits ? charIndex - 1u : charIndex;
-    const uint numDigits = label.numIntegerDigits + label.numDecimals;
-
-    return (label.scaledValue / Pow10(numDigits - 1u - digitIndex)) % 10u;
-}
-
-// offset is in pixels from the label's top left corner
-float SampleGridLabel(GridLabel label, float2 offset)
-{
-    if (offset.x < 0.0)
-    {
-        return 0.0;
-    }
-
-    float penX = 0.0;
-
-    for (uint charIndex = 0u; charIndex < label.numChars; charIndex++)
-    {
-        const uint glyph = GetGridLabelGlyph(label, charIndex);
-        const float advance = GetGlyphAdvance(glyph);
-
-        if (offset.x < penX + advance)
-        {
-            return SampleGlyph(glyph, float2(offset.x - penX, offset.y));
-        }
-
-        penX += advance;
-    }
-
-    return 0.0;
-}
-
-// 1-2-5 steps up from the grid size, so labels always land on grid lines
-float GetLabelStep(float spacing, float worldPerPixel)
-{
-    float labelStep = spacing;
-
-    for (uint i = 0u; i < 30u && labelStep / worldPerPixel < MinLabelSpacingPixels; i++)
-    {
-        labelStep *= (i % 3u == 1u) ? 2.5 : 2.0;
-    }
-
-    return labelStep;
-}
-
-uint GetLabelDecimals(float labelStep, float planeOffset)
-{
-    for (uint numDecimals = 0u; numDecimals < 3u; numDecimals++)
-    {
-        const float scale = float(Pow10(numDecimals));
-        const float scaledStep = labelStep * scale;
-        const float scaledOffset = planeOffset * scale;
-
-        if (abs(scaledStep - round(scaledStep)) < 1e-3 && abs(scaledOffset - round(scaledOffset)) < 1e-3)
-        {
-            return numDecimals;
-        }
-    }
-
-    return 3u;
-}
+#include "GridLabels.hlsli"
 
 PSOutput PSMain(PSInput i)
 {
@@ -358,7 +178,7 @@ PSOutput PSMain(PSInput i)
             {
                 const GridLabel label = MakeGridLabel(lineIndex * labelStep + planeOffset.x, GetLabelDecimals(labelStep, planeOffset.x));
 
-                labelCoverage = SampleGridLabel(label, float2(pixel.x - labelStartX, pixel.y - bottomLabelsTop));
+                labelCoverage = SampleGridLabel(label, float2(pixel.x - labelStartX, pixel.y - bottomLabelsTop), float2(1.0, 1.0)).x;
             }
         }
 
@@ -373,7 +193,7 @@ PSOutput PSMain(PSInput i)
             {
                 const GridLabel label = MakeGridLabel(lineIndex * labelStep + planeOffset.y, GetLabelDecimals(labelStep, planeOffset.y));
 
-                labelCoverage = max(labelCoverage, SampleGridLabel(label, float2(pixel.x - LabelMargin, pixel.y - labelTopY)));
+                labelCoverage = max(labelCoverage, SampleGridLabel(label, float2(pixel.x - LabelMargin, pixel.y - labelTopY), float2(1.0, 1.0)).x);
             }
         }
 
@@ -390,8 +210,8 @@ PSOutput PSMain(PSInput i)
             clamp(axisPixel.x + LabelPadding, leftLabelsRight + LabelPadding, viewportSize.x - LabelMargin - GetGlyphAdvance(verticalAxisGlyph)),
             verticalWorldPerPixel < 0.0 ? LabelMargin : bottomLabelsTop - LabelPadding - GlyphHeight);
 
-        color = lerp(color, saturate(horizontalAxisColor * 2.0), SampleGlyph(horizontalAxisGlyph, pixel - horizontalAxisGlyphPosition));
-        color = lerp(color, saturate(verticalAxisColor * 2.0), SampleGlyph(verticalAxisGlyph, pixel - verticalAxisGlyphPosition));
+        color = lerp(color, saturate(horizontalAxisColor * 2.0), SampleGlyph(horizontalAxisGlyph, pixel - horizontalAxisGlyphPosition, float2(1.0, 1.0)).x);
+        color = lerp(color, saturate(verticalAxisColor * 2.0), SampleGlyph(verticalAxisGlyph, pixel - verticalAxisGlyphPosition, float2(1.0, 1.0)).x);
     }
 
     PSOutput output;

@@ -214,6 +214,8 @@ private:
     void UpdateWindowSize(Vec2i newSize);
 
     void SetKey(KeyCode key, bool pressed);
+    void ReleaseKey(KeyCode key);
+    void ReleaseKeysNotPhysicallyHeld();
     void SetMouseButton(MouseButtonKey btn, bool pressed);
 
     void ApplyMouseLockState(InputMouseLockState* mouseLockState);

@@ -11,7 +11,13 @@
 
 #include <Framework/CVarManager.hpp>
 
+#include <Core/Reflection/Handle.hpp>
+#include <Core/Threading/Task.hpp>
+#include <Core/Math/Vector4.hpp>
+
 namespace Hyperion {
+
+class FontAtlas;
 
 extern ENGINE_API CVar<bool> g_cvEditorGrid;
 
@@ -22,6 +28,39 @@ extern ENGINE_API CVar<float> g_cvEditorGridSize;
 extern ENGINE_API CVar<float> g_cvEditorGridOffsetX;
 extern ENGINE_API CVar<float> g_cvEditorGridOffsetY;
 extern ENGINE_API CVar<float> g_cvEditorGridOffsetZ;
+
+class EditorGridLabelFont
+{
+public:
+    static constexpr uint32 NumGlyphs = 15;
+
+    struct Glyphs
+    {
+        Vec4f uvRects[NumGlyphs];    // xy: top left uv, zw: uv size
+        Vec4f pixelRects[NumGlyphs]; // xy: offset from the pen position at the label's top, zw: size, all in pixels
+        Vec4f advances[(NumGlyphs + 3) / 4];
+    };
+
+    EditorGridLabelFont();
+    EditorGridLabelFont(const EditorGridLabelFont& other) = delete;
+    EditorGridLabelFont& operator=(const EditorGridLabelFont& other) = delete;
+    ~EditorGridLabelFont();
+
+    bool Update();
+
+    HYP_FORCE_INLINE const Glyphs& GetGlyphs() const
+    {
+        return m_glyphs;
+    }
+
+    GpuImageView* GetAtlasImageView() const;
+
+private:
+    Task<Handle<FontAtlas>> m_fontAtlasTask;
+    Handle<FontAtlas> m_fontAtlas;
+    Glyphs m_glyphs {};
+    bool m_isReady = false;
+};
 
 class EditorGridPass final : public FullScreenPass
 {
@@ -46,6 +85,8 @@ private:
     {
         return false;
     }
+
+    EditorGridLabelFont m_labelFont;
 };
 
 } // namespace Hyperion

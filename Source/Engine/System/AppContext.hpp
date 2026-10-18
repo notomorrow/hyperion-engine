@@ -31,6 +31,7 @@
 #include <Rendering/RenderTypes.hpp>
 
 #include <Input/Mouse.hpp>
+#include <Input/Keyboard.hpp>
 
 #if HYP_VULKAN
 #include <vulkan/vulkan_core.h>
@@ -154,6 +155,13 @@ public:
 
     HYP_METHOD()
     virtual bool HasMouseFocus() const = 0;
+
+    /*! \brief Queries whether a key is physically held down, on platforms that support it.
+     *  \return false if the state could not be determined */
+    virtual bool QueryPhysicalKeyState(KeyCode key, bool& outIsDown) const
+    {
+        return false;
+    }
 
     HYP_METHOD()
     virtual void ShowVirtualKeyboard()
@@ -450,6 +458,8 @@ public:
 
     HYP_METHOD()
     bool HasMouseFocus() const override;
+
+    bool QueryPhysicalKeyState(KeyCode key, bool& outIsDown) const override;
 
     HYP_METHOD()
     bool IsHighDPI() const override;

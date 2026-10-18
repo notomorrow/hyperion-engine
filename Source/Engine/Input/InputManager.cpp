@@ -410,15 +410,49 @@ void InputManager::ReleaseHeldKeys()
 
     for (uint32 i = 0; i < NumKeyboardKeys; i++)
     {
-        if (!IsKeyDown(KeyCode(i)))
+        if (IsKeyDown(KeyCode(i)))
+        {
+            ReleaseKey(KeyCode(i));
+        }
+    }
+}
+
+void InputManager::ReleaseKey(KeyCode key)
+{
+    Event event(EventType::KEYUP, m_ownerWindow, PlatformEvent {});
+    event.GetEventData().Set(key);
+
+    ProcessEvent(std::move(event));
+}
+
+void InputManager::ReleaseKeysNotPhysicallyHeld()
+{
+    HYP_SCOPE;
+    AssertOnThread(g_mainThread);
+
+    // Safety net for key up events the OS never delivered to us.
+    for (uint32 wordIndex = 0; wordIndex < NumKeyboardKeys / 32 + 1; wordIndex++)
+    {
+        if (AtomicAdd(&m_inputState.keyStates[wordIndex], 0) == 0)
         {
             continue;
         }
 
-        Event event(EventType::KEYUP, m_ownerWindow, PlatformEvent {});
-        event.GetEventData().Set(KeyCode(i));
+        for (uint32 bitIndex = 0; bitIndex < 32; bitIndex++)
+        {
+            const KeyCode key = KeyCode(wordIndex * 32 + bitIndex);
 
-        ProcessEvent(std::move(event));
+            bool isPhysicallyDown = true;
+
+            if (!IsKeyDown(key) || !m_ownerWindow->QueryPhysicalKeyState(key, isPhysicallyDown) || isPhysicallyDown)
+            {
+                continue;
+            }
+
+            HYP_LOG(Input, Debug, "Key {} is no longer physically held but no key up event was received! releasing it", uint32(key));
+
+            ReleaseKey(key);
+        }
     }
 }
 
@@ -688,6 +722,8 @@ void InputManager::MainThreadUpdate()
 {
     HYP_SCOPE;
     AssertOnThread(g_mainThread);
+
+    ReleaseKeysNotPhysicallyHeld();
 
     Mutex::Guard guard(m_mouseLockStatesMutex);
 

@@ -23,27 +23,16 @@
 #include <Rendering/CommandRecorderAllocator.hpp>
 #include <Rendering/DebugDrawer.hpp>
 #include <Rendering/ThumbnailCaptureState.hpp>
-#include <Rendering/Texture.hpp>
-#include <Rendering/TextureViewCache.hpp>
 #include <Rendering/PlaceholderData.hpp>
 #include <Rendering/Util/DeletionQueue.hpp>
 #include <Rendering/Util/MeshBuilder.hpp>
 
 #include <Framework/EngineStats.hpp>
-#include <Framework/EngineDefaults.hpp>
 #include <Framework/View.hpp>
-
-#include <UI/Font/FontAtlas.hpp>
-
-#include <Core/Threading/TaskSystem.hpp>
-
-#include <Core/Logging/Logger.hpp>
 
 #include <Scene/Camera/Camera.hpp>
 
 namespace Hyperion {
-
-ENGINE_API HYP_DECLARE_LOG_CHANNEL(Rendering);
 
 static EngineStatGpuTimer s_statEditorWireframe("Rendering/GPU/EditorWireframe");
 static EngineStatCounter<uint32> s_statEditorWireframeRedraws("Rendering/EditorWireframeRedraws");
@@ -52,30 +41,18 @@ static constexpr uint32 UnusedTargetFrames = 30;
 
 static const Vec4f BackgroundColor { 0.012f, 0.012f, 0.014f, 1.0f };
 
-// digits are drawn this tall, the shader's label layout assumes it
-static constexpr float LabelCapHeightPixels = 10.0f;
-
-static constexpr char LabelGlyphChars[EditorWireframePass::NumLabelGlyphs] = {
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '.', 'X', 'Y', 'Z'
-};
-
 // matches EditorGridConstants in Shaders/Editor/EditorOrthoGrid.hlsl
 struct EditorOrthoGridConstants
 {
     Vec4f gridOffsetAndSize;
     Vec4f labelParams; // x: 1 when the glyph atlas is bound
-    EditorWireframePass::LabelGlyphs glyphs;
+    EditorGridLabelFont::Glyphs glyphs;
 };
 
 EditorWireframePass::EditorWireframePass() = default;
 
 EditorWireframePass::~EditorWireframePass()
 {
-    if (m_labelFontTask.IsValid() && !m_labelFontTask.IsCompleted())
-    {
-        m_labelFontTask.Await();
-    }
-
     for (auto& it : m_targets)
     {
         EnqueueDeletion(std::move(it.second.framebuffer));
@@ -147,80 +124,6 @@ void EditorWireframePass::PurgeUnusedTargets()
     }
 }
 
-bool EditorWireframePass::UpdateLabelFont()
-{
-    if (!m_labelFontAtlas.IsValid())
-    {
-        // only fetched once - a missing atlas just leaves the grid unlabeled
-        if (!m_labelFontTask.IsValid())
-        {
-            m_labelFontTask = TaskSystem::GetInstance().Enqueue([]() -> Handle<FontAtlas>
-                {
-                    return EngineDefaults::LoadAsset<FontAtlas>(EngineDefaults::Get().font);
-                });
-
-            return false;
-        }
-
-        if (!m_labelFontTask.IsCompleted())
-        {
-            return false;
-        }
-
-        const Handle<FontAtlas> fontAtlas = m_labelFontTask.Await();
-
-        if (!fontAtlas.IsValid() || !fontAtlas->GetAtlasTextures().GetMainAtlas().IsValid())
-        {
-            HYP_LOG_ONCE(Rendering, Warning, "No font atlas for editor grid labels");
-
-            return false;
-        }
-
-        const Vec2f atlasPixelSize = Vec2f::One() / Vec2f(MathUtil::Max(fontAtlas->GetAtlasTextures().GetMainAtlas()->GetExtent().GetXY(), Vec2u::One()));
-
-        Optional<const GlyphMetrics&> zeroMetrics = fontAtlas->GetGlyphMetricsForChar(uint32('0'));
-        const float capHeight = zeroMetrics.HasValue() ? MathUtil::Max(float(zeroMetrics->bearingY), 1.0f) : 46.0f;
-        const float scale = LabelCapHeightPixels / capHeight;
-
-        m_labelGlyphs = {};
-
-        for (uint32 glyphIndex = 0; glyphIndex < NumLabelGlyphs; glyphIndex++)
-        {
-            Optional<const GlyphMetrics&> metrics = fontAtlas->GetGlyphMetricsForChar(uint32(LabelGlyphChars[glyphIndex]));
-
-            if (!metrics.HasValue())
-            {
-                continue;
-            }
-
-            const Vec2f glyphSize = Vec2f(float(metrics->width), float(metrics->height));
-
-            m_labelGlyphs.uvRects[glyphIndex] = Vec4f(Vec2f(metrics->imagePosition) * atlasPixelSize, glyphSize * atlasPixelSize);
-
-            m_labelGlyphs.pixelRects[glyphIndex] = Vec4f(
-                float(metrics->bearingX) * scale,
-                (capHeight - float(metrics->bearingY)) * scale,
-                glyphSize.x * scale,
-                glyphSize.y * scale);
-
-            // advance is 26.6 fixed point
-            m_labelGlyphs.advances[glyphIndex / 4][glyphIndex % 4] = (float(metrics->advance) / 64.0f) * scale;
-        }
-
-        m_labelFontAtlas = fontAtlas;
-    }
-
-    Texture* atlasTexture = m_labelFontAtlas->GetAtlasTextures().GetMainAtlas().Get();
-
-    // uploaded lazily when first bound, same as ResourceBindings
-    if (!atlasTexture->IsCreated())
-    {
-        Check(atlasTexture->Create());
-    }
-
-    return atlasTexture->IsCreated();
-}
-
 void EditorWireframePass::RenderGrid(Frame* frame, const RenderSetup& rs, bool drawLabels)
 {
     if (!g_cvEditorGrid.Get())
@@ -244,7 +147,7 @@ void EditorWireframePass::RenderGrid(Frame* frame, const RenderSetup& rs, bool d
         g_cvEditorGridOffsetZ.Get(),
         MathUtil::Max(g_cvEditorGridSize.Get(), MathUtil::epsilonF));
     constants.labelParams = Vec4f(drawLabels ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f);
-    constants.glyphs = m_labelGlyphs;
+    constants.glyphs = m_labelFont.GetGlyphs();
 
     GpuBuffer* cbuffer = nullptr;
     size_t cbufferOffset = 0;
@@ -269,9 +172,7 @@ void EditorWireframePass::RenderGrid(Frame* frame, const RenderSetup& rs, bool d
     cr << SetShaderUniform(0, "CamerasBuffer"_sh, RI.namedBuffers[NamedBuffer::Cameras], Resources::GetBinding(rs.view->GetCamera()));
     cr << SetShaderUniform(1, "EditorGridConstants"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
     cr << SetShaderUniform(2, "SamplerLinear"_sh, RI.placeholderData->GetSamplerLinear());
-    cr << SetShaderUniform(3, "GlyphAtlas"_sh, drawLabels
-            ? RI.textureViewCache->GetOrCreate(m_labelFontAtlas->GetAtlasTextures().GetMainAtlas().Get())
-            : RI.placeholderData->GetImageView2D1x1R8());
+    cr << SetShaderUniform(3, "GlyphAtlas"_sh, m_labelFont.GetAtlasImageView());
 
     cr << CommitDrawState();
 
@@ -313,7 +214,7 @@ EditorWireframePass::RenderResult EditorWireframePass::Render(Frame* frame, cons
         g_cvEditorGrid.Get() ? g_cvEditorGridSize.Get() : 0.0f);
 
     const HashCode debugDrawHash = DebugDrawer::GetInstance().GetCommandsHash();
-    const bool hasLabelFont = UpdateLabelFont();
+    const bool hasLabelFont = m_labelFont.Update();
     const bool meshesChanged = GetConsumerProxyList(view).GetMeshEntities().GetDiff().NeedsUpdate();
     const bool captureRequested = view->thumbnailCaptureState != nullptr && view->thumbnailCaptureState->IsRequested();
 
