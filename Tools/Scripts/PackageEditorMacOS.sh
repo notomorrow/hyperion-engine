@@ -1,5 +1,5 @@
 #!/bin/bash
-# Stages a relocatable macOS editor preview from Binaries/Mac/Distribution and archives it.
+# Stages a relocatable macOS editor preview (Hyperion Editor.app) from Binaries/Mac/Distribution and archives it.
 #
 #   Tools/Scripts/BuildHyperion.sh distribution ninja regenerate
 #   Tools/Scripts/PackageEditorMacOS.sh [output dir]
@@ -25,6 +25,12 @@ version_component() {
 VERSION="$(version_component MAJOR).$(version_component MINOR).$(version_component PATCH)"
 STAGE_NAME="Hyperion-Editor-$VERSION-macos-arm64"
 STAGE_DIR="$OUTPUT_DIR/$STAGE_NAME"
+BUNDLE_ID="io.github.ajmd17.HyperionEditor"
+
+# the engine resolves Config, Content and Data next to its executable, so they all live in Contents/MacOS
+APP_DIR="$STAGE_DIR/Hyperion Editor.app"
+APP_ROOT="$APP_DIR/Contents/MacOS"
+APP_RESOURCES="$APP_DIR/Contents/Resources"
 
 if [[ ! -e "$BIN_DIR/Hyperion.Editor" ]]; then
     echo "Hyperion.Editor not found in $BIN_DIR. Run 'Tools/Scripts/BuildHyperion.sh distribution ninja regenerate' first." >&2
@@ -34,7 +40,7 @@ fi
 step "Packaging Hyperion editor preview $VERSION (macOS arm64)"
 
 rm -rf "$STAGE_DIR"
-mkdir -p "$STAGE_DIR"
+mkdir -p "$APP_ROOT" "$APP_RESOURCES"
 
 # --- Managed editor ---------------------------------------------------------------------------------------------------
 
@@ -53,16 +59,16 @@ rm -rf "$PUBLISH_ROOT"
 env -u MSBuildSdksPath dotnet publish "$EDITOR_PROJECT" --configuration Release --runtime osx-arm64 --self-contained true --disable-build-servers \
     -p:DebugType=none "-p:OutputPath=$PUBLISH_ROOT/build/" --output "$PUBLISH_ROOT/publish"
 
-cp -R "$PUBLISH_ROOT/publish/." "$STAGE_DIR/"
+cp -R "$PUBLISH_ROOT/publish/." "$APP_ROOT/"
 rm -rf "$PUBLISH_ROOT"
 
 # loaded at runtime by ScriptSystem, so the editor's publish doesn't pick it up
-cp "$BIN_DIR/Hyperion.NET.Scripting.dll" "$STAGE_DIR/"
+cp "$BIN_DIR/Hyperion.NET.Scripting.dll" "$APP_ROOT/"
 
 # script projects compile against these; at runtime the published copies are used
-mkdir -p "$STAGE_DIR/ref"
+mkdir -p "$APP_ROOT/ref"
 for name in Hyperion.NET.Shared.dll Hyperion.NET.Runtime.dll Hyperion.NET.Interop.dll; do
-    cp "$BIN_DIR/$name" "$STAGE_DIR/ref/"
+    cp "$BIN_DIR/$name" "$APP_ROOT/ref/"
 done
 
 # --- Native binaries --------------------------------------------------------------------------------------------------
@@ -72,9 +78,9 @@ step "Staging native libraries"
 is_macho() { file -b "$1" | grep -q "Mach-O"; }
 
 for path in "$BIN_DIR"/*.dylib; do
-    cp "$path" "$STAGE_DIR/"
+    cp "$path" "$APP_ROOT/"
     # the debug map names the build machine's object files
-    strip -S "$STAGE_DIR/$(basename "$path")"
+    strip -S "$APP_ROOT/$(basename "$path")"
 done
 
 # --- Bundle non-system libraries --------------------------------------------------------------------------------------
@@ -82,7 +88,7 @@ done
 step "Bundling library dependencies"
 
 macho_files() {
-    find "$STAGE_DIR" -type f \( -name "*.dylib" -o -perm -u+x \) -not -path "*/ref/*" | while read -r candidate; do
+    find "$APP_ROOT" -type f \( -name "*.dylib" -o -perm -u+x \) -not -path "*/ref/*" | while read -r candidate; do
         if is_macho "$candidate"; then echo "$candidate"; fi
     done
 }
@@ -137,8 +143,8 @@ rpath_search_dirs() {
 
 stage_library() {
     echo "    $2  (from $1)"
-    cp -L "$1" "$STAGE_DIR/$2"
-    chmod u+w "$STAGE_DIR/$2"
+    cp -L "$1" "$APP_ROOT/$2"
+    chmod u+w "$APP_ROOT/$2"
     dirname "$1" > "$ORIGINS_DIR/$2"
 }
 
@@ -150,7 +156,7 @@ for pass in 1 2 3 4 5 6; do
         for dependency in $(external_dependencies "$binary"); do
             dependency_name="$(basename "$dependency")"
 
-            if [[ ! -e "$STAGE_DIR/$dependency_name" ]]; then
+            if [[ ! -e "$APP_ROOT/$dependency_name" ]]; then
                 if [[ ! -e "$dependency" ]]; then
                     warn "$(basename "$binary") links $dependency, which does not exist on this machine"
                     continue
@@ -164,7 +170,7 @@ for pass in 1 2 3 4 5 6; do
 
         # @rpath/ libraries already resolve next to the binary, but have to be found through the build machine's rpaths first
         for dependency_name in $(rpath_dependencies "$binary"); do
-            [[ -e "$STAGE_DIR/$dependency_name" ]] && continue
+            [[ -e "$APP_ROOT/$dependency_name" ]] && continue
 
             for rpath in $(rpath_search_dirs "$binary"); do
                 if [[ -e "$rpath/$dependency_name" ]]; then
@@ -174,7 +180,7 @@ for pass in 1 2 3 4 5 6; do
                 fi
             done
 
-            [[ -e "$STAGE_DIR/$dependency_name" ]] || warn "$(basename "$binary") links @rpath/$dependency_name, which is not in any of its rpaths"
+            [[ -e "$APP_ROOT/$dependency_name" ]] || warn "$(basename "$binary") links @rpath/$dependency_name, which is not in any of its rpaths"
         done
     done < <(macho_files)
 
@@ -200,21 +206,22 @@ done < <(macho_files)
 
 # --- Vulkan driver ----------------------------------------------------------------------------------------------------
 
-# The Vulkan loader finds MoltenVK through a driver manifest; point it at the bundled copy from the launcher.
-# prefer the MoltenVK that ships with the Vulkan install the engine was built against; the checked-in copy lags behind
+# The Vulkan loader looks for driver manifests in the app bundle's Resources/vulkan/icd.d, so the bundled MoltenVK is
+# found without setting VK_DRIVER_FILES. Prefer the MoltenVK from the Vulkan install the engine was built against;
+# the checked-in copy lags behind.
 MOLTENVK_SOURCE=""
-for candidate in "$STAGE_DIR/libMoltenVK.dylib" "${VULKAN_SDK:-/nonexistent}/lib/libMoltenVK.dylib" /usr/local/lib/libMoltenVK.dylib /opt/homebrew/lib/libMoltenVK.dylib "$ROOT_DIR/External/ThirdParty/Binaries/Mac/Release/libMoltenVK.dylib"; do
+for candidate in "$APP_ROOT/libMoltenVK.dylib" "${VULKAN_SDK:-/nonexistent}/lib/libMoltenVK.dylib" /usr/local/lib/libMoltenVK.dylib /opt/homebrew/lib/libMoltenVK.dylib "$ROOT_DIR/External/ThirdParty/Binaries/Mac/Release/libMoltenVK.dylib"; do
     if [[ -e "$candidate" ]]; then MOLTENVK_SOURCE="$candidate"; break; fi
 done
 
 if [[ -n "$MOLTENVK_SOURCE" ]]; then
-    [[ -e "$STAGE_DIR/libMoltenVK.dylib" ]] || cp -L "$MOLTENVK_SOURCE" "$STAGE_DIR/libMoltenVK.dylib"
-    mkdir -p "$STAGE_DIR/vulkan/icd.d"
-    cat > "$STAGE_DIR/vulkan/icd.d/MoltenVK_icd.json" <<'EOF'
+    [[ -e "$APP_ROOT/libMoltenVK.dylib" ]] || cp -L "$MOLTENVK_SOURCE" "$APP_ROOT/libMoltenVK.dylib"
+    mkdir -p "$APP_RESOURCES/vulkan/icd.d"
+    cat > "$APP_RESOURCES/vulkan/icd.d/MoltenVK_icd.json" <<'EOF'
 {
     "file_format_version": "1.0.0",
     "ICD": {
-        "library_path": "../../libMoltenVK.dylib",
+        "library_path": "../../../MacOS/libMoltenVK.dylib",
         "api_version": "1.2.0",
         "is_portability_driver": true
     }
@@ -224,33 +231,85 @@ else
     warn "libMoltenVK.dylib not found; the package will rely on a Vulkan driver installed on the user's machine"
 fi
 
-cat > "$STAGE_DIR/Hyperion Editor.command" <<'EOF'
-#!/bin/bash
-# Double-click to start the editor.
-DIR="$(cd "$(dirname "$0")" && pwd)"
-if [[ -f "$DIR/vulkan/icd.d/MoltenVK_icd.json" ]]; then
-    export VK_DRIVER_FILES="$DIR/vulkan/icd.d/MoltenVK_icd.json"
-    export VK_ICD_FILENAMES="$VK_DRIVER_FILES"
-fi
-cd "$DIR"
-exec "$DIR/Hyperion.Editor" "$@"
+# --- Bundle metadata --------------------------------------------------------------------------------------------------
+
+step "Writing Info.plist and icon"
+
+cat > "$APP_DIR/Contents/Info.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Hyperion Editor</string>
+    <key>CFBundleDisplayName</key>
+    <string>Hyperion Editor</string>
+    <key>CFBundleIdentifier</key>
+    <string>$BUNDLE_ID</string>
+    <key>CFBundleExecutable</key>
+    <string>Hyperion.Editor</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$VERSION</string>
+    <key>CFBundleVersion</key>
+    <string>$VERSION</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSArchitecturePriority</key>
+    <array>
+        <string>arm64</string>
+    </array>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+</dict>
+</plist>
 EOF
-chmod +x "$STAGE_DIR/Hyperion Editor.command"
+plutil -lint "$APP_DIR/Contents/Info.plist" >/dev/null
+
+ICONSET_DIR="$OUTPUT_DIR/AppIcon.iconset"
+ICON_SOURCE="$ROOT_DIR/Source/Editor/managed/Assets/Branding/hyperion-icon.ico"
+rm -rf "$ICONSET_DIR"
+mkdir -p "$ICONSET_DIR"
+for size in 16 32 128 256; do
+    sips -s format png -z $size $size "$ICON_SOURCE" --out "$ICONSET_DIR/icon_${size}x${size}.png" >/dev/null
+    if [[ $size -le 128 ]]; then
+        sips -s format png -z $((size * 2)) $((size * 2)) "$ICON_SOURCE" --out "$ICONSET_DIR/icon_${size}x${size}@2x.png" >/dev/null
+    fi
+done
+iconutil -c icns "$ICONSET_DIR" -o "$APP_RESOURCES/AppIcon.icns"
+rm -rf "$ICONSET_DIR"
 
 # --- Re-sign ----------------------------------------------------------------------------------------------------------
 
 # Apple Silicon refuses to run a binary whose signature no longer matches, and install_name_tool invalidates it.
 # This is an ad-hoc signature: enough to run, but Gatekeeper still treats the download as unidentified.
 step "Ad-hoc signing"
+ad_hoc_sign() {
+    codesign --force --sign - "$1" 2>/dev/null || warn "codesign failed for $(basename "$1")"
+    codesign --verify "$1" 2>/dev/null || warn "$(basename "$1") has an invalid signature and won't launch"
+}
+
 while read -r binary; do
-    codesign --force --sign - "$binary" 2>/dev/null || warn "codesign failed for $(basename "$binary")"
+    if [[ "$binary" == "$APP_ROOT/Hyperion.Editor" ]]; then
+        # codesign treats a bundle's main executable as the whole bundle, which fails on the .dll files beside it
+        cp "$binary" "$OUTPUT_DIR/Hyperion.Editor.signing"
+        ad_hoc_sign "$OUTPUT_DIR/Hyperion.Editor.signing"
+        mv "$OUTPUT_DIR/Hyperion.Editor.signing" "$binary"
+    else
+        ad_hoc_sign "$binary"
+    fi
 done < <(macho_files)
 
 # --- Config -----------------------------------------------------------------------------------------------------------
 
 step "Staging config"
 
-mkdir -p "$STAGE_DIR/Config"
+mkdir -p "$APP_ROOT/Config"
 
 # mirrors Source/Sample/CopyPlatformConfigs.cmake for PLATFORM=Mac
 for config_file in "$ROOT_DIR"/Config/*; do
@@ -261,14 +320,14 @@ for config_file in "$ROOT_DIR"/Config/*; do
         *.IOS.json|*.Android.json|*.Windows.json|*.Mac.json|*.Linux.json|*.Web.json) continue ;;
         *.json)
             mac_variant="$ROOT_DIR/Config/${name%.json}.Mac.json"
-            if [[ -f "$mac_variant" ]]; then cp "$mac_variant" "$STAGE_DIR/Config/$name"; else cp "$config_file" "$STAGE_DIR/Config/$name"; fi
+            if [[ -f "$mac_variant" ]]; then cp "$mac_variant" "$APP_ROOT/Config/$name"; else cp "$config_file" "$APP_ROOT/Config/$name"; fi
             ;;
-        *) cp "$config_file" "$STAGE_DIR/Config/$name" ;;
+        *) cp "$config_file" "$APP_ROOT/Config/$name" ;;
     esac
 done
 
 # basedir points at the source tree, trace/cache servers are dev-only localhost endpoints
-GLOBAL_CONFIG="$STAGE_DIR/Config/GlobalConfig.json"
+GLOBAL_CONFIG="$APP_ROOT/Config/GlobalConfig.json"
 if [[ -f "$GLOBAL_CONFIG" ]]; then
     sed -i '' -E 's# ?--(basedir|traceserver|cacheserver)=[^ "]*##g; s#("Args"[[:space:]]*:[[:space:]]*")#\1--basedir=./ #' "$GLOBAL_CONFIG"
 fi
@@ -279,8 +338,8 @@ copy_tracked() {
     local count=0
     while IFS= read -r -d '' relative_path; do
         [[ -f "$ROOT_DIR/$relative_path" ]] || continue
-        mkdir -p "$STAGE_DIR/$(dirname "$relative_path")"
-        cp "$ROOT_DIR/$relative_path" "$STAGE_DIR/$relative_path"
+        mkdir -p "$APP_ROOT/$(dirname "$relative_path")"
+        cp "$ROOT_DIR/$relative_path" "$APP_ROOT/$relative_path"
         count=$((count + 1))
     done < <(cd "$ROOT_DIR" && git -c core.quotepath=off ls-files -z -- "$@")
     echo "    $count files"
@@ -297,8 +356,8 @@ copy_tracked Source/Templates Source/Engine/DotNET/Sdk
 
 if [[ -d "$ROOT_DIR/Data/Scripts/Strata" ]]; then
     step "Staging generated Strata bindings"
-    mkdir -p "$STAGE_DIR/Data/Scripts"
-    cp -R "$ROOT_DIR/Data/Scripts/Strata" "$STAGE_DIR/Data/Scripts/"
+    mkdir -p "$APP_ROOT/Data/Scripts"
+    cp -R "$ROOT_DIR/Data/Scripts/Strata" "$APP_ROOT/Data/Scripts/"
 else
     warn "Data/Scripts/Strata not found; Strata scripts won't resolve engine modules"
 fi
@@ -319,11 +378,11 @@ while read -r binary; do
     fi
 
     for dependency_name in $(rpath_dependencies "$binary"); do
-        [[ -e "$STAGE_DIR/$dependency_name" ]] || warn "$(basename "$binary") links @rpath/$dependency_name, which is not in the package"
+        [[ -e "$APP_ROOT/$dependency_name" ]] || warn "$(basename "$binary") links @rpath/$dependency_name, which is not in the package"
     done
 done < <(macho_files)
 
-if grep -q -a -F "$ROOT_DIR" "$STAGE_DIR"/libhyperion*.dylib 2>/dev/null; then
+if grep -q -a -F "$ROOT_DIR" "$APP_ROOT"/libhyperion*.dylib 2>/dev/null; then
     warn "the engine library has the source tree path ($ROOT_DIR) baked in; build with the 'distribution' argument"
 fi
 

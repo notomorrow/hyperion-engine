@@ -219,5 +219,4 @@ jobs:
             --notes-file - <<'EOF'
           No .NET install is needed to run the editor. C# scripting requires the .NET 10 SDK.
 
-          macOS (Apple Silicon): the build is not notarized. After extracting, run `xattr -dr com.apple.quarantine <folder>` and start the editor with `Hyperion Editor.command`.
           EOF
