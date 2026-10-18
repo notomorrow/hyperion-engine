@@ -19,6 +19,8 @@
 
 namespace Hyperion {
 
+class ByteWriter;
+
 struct WebGPUPipelineManifestBinding
 {
     uint8 group;
@@ -66,6 +68,8 @@ private:
 
     void Load();
     bool Read(ByteReader& reader);
+    void Write(ByteWriter& writer) const;
+    void Publish() const;
 
     bool Prewarm(Entry& entry);
 
@@ -73,6 +77,8 @@ private:
     bool m_isLoaded = false;
     bool m_isPrewarming = false;
     bool m_hasReported = true;
+    uint32 m_numUnpublished = 0;
+    uint32 m_framesSinceRecord = 0;
 };
 
 } // namespace Hyperion

@@ -20,6 +20,10 @@
 
 #include <Core/Logging/Logger.hpp>
 
+#ifdef HYP_WEB
+#include <emscripten.h>
+#endif
+
 namespace Hyperion {
 
 ENGINE_API HYP_DECLARE_LOG_CHANNEL(RenderingBackend);
@@ -189,6 +193,9 @@ bool ToLayoutEntry(const WebGPUPipelineManifestBinding& binding, WGPUBindGroupLa
 
 ////////////////////
 
+/// sent once no new variant has been seen for this long
+/// so that when we keep finding new pipelines, we send in bulk
+static constexpr uint32 PublishAfterQuietFrames = 300;
 
 struct WebGPUPipelineManifestHeader
 {
@@ -296,6 +303,9 @@ void WebGPUPipelineManifest::Record(const ShaderDesc& shaderDesc, const WGPUBind
     }
 
     m_entries.PushBack(std::move(entry));
+
+    ++m_numUnpublished;
+    m_framesSinceRecord = 0;
 }
 
 void WebGPUPipelineManifest::Load()
@@ -387,21 +397,6 @@ void WebGPUPipelineManifest::Save() const
         return;
     }
 
-    WebGPUPipelineManifestHeader header;
-    header.float32Filterable = RI.GetDeviceFeatures().float32Filterable ? 1 : 0;
-
-    for (const Entry& entry : m_entries)
-    {
-        header.entryCount += entry.isStale ? 0 : 1;
-    }
-
-    header.propertyIdCount = GetShaderPropertyCount();
-
-    HashCode propertyDictionaryHashCode;
-    GetShaderPropertyDictionaryHashCode(header.propertyIdCount, propertyDictionaryHashCode);
-
-    header.propertyDictionaryHash = propertyDictionaryHashCode.Value();
-
     const FilePath cacheDir = EngineGlobals::GetCacheDirectory();
 
     if (!cacheDir.Exists())
@@ -417,6 +412,47 @@ void WebGPUPipelineManifest::Save() const
 
         return;
     }
+
+    Write(writer);
+
+    writer.Close();
+}
+
+void WebGPUPipelineManifest::Publish() const
+{
+#ifdef HYP_WEB
+    MemoryByteWriter<DynamicAllocator> writer;
+    Write(writer);
+
+    const auto& bytes = writer.GetBuffer();
+
+    EM_ASM({
+        const hostname = self.location ? self.location.hostname : '';
+
+        if (hostname === 'localhost' || hostname === '127.0.0.1')
+        {
+            fetch('pipeline-manifest', { method: 'POST', body: HEAPU8.slice($0, $0 + $1) }).catch(() => {});
+        }
+    }, bytes.Data(), bytes.Size());
+#endif
+}
+
+void WebGPUPipelineManifest::Write(ByteWriter& writer) const
+{
+    WebGPUPipelineManifestHeader header;
+    header.float32Filterable = RI.GetDeviceFeatures().float32Filterable ? 1 : 0;
+
+    for (const Entry& entry : m_entries)
+    {
+        header.entryCount += entry.isStale ? 0 : 1;
+    }
+
+    header.propertyIdCount = GetShaderPropertyCount();
+
+    HashCode propertyDictionaryHashCode;
+    GetShaderPropertyDictionaryHashCode(header.propertyIdCount, propertyDictionaryHashCode);
+
+    header.propertyDictionaryHash = propertyDictionaryHashCode.Value();
 
     writer.Write(&header, sizeof(header));
 
@@ -443,8 +479,6 @@ void WebGPUPipelineManifest::Save() const
         writer.Write(&entryHeader, sizeof(entryHeader));
         writer.Write(entry.bindings.Data(), entry.bindings.Size() * sizeof(WebGPUPipelineManifestBinding));
     }
-
-    writer.Close();
 }
 
 void WebGPUPipelineManifest::ReleasePipelines()
@@ -575,6 +609,13 @@ void WebGPUPipelineManifest::Update()
 
         entry.pipeline->lastFrame = frameCounter;
         entry.lastTouchedFrame = frameCounter;
+    }
+
+    if (m_numUnpublished != 0 && ++m_framesSinceRecord >= PublishAfterQuietFrames)
+    {
+        m_numUnpublished = 0;
+
+        Publish();
     }
 
     if (!m_hasReported && m_entries.Any() && !hasPending)

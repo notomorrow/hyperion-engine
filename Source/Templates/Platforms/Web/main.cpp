@@ -16,6 +16,7 @@
 #include <unistd.h>
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <thread>
 
@@ -23,6 +24,16 @@ using namespace Hyperion;
 
 #ifdef HYP_WEB_GAME_MODULE
 extern "C" const char* HypGameModule_GetGameClassName();
+#endif
+
+#ifndef HYP_WEB_NODE_PACKAGE_DIR
+
+EM_JS_DEPS(HypWeb_PackageUrl, "$stringToNewUTF8");
+
+EM_JS(char*, HypWeb_GetPackageUrl, (), {
+    return stringToNewUTF8(new URL('Cache', self.location.href).href);
+});
+
 #endif
 
 static void MountPackage()
@@ -36,7 +47,9 @@ static void MountPackage()
     chmod("/hyperion", 0777); // preloaded directories come out read-only
     mkdir("/hyperion/Cache", 0777);
 
-    backend_t backend = wasmfs_create_fetch_backend("Cache", 16 * 1024 * 1024);
+    char* packageUrl = HypWeb_GetPackageUrl();
+    backend_t backend = wasmfs_create_fetch_backend(packageUrl, 16 * 1024 * 1024);
+    free(packageUrl);
     wasmfs_create_directory("/package", 0777, backend);
 
     close(wasmfs_create_file("/package/index.txt", 0444, backend));

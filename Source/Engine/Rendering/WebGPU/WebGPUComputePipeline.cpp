@@ -201,12 +201,10 @@ WGPUComputePipeline WebGPUComputePipeline::GetOrCreateVariant(const WGPUBindGrou
 
     variant->isCompiling = true;
 
-#ifndef HYP_WEB
     if (variant->compileMode == WebGPUPipelineCompileMode::InBackground)
     {
         RI.GetPipelineManifest().Record(cacheDesc, layouts, numLayouts);
     }
-#endif
 
     WGPUCreateComputePipelineAsyncCallbackInfo callbackInfo = WGPU_CREATE_COMPUTE_PIPELINE_ASYNC_CALLBACK_INFO_INIT;
     callbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;

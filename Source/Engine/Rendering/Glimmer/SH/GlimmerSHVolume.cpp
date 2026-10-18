@@ -47,6 +47,7 @@ static EngineStatCounter<uint32> s_statGlimmerSHVoxelsTraced("Rendering/Glimmer/
 
 static StaticShaderPropertyId s_propSHModeUpdate { ShaderProperty(NAME("MODE"), NAME("UPDATE")) };
 static StaticShaderPropertyId s_propSHModeCompose { ShaderProperty(NAME("MODE"), NAME("COMPOSE")) };
+static StaticShaderPropertyId s_propSHProbes { ShaderProperty(NAME("PROBES")) };
 
 static constexpr int32 VoxelsPerFrame = 512;
 
@@ -338,6 +339,9 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
 {
     CommandRecorder& cr = frame->cr;
 
+    const GlimmerProbeVolume* probeVolume = inputs.probeVolume;
+    const bool isSamplingProbes = probeVolume && probeVolume->IsReady() && g_cvGlimmerProbesEnabled.Get();
+
     if (!inOutHasBarriers)
     {
         inOutHasBarriers = true;
@@ -349,6 +353,11 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
 
         ShaderPropertySet shaderProperties;
         shaderProperties.Add(s_propSHModeUpdate);
+
+        if (isSamplingProbes)
+        {
+            shaderProperties.Add(s_propSHProbes);
+        }
 
         cr << SetCurrentShader(ShaderDesc(NAME("GlimmerSHUpdate"), shaderProperties));
     }
@@ -371,9 +380,7 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
         constants.relight = *inputs.relight;
     }
 
-    const GlimmerProbeVolume* probeVolume = inputs.probeVolume;
-
-    if (probeVolume && probeVolume->IsReady() && g_cvGlimmerProbesEnabled.Get())
+    if (isSamplingProbes)
     {
         constants.probes = probeVolume->GetShaderData();
     }

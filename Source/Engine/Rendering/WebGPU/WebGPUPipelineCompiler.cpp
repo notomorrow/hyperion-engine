@@ -15,9 +15,8 @@
 
 namespace Hyperion {
 
-// The browser compiles its shaders one at a time, a background compile included, so a pipeline the frame is waiting on
-// gets stuck behind any that is running. Background compiles start once the others have stopped coming.
-static constexpr uint32 g_numQuietFramesBeforeBackgroundCompile = 30;
+static constexpr uint32 NumQuietFramesBeforeBackgroundCompile = 30;
+static constexpr uint32 MaxBackgroundCompilesRunning = 3;
 
 // These ray traversal shaders take the browser seconds each to compile.
 static const ANSIStringView g_backgroundCompiledShaderPrefix = "Glimmer";
@@ -98,7 +97,8 @@ void WebGPUPipelineCompiler::OnCompileFinished(WebGPUPipelineCompileMode compile
         AssertDebug(status.numCompiling != 0);
         --status.numCompiling;
 
-        m_isBackgroundCompileRunning = false;
+        AssertDebug(m_numBackgroundCompilesRunning != 0);
+        --m_numBackgroundCompilesRunning;
         break;
     }
     default:
@@ -120,18 +120,16 @@ void WebGPUPipelineCompiler::Update()
 {
     ++m_numQuietFrames;
 
-    while (!m_isBackgroundCompileRunning
+    while (m_numBackgroundCompilesRunning < MaxBackgroundCompilesRunning
         && m_numFrameCompilesRunning == 0
-        && m_numQuietFrames >= g_numQuietFramesBeforeBackgroundCompile
+        && m_numQuietFrames >= NumQuietFramesBeforeBackgroundCompile
         && m_queuedBackgroundCompiles.Any())
     {
         QueuedBackgroundCompile queued = m_queuedBackgroundCompiles.PopFront();
 
-        if (queued.start())
-        {
-            m_isBackgroundCompileRunning = true;
-        }
-        else
+        ++m_numBackgroundCompilesRunning;
+
+        if (!queued.start())
         {
             OnCompileFinished(WebGPUPipelineCompileMode::InBackground, queued.shaderName);
         }
