@@ -1,0 +1,35 @@
+Texture EditorGridLabelGlyphs {
+    TextureDesc = {
+        Type = Texture2D
+        Format = R8
+        Extent = (728, 68, 1)
+        MinFilterMode = Linear
+        MagFilterMode = Linear
+        TextureWrapMode = ClampToEdge
+        NumLayers = 1
+        ImageUsage = Sampled
+        MipOffsets = [
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+        ]
+    }
+    ImageData = {
+        Key = "Editor://Textures/EditorGridLabelGlyphs.TEX"
+        Size = 49504
+    }
+    UUID = "a76de232-c31b-4b03-b90e-54384aa7be2a"
+}

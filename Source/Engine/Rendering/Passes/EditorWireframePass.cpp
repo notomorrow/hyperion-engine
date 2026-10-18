@@ -146,7 +146,13 @@ void EditorWireframePass::RenderGrid(Frame* frame, const RenderSetup& rs, bool d
         g_cvEditorGridOffsetY.Get(),
         g_cvEditorGridOffsetZ.Get(),
         MathUtil::Max(g_cvEditorGridSize.Get(), MathUtil::epsilonF));
-    constants.labelParams = Vec4f(drawLabels ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f);
+
+    constants.labelParams = Vec4f(
+        drawLabels ? 1.0f : 0.0f,
+        m_labelFont.GetDistanceRange(),
+        0.0f,
+        0.0f);
+        
     constants.glyphs = m_labelFont.GetGlyphs();
 
     GpuBuffer* cbuffer = nullptr;

@@ -228,7 +228,7 @@ PSOutput PSMain(PSInput input)
 
     const uint2 viewportExtent = camera.dimensions.xy;
 
-    g_skyVisibility = EvaluateSkyVisibility(skyVisibilityCapture, SkyVisibilityTexture, positionWS.xyz, N, texcoord * float2(camera.dimensions.xy) - 0.5);
+    g_skyVisibility = EvaluateSkyVisibility(skyVisibilityCapture, SkyVisibilityTexture, positionWS.xyz, N);
 
     if (glimmerParams.x != 0u && glimmerParams.y == 0u && (mask & OBJECT_MASK_LIGHTMAPPED) == 0)
     {

@@ -7,18 +7,7 @@ struct SkyVisibilityCapture
     float4 params;
 };
 
-static const float2 s_skyVisibilityKernel[8] = {
-    float2(-0.94201624, -0.39906216),
-    float2(0.94558609, -0.76890725),
-    float2(-0.094184101, -0.92938870),
-    float2(0.34495938, 0.29387760),
-    float2(-0.91588581, 0.45771432),
-    float2(-0.38277543, 0.27676845),
-    float2(0.97484398, 0.75648379),
-    float2(0.44323325, -0.97511554)
-};
-
-float EvaluateSkyVisibility(SkyVisibilityCapture skyVisibilityCapture, Texture2D skyVisibilityTexture, float3 positionWS, float3 N, float2 pixelPosition)
+float EvaluateSkyVisibility(SkyVisibilityCapture skyVisibilityCapture, Texture2D skyVisibilityTexture, float3 positionWS, float3 N)
 {
     const float strength = world_shader_data.sky_occlusion_params.x;
 
@@ -51,38 +40,38 @@ float EvaluateSkyVisibility(SkyVisibilityCapture skyVisibilityCapture, Texture2D
     
     const float referenceDepth = captureNdc.z - (baseBias + filterRadius * slopeTangent) / depthRange;
     
-    const float rotation = InterleavedGradientNoise(pixelPosition) * HYP_FMATH_TWO_PI;
-    float rotationSin, rotationCos;
-    sincos(rotation, rotationSin, rotationCos);
-
-    const float2x2 rotationMatrix = float2x2(rotationCos, -rotationSin, rotationSin, rotationCos);
-
     uint2 captureDimensions;
     skyVisibilityTexture.GetDimensions(captureDimensions.x, captureDimensions.y);
-    
+
     const float softnessDepth = max(baseBias, 0.25) / depthRange;
 
+    // fixed tent-weighted grid; nothing accumulates this over time, so a noise-rotated kernel shows up as per-pixel noise
     float openSum = 0.0;
 
     [unroll]
-    for (uint i = 0; i < 8; i++)
+    for (int y = -1; y <= 1; y++)
     {
-        const float2 offset = mul(s_skyVisibilityKernel[i], rotationMatrix) * sampleRadius;
+        [unroll]
+        for (int x = -1; x <= 1; x++)
+        {
+            const float weight = float((2 - abs(x)) * (2 - abs(y))) / 16.0;
+            const float2 offset = float2(x, y) * sampleRadius;
 
-        const float2 texelPosition = (captureUv + offset) * float2(captureDimensions) - 0.5;
-        const float2 texelFraction = frac(texelPosition);
-        const float2 gatherUv = (floor(texelPosition) + 1.0) / float2(captureDimensions);
+            const float2 texelPosition = (captureUv + offset) * float2(captureDimensions) - 0.5;
+            const float2 texelFraction = frac(texelPosition);
+            const float2 gatherUv = (floor(texelPosition) + 1.0) / float2(captureDimensions);
 
-        const float4 occluderDepths = skyVisibilityTexture.GatherRed(sampler_nearest, gatherUv);
-        const float4 open = saturate((occluderDepths - referenceDepth) / softnessDepth + 1.0);
-        
-        openSum += lerp(lerp(open.w, open.z, texelFraction.x), lerp(open.x, open.y, texelFraction.x), texelFraction.y);
+            const float4 occluderDepths = skyVisibilityTexture.GatherRed(sampler_nearest, gatherUv);
+            const float4 open = saturate((occluderDepths - referenceDepth) / softnessDepth + 1.0);
+
+            openSum += weight * lerp(lerp(open.w, open.z, texelFraction.x), lerp(open.x, open.y, texelFraction.x), texelFraction.y);
+        }
     }
-    
+
     const float2 edgeDistance = 1.0 - abs(captureNdc.xy);
     const float edgeFade = saturate(min(edgeDistance.x, edgeDistance.y) * 8.0);
 
-    return lerp(1.0, openSum / 8.0, strength * edgeFade);
+    return lerp(1.0, openSum, strength * edgeFade);
 }
 
 #endif // HYP_SKY_VISIBILITY_HLSLI

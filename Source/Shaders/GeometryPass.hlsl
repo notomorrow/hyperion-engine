@@ -449,7 +449,7 @@ PSOutput PSMain(PSInput input)
                     float4 reflections = (float4)0;
                     float4 irradiance = (float4)0;
 
-                    g_skyVisibility = EvaluateSkyVisibility(skyVisibilityCapture, SkyVisibilityTexture, P, N, input.position_cs.xy - 0.5);
+                    g_skyVisibility = EvaluateSkyVisibility(skyVisibilityCapture, SkyVisibilityTexture, P, N);
 
                     EvaluateEnvProbes(
                         positionVS.xyz, P,

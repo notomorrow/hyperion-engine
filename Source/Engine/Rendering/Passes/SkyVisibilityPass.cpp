@@ -40,6 +40,7 @@ static EngineStatGpuTimer s_statSkyVisibility("Rendering/GPU/SkyVisibility");
 
 static constexpr uint32 BucketMask = RenderBucketMask<RenderBucket::Opaque, RenderBucket::Lightmapped, RenderBucket::Translucent>;
 
+static CVar<bool> s_cvSkyVisibilityEnabled("Rendering.SkyVisibility.Enabled", true);
 static CVar<bool> s_cvSkyVisibilityTimeSlicingEnabled("Rendering.SkyVisibility.TimeSlicingEnabled", true);
 static CVar<int> s_cvSkyVisibilityMaxStaleFrames("Rendering.SkyVisibility.MaxStaleFrames", 30);
 
@@ -102,8 +103,8 @@ void SkyVisibilityPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup
     View* view = renderSetup.view;
     AssertDebug(view != nullptr && (view->GetFlags() & ViewFlags::SKY_VISIBILITY_VIEW));
 
-    // nothing samples the map when the world turns sky occlusion off, so don't pay for the capture
-    if (GetWorldBufferData()->skyOcclusionParams.x <= 0.0f)
+    // nothing samples the map when sky occlusion is off, so don't pay for the capture
+    if (!s_cvSkyVisibilityEnabled.Get() || GetWorldBufferData()->skyOcclusionParams.x <= 0.0f)
     {
         m_isValid = false;
         return;
