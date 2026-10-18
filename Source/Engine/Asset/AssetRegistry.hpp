@@ -183,6 +183,8 @@ public:
     static void WalkAssetDeep(const BoxedValue& target, const ProcRef<void(const Handle<AssetObject>&)>& onAssetFound);
 
 private:
+    static void MarkIfCreatedByCook(AssetObject& assetObject);
+
     AssetRegistryId m_registryId;
     FilePath m_rootPath;
 

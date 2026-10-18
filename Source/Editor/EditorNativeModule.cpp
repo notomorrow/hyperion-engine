@@ -551,10 +551,7 @@ static void ReplaceRetiredProjectGame(EditorProject* project, const LoadedNative
 
     project->SetGame(newGame);
 
-    HYP_LOG(Editor, Info, "Project '{}' now plays with the new build of {}", project->GetName(), loadedModule.gameClassName);
-
     oldGame->ReleaseManagedObject();
-
     oldGame.Reset();
 
     CollectManagedGarbage();

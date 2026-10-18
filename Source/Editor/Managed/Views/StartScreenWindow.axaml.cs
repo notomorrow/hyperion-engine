@@ -16,6 +16,8 @@ namespace Hyperion.Editor.Views
             InitializeComponent();
 
             Opened += OnWindowOpened;
+
+            AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
         }
 
         private StartScreenViewModel? ViewModel => DataContext as StartScreenViewModel;
@@ -62,6 +64,44 @@ namespace Hyperion.Editor.Views
             base.OnClosed(e);
         }
 
+        private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
+        {
+            if (ViewModel is not { IsBusy: false } viewModel || e.KeyModifiers != KeyModifiers.None)
+            {
+                return;
+            }
+
+            switch (e.Key)
+            {
+                case Key.Up or Key.Down when e.Source is not TextBox:
+                    MoveSelection(viewModel, e.Key == Key.Down ? 1 : -1);
+                    e.Handled = true;
+                    break;
+                case Key.Enter when viewModel.SelectedProject != null && e.Source is not (Button or CheckBox):
+                    viewModel.OpenRecentProjectCommand.Execute(viewModel.SelectedProject);
+                    e.Handled = true;
+                    break;
+            }
+        }
+
+        private void MoveSelection(StartScreenViewModel viewModel, int step)
+        {
+            int count = viewModel.RecentProjects.Count;
+
+            if (count == 0)
+            {
+                return;
+            }
+
+            int index = viewModel.SelectedProject is { } selected ? viewModel.RecentProjects.IndexOf(selected) : -1;
+            index = index < 0 ? 0 : Math.Clamp(index + step, 0, count - 1);
+
+            viewModel.SelectedProject = viewModel.RecentProjects[index];
+
+            RecentList.ScrollIntoView(index);
+            (RecentList.ContainerFromIndex(index) as ListBoxItem)?.Focus();
+        }
+
         private void OnRecentListKeyDown(object? sender, KeyEventArgs e)
         {
             if (ViewModel is not { } viewModel || viewModel.SelectedProject is not { } selected)
@@ -71,10 +111,6 @@ namespace Hyperion.Editor.Views
 
             switch (e.Key)
             {
-                case Key.Enter:
-                    viewModel.OpenRecentProjectCommand.Execute(selected);
-                    e.Handled = true;
-                    break;
                 case Key.Delete:
                     viewModel.RemoveRecentProjectCommand.Execute(selected);
                     e.Handled = true;
@@ -91,10 +127,6 @@ namespace Hyperion.Editor.Views
 
             switch (e.Key)
             {
-                case Key.Enter when viewModel.SelectedProject != null:
-                    viewModel.OpenRecentProjectCommand.Execute(viewModel.SelectedProject);
-                    e.Handled = true;
-                    break;
                 case Key.Down when viewModel.SelectedProject != null:
                     (RecentList.ContainerFromItem(viewModel.SelectedProject) as ListBoxItem)?.Focus();
                     e.Handled = true;

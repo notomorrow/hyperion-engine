@@ -81,14 +81,6 @@ static Array<Handle<AssetRegistry>>& GetAssetRegistryStack()
     return s_stack;
 }
 
-static void MarkIfCreatedByCook(AssetObject& assetObject)
-{
-    if (EngineGlobals::IsCooking() && !IsGlobalContextActive<AssetLoadingContext>())
-    {
-        assetObject.m_flags |= AssetObjectFlags::CreatedByCook;
-    }
-}
-
 ENGINE_API Handle<AssetRegistry> GetCurrentAssetRegistry()
 {
     // try getting thread-local registry override.
@@ -2013,6 +2005,14 @@ FilePath AssetRegistry::GetManifestPath(const AssetPath& assetPath) const
     AssertDebug(bucketName != nullptr);
 
     return GetRootPath() / bucketName / (String(*assetPath.assetName) + ".hmf");
+}
+
+void AssetRegistry::MarkIfCreatedByCook(AssetObject& assetObject)
+{
+    if (EngineGlobals::IsCooking() && !IsGlobalContextActive<AssetLoadingContext>())
+    {
+        assetObject.m_flags |= AssetObjectFlags::CreatedByCook;
+    }
 }
 
 #pragma endregion AssetRegistry
