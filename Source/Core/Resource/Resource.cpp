@@ -10,6 +10,7 @@
 #include <Core/Profiling/PerformanceClock.hpp>
 
 #include <Core/Utilities/DeferredScope.hpp>
+#include <Core/Utilities/GlobalContext.hpp>
 
 #include <Core/Logging/Logger.hpp>
 #include <Core/Logging/LogChannels.hpp>
@@ -17,6 +18,31 @@
 namespace Hyperion {
 
 CORE_API HYP_DEFINE_LOG_SUBCHANNEL(Resource, Core);
+
+namespace /* Context */ {
+
+struct ResourceInitializingContext
+{
+    const ResourceBase* resource;
+    const ResourceInitializingContext* prev;
+};
+
+inline bool IsResourceInitializingOnCurrentThread(const ResourceBase* resource)
+{
+    for (const ResourceInitializingContext* context = GetGlobalContext<ResourceInitializingContext>();
+            context;
+            context = context->prev)
+    {
+        if (context->resource == resource)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+} // namespace
 
 #pragma region ResourceGuard
 
@@ -230,7 +256,14 @@ void ResourceBase::AddReader()
                     m_isInitialized.Store(true);
                     isInitializedLocal = true;
 
-                    Initialize();
+                    {
+                        GlobalContextScope scope(ResourceInitializingContext {
+                            this,
+                            GetGlobalContext<ResourceInitializingContext>()
+                        });
+
+                        Initialize();
+                    }
 
                     shouldNotifyWaiters = true;
                 }
@@ -244,6 +277,11 @@ void ResourceBase::AddReader()
 
         if (!isInitializedLocal)
         {
+            if (IsResourceInitializingOnCurrentThread(this))
+            {
+                return;
+            }
+
             // wait for initialization to complete
             Mutex::Guard initGuard(m_initMutex);
 
