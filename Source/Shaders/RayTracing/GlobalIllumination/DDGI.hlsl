@@ -50,9 +50,9 @@ DECLARE_SRV(DDGI, EnvProbesColorTexture) TextureCubeArray envProbesColorTexture;
 #define NUM_SAMPLES 1
 #define ENVIRONMENT_INTENSITY 1.0
 
-void SetProbeRayData(uint2 coord, ProbeRayData ray_data)
+void SetProbeRayData(uint2 coord, ProbeRayData probe_ray)
 {
-    probe_rays[PROBE_RAY_DATA_INDEX(coord)] = ray_data;
+    probe_rays[PROBE_RAY_DATA_INDEX(coord)] = probe_ray;
 }
 
 struct RayBounceInfo
@@ -94,8 +94,8 @@ void RayGenMain()
 
     uint ray_seed = InitRandomSeed(InitRandomSeed(coord.x, coord.y), world_shader_data.frame_counter % 256);
 
-    ProbeRayData ray_data = (ProbeRayData)0;
-    ray_data.origin = float4(origin, 0.0);
+    ProbeRayData probe_ray = (ProbeRayData)0;
+    probe_ray.origin = float4(origin, 0.0);
 
     float4 accumRadiance = (float4)0;
 
@@ -140,7 +140,7 @@ void RayGenMain()
                 radiance += env;
             }
 
-            ray_data.direction_depth += float4(localDirection, tmax);
+            probe_ray.direction_depth += float4(localDirection, tmax);
 
             accumRadiance += float4(radiance, 1.0);
             break;
@@ -149,8 +149,8 @@ void RayGenMain()
         float3 hitPos = localOrigin + localDirection * payload.distance;
         float3 N = normalize(payload.normal);
 
-        ray_data.normal += float4(N, 0.0);
-        ray_data.direction_depth += float4(localDirection, payload.distance);
+        probe_ray.normal += float4(N, 0.0);
+        probe_ray.direction_depth += float4(localDirection, payload.distance);
 
         float3 hitAlbedo = saturate(payload.throughput.rgb);
 
@@ -216,15 +216,15 @@ void RayGenMain()
     } // end samples
 
 #if NUM_SAMPLES > 1
-    ray_data.normal.xyz = normalize(ray_data.normal.xyz);
-    ray_data.direction_depth.xyz = normalize(ray_data.direction_depth.xyz);
-    ray_data.direction_depth.w /= NUM_SAMPLES;
+    probe_ray.normal.xyz = normalize(probe_ray.normal.xyz);
+    probe_ray.direction_depth.xyz = normalize(probe_ray.direction_depth.xyz);
+    probe_ray.direction_depth.w /= NUM_SAMPLES;
 #endif
 
-    ray_data.color = accumRadiance / NUM_SAMPLES;
+    probe_ray.color = accumRadiance / NUM_SAMPLES;
 
     //// temp debug
-    //ray_data.color = float4(1.0, 0.0, 0.0, 1.0);
+    //probe_ray.color = float4(1.0, 0.0, 0.0, 1.0);
 
-    SetProbeRayData(coord, ray_data);
+    SetProbeRayData(coord, probe_ray);
 }

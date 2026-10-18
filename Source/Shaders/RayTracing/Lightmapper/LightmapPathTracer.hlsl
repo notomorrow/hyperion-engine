@@ -44,7 +44,7 @@ DECLARE_SRV(LightmapPathTracer, WorldsBuffer) StructuredBuffer<WorldShaderData> 
 
 DECLARE_UAV(LightmapPathTracer, HitsBuffer) RWStructuredBuffer<float4> hits;
 
-DECLARE_SRV(LightmapPathTracer, RaysBuffer) StructuredBuffer<float4> ray_data;
+DECLARE_SRV(LightmapPathTracer, RaysBuffer) StructuredBuffer<float4> rays_buffer;
 
 DECLARE_BUFFER(LightmapPathTracer, CBuffer) cbuffer CBuffer
 {

@@ -238,11 +238,11 @@ float3 PushOutOfGeometry(float3 origin, float3 faceNormal, float searchRadius, i
 float4 IntegrateLightmapRay(uint ray_index)
 {
     LightmapRay ray;
-    ray.origin = ray_data[ray_index * 2].xyz;
-    ray.direction = ray_data[ray_index * 2 + 1].xyz;
+    ray.origin = rays_buffer[ray_index * 2].xyz;
+    ray.direction = rays_buffer[ray_index * 2 + 1].xyz;
 
-    const float3 faceNormal = UnpackFaceNormalFromFloat(ray_data[ray_index * 2 + 1].w);
-    const float texelWorldSize = ray_data[ray_index * 2].w;
+    const float3 faceNormal = UnpackFaceNormalFromFloat(rays_buffer[ray_index * 2 + 1].w);
+    const float texelWorldSize = rays_buffer[ray_index * 2].w;
 
     const float tmin = RAY_OFFSET;
     const float tmax = rayTracingConstants.maxDistance;

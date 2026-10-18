@@ -45,7 +45,7 @@ DECLARE_SRV(LightmapPathTracerCompute, WorldsBuffer) StructuredBuffer<WorldShade
 
 DECLARE_UAV(LightmapPathTracerCompute, HitsBuffer) RWStructuredBuffer<float4> hits;
 
-DECLARE_SRV(LightmapPathTracerCompute, RaysBuffer) StructuredBuffer<float4> ray_data;
+DECLARE_SRV(LightmapPathTracerCompute, RaysBuffer) StructuredBuffer<float4> rays_buffer;
 
 DECLARE_SRV(LightmapPathTracerCompute, MaterialsBuffer) StructuredBuffer<Material> materials;
 
