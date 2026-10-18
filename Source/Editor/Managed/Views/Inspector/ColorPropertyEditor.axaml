@@ -1,0 +1,78 @@
+<UserControl
+    x:Class="Hyperion.Editor.Views.Inspector.ColorPropertyEditor"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Hyperion.Editor.Controls;assembly=Hyperion.Editor"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="clr-namespace:Hyperion.Editor.ViewModels;assembly=Hyperion.Editor"
+    x:DataType="vm:ColorViewModel"
+    mc:Ignorable="d">
+    <UserControl.Styles>
+        <Style Selector="Border.color-swatch">
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Border.color-swatch:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.HoverBorder}" />
+        </Style>
+        <Style Selector="Border.color-swatch:disabled">
+            <Setter Property="Cursor" Value="Arrow" />
+        </Style>
+    </UserControl.Styles>
+    <Grid ColumnDefinitions="20,*,*,*,*" ColumnSpacing="4">
+        <Border
+            x:Name="Swatch"
+            Grid.Column="0"
+            Width="16"
+            Height="16"
+            VerticalAlignment="Center"
+            Classes="color-swatch"
+            Background="{Binding SwatchBrush}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="1"
+            CornerRadius="3"
+            IsEnabled="{Binding !IsReadOnly}"
+            ToolTip.Tip="Pick color">
+            <FlyoutBase.AttachedFlyout>
+                <Flyout Placement="BottomEdgeAlignedLeft" ShowMode="Standard">
+                    <StackPanel x:Name="FlyoutContent" Width="220" Spacing="8">
+                        <controls:ColorPicker
+                            x:Name="Picker"
+                            Height="180" />
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <!--  Left half is the color the flyout opened on; clicking it puts that back  -->
+                            <Border
+                                Grid.Column="0"
+                                Width="48"
+                                Height="22"
+                                BorderBrush="{DynamicResource Brush.Border}"
+                                BorderThickness="1"
+                                ClipToBounds="True"
+                                CornerRadius="3">
+                                <Grid ColumnDefinitions="*,*">
+                                    <Border
+                                        x:Name="OriginalSwatch"
+                                        Grid.Column="0"
+                                        Cursor="Hand"
+                                        ToolTip.Tip="Revert to the original color" />
+                                    <Border Grid.Column="1" Background="{Binding SwatchBrush}" />
+                                </Grid>
+                            </Border>
+                            <!--  No inspector DataContext, so the inspector's own text box focus handlers leave it alone  -->
+                            <TextBox
+                                x:Name="HexTextBox"
+                                Grid.Column="1"
+                                DataContext="{x:Null}"
+                                FontFamily="Consolas,Menlo,monospace"
+                                PlaceholderText="RRGGBBAA" />
+                        </Grid>
+                    </StackPanel>
+                </Flyout>
+            </FlyoutBase.AttachedFlyout>
+        </Border>
+        <TextBox Grid.Column="1" HorizontalAlignment="Stretch" Text="{Binding R, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBox Grid.Column="2" HorizontalAlignment="Stretch" Text="{Binding G, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBox Grid.Column="3" HorizontalAlignment="Stretch" Text="{Binding B, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBox Grid.Column="4" HorizontalAlignment="Stretch" Text="{Binding A, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+    </Grid>
+</UserControl>

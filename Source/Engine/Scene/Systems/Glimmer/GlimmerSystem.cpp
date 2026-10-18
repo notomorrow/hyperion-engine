@@ -93,7 +93,7 @@ Color GetGlimmerProbeDebugColor(GlimmerProbeDebugMode mode, const GlimmerProbeDe
 
     if (mode == GlimmerProbeDebugMode::Status)
     {
-        const float spacing = GetGlimmerProbeLevelSpacing(uint32(record.position.w));
+        const float spacing = GlimmerHelpers::GetGlimmerProbeLevelSpacing(uint32(record.position.w));
         const Vec3f position = record.position.GetXYZ();
 
         // off its grid point: moved out of a solid, or off a surface it sat against
@@ -314,7 +314,7 @@ void GlimmerSystem::OnAddedToWorld(World* world)
         GlimmerChannel::Register(world, m_channel);
     }
 
-    SetSceneViewActive(IsGlimmerSceneRequired() && IsWorldGlimmerEnabled(world));
+    SetSceneViewActive(GlimmerHelpers::IsGlimmerSceneRequired() && IsWorldGlimmerEnabled(world));
 }
 
 void GlimmerSystem::OnRemovedFromWorld(World* world)
@@ -337,7 +337,7 @@ void GlimmerSystem::Process(float delta, Span<Handle<Scene>> scenes)
 {
     HYP_SCOPE;
 
-    SetSceneViewActive(IsGlimmerSceneRequired() && IsWorldGlimmerEnabled(GetWorld()));
+    SetSceneViewActive(GlimmerHelpers::IsGlimmerSceneRequired() && IsWorldGlimmerEnabled(GetWorld()));
 
     if (!m_isSceneViewActive || !m_channel)
     {
@@ -561,7 +561,7 @@ void GlimmerSystem::DebugDrawProbes(const Vec3f& viewerPosition)
             continue;
         }
 
-        const float spacing = GetGlimmerProbeLevelSpacing(levelIndex);
+        const float spacing = GlimmerHelpers::GetGlimmerProbeLevelSpacing(levelIndex);
         const float blockSize = spacing * float(GlimmerProbeBlock);
 
         // the first probe of a block is its corner one, so its grid point gives the block

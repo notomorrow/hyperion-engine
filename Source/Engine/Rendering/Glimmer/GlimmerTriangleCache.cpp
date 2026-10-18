@@ -231,6 +231,21 @@ void Reorder(Array<T, GlimmerAllocator>& values, Span<const uint32> order)
     values = std::move(reordered);
 }
 
+void UpdateEntryPriority(float& entryPriority, uint32& entryPriorityFrame, float priority)
+{
+    const uint32 frameCounter = GetFrameCounter();
+
+    if (entryPriorityFrame != frameCounter)
+    {
+        entryPriority = priority;
+        entryPriorityFrame = frameCounter;
+    }
+    else
+    {
+        entryPriority = MathUtil::Min(entryPriority, priority);
+    }
+}
+
 } // namespace
 
 #pragma region GlimmerPoolAllocator
@@ -437,15 +452,16 @@ void GlimmerTriangleCache::CreatePoolBuffers()
     const uint32 triangleCapacity = uint32(PoolBytes / sizeof(GlimmerTriangle));
     const uint32 lightmapUVCapacity = uint32(LightmapUVPoolBytes / sizeof(GlimmerTriangleLightmapUVs));
 
-    m_trianglesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerTriangle), triangleCapacity);
-    m_lightmapUVsBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerTriangleLightmapUVs), lightmapUVCapacity);
+    m_trianglesBuffer = GlimmerHelpers::CreateGlimmerStructuredBuffer(sizeof(GlimmerTriangle), triangleCapacity);
+    m_lightmapUVsBuffer = GlimmerHelpers::CreateGlimmerStructuredBuffer(sizeof(GlimmerTriangleLightmapUVs), lightmapUVCapacity);
 
-    // only bindless devices sample the textures for the bricks; the rest take each material's average
+    // only bindless-supported devices sample the textures for the bricks.
+    // others will use material's average
     const uint32 texcoordCapacity = RI.GetRenderConfig().bindlessTextures
         ? uint32(TexcoordPoolBytes / sizeof(GlimmerTriangleTexcoords))
         : 1u;
 
-    m_texcoordsBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerTriangleTexcoords), texcoordCapacity);
+    m_texcoordsBuffer = GlimmerHelpers::CreateGlimmerStructuredBuffer(sizeof(GlimmerTriangleTexcoords), texcoordCapacity);
 
 #ifdef HYP_RHI_DEBUG_NAMES
     m_trianglesBuffer->SetDebugName(NAME("GlimmerTriangles"));
@@ -462,7 +478,7 @@ void GlimmerTriangleCache::CreatePoolBuffers()
 
     if (nodeCapacity != 0)
     {
-        m_nodesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerBLASNode), nodeCapacity);
+        m_nodesBuffer = GlimmerHelpers::CreateGlimmerStructuredBuffer(sizeof(GlimmerBLASNode), nodeCapacity);
 
 #ifdef HYP_RHI_DEBUG_NAMES
         m_nodesBuffer->SetDebugName(NAME("GlimmerBLASNodes"));
@@ -473,21 +489,6 @@ void GlimmerTriangleCache::CreatePoolBuffers()
 
     HYP_LOG(Rendering, Info, "Glimmer: created triangle pool ({} MB, {} triangles) and BLAS node pool ({} MB, {} nodes)",
         PoolBytes / (1024ull * 1024ull), triangleCapacity, nodePoolBytes / (1024ull * 1024ull), nodeCapacity);
-}
-
-static void UpdateEntryPriority(float& entryPriority, uint32& entryPriorityFrame, float priority)
-{
-    const uint32 frameCounter = GetFrameCounter();
-
-    if (entryPriorityFrame != frameCounter)
-    {
-        entryPriority = priority;
-        entryPriorityFrame = frameCounter;
-    }
-    else
-    {
-        entryPriority = MathUtil::Min(entryPriority, priority);
-    }
 }
 
 GlimmerTriangleRequestResult GlimmerTriangleCache::Request(Mesh* mesh, uint8 lodIndex, float priority, GlimmerTriangleRef& outRef)

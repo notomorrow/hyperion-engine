@@ -28,6 +28,8 @@ class RenderProxyList;
 class TerrainWorldGridLayer;
 
 class EnvProbe;
+class Material;
+
 struct GlimmerChannelState;
 struct GlimmerTerrainPatchShaderData;
 struct EnvProbeShaderData;
@@ -69,8 +71,6 @@ struct GlimmerSkyShaderData
     Vec4f params; // x = sky probe diffuse strength, y = luminance escaping rays are clamped to, z = luminance of the sky's irradiance from above (without the world's sky intensity)
 };
 
-/// @TODO: Namespace this
-
 struct GlimmerTexelRect
 {
     Vec2i min;
@@ -89,6 +89,14 @@ struct GlimmerTexelRect
     static GlimmerTexelRect Intersect(const GlimmerTexelRect& a, const GlimmerTexelRect& b);
     static GlimmerTexelRect Union(const GlimmerTexelRect& a, const GlimmerTexelRect& b);
 };
+
+struct GlimmerLightmapPages
+{
+    Texture* irradianceTextures[GlimmerMaxLightmapPages] = {};
+    Vec4u stencilValues;
+};
+
+namespace GlimmerHelpers {
 
 GlimmerTexelRect GetGlimmerGroundWindow(const Vec2i& origin);
 
@@ -126,12 +134,10 @@ void GetGlimmerLightShaderData(EnvProbe* skyProbe, GlimmerLightShaderData& outLi
 
 float GetGlimmerFoliageExtinction();
 
-struct GlimmerLightmapPages
-{
-    Texture* irradianceTextures[GlimmerMaxLightmapPages] = {};
-    Vec4u stencilValues;
-};
-
 void CollectGlimmerLightmapPages(RenderProxyList& rpl, GlimmerLightmapPages& outPages);
+
+uint64 GetMaterialHash(RenderProxyList& rpl, const Material& material);
+
+} // namespace GlimmerHelpers
 
 } // namespace Hyperion

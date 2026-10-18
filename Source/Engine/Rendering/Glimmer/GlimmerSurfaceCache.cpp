@@ -100,12 +100,29 @@ GlimmerSurfaceCache::~GlimmerSurfaceCache()
 
 void GlimmerSurfaceCache::CreateTextures()
 {
-    m_ground = CreateGlimmerStorageTexture(TextureType::Texture2DArray, TextureFormat::R32F, Vec3u(GlimmerGroundResolution, GlimmerGroundResolution, 1), uint16(GlimmerGroundLevels), NAME("GlimmerGround"));
-    m_groundAlbedo = CreateGlimmerStorageTexture(TextureType::Texture2DArray, TextureFormat::RGBA8, Vec3u(GlimmerGroundResolution, GlimmerGroundResolution, 1), uint16(GlimmerGroundLevels), NAME("GlimmerGroundAlbedo"));
+    m_ground = GlimmerHelpers::CreateGlimmerStorageTexture(
+        TextureType::Texture2DArray,
+        TextureFormat::R32F,
+        Vec3u(GlimmerGroundResolution, GlimmerGroundResolution, 1),
+        uint16(GlimmerGroundLevels),
+        NAME("GlimmerGround"));
 
-    m_terrainPatchesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerTerrainPatchShaderData), GlimmerMaxTerrainPatches);
+    m_groundAlbedo = GlimmerHelpers::CreateGlimmerStorageTexture(
+        TextureType::Texture2DArray,
+        TextureFormat::RGBA8,
+        Vec3u(GlimmerGroundResolution, GlimmerGroundResolution, 1),
+        uint16(GlimmerGroundLevels),
+        NAME("GlimmerGroundAlbedo"));
 
-    m_groundCoverAlbedoBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, GlimmerGroundCoverLayers * sizeof(Vec4f), alignof(Vec4f));
+    m_terrainPatchesBuffer = GlimmerHelpers::CreateGlimmerStructuredBuffer(
+        sizeof(GlimmerTerrainPatchShaderData),
+        GlimmerMaxTerrainPatches);
+
+    m_groundCoverAlbedoBuffer = RI.MakeGpuBuffer(
+        GpuBufferType::RWStructuredBuffer,
+        GlimmerGroundCoverLayers * sizeof(Vec4f),
+        alignof(Vec4f));
+
     Check(m_groundCoverAlbedoBuffer->Create());
 }
 
@@ -286,7 +303,7 @@ void GlimmerSurfaceCache::UpdateGroundAlbedo(Frame* frame, const GlimmerChannelS
         AlbedoLevel& albedoLevel = m_albedoLevels[levelIndex];
 
         const Vec2i windowOrigin = state.groundLevels[levelIndex].windowOrigin;
-        const GlimmerTexelRect window = GetGlimmerGroundWindow(windowOrigin);
+        const GlimmerTexelRect window = GlimmerHelpers::GetGlimmerGroundWindow(windowOrigin);
 
         const bool isJump = !albedoLevel.hasFilled
             || MathUtil::Abs(windowOrigin.x - albedoLevel.filledOrigin.x) >= int32(GlimmerGroundResolution)
@@ -300,7 +317,10 @@ void GlimmerSurfaceCache::UpdateGroundAlbedo(Frame* frame, const GlimmerChannelS
         {
             albedoLevel.unfilledUploads = GlimmerTexelRect::Union(
                 albedoLevel.unfilledUploads,
-                GlimmerTexelRect { uploadedRect.min - Vec2i(1, 1), uploadedRect.max + Vec2i(1, 1) });
+                GlimmerTexelRect {
+                    uploadedRect.min - Vec2i(1, 1),
+                    uploadedRect.max + Vec2i(1, 1)
+                });
         }
 
         albedoLevel.unfilledUploads = GlimmerTexelRect::Intersect(albedoLevel.unfilledUploads, window);
@@ -330,7 +350,12 @@ void GlimmerSurfaceCache::UpdateGroundAlbedo(Frame* frame, const GlimmerChannelS
             {
                 GlimmerTexelRect columns;
                 GlimmerTexelRect rows;
-                GetGlimmerScrolledRects(GetGlimmerGroundWindow(albedoLevel.filledOrigin), window, columns, rows);
+
+                GlimmerHelpers::GetGlimmerScrolledRects(
+                    GlimmerHelpers::GetGlimmerGroundWindow(albedoLevel.filledOrigin),
+                    window,
+                    columns,
+                    rows);
 
                 addRect(columns);
                 addRect(rows);

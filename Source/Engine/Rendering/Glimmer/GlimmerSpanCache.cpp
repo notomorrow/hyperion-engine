@@ -245,7 +245,7 @@ void GlimmerSpanCache::UpdateHeightBounds(Frame* frame, const GlimmerChannelStat
         const Vec4i validRect = groundShaderData.levels[levelIndex].validRect;
         const Vec4i spanWindow = m_shaderData.levels[levelIndex].window;
 
-        const Rect window = GetGlimmerGroundWindow(windowOrigin);
+        const Rect window = GlimmerHelpers::GetGlimmerGroundWindow(windowOrigin);
 
         Rect dirtyTexels = Rect::Union(surfaceCache.GetUploadedRect(levelIndex), m_filledRects[levelIndex]);
 
@@ -255,7 +255,10 @@ void GlimmerSpanCache::UpdateHeightBounds(Frame* frame, const GlimmerChannelStat
         }
         else if (!dirtyTexels.IsEmpty())
         {
-            dirtyTexels = Rect::Intersect(Rect { dirtyTexels.min - Vec2i(1, 1), dirtyTexels.max + Vec2i(1, 1) }, window);
+            dirtyTexels = Rect::Intersect(Rect {
+                dirtyTexels.min - Vec2i(1, 1),
+                dirtyTexels.max + Vec2i(1, 1)
+            }, window);
         }
 
         m_boundsWindowOrigins[levelIndex] = windowOrigin;
@@ -382,13 +385,14 @@ void GlimmerSpanCache::Update(Frame* frame, const GlimmerChannelState& state, co
         m_seenGeneration = sceneInstances.GetGeneration();
     }
 
-    // one level per frame keeps the splat's cost spread out; the finest level is what the near probes see
+    // one level per frame keeps the splat's cost spread out.
+    // the finest level is what the near probes see
     for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)
     {
         const GlimmerGroundLevelState& groundLevel = state.groundLevels[levelIndex];
 
         const Vec2i windowOrigin = groundLevel.windowOrigin;
-        const Rect window = GetGlimmerGroundWindow(windowOrigin);
+        const Rect window = GlimmerHelpers::GetGlimmerGroundWindow(windowOrigin);
 
         const bool isGroundComplete = groundLevel.validMin == windowOrigin
             && groundLevel.validMax == windowOrigin + Vec2i(int32(GlimmerGroundResolution), int32(GlimmerGroundResolution));
@@ -410,7 +414,12 @@ void GlimmerSpanCache::Update(Frame* frame, const GlimmerChannelState& state, co
             // only what scrolled in
             Rect columns;
             Rect rows;
-            GetGlimmerScrolledRects(GetGlimmerGroundWindow(builtOrigin), window, columns, rows);
+
+            GlimmerHelpers::GetGlimmerScrolledRects(
+                GlimmerHelpers::GetGlimmerGroundWindow(builtOrigin),
+                window,
+                columns,
+                rows);
 
             rects.Add(columns);
             rects.Add(rows);

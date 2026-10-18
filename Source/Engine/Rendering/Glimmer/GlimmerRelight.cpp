@@ -47,7 +47,7 @@ const GpuImageViewRef& GlimmerRelight::GetImageView()
 {
     if (!m_texture.IsValid())
     {
-        m_texture = CreateGlimmerStorageTexture(
+        m_texture = GlimmerHelpers::CreateGlimmerStorageTexture(
             TextureType::Texture2DArray,
             TextureFormat::RGBA16F,
             Vec3u(GlimmerGroundResolution, GlimmerGroundResolution, 1),
@@ -68,9 +68,14 @@ const GpuImageRef& GlimmerRelight::GetGpuImage() const
 void GlimmerRelight::AddPending(Level& level, const Rect& rect)
 {
     // out to whole 2x2 blocks, as a block is only lit from its first texel
-    const Rect blocks { Vec2i(rect.min.x & ~1, rect.min.y & ~1), Vec2i((rect.max.x + 1) & ~1, (rect.max.y + 1) & ~1) };
+    const Rect blocks {
+        Vec2i(rect.min.x & ~1, rect.min.y & ~1),
+        Vec2i((rect.max.x + 1) & ~1, (rect.max.y + 1) & ~1)
+    };
 
-    const Rect clipped = Rect::Intersect(blocks, GetGlimmerGroundWindow(level.windowOrigin));
+    const Rect clipped = Rect::Intersect(
+        blocks,
+        GlimmerHelpers::GetGlimmerGroundWindow(level.windowOrigin));
 
     if (clipped.IsEmpty())
     {
@@ -79,8 +84,8 @@ void GlimmerRelight::AddPending(Level& level, const Rect& rect)
 
     if (level.pending.Size() >= MaxPendingRects)
     {
-        level.pending.Clear();
-        level.pending.PushBack(GetGlimmerGroundWindow(level.windowOrigin));
+        level.pending.Resize(1);
+        level.pending[0] = GlimmerHelpers::GetGlimmerGroundWindow(level.windowOrigin);
 
         return;
     }
@@ -98,7 +103,12 @@ void GlimmerRelight::AddEcho(uint32 levelIndex, const Rect& rect)
         {
             if (m_levels[windowLevel].hasWindow)
             {
-                m_echoes.PushBack(Echo { windowLevel, GetGlimmerGroundWindow(m_levels[windowLevel].windowOrigin), m_frameIndex + EchoFrames[std::size(EchoFrames) - 1] });
+                m_echoes.PushBack(Echo {
+                    windowLevel,
+                    GlimmerHelpers::GetGlimmerGroundWindow(
+                        m_levels[windowLevel].windowOrigin),
+                        m_frameIndex + EchoFrames[std::size(EchoFrames) - 1]
+                    });
             }
         }
 
@@ -107,7 +117,11 @@ void GlimmerRelight::AddEcho(uint32 levelIndex, const Rect& rect)
 
     for (uint32 frames : EchoFrames)
     {
-        m_echoes.PushBack(Echo { levelIndex, rect, m_frameIndex + frames });
+        m_echoes.PushBack(Echo {
+            levelIndex,
+            rect,
+            m_frameIndex + frames
+        });
     }
 }
 
@@ -129,7 +143,9 @@ void GlimmerRelight::AddEchoAround(const Vec2f& min, const Vec2f& max)
             Vec2i(int32(MathUtil::Ceil(max.x * invTexelSize)), int32(MathUtil::Ceil(max.y * invTexelSize)))
         };
 
-        const Rect clipped = Rect::Intersect(rect, GetGlimmerGroundWindow(level.windowOrigin));
+        const Rect clipped = Rect::Intersect(
+            rect,
+            GlimmerHelpers::GetGlimmerGroundWindow(level.windowOrigin));
 
         if (!clipped.IsEmpty())
         {
@@ -149,10 +165,9 @@ void GlimmerRelight::UpdateProbeWindows(const GlimmerChannelState& state)
 
     for (uint32 levelIndex = 0; levelIndex < GlimmerProbeLevels; levelIndex++)
     {
-        const float blockSize = GetGlimmerProbeLevelSpacing(levelIndex) * float(GlimmerProbeBlock);
+        const float blockSize = GlimmerHelpers::GetGlimmerProbeLevelSpacing(levelIndex) * float(GlimmerProbeBlock);
 
-        const Vec3i origin = GetGlimmerProbeWindowOrigin(state.viewerPosition, state.lookAhead, levelIndex);
-
+        const Vec3i origin = GlimmerHelpers::GetGlimmerProbeWindowOrigin(state.viewerPosition, state.lookAhead, levelIndex);
         const Vec3i previous = m_probeWindows[levelIndex];
 
         m_probeWindows[levelIndex] = origin;
@@ -180,14 +195,18 @@ void GlimmerRelight::UpdateProbeWindows(const GlimmerChannelState& state)
         {
             const float edge = float(dx > 0 ? previous.x + window : previous.x) * blockSize;
 
-            AddEchoAround(Vec2f(MathUtil::Min(edge, dx > 0 ? windowMax.x : windowMin.x), windowMin.y), Vec2f(MathUtil::Max(edge, dx > 0 ? windowMax.x : windowMin.x), windowMax.y));
+            AddEchoAround(
+                Vec2f(MathUtil::Min(edge, dx > 0 ? windowMax.x : windowMin.x), windowMin.y),
+                Vec2f(MathUtil::Max(edge, dx > 0 ? windowMax.x : windowMin.x), windowMax.y));
         }
 
         if (dz != 0)
         {
             const float edge = float(dz > 0 ? previous.z + window : previous.z) * blockSize;
 
-            AddEchoAround(Vec2f(windowMin.x, MathUtil::Min(edge, dz > 0 ? windowMax.y : windowMin.y)), Vec2f(windowMax.x, MathUtil::Max(edge, dz > 0 ? windowMax.y : windowMin.y)));
+            AddEchoAround(
+                Vec2f(windowMin.x, MathUtil::Min(edge, dz > 0 ? windowMax.y : windowMin.y)),
+                Vec2f(windowMax.x, MathUtil::Max(edge, dz > 0 ? windowMax.y : windowMin.y)));
         }
     }
 
@@ -211,7 +230,6 @@ void GlimmerRelight::Schedule(
         }
 
         m_echoes.Clear();
-
         m_dispatches.Clear();
     }
 
@@ -235,7 +253,7 @@ void GlimmerRelight::Schedule(
         Level& level = m_levels[levelIndex];
 
         const Vec2i windowOrigin = state.groundLevels[levelIndex].windowOrigin;
-        const Rect window = GetGlimmerGroundWindow(windowOrigin);
+        const Rect window = GlimmerHelpers::GetGlimmerGroundWindow(windowOrigin);
 
         const bool isJump = !level.hasWindow
             || MathUtil::Abs(windowOrigin.x - level.windowOrigin.x) >= int32(GlimmerGroundResolution)
@@ -257,7 +275,12 @@ void GlimmerRelight::Schedule(
         {
             Rect columns;
             Rect rows;
-            GetGlimmerScrolledRects(GetGlimmerGroundWindow(level.windowOrigin), window, columns, rows);
+
+            GlimmerHelpers::GetGlimmerScrolledRects(
+                GlimmerHelpers::GetGlimmerGroundWindow(level.windowOrigin),
+                window,
+                columns,
+                rows);
 
             level.windowOrigin = windowOrigin;
 
@@ -271,6 +294,7 @@ void GlimmerRelight::Schedule(
                 if (!scrolled.IsEmpty())
                 {
                     m_dispatches.PushBack(GlimmerRelightDispatch { levelIndex, scrolled });
+
                     budget -= scrolled.Area();
                 }
             }
@@ -325,9 +349,17 @@ void GlimmerRelight::Schedule(
             }
 
             const int32 width = rect.max.x - rect.min.x;
-            const int32 rows = MathUtil::Min((MathUtil::Max(budget / MathUtil::Max(width, 1), 1) + 1) & ~1, rect.max.y - rect.min.y);
+            const int32 rows = MathUtil::Min(
+                (MathUtil::Max(budget / MathUtil::Max(width, 1), 1) + 1) & ~1,
+                rect.max.y - rect.min.y);
 
-            m_dispatches.PushBack(GlimmerRelightDispatch { levelIndex, Rect { rect.min, Vec2i(rect.max.x, rect.min.y + rows) } });
+            m_dispatches.PushBack(GlimmerRelightDispatch {
+                levelIndex,
+                Rect {
+                    rect.min,
+                    Vec2i(rect.max.x, rect.min.y + rows)
+                }
+            });
 
             budget -= width * rows;
             rect.min.y += rows;
@@ -336,7 +368,9 @@ void GlimmerRelight::Schedule(
 
     const int32 rowTexels = int32(GlimmerGroundResolution);
 
-    m_refreshBudget = MathUtil::Min(m_refreshBudget + IdleRefreshTexelsPerFrame, MathUtil::Max(IdleRefreshTexelsPerFrame, rowTexels) * 2);
+    m_refreshBudget = MathUtil::Min(
+        m_refreshBudget + IdleRefreshTexelsPerFrame,
+        MathUtil::Max(IdleRefreshTexelsPerFrame, rowTexels) * 2);
 
     budget = m_refreshBudget >= rowTexels
         ? m_refreshBudget
@@ -355,7 +389,7 @@ void GlimmerRelight::Schedule(
             continue;
         }
 
-        const Rect window = GetGlimmerGroundWindow(level.windowOrigin);
+        const Rect window = GlimmerHelpers::GetGlimmerGroundWindow(level.windowOrigin);
 
         // rows that scrolled out are skipped; the ones that scrolled in were lit as they did
         level.refreshRow = MathUtil::Max(level.refreshRow, window.min.y);
@@ -370,9 +404,17 @@ void GlimmerRelight::Schedule(
 
         level.refreshRow &= ~1;
 
-        const int32 rows = MathUtil::Min((MathUtil::Max(budget / int32(GlimmerGroundResolution), 1) + 1) & ~1, window.max.y - level.refreshRow);
+        const int32 rows = MathUtil::Min(
+            (MathUtil::Max(budget / int32(GlimmerGroundResolution), 1) + 1) & ~1,
+            window.max.y - level.refreshRow);
 
-        m_dispatches.PushBack(GlimmerRelightDispatch { m_refreshLevel, Rect { Vec2i(window.min.x, level.refreshRow), Vec2i(window.max.x, level.refreshRow + rows) } });
+        m_dispatches.PushBack(GlimmerRelightDispatch {
+            m_refreshLevel,
+            Rect {
+                Vec2i(window.min.x, level.refreshRow),
+                Vec2i(window.max.x, level.refreshRow + rows)
+            }
+        });
 
         budget -= rows * int32(GlimmerGroundResolution);
 
@@ -402,7 +444,11 @@ void GlimmerRelight::OnDispatched()
             level.isLit = true;
         }
 
-        m_shaderData.levels[levelIndex] = Vec4i(level.windowOrigin.x, level.windowOrigin.y, level.isLit ? 1 : 0, 0);
+        m_shaderData.levels[levelIndex] = Vec4i(
+            level.windowOrigin.x,
+            level.windowOrigin.y,
+            level.isLit ? 1 : 0,
+            0);
     }
 
     m_dispatches.Clear();

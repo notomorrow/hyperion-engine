@@ -602,6 +602,90 @@ namespace Hyperion.Editor.ViewModels
                 : throw new InvalidOperationException($"Failed to read '{Label}'"));
         }
 
+        // Sim thread only. The values each target had before the current preview started.
+        private List<(PropertyTarget Target, object? OriginalValue)>? _previewOriginals;
+
+        protected void PreviewPropertyChange(Func<BoxedValue, object?> computeNewValue)
+        {
+            if (_isReadOnly)
+            {
+                return;
+            }
+
+            if (_previewOriginals == null)
+            {
+                _previewOriginals = new();
+
+                List<PropertyTarget> targets = [CreateOwnTarget(), .. Peers];
+
+                foreach (PropertyTarget target in targets)
+                {
+                    try
+                    {
+                        target.PreWrite?.Invoke();
+
+                        using BoxedValue current = target.Get();
+                        _previewOriginals.Add((target, current.GetValue()));
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LogLevel.Warning, $"Inspector failed to read '{Label}' before previewing: {ex.Message}");
+                    }
+                }
+            }
+
+            foreach ((PropertyTarget target, _) in _previewOriginals)
+            {
+                try
+                {
+                    target.PreWrite?.Invoke();
+
+                    object? newValueObj;
+
+                    using (BoxedValue current = target.Get())
+                    {
+                        newValueObj = computeNewValue(current);
+                    }
+
+                    using BoxedValue bv = new BoxedValue(newValueObj);
+                    target.Set(bv);
+
+                    target.PostWrite?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"Inspector failed to preview '{Label}': {ex.Message}");
+                }
+            }
+        }
+
+        protected void EndPreview()
+        {
+            if (_previewOriginals == null)
+            {
+                return;
+            }
+
+            foreach ((PropertyTarget target, object? originalValue) in _previewOriginals)
+            {
+                try
+                {
+                    target.PreWrite?.Invoke();
+
+                    using BoxedValue bv = new BoxedValue(originalValue);
+                    target.Set(bv);
+
+                    target.PostWrite?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"Inspector failed to restore '{Label}' after previewing: {ex.Message}");
+                }
+            }
+
+            _previewOriginals = null;
+        }
+
         private void CommitChange(string actionText, Func<BoxedValue?, object?> computeNewValue)
         {
             if (_isReadOnly)

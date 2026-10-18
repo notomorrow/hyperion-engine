@@ -279,6 +279,7 @@ private:
         
         Array<GlimmerSpanInstanceShaderData, GlimmerAllocator> spanInstances;
         Array<BoundingBox, GlimmerAllocator> spanInstanceBounds;
+        Array<uint64, GlimmerAllocator> spanMaterialHashes; // what GI reads of each span instance's material
         
         Array<GlimmerTracedInstanceShaderData, GlimmerAllocator> tracedInstances;
         Array<BoundingBox, GlimmerAllocator> tracedBounds;

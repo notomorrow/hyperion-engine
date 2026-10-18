@@ -370,9 +370,8 @@ void GlimmerProbeVolume::UpdateWindows(const Vec3f& viewerPosition, const Vec3f&
 {
     for (uint32 levelIndex = 0; levelIndex < GlimmerProbeLevels; levelIndex++)
     {
-        const float spacing = GetGlimmerProbeLevelSpacing(levelIndex);
-
-        const Vec3i origin = GetGlimmerProbeWindowOrigin(viewerPosition, lookAhead, levelIndex);
+        const float spacing = GlimmerHelpers::GetGlimmerProbeLevelSpacing(levelIndex);
+        const Vec3i origin = GlimmerHelpers::GetGlimmerProbeWindowOrigin(viewerPosition, lookAhead, levelIndex);
 
         GlimmerProbeLevelShaderData& level = m_shaderData.levels[levelIndex];
         level.windowOrigin = Vec4i(origin.x, origin.y, origin.z, 1);
@@ -438,7 +437,9 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
 
     if (isNewTracer)
     {
-        const GlimmerTriangleCacheStats triangleStats = inputs.triangleCache ? inputs.triangleCache->GetStats() : GlimmerTriangleCacheStats {};
+        const GlimmerTriangleCacheStats triangleStats = inputs.triangleCache
+            ? inputs.triangleCache->GetStats()
+            : GlimmerTriangleCacheStats {};
 
         HYP_LOG(Rendering, Info, "Glimmer: probes trace {} from {} ms; BLAS nodes {} of {}, {} traced instances",
             nearTracer == 2u ? "the BVH" : (nearTracer == 1u ? "the bricks" : "nothing near"),
@@ -452,16 +453,26 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
 
     // counted per frame, so a low frame rate gets more a frame to keep the same pace
     const float budgetScale = MathUtil::Clamp(inputs.budgetScale, 1.0f, float(MaxBudgetScale));
-    const uint32 probesPerFrame = MathUtil::Clamp(uint32(float(uint32(MathUtil::Max(g_cvGlimmerProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays) * budgetScale), 1u, m_maxProbesPerFrame);
+
+    const uint32 probesPerFrame = MathUtil::Clamp(
+        uint32(float(uint32(MathUtil::Max(g_cvGlimmerProbesRaysPerFrame.Get(), 0)) / GlimmerProbeRays) * budgetScale),
+        1u,
+        m_maxProbesPerFrame);
 
     const uint32 sleepMaxInterval = g_cvGlimmerProbesSleep.Get() ? SleepMaxInterval : 0u;
 
-    m_shaderData.info = Vec4u(GlimmerProbeLevels, GlimmerProbeRays, m_frameIndex, m_shaderData.info.w);
+    m_shaderData.info = Vec4u(
+        GlimmerProbeLevels,
+        GlimmerProbeRays,
+        m_frameIndex,
+        m_shaderData.info.w);
+
     m_shaderData.params = Vec4f(
         float(double(Time::Now().ToMilliseconds() - m_startTime.ToMilliseconds()) * 0.001),
         MathUtil::Clamp(g_cvGlimmerVisibility.Get(), 0.0f, 1.0f),
         GlimmerSkyMaxLuminance,
         GlimmerMaxRayDistance);
+
     m_shaderData.nearField = Vec4f(
         float(MathUtil::Clamp(g_cvGlimmerProbesNearFieldCascades.Get(), 0, int(GlimmerProbeLevels))),
         NearFieldReachSpacings,
@@ -471,25 +482,42 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
     const GlimmerGroundShaderData& groundShaderData = inputs.surfaceCache->GetGroundShaderData();
     const GpuImageViewRef& groundImageView = inputs.surfaceCache->GetGroundImageView();
 
-    const GpuBufferRef* const probeStateBuffers[] = { &m_blockTableBuffer, &m_cellsBuffer, &m_slotsBuffer, &m_slotTimesBuffer, &m_statesBuffer, &m_shBuffer, &m_lightBuffer, &m_visibilityBuffer, &m_trendBuffer, &m_countersBuffer };
+    const GpuBufferRef* const probeStateBuffers[] = {
+        &m_blockTableBuffer,
+        &m_cellsBuffer,
+        &m_slotsBuffer,
+        &m_slotTimesBuffer,
+        &m_statesBuffer,
+        &m_shBuffer,
+        &m_lightBuffer,
+        &m_visibilityBuffer,
+        &m_trendBuffer,
+        &m_countersBuffer
+    };
 
     { // find the blocks around solids, allocate them, then list the probes due for an update
         GlimmerProbeAllocConstants constants {};
         constants.volume = m_shaderData;
         constants.ground = groundShaderData;
         constants.occupancy = *inputs.occupancy;
+
         constants.budget = Vec4u(
             probesPerFrame,
             BlockReleaseFrames,
             InsideRetryInterval,
             uint32(MathUtil::Clamp(g_cvGlimmerProbesPoolBlocks.Get(), 1, int(m_poolBlocks))));
+
         constants.params = Vec4f(
             BlockMarginSpacings,
             MinHeightAboveGround,
             float(ClassifyPeriod),
             0.0f);
+
         // blocks are ranked by distance from where the viewer is headed, so what it flies into gets slots first
-        const Vec3f priorityPoint = GetGlimmerWindowCenter(inputs.viewerPosition, inputs.lookAhead, Vec3f(GetGlimmerProbeLevelSpacing(0) * float(GlimmerProbeBlock * GlimmerProbeWindow)));
+        const Vec3f priorityPoint = GlimmerHelpers::GetGlimmerWindowCenter(
+            inputs.viewerPosition,
+            inputs.lookAhead,
+            Vec3f(GlimmerHelpers::GetGlimmerProbeLevelSpacing(0) * float(GlimmerProbeBlock * GlimmerProbeWindow)));
 
         constants.viewer = Vec4f(priorityPoint.x, priorityPoint.y, priorityPoint.z, 0.0f);
 
@@ -636,7 +664,7 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
 
     GlimmerSkyShaderData skyData;
     EnvProbeShaderData skyProbeData;
-    GetGlimmerSkyShaderData(inputs.skyProbe, skyData, skyProbeData);
+    GlimmerHelpers::GetGlimmerSkyShaderData(inputs.skyProbe, skyData, skyProbeData);
 
     // the far field is sampled once it has been traced; until then its constants stay zeroed and the trace treats it as covering nothing
     const bool hasSHVolume = inputs.shVolume && inputs.shVolume->IsReady();
@@ -654,7 +682,7 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
         constants.ground = groundShaderData;
         constants.spans = inputs.spanCache->GetShaderData();
         constants.dispatch = Vec4u(probesPerFrame, 0, 0, 0);
-        constants.params = Vec4f(GetGlimmerFoliageExtinction(), 0.0f, 0.0f, 0.0f);
+        constants.params = Vec4f(GlimmerHelpers::GetGlimmerFoliageExtinction(), 0.0f, 0.0f, 0.0f);
         constants.sky = skyData;
 
         if (hasSHVolume)

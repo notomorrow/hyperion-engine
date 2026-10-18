@@ -40,7 +40,7 @@ void GlimmerGroundClipmap::MoveWindow(uint32 levelIndex, const Vec2i& desiredOri
         return;
     }
 
-    const Rect newWindow = GetGlimmerGroundWindow(desiredOrigin);
+    const Rect newWindow = GlimmerHelpers::GetGlimmerGroundWindow(desiredOrigin);
 
     const bool isJump = !level.hasWindow
         || MathUtil::Abs(desiredOrigin.x - level.windowOrigin.x) >= int32(GlimmerGroundResolution)
@@ -54,7 +54,7 @@ void GlimmerGroundClipmap::MoveWindow(uint32 levelIndex, const Vec2i& desiredOri
     }
     else
     {
-        const Rect oldWindow = GetGlimmerGroundWindow(level.windowOrigin);
+        const Rect oldWindow = GlimmerHelpers::GetGlimmerGroundWindow(level.windowOrigin);
 
         level.valid = Rect::Intersect(level.valid, newWindow);
 
@@ -65,7 +65,8 @@ void GlimmerGroundClipmap::MoveWindow(uint32 levelIndex, const Vec2i& desiredOri
 
         Rect columns;
         Rect rows;
-        GetGlimmerScrolledRects(oldWindow, newWindow, columns, rows);
+
+        GlimmerHelpers::GetGlimmerScrolledRects(oldWindow, newWindow, columns, rows);
 
         if (!columns.IsEmpty())
         {
@@ -92,7 +93,7 @@ void GlimmerGroundClipmap::AddDirtyRect(uint32 levelIndex, const Vec4f& worldRec
     }
 
     const float invTexelSize = 1.0f / GetGlimmerGroundTexelSize(levelIndex);
-    const Rect window = GetGlimmerGroundWindow(level.windowOrigin);
+    const Rect window = GlimmerHelpers::GetGlimmerGroundWindow(level.windowOrigin);
 
     const Rect rect = Rect::Intersect(
         Rect {
@@ -263,7 +264,7 @@ void GlimmerGroundClipmap::Update(
 
         if (level.pending.Empty())
         {
-            level.valid = GetGlimmerGroundWindow(level.windowOrigin);
+            level.valid = GlimmerHelpers::GetGlimmerGroundWindow(level.windowOrigin);
         }
     }
 }
@@ -274,7 +275,7 @@ void GlimmerGroundClipmap::FillState(GlimmerChannelState& outState) const
 
     if (m_terrain)
     {
-        FillGlimmerGroundCover(m_terrain, outState);
+        GlimmerHelpers::FillGlimmerGroundCover(m_terrain, outState);
     }
 
     for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)

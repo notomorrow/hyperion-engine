@@ -16,6 +16,7 @@ namespace Hyperion.Editor.ViewModels
         private string _a = string.Empty;
 
         private IBrush _swatchBrush = Brushes.Transparent;
+        private Avalonia.Media.Color _pickerColor = Colors.White;
 
         public ColorViewModel(ObjectBase target, Property property, bool isReadOnly)
             : base(target, property, isReadOnly)
@@ -94,6 +95,64 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _swatchBrush, value);
         }
 
+        /// <summary>The color the picker opens on; the first selected object's when they differ.</summary>
+        public Avalonia.Media.Color PickerColor
+        {
+            get => _pickerColor;
+            private set => SetProperty(ref _pickerColor, value);
+        }
+
+        /// <summary>Shows a color from the picker on the targets while it is being dragged, without an undo entry.</summary>
+        public void PreviewPickerColor(Avalonia.Media.Color color)
+        {
+            if (_isReadOnly || !IsTargetValid)
+            {
+                return;
+            }
+
+            Color captured = FromAvaloniaColor(color);
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                try
+                {
+                    PreviewPropertyChange(_ => captured);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"Inspector failed to preview color property '{Label}': {ex.Message}");
+                }
+            });
+
+            SwatchBrush = new SolidColorBrush(color);
+        }
+
+        /// <summary>Writes a color from the picker to every target as a single undoable action.</summary>
+        public void CommitPickerColor(Avalonia.Media.Color color)
+        {
+            if (_isReadOnly || !IsTargetValid)
+            {
+                return;
+            }
+
+            Color captured = FromAvaloniaColor(color);
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                try
+                {
+                    EndPreview();
+                    CommitPropertyChange($"Set {Label}", _ => captured);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Error, $"Inspector failed to write color property '{Label}': {ex.Message}");
+
+                    Dispatcher.UIThread.Post(RefreshValue);
+                }
+            });
+        }
+
         public override void RefreshValue()
         {
             if (!BeginRefresh())
@@ -160,6 +219,7 @@ namespace Hyperion.Editor.ViewModels
 
                             // Avalonia UI objects (Brush/Color) must be created on the UI thread.
                             SwatchBrush = hasMixedValues ? Brushes.Transparent : ToBrush(color);
+                            PickerColor = ToAvaloniaColor(color);
                         });
                     }
                     finally
@@ -210,12 +270,22 @@ namespace Hyperion.Editor.ViewModels
 
         private static IBrush ToBrush(Color color)
         {
-            byte a = (byte)Math.Clamp(color.Alpha * 255.0f, 0.0f, 255.0f);
-            byte r = (byte)Math.Clamp(color.Red * 255.0f, 0.0f, 255.0f);
-            byte g = (byte)Math.Clamp(color.Green * 255.0f, 0.0f, 255.0f);
-            byte b = (byte)Math.Clamp(color.Blue * 255.0f, 0.0f, 255.0f);
+            return new SolidColorBrush(ToAvaloniaColor(color));
+        }
 
-            return new SolidColorBrush(new Avalonia.Media.Color(a, r, g, b));
+        private static Avalonia.Media.Color ToAvaloniaColor(Color color)
+        {
+            byte a = (byte)Math.Clamp(MathF.Round(color.Alpha * 255.0f), 0.0f, 255.0f);
+            byte r = (byte)Math.Clamp(MathF.Round(color.Red * 255.0f), 0.0f, 255.0f);
+            byte g = (byte)Math.Clamp(MathF.Round(color.Green * 255.0f), 0.0f, 255.0f);
+            byte b = (byte)Math.Clamp(MathF.Round(color.Blue * 255.0f), 0.0f, 255.0f);
+
+            return new Avalonia.Media.Color(a, r, g, b);
+        }
+
+        private static Color FromAvaloniaColor(Avalonia.Media.Color color)
+        {
+            return new Color((uint)color.A << 24 | (uint)color.B << 16 | (uint)color.G << 8 | color.R);
         }
 
         private static string FormatComponent(float value)

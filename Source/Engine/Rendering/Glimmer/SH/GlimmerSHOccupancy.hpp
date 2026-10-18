@@ -98,8 +98,21 @@ private:
         }
     };
 
-    void SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const Box& box, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache);
-    void ScrollWindow(Frame* frame, uint32 cascadeIndex, const Vec3i& origin, const GlimmerSceneInstances& sceneInstances, const GlimmerTriangleCache& triangleCache);
+    void SplatBox(
+        Frame* frame,
+        uint32 cascadeIndex,
+        const Vec3i& origin,
+        const Box& box,
+        const GlimmerSceneInstances& sceneInstances,
+        const GlimmerTriangleCache& triangleCache);
+
+    void ScrollWindow(
+        Frame* frame,
+        uint32 cascadeIndex,
+        const Vec3i& origin,
+        const GlimmerSceneInstances& sceneInstances,
+        const GlimmerTriangleCache& triangleCache);
+    
     void SetBuilt(uint32 cascadeIndex, const Vec3i& origin);
 
     Handle<Texture> m_texture;
