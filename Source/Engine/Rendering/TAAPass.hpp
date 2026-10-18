@@ -25,7 +25,8 @@ class TAAPass
 public:
     HYP_DEF_POOL_NEW_DELETE(g_renderPool);
 
-    TAAPass(const Vec2u& extent, GBuffer* gbuffer);
+    TAAPass(const Vec2u& extent, const Vec2u& outputExtent, GBuffer* gbuffer);
+
     TAAPass(const TAAPass& other) = delete;
     TAAPass& operator=(const TAAPass& other) = delete;
     ~TAAPass();
@@ -42,6 +43,7 @@ private:
     void CreateTextures();
 
     Vec2u m_extent;
+    Vec2u m_outputExtent;
 
     GBuffer* m_gbuffer;
 

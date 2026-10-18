@@ -24,6 +24,9 @@ struct PresentTarget
     uint32 windowId = 0;
     Swapchain* swapchain = nullptr;
     Viewport viewport;
+    
+    // full swapchain size
+    Vec2u outputExtent;
 };
 
 /*! \brief Describes the setup for rendering a frame.  */

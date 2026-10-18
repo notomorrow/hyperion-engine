@@ -77,6 +77,8 @@ public:
 
     int priority = 0;
 
+    Vec2u outputExtent;
+
     Handle<Texture> mipChain;
     
     /// One framebuffer per mip level for downsampling
@@ -192,7 +194,7 @@ private:
 
     void CreateViewTopLevelAccelerationStructures(View* view, RayTracingPassData& passData);
 
-    void ResizeView(Viewport viewport, View* view, DeferredPassData& passData);
+    void ResizeView(Viewport viewport, Vec2u outputExtent, View* view, DeferredPassData& passData);
 
     void ExecuteDrawCalls(Frame* frame, const RenderSetup& rs, RenderCollector& renderCollector, uint32 bucketMask);
     void GenerateMipChain(Frame* frame, const RenderSetup& rs, RenderCollector& renderCollector, GpuImage* srcImage);

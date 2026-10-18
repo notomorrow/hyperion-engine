@@ -425,6 +425,40 @@ static Viewport GetViewportForView(View* view, const RenderSetup& rs)
     return viewport;
 }
 
+static Vec2u GetOutputExtentForView(View* view, const RenderSetup& rs, Vec2u renderExtent)
+{
+    if (view->GetFlags() & ViewFlags::THUMBNAIL_VIEW)
+    {
+        return renderExtent;
+    }
+
+    const PresentTarget* presentTarget = nullptr;
+
+    if (const uint32 windowId = view->GetOutputWindowId(); windowId != 0)
+    {
+        for (const PresentTarget& target : rs.presentTargets)
+        {
+            if (target.windowId == windowId)
+            {
+                presentTarget = &target;
+                break;
+            }
+        }
+    }
+
+    if (presentTarget == nullptr && rs.presentTargets.Size() != 0 && rs.presentTargets[0].viewport.extent == rs.viewport.extent)
+    {
+        presentTarget = &rs.presentTargets[0];
+    }
+
+    if (presentTarget == nullptr || presentTarget->outputExtent.Volume() == 0)
+    {
+        return renderExtent;
+    }
+
+    return presentTarget->outputExtent;
+}
+
 static FramebufferRef CreateLightingFramebuffer(GBuffer* gbuffer)
 {
     FramebufferDesc framebufferDesc {};
@@ -1163,7 +1197,9 @@ PassData* DeferredPass::CreateViewPassData(View* view, PassDataExt&)
         passData.editorGridPass->Create();
 #endif // HYP_EDITOR
 
-        passData.taaPass = MakeUnique<TAAPass>(gbuffer->GetExtent(), gbuffer);
+        passData.outputExtent = gbuffer->GetExtent();
+
+        passData.taaPass = MakeUnique<TAAPass>(gbuffer->GetExtent(), passData.outputExtent, gbuffer);
         passData.taaPass->Create();
 
         CreateViewRayTracingPasses(view, passData);
@@ -1253,7 +1289,7 @@ void DeferredPass::CreateViewTopLevelAccelerationStructures(View* view, RayTraci
     }
 }
 
-void DeferredPass::ResizeView(Viewport viewport, View* view, DeferredPassData& passData)
+void DeferredPass::ResizeView(Viewport viewport, Vec2u outputExtent, View* view, DeferredPassData& passData)
 {
     AssertOnThread(g_renderThread);
 
@@ -1373,7 +1409,9 @@ void DeferredPass::ResizeView(Viewport viewport, View* view, DeferredPassData& p
     passData.reflectionsOnlyPass->SetBlendFunction(BlendFunction::None());
     passData.reflectionsOnlyPass->Create();
 
-    passData.tonemapPass = MakeUnique<TonemapPass>(newSize, gbuffer);
+    passData.outputExtent = outputExtent;
+
+    passData.tonemapPass = MakeUnique<TonemapPass>(outputExtent, gbuffer);
     passData.tonemapPass->Create();
 
     passData.lightmapPass = MakeUnique<LightmapPass>();
@@ -1390,7 +1428,7 @@ void DeferredPass::ResizeView(Viewport viewport, View* view, DeferredPassData& p
     passData.editorGridPass->Create();
 #endif
 
-    passData.taaPass = MakeUnique<TAAPass>(newSize, gbuffer);
+    passData.taaPass = MakeUnique<TAAPass>(newSize, outputExtent, gbuffer);
     passData.taaPass->Create();
 
     CreateViewRayTracingPasses(view, passData);
@@ -1458,21 +1496,19 @@ void DeferredPass::RenderFrame(Frame* frame, const RenderSetup& rs)
             GBuffer* gbuffer = view->GetOutputTarget().GetGBuffer();
 
             const Viewport viewViewport = GetViewportForView(view, rs);
+            const Vec2u viewOutputExtent = GetOutputExtentForView(view, rs, viewViewport.extent);
 
-            if (!gbuffer || gbuffer->GetExtent() != viewViewport.extent)
+            PassData* pd = FetchViewPassData(view);
+            Assert(pd != nullptr);
+
+            DeferredPassData* pdCasted = DynamicCast<DeferredPassData>(pd);
+            Assert(pdCasted != nullptr);
+
+            if (!gbuffer || gbuffer->GetExtent() != viewViewport.extent || pdCasted->outputExtent != viewOutputExtent)
             {
-                PassData* pd = FetchViewPassData(view);
-                Assert(pd != nullptr);
-
-                DeferredPassData* pdCasted = DynamicCast<DeferredPassData>(pd);
-                Assert(pdCasted != nullptr);
-
                 pdCasted->priority = view->GetPriority();
 
-                if (gbuffer->GetExtent() != viewViewport.extent)
-                {
-                    ResizeView(viewViewport, view, *pdCasted);
-                }
+                ResizeView(viewViewport, viewOutputExtent, view, *pdCasted);
             }
 
             { // Clouds - before lighting, fog and the sky probe sample the view's weather and shadow maps
