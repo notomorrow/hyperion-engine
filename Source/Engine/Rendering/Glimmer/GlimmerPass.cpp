@@ -287,7 +287,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     View* view = renderSetup.view;
     AssertDebug(view != nullptr && (view->GetFlags() & ViewFlags::GLIMMER_SCENE_VIEW));
 
-    if (!IsGlimmerSceneRequired() || !(GetWorldBufferData()->environmentFlags & uint32(WorldEnvironmentFlags::Glimmer)))
+    if (!GlimmerHelpers::IsGlimmerSceneRequired() || !(GetWorldBufferData()->environmentFlags & uint32(WorldEnvironmentFlags::Glimmer)))
     {
         return;
     }
@@ -473,7 +473,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     if (channel)
     {
         Array<GlimmerTerrainPatchShaderData, GlimmerTempAllocator> terrainPatches;
-        CollectGlimmerTerrainPatches(rpl, terrainPatches);
+        GlimmerHelpers::CollectGlimmerTerrainPatches(rpl, terrainPatches);
 
         for (View* otherView : renderSetup.world->GetViews())
         {
@@ -485,7 +485,7 @@ void GlimmerPass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
             RenderProxyList& cameraRpl = GetConsumerProxyList(otherView);
             cameraRpl.BeginRead();
 
-            CollectGlimmerTerrainPatches(cameraRpl, terrainPatches);
+            GlimmerHelpers::CollectGlimmerTerrainPatches(cameraRpl, terrainPatches);
 
             cameraRpl.EndRead();
         }

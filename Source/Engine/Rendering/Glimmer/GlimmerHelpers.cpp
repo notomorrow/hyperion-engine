@@ -39,6 +39,8 @@ namespace Hyperion {
 
 extern CVar<bool> g_cvLightmapVolumes;
 
+#pragma region GlimmerTexelRect
+
 GlimmerTexelRect GlimmerTexelRect::Intersect(const GlimmerTexelRect& a, const GlimmerTexelRect& b)
 {
     GlimmerTexelRect result;
@@ -71,6 +73,10 @@ GlimmerTexelRect GlimmerTexelRect::Union(const GlimmerTexelRect& a, const Glimme
 
     return result;
 }
+
+#pragma endregion GlimmerTexelRect
+
+namespace GlimmerHelpers {
 
 GlimmerTexelRect GetGlimmerGroundWindow(const Vec2i& origin)
 {
@@ -140,8 +146,8 @@ Vec3f GetGlimmerWindowCenter(const Vec3f& viewerPosition, const Vec3f& lookAhead
     const float horizontalLength = horizontal.Length();
 
     Vec2f clampedHorizontal = horizontal;
-    
-    if(horizontalLength > maxHorizontal)
+
+    if (horizontalLength > maxHorizontal)
     {
         clampedHorizontal = horizontal * (maxHorizontal / horizontalLength);
     }
@@ -276,9 +282,9 @@ void CollectGlimmerTerrainPatches(
         patch.data = Vec4u(materialIndex, 0, 0, 0);
 
         GlimmerTerrainPatchShaderData* existing = outPatches.FindIf([&patch](const GlimmerTerrainPatchShaderData& other)
-            {
-                return other.data.x == patch.data.x && other.worldToObject0 == patch.worldToObject0 && other.worldToObject2 == patch.worldToObject2;
-            });
+                                                                    {
+                                                                        return other.data.x == patch.data.x && other.worldToObject0 == patch.worldToObject0 && other.worldToObject2 == patch.worldToObject2;
+                                                                    });
 
         if (existing != outPatches.End())
         {
@@ -462,5 +468,33 @@ void FillGlimmerGroundCover(TerrainWorldGridLayer* terrain, GlimmerChannelState&
         }
     }
 }
+
+uint64 GetMaterialHash(RenderProxyList& rpl, const Material& material)
+{
+    const RenderProxyMaterial* materialProxy = rpl.GetMaterials().GetProxy(material.Id());
+
+    if (!materialProxy)
+    {
+        return 0;
+    }
+
+    const MaterialShaderData& data = materialProxy->bufferData;
+
+    uint64 hash = FNV1::DoHashWords(&data.albedo, sizeof(data.albedo), 0);
+    hash = FNV1::DoHashWords(&data.packedParams, sizeof(data.packedParams), hash);
+    hash = FNV1::DoHashWords(&data.textureUsage, sizeof(data.textureUsage), hash);
+    hash = FNV1::DoHashWords(&data.uvScale, sizeof(data.uvScale), hash);
+
+    for (const Texture* texture : materialProxy->boundTextures)
+    {
+        const uint64 textureId = texture ? uint64(texture->Id().Value()) : 0;
+
+        hash = FNV1::DoHashWords(&textureId, sizeof(textureId), hash);
+    }
+
+    return hash;
+}
+
+} // namespace GlimmerHelpers
 
 } // namespace Hyperion

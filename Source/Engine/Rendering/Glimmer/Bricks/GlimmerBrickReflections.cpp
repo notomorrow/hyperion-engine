@@ -165,7 +165,13 @@ void GlimmerBrickReflections::CreateTextures(const Vec2u& extent)
 
     const auto createTexture = [](const Vec2u& textureExtent, Name name)
     {
-        return CreateGlimmerStorageTexture(TextureType::Texture2D, TextureFormat::RGBA16F, Vec3u(textureExtent, 1), 1, name, TextureWrapMode::ClampToEdge);
+        return GlimmerHelpers::CreateGlimmerStorageTexture(
+            TextureType::Texture2D,
+            TextureFormat::RGBA16F,
+            Vec3u(textureExtent, 1),
+            1,
+            name,
+            TextureWrapMode::ClampToEdge);
     };
 
     m_rawColorTexture = createTexture(halfExtent, NAME("GlimmerBrickReflectionsRawColor"));
@@ -403,11 +409,12 @@ void GlimmerBrickReflections::Render(Frame* frame, View* view, GBuffer* gbuffer,
         GlimmerBrickReflectionsHeightfieldConstants heightfieldConstants {};
         heightfieldConstants.bricks = constants.bricks;
         heightfieldConstants.dimensions = constants.dimensions;
-        heightfieldConstants.params = Vec4f(GetGlimmerFoliageExtinction(), 0.0f, 0.0f, 0.0f);
+        heightfieldConstants.params = Vec4f(GlimmerHelpers::GetGlimmerFoliageExtinction(), 0.0f, 0.0f, 0.0f);
         heightfieldConstants.ground = scene->surfaceCache->GetGroundShaderData();
         heightfieldConstants.spans = scene->spanCache->GetShaderData();
         heightfieldConstants.relight = relight->GetShaderData();
-        GetGlimmerLightShaderData(skyProbe, heightfieldConstants.light);
+
+        GlimmerHelpers::GetGlimmerLightShaderData(skyProbe, heightfieldConstants.light);
 
         GpuBuffer* heightfieldCbuffer = nullptr;
         size_t heightfieldCbufferOffset = 0;

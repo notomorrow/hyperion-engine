@@ -90,7 +90,7 @@ GlimmerSHOccupancy::GlimmerSHOccupancy()
 {
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
     {
-        const float spacing = GetGlimmerSHOccupancySpacing(cascadeIndex);
+        const float spacing = GlimmerHelpers::GetGlimmerSHOccupancySpacing(cascadeIndex);
 
         m_shaderData.cascades[cascadeIndex].params = Vec4f(spacing, 1.0f / spacing, 0.0f, 0.0f);
         m_builtGenerations[cascadeIndex] = ~0u;
@@ -108,7 +108,7 @@ GlimmerSHOccupancy::~GlimmerSHOccupancy()
 
 void GlimmerSHOccupancy::CreateResources()
 {
-    m_texture = CreateGlimmerStorageTexture(
+    m_texture = GlimmerHelpers::CreateGlimmerStorageTexture(
         TextureType::Texture3D,
         TextureFormat::RGBA8,
         Vec3u(GlimmerSHOccupancyGridXZ, GlimmerSHOccupancyGridY * GlimmerSHCascades, GlimmerSHOccupancyGridXZ),
@@ -138,7 +138,7 @@ void GlimmerSHOccupancy::SplatBox(Frame* frame, uint32 cascadeIndex, const Vec3i
 
     CommandRecorder& cr = frame->cr;
 
-    const float spacing = GetGlimmerSHOccupancySpacing(cascadeIndex);
+    const float spacing = GlimmerHelpers::GetGlimmerSHOccupancySpacing(cascadeIndex);
 
     const auto dispatchPass = [&](const StaticShaderPropertyId& modeProperty, uint32 numThreads)
     {
@@ -336,7 +336,8 @@ void GlimmerSHOccupancy::Update(
             continue;
         }
 
-        const float invSpacing = 1.0f / GetGlimmerSHOccupancySpacing(cascadeIndex);
+        const float invSpacing = 1.0f / GlimmerHelpers::GetGlimmerSHOccupancySpacing(cascadeIndex);
+
         const Vec3i windowMin = m_builtOrigins[cascadeIndex];
         const Vec3i windowMax = windowMin + Vec3i(int32(GlimmerSHOccupancyGridXZ), int32(GlimmerSHOccupancyGridY), int32(GlimmerSHOccupancyGridXZ));
 
@@ -344,7 +345,7 @@ void GlimmerSHOccupancy::Update(
 
         for (const GlimmerSceneChange& change : changes)
         {
-            // another LOD of the same instance is within its LOD error of what was splatted: not worth a splat
+            // another LOD of the same instance is within its LOD error of what was splatted, not worth a splat
             if (change.isLodOnly)
             {
                 continue;
@@ -403,10 +404,13 @@ void GlimmerSHOccupancy::Update(
 
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
     {
-        const float spacing = GetGlimmerSHOccupancySpacing(cascadeIndex);
+        const float spacing = GlimmerHelpers::GetGlimmerSHOccupancySpacing(cascadeIndex);
 
         // must lean exactly as the SH volume's windows do, which line up with these
-        const Vec3f center = GetGlimmerWindowCenter(viewerPosition, lookAhead, Vec3f(float(GlimmerSHOccupancyGridXZ), float(GlimmerSHOccupancyGridY), float(GlimmerSHOccupancyGridXZ)) * spacing);
+        const Vec3f center = GlimmerHelpers::GetGlimmerWindowCenter(
+            viewerPosition,
+            lookAhead,
+            Vec3f(float(GlimmerSHOccupancyGridXZ), float(GlimmerSHOccupancyGridY), float(GlimmerSHOccupancyGridXZ)) * spacing);
 
         const Vec3i origin = Vec3i(
             MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.x / spacing)) - int32(GlimmerSHOccupancyGridXZ / 2), WindowSnapVoxels),

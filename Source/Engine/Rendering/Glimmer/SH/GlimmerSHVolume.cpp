@@ -91,8 +91,8 @@ struct GlimmerSHUpdateConstants
 GlimmerSHVolume::Box GlimmerSHVolume::Box::Intersect(const Box& a, const Box& b)
 {
     Box result;
-    result.min = Vec3i(MathUtil::Max(a.min.x, b.min.x), MathUtil::Max(a.min.y, b.min.y), MathUtil::Max(a.min.z, b.min.z));
-    result.max = Vec3i(MathUtil::Min(a.max.x, b.max.x), MathUtil::Min(a.max.y, b.max.y), MathUtil::Min(a.max.z, b.max.z));
+    result.min = MathUtil::Max(a.min, b.min);
+    result.max = MathUtil::Min(a.max, b.max);
 
     if (result.IsEmpty())
     {
@@ -115,8 +115,8 @@ GlimmerSHVolume::Box GlimmerSHVolume::Box::Union(const Box& a, const Box& b)
     }
 
     Box result;
-    result.min = Vec3i(MathUtil::Min(a.min.x, b.min.x), MathUtil::Min(a.min.y, b.min.y), MathUtil::Min(a.min.z, b.min.z));
-    result.max = Vec3i(MathUtil::Max(a.max.x, b.max.x), MathUtil::Max(a.max.y, b.max.y), MathUtil::Max(a.max.z, b.max.z));
+    result.min = MathUtil::Min(a.min, b.min);
+    result.max = MathUtil::Max(a.max, b.max);
 
     return result;
 }
@@ -136,7 +136,7 @@ GlimmerSHVolume::GlimmerSHVolume()
 {
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
     {
-        const float spacing = GetGlimmerSHCascadeSpacing(cascadeIndex);
+        const float spacing = GlimmerHelpers::GetGlimmerSHCascadeSpacing(cascadeIndex);
 
         m_shaderData.cascades[cascadeIndex].params = Vec4f(spacing, 1.0f / spacing, 0.0f, 0.0f);
     }
@@ -157,11 +157,32 @@ void GlimmerSHVolume::CreateResources()
 {
     const Vec3u extent = Vec3u(GlimmerSHGridXZ, GlimmerSHGridY * GlimmerSHCascades, GlimmerSHGridXZ);
 
-    m_dataTexture = CreateGlimmerStorageTexture(TextureType::Texture3D, TextureFormat::RGBA16F, extent, 1, NAME("GlimmerSHData"));
-    m_stateTexture = CreateGlimmerStorageTexture(TextureType::Texture3D, TextureFormat::RGBA32, extent, 1, NAME("GlimmerSHState"));
-    m_radianceTexture = CreateGlimmerStorageTexture(TextureType::Texture3D, TextureFormat::RGBA16F, Vec3u(extent.x * RadianceColumns, extent.y * RadianceRows, extent.z), 1, NAME("GlimmerSHRadiance"));
+    m_dataTexture = GlimmerHelpers::CreateGlimmerStorageTexture(
+        TextureType::Texture3D,
+        TextureFormat::RGBA16F,
+        extent,
+        1,
+        NAME("GlimmerSHData"));
 
-    m_lightBuffer = RI.MakeGpuBuffer(GpuBufferType::RWStructuredBuffer, size_t(extent.x) * extent.y * extent.z * LightUints * sizeof(uint32), alignof(Vec4f));
+    m_stateTexture = GlimmerHelpers::CreateGlimmerStorageTexture(
+        TextureType::Texture3D,
+        TextureFormat::RGBA32,
+        extent,
+        1,
+        NAME("GlimmerSHState"));
+
+    m_radianceTexture = GlimmerHelpers::CreateGlimmerStorageTexture(
+        TextureType::Texture3D,
+        TextureFormat::RGBA16F,
+        Vec3u(extent.x * RadianceColumns, extent.y * RadianceRows, extent.z),
+        1,
+        NAME("GlimmerSHRadiance"));
+
+    m_lightBuffer = RI.MakeGpuBuffer(
+        GpuBufferType::RWStructuredBuffer,
+        size_t(extent.x) * extent.y * extent.z * LightUints * sizeof(uint32),
+        alignof(Vec4f));
+
     Check(m_lightBuffer->Create());
 }
 
@@ -296,17 +317,20 @@ void GlimmerSHVolume::AddPendingWorld(const Vec3f& worldMin, const Vec3f& worldM
 {
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
     {
-        const float invSpacing = 1.0f / GetGlimmerSHCascadeSpacing(cascadeIndex);
+        const float invSpacing = 1.0f / GlimmerHelpers::GetGlimmerSHCascadeSpacing(cascadeIndex);
 
-        AddPending(cascadeIndex, Box {
-            Vec3i(
-                int32(MathUtil::Floor(worldMin.x * invSpacing)) - marginVoxels,
-                int32(MathUtil::Floor(worldMin.y * invSpacing)) - marginVoxels,
-                int32(MathUtil::Floor(worldMin.z * invSpacing)) - marginVoxels),
-            Vec3i(
-                int32(MathUtil::Floor(worldMax.x * invSpacing)) + 1 + marginVoxels,
-                int32(MathUtil::Floor(worldMax.y * invSpacing)) + 1 + marginVoxels,
-                int32(MathUtil::Floor(worldMax.z * invSpacing)) + 1 + marginVoxels) });
+        AddPending(
+            cascadeIndex,
+            Box {
+                Vec3i(
+                    int32(MathUtil::Floor(worldMin.x * invSpacing)) - marginVoxels,
+                    int32(MathUtil::Floor(worldMin.y * invSpacing)) - marginVoxels,
+                    int32(MathUtil::Floor(worldMin.z * invSpacing)) - marginVoxels),
+                Vec3i(
+                    int32(MathUtil::Floor(worldMax.x * invSpacing)) + 1 + marginVoxels,
+                    int32(MathUtil::Floor(worldMax.y * invSpacing)) + 1 + marginVoxels,
+                    int32(MathUtil::Floor(worldMax.z * invSpacing)) + 1 + marginVoxels)
+            });
     }
 }
 
@@ -335,9 +359,9 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
     constants.spans = inputs.spanCache->GetShaderData();
     constants.occupancy = *inputs.occupancy;
     constants.boxMin = Vec4i(box.min.x, box.min.y, box.min.z, int32(cascadeIndex));
-    constants.rayRotation = MakeGlimmerRandomRotation(m_updateIndex++);
+    constants.rayRotation = GlimmerHelpers::MakeGlimmerRandomRotation(m_updateIndex++);
     constants.params = Vec4f(
-        GetGlimmerFoliageExtinction(),
+        GlimmerHelpers::GetGlimmerFoliageExtinction(),
         GlimmerMaxRayDistance,
         GlimmerDefaultGroundAlbedo,
         radianceHysteresis);
@@ -354,7 +378,7 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
         constants.probes = probeVolume->GetShaderData();
     }
 
-    GetGlimmerSkyShaderData(inputs.skyProbe, constants.sky, constants.skyProbe);
+    GlimmerHelpers::GetGlimmerSkyShaderData(inputs.skyProbe, constants.sky, constants.skyProbe);
 
     constants.light = inputs.light;
     constants.options = Vec4u(g_cvGlimmerSHNearestHitLight.Get() ? 1u : 0u, 0u, 0u, 0u);
@@ -557,12 +581,15 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
 
     for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
     {
-        const float spacing = GetGlimmerSHCascadeSpacing(cascadeIndex);
+        const float spacing = GlimmerHelpers::GetGlimmerSHCascadeSpacing(cascadeIndex);
 
         m_shaderData.cascades[cascadeIndex].params.z = MathUtil::Clamp(g_cvGlimmerVisibility.Get(), 0.0f, 1.0f);
 
         // must lean exactly as GlimmerSHOccupancy's windows do
-        const Vec3f center = GetGlimmerWindowCenter(inputs.viewerPosition, inputs.lookAhead, Vec3f(float(GlimmerSHGridXZ), float(GlimmerSHGridY), float(GlimmerSHGridXZ)) * spacing);
+        const Vec3f center = GlimmerHelpers::GetGlimmerWindowCenter(
+            inputs.viewerPosition,
+            inputs.lookAhead,
+            Vec3f(float(GlimmerSHGridXZ), float(GlimmerSHGridY), float(GlimmerSHGridXZ)) * spacing);
 
         const Vec3i origin = Vec3i(
             MathUtil::FloorToMultiple(int32(MathUtil::Floor(center.x / spacing)) - int32(GlimmerSHGridXZ / 2), WindowSnapVoxels),

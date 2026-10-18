@@ -58,11 +58,7 @@ namespace Hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Rendering);
 
-static EngineStatGpuTimer s_statGlimmerHeightfieldDebug("Rendering/GPU/Glimmer/HeightfieldDebug");
-
-static EngineStatCounter<uint32> s_statGlimmerHeightfieldDebugRays("Rendering/Glimmer/HeightfieldDebugRays");
-
-static constexpr float RegionRecenterFraction = 0.25f;
+namespace {
 
 struct GlimmerHeightfieldDebugConstants
 {
@@ -73,15 +69,23 @@ struct GlimmerHeightfieldDebugConstants
     GlimmerSHOccupancyShaderData occupancy;
 };
 
+HYP_FORCE_INLINE bool UseBrickTracer()
+{
+    return g_cvGlimmerProbesEnabled.Get()
+        && g_cvGlimmerProbesTracer.Get() == 0;
+}
+
+} // namespace
+
 #pragma region GlimmerTechnique
 
 GlimmerSceneRegionParams GlimmerTechnique::GetSceneRegionParams()
 {
-    const float minRadius = GetGlimmerRegionMinRadius();
+    const float minRadius = GlimmerHelpers::GetGlimmerRegionMinRadius();
 
     GlimmerSceneRegionParams params;
     params.radius = MathUtil::Max(minRadius, g_cvGlimmerSpansRadius.Get());
-    params.recenterDistance = minRadius * RegionRecenterFraction;
+    params.recenterDistance = minRadius * 0.25f;
 
     return params;
 }
@@ -151,8 +155,7 @@ GlimmerTechnique::GlimmerTechnique()
       m_probeDebug(MakeUnique<GlimmerProbeDebug>()),
       m_shOccupancy(MakeUnique<GlimmerSHOccupancy>()),
       m_shVolume(MakeUnique<GlimmerSHVolume>()),
-      m_relight(MakeUnique<GlimmerRelight>()),
-      m_brickWorld(MakeUnique<GlimmerBrickWorld>())
+      m_relight(MakeUnique<GlimmerRelight>())
 {
 }
 
@@ -192,6 +195,17 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
 
     const GlimmerSceneInstances& sceneInstances = *context.sceneInstances;
 
+    const bool shouldUseBricks = g_cvGlimmerBricksEnabled.Get() && (UseBrickTracer() || g_cvGlimmerBricksReflections.Get());
+
+    if (shouldUseBricks && !m_brickWorld)
+    {
+        m_brickWorld = MakeUnique<GlimmerBrickWorld>();
+    }
+    else if (!shouldUseBricks && m_brickWorld)
+    {
+        m_brickWorld.Reset();
+    }
+
     if (context.updateLighting && context.surfaceCache && context.spanCache)
     {
         if (!m_scratchBuffer.IsValid())
@@ -207,7 +221,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         const bool probesEnabled = g_cvGlimmerProbesEnabled.Get();
 
         GlimmerLightShaderData light;
-        GetGlimmerLightShaderData(context.skyProbe, light);
+        GlimmerHelpers::GetGlimmerLightShaderData(context.skyProbe, light);
 
         if (probesEnabled)
         {
@@ -227,10 +241,17 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
 
         if (context.sceneProxies)
         {
-            CollectGlimmerLightmapPages(*context.sceneProxies, lightmapPages);
+            GlimmerHelpers::CollectGlimmerLightmapPages(*context.sceneProxies, lightmapPages);
         }
 
-        m_shOccupancy->Update(context.frame, context.channelState->viewerPosition, context.channelState->lookAhead, sceneInstances, *context.triangleCache, lightmapPages, *m_scratchBuffer);
+        m_shOccupancy->Update(
+            context.frame,
+            context.channelState->viewerPosition,
+            context.channelState->lookAhead,
+            sceneInstances,
+            *context.triangleCache,
+            lightmapPages,
+            *m_scratchBuffer);
 
         GlimmerSHVolumeUpdateInputs shInputs;
         shInputs.viewerPosition = context.channelState->viewerPosition;
@@ -266,7 +287,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         probeInputs.shVolume = m_shVolume.Get();
         probeInputs.skyProbe = context.skyProbe;
         probeInputs.relight = m_relight.Get();
-        probeInputs.brickWorld = g_cvGlimmerBricksEnabled.Get() ? m_brickWorld.Get() : nullptr;
+        probeInputs.brickWorld = m_brickWorld.Get();
         probeInputs.cloudPass = context.cloudPass;
         probeInputs.light = light;
         probeInputs.scratchBuffer = m_scratchBuffer.Get();
@@ -287,7 +308,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         m_probeDebug->Reset();
     }
 
-    if (g_cvGlimmerBricksEnabled.Get() && context.triangleCache)
+    if (m_brickWorld && context.triangleCache)
     {
         const bool hasViewer = context.channelState && context.channelState->hasViewer;
 
@@ -296,7 +317,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         const float budgetScale = context.channelState ? context.channelState->budgetScale : 1.0f;
 
         GlimmerLightShaderData light;
-        GetGlimmerLightShaderData(context.skyProbe, light);
+        GlimmerHelpers::GetGlimmerLightShaderData(context.skyProbe, light);
 
         m_brickWorld->Update(context.frame, viewerPosition, lookAhead, budgetScale, sceneInstances, *context.triangleCache, this, light);
     }
@@ -311,7 +332,7 @@ bool GlimmerTechnique::RenderDebugView(const GlimmerDebugViewContext& context)
     {
         const int brickView = context.techniqueView - int(GlimmerHeightfieldDebugView::Max) + 1;
 
-        return brickView < int(GlimmerBrickDebugView::Max) && m_brickWorld->RenderDebugView(context, GlimmerBrickDebugView(brickView));
+        return m_brickWorld && brickView < int(GlimmerBrickDebugView::Max) && m_brickWorld->RenderDebugView(context, GlimmerBrickDebugView(brickView));
     }
 
     if (context.techniqueView <= int(GlimmerHeightfieldDebugView::None))
@@ -332,8 +353,6 @@ bool GlimmerTechnique::RenderDebugView(const GlimmerDebugViewContext& context)
     View* view = context.view;
     Framebuffer* gbufferFramebuffer = context.gbufferFramebuffer;
     const Vec2u extent = context.extent;
-
-    ENGINE_STAT_GPU_SCOPE(&s_statGlimmerHeightfieldDebug);
 
     GlimmerHeightfieldDebugConstants constants {};
     constants.dimensionsMode = Vec4u(extent.x, extent.y, uint32(context.techniqueView), 0);
@@ -373,15 +392,13 @@ bool GlimmerTechnique::RenderDebugView(const GlimmerDebugViewContext& context)
     cr << SetShaderUniform(uniformIndex++, "GlimmerHeightBoundsBuffer"_sh, context.spanCache->GetHeightBoundsBuffer().Get(), ShaderDataOffset(0, sizeof(float)));
     cr << SetShaderUniform(uniformIndex++, "GlimmerGroundAlbedoTexture"_sh, context.surfaceCache->GetGroundAlbedoImageView());
 
-    // the occupancy's zeroed constants (before it's built) have every cascade read as missing
     const GpuImageViewRef& occupancyImageView = m_shOccupancy->GetImageView();
+
     cr << SetShaderUniform(uniformIndex++, "GlimmerSHOccupancyTexture"_sh, occupancyImageView.IsValid() ? occupancyImageView : RI.placeholderData->GetImageView3D1x1x1R8());
     cr << SetShaderUniform(uniformIndex++, "GlimmerSHOccupancyMaskBuffer"_sh, m_shOccupancy->GetMaskBuffer().Get(), ShaderDataOffset(0, sizeof(uint32)));
 
     cr << DispatchCompute(Vec3u { (extent.x + 7) / 8, (extent.y + 7) / 8, 1 });
-
-    s_statGlimmerHeightfieldDebugRays += extent.x * extent.y;
-
+    
     return true;
 }
 

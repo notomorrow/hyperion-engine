@@ -21,6 +21,7 @@
 #include <Rendering/Frame.hpp>
 #include <Rendering/Mesh.hpp>
 #include <Rendering/Material.hpp>
+#include <Rendering/Texture.hpp>
 #include <Rendering/RenderHelpers.hpp>
 
 #include <Rendering/Util/DeletionQueue.hpp>
@@ -281,6 +282,8 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
     tracedRegion.min.z = MathUtil::Max(region.min.z, tracedCenter.y - tracedRadius);
     tracedRegion.max.z = MathUtil::Min(region.max.z, tracedCenter.y + tracedRadius);
 
+    uint64 materialHash = 0;
+
     // the rect offset is 0 for a mesh that isn't lit by a lightmap
     const auto addInstance = [&](
             const RenderProxyMesh& proxy,
@@ -402,6 +405,7 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
         spanInstance.texcoordBase = triangleRef.texcoordBase;
 
         outInput.spanInstanceBounds.PushBack(worldBounds);
+        outInput.spanMaterialHashes.PushBack(materialHash);
 
         // leaves dim light rather than stop it: they're the canopy spans' business, not the BVH's
         if (!isFoliage && outInput.tracedInstances.Size() < MaxTracedInstances && worldBounds.Overlaps(tracedRegion))
@@ -463,6 +467,7 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
         struct
         {
             uint64 mesh;
+            uint64 materialHash;
             uint32 materialIndex;
             uint32 flags;
             uint32 lightmapRectOffset;
@@ -470,6 +475,7 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
         } content;
 
         content.mesh = uint64(uintptr_t(proxy.mesh));
+        content.materialHash = materialHash;
         content.materialIndex = materialIndex;
         content.flags = instanceFlags;
         content.lightmapRectOffset = lightmapRectOffset;
@@ -523,6 +529,9 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
         }
 
         const uint32 materialIndex = Resources::GetBinding(proxy->material);
+
+        materialHash = GlimmerHelpers::GetMaterialHash(rpl, *proxy->material);
+        
         const Mat4f& modelMatrix = proxy->bufferData.modelMatrix;
 
         uint32 lightmapRectOffset = 0;
@@ -593,6 +602,7 @@ GlimmerSceneInstances::BuildResult GlimmerSceneInstances::Build(BuildInput&& inp
 
     result.inputHash = FNV1::DoHashWords(input.spanInstances.Data(), input.spanInstances.ByteSize(), 0);
     result.inputHash = FNV1::DoHashWords(input.tracedInstances.Data(), input.tracedInstances.ByteSize(), result.inputHash);
+    result.inputHash = FNV1::DoHashWords(input.spanMaterialHashes.Data(), input.spanMaterialHashes.ByteSize(), result.inputHash);
 
     result.meshKeys = std::move(input.meshKeys);
 
@@ -619,7 +629,7 @@ GlimmerSceneInstances::BuildResult GlimmerSceneInstances::Build(BuildInput&& inp
 
     for (size_t spanIndex = 0; spanIndex < result.spanInstances.Size(); spanIndex++)
     {
-        result.spanKeys.PushBack(SpanKey { FNV1::DoHashWords(&result.spanInstances[spanIndex], sizeof(GlimmerSpanInstanceShaderData), 0), input.spanInstanceBounds[spanIndex] });
+        result.spanKeys.PushBack(SpanKey { FNV1::DoHashWords(&result.spanInstances[spanIndex], sizeof(GlimmerSpanInstanceShaderData), input.spanMaterialHashes[spanIndex]), input.spanInstanceBounds[spanIndex] });
     }
 
     std::sort(result.spanKeys.Begin(), result.spanKeys.End());
@@ -748,8 +758,13 @@ void GlimmerSceneInstances::Upload(Frame* frame, BuildResult& result)
 
     CommandRecorder& cr = frame->cr;
 
-    GpuBufferRef spanInstancesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerSpanInstanceShaderData), result.spanInstances.Size());
-    GpuBufferRef spanChunksBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerSpanChunkShaderData), result.spanChunks.Size());
+    GpuBufferRef spanInstancesBuffer = GlimmerHelpers::CreateGlimmerStructuredBuffer(
+        sizeof(GlimmerSpanInstanceShaderData),
+        result.spanInstances.Size());
+
+    GpuBufferRef spanChunksBuffer = GlimmerHelpers::CreateGlimmerStructuredBuffer(
+        sizeof(GlimmerSpanChunkShaderData),
+        result.spanChunks.Size());
 
     const size_t spanInstancesByteSize = result.spanInstances.ByteSize();
     const size_t spanChunksByteSize = result.spanChunks.ByteSize();
@@ -809,8 +824,13 @@ void GlimmerSceneInstances::UploadTLAS(Frame* frame, BuildResult& result)
     m_stats.numTLASBuilds++;
 
     // a single placeholder element keeps the buffers bindable without a TLAS
-    GpuBufferRef nodesBuffer = CreateGlimmerStructuredBuffer(sizeof(SAHBVHNode), MathUtil::Max(result.tlasNodes.Size(), size_t(1)));
-    GpuBufferRef instancesBuffer = CreateGlimmerStructuredBuffer(sizeof(GlimmerTracedInstanceShaderData), MathUtil::Max(result.tracedInstances.Size(), size_t(1)));
+    GpuBufferRef nodesBuffer = GlimmerHelpers::CreateGlimmerStructuredBuffer(
+        sizeof(SAHBVHNode),
+        MathUtil::Max(result.tlasNodes.Size(), size_t(1)));
+
+    GpuBufferRef instancesBuffer = GlimmerHelpers::CreateGlimmerStructuredBuffer(
+        sizeof(GlimmerTracedInstanceShaderData),
+        MathUtil::Max(result.tracedInstances.Size(), size_t(1)));
 
     const size_t nodesByteSize = result.tlasNodes.ByteSize();
     const size_t instancesByteSize = result.tracedInstances.ByteSize();
@@ -847,7 +867,7 @@ void GlimmerSceneInstances::Update(Frame* frame, RenderProxyList& rpl, const Bou
     HYP_SCOPE;
     AssertOnThread(g_renderThread);
 
-    if (rpl.GetMeshEntities().GetDiff().NeedsUpdate() || region != m_lastRegion)
+    if (rpl.GetMeshEntities().GetDiff().NeedsUpdate() || rpl.GetMaterials().GetDiff().NeedsUpdate() || region != m_lastRegion)
     {
         m_dirty = true;
     }
