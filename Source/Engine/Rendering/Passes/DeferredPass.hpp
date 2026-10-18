@@ -73,14 +73,20 @@ class DeferredPassData : public PassData
 public:
     virtual ~DeferredPassData() override;
 
+    const GpuImageViewRef& GetSceneColorView() const;
+
     int priority = 0;
 
     Handle<Texture> mipChain;
-    Array<FramebufferRef, RenderAllocator> mipChainFramebuffers; // One framebuffer per mip level for downsampling
+    
+    /// One framebuffer per mip level for downsampling
+    Array<FramebufferRef, RenderAllocator> mipChainFramebuffers;
 
     UniquePtr<LightingPass> indirectLightingPass;
     UniquePtr<LightingPass> directLightingPass;
-    UniquePtr<LightingPass> reflectionsOnlyPass; //!< Writes clustered env-probe reflections (pre-multiplied by coverage)
+    
+    /// Writes clustered env-probe reflections (pre-multiplied by coverage)
+    UniquePtr<LightingPass> reflectionsOnlyPass;
 
     FramebufferRef lightingFramebuffer;
     FramebufferRef depthPrepassFramebuffer;

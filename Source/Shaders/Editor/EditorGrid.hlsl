@@ -314,8 +314,10 @@ float4 GridColor(float2 coord, float scale, float lineWidth, float3 baseColor)
 
 PSOutput PSMain(PSInput i)
 {
-    float3 rayOrigin = UnprojectPoint(i.ndc, 0.0);
-    float3 rayEnd = UnprojectPoint(i.ndc, 1.0);
+    const float2 sampleNdc = i.ndc - camera.jitter.xy;
+
+    float3 rayOrigin = UnprojectPoint(sampleNdc, 0.0);
+    float3 rayEnd = UnprojectPoint(sampleNdc, 1.0);
     float3 rayDir = rayEnd - rayOrigin;
 
     PSOutput output;
@@ -327,7 +329,7 @@ PSOutput PSMain(PSInput i)
 
     ScreenMapping mapping;
     mapping.pixel = i.position_cs.xy;
-    mapping.ndc = i.ndc;
+    mapping.ndc = sampleNdc;
     mapping.ndcPerPixel = float2(ddx(i.ndc.x), ddy(i.ndc.y));
 
     const float2 viewportSize = 2.0 / max(abs(mapping.ndcPerPixel), 1e-6);

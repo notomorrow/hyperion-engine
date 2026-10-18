@@ -82,7 +82,9 @@ float4 SampleRectLightTexture(in Light light, in float3 pts[4])
 float4 CalculateAreaLightRadiance(in Light light, in float3x3 Minv, in float3 pts[4], in float3 P, in float3 N, in float3 V)
 {
     // construct orthonormal basis around N
-    float3 T1 = normalize(V - N * dot(V, N));
+    // V along N leaves no tangent to build the basis from
+    float3 T1 = V - N * dot(V, N);
+    T1 = dot(T1, T1) > 1e-8 ? normalize(T1) : (abs(N.y) < 0.999 ? normalize(cross(N, float3(0.0, 1.0, 0.0))) : float3(1.0, 0.0, 0.0));
     float3 T2 = cross(N, T1);
     float3x3 tbn = transpose(float3x3(T1, T2, N));
 
@@ -100,7 +102,7 @@ float4 CalculateAreaLightRadiance(in Light light, in float3x3 Minv, in float3 pt
     [unroll]
     for (int i = 0; i < 4; i++)
     {
-        L[i] = normalize(L[i]);
+        L[i] *= rsqrt(max(dot(L[i], L[i]), 1e-12));
     }
 
     // clipless approximation: the sphere form factor table in ltc_brdf_texture.w accounts for horizon clipping
@@ -115,7 +117,7 @@ float4 CalculateAreaLightRadiance(in Light light, in float3x3 Minv, in float3 pt
     vsum += IntegrateEdgeVec(L[3], L[0]);
 
     float len = length(vsum);
-    float z = vsum.z / len;
+    float z = vsum.z / max(len, 1e-6);
 
     if (behind)
         z = -z;

@@ -139,14 +139,9 @@
 #define HYP_FLOAT_MAX 3.402823466e+38F
 #define HYP_FLOAT_MIN 1.175494351e-38F
 
-#ifdef BACKEND_WEBGPU
-// WGSL has no NaN / infinity tests, so look at the bit pattern
+// test the bit pattern - WGSL has no NaN / infinity tests, and Metal's fastmath folds isnan() away
 #define HYP_ISNAN(value) ((asuint(value) & 0x7FFFFFFFu) > 0x7F800000u)
 #define HYP_ISINF(value) ((asuint(value) & 0x7FFFFFFFu) == 0x7F800000u)
-#else
-#define HYP_ISNAN(value) isnan(value)
-#define HYP_ISINF(value) isinf(value)
-#endif // BACKEND_WEBGPU
 
 #ifdef BACKEND_WEBGPU
 

@@ -20,11 +20,22 @@ static const float temporal_rotations[] = { 60, 300, 180, 240, 120, 0 };
 #define ADJUST_COLOR_GAMMA_OUT(col) \
     (float4(pow(col.rgb, float3(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2)), col.a))
 #elif defined(TEMPORAL_BLENDING_REVERSE_TONEMAP)
+
+float3 TemporalTonemap(float3 color)
+{
+    return color * rcp(1.0 + max(color.r, max(color.g, color.b)));
+}
+
+float3 TemporalTonemapInverse(float3 color)
+{
+    return color * rcp(max(1.0 - max(color.r, max(color.g, color.b)), 1.0 / 65504.0));
+}
+
 #define ADJUST_COLOR_GAMMA_IN(col) \
-    (float4(ReverseTonemapReinhardSimple(col.rgb), col.a))
+    (float4(TemporalTonemap(max((col).rgb, 0.0)), (col).a))
 
 #define ADJUST_COLOR_GAMMA_OUT(col) \
-    (float4(ReverseTonemapReinhardSimple(col.rgb), col.a))
+    (float4(TemporalTonemapInverse(saturate((col).rgb)), (col).a))
 #else
 #define ADJUST_COLOR_GAMMA_IN(col) \
     (col)
@@ -175,31 +186,16 @@ void GetPixelTexelNeighborsMinMax_3x3(in texture2D tex, in int2 coord, in int2 d
 
 float4 ClipAABB(float4 aabb_min, float4 aabb_max, float4 p, float4 q)
 {
-    float4 r = q - p;
-    float4 rmax = aabb_max - p;
-    float4 rmin = aabb_min - p;
+    // clips the segment p -> q to the box; p must be inside it.
+    // no data-dependent division - fast math may evaluate a guarded 0 / 0 anyway (YCoCg chroma is exactly 0 on greys)
+    const float4 r = q - p;
+    const float4 limit = abs(select(r > 0.0, aabb_max - p, aabb_min - p));
+    const float4 abs_r = abs(r);
 
-    const float eps = HYP_FMATH_EPSILON;
+    const float4 scale = select(abs_r > limit, limit / max(abs_r, 1e-8), (float4)1.0);
+    const float t = saturate(min(min(scale.x, scale.y), min(scale.z, scale.w)));
 
-    if (r.x > rmax.x + eps)
-        r *= (rmax.x / r.x);
-    if (r.y > rmax.y + eps)
-        r *= (rmax.y / r.y);
-    if (r.z > rmax.z + eps)
-        r *= (rmax.z / r.z);
-    if (r.w > rmax.w + eps)
-        r *= (rmax.w / r.w);
-
-    if (r.x < rmin.x - eps)
-        r *= (rmin.x / r.x);
-    if (r.y < rmin.y - eps)
-        r *= (rmin.y / r.y);
-    if (r.z < rmin.z - eps)
-        r *= (rmin.z / r.z);
-    if (r.w < rmin.w - eps)
-        r *= (rmin.w / r.w);
-
-    return p + r;
+    return p + r * t;
 }
 
 #define VARIANCE_INTERSECTION_MAX_T 10000.0
@@ -676,53 +672,6 @@ float4 TemporalBlendVarying(
     float4 resolved_rgb = YCoCgToRGB(resolved_yc);
     float4 out_rgb = ADJUST_COLOR_OUT(resolved_rgb);
     return ADJUST_COLOR_GAMMA_OUT(out_rgb);
-}
-
-float4 TemporalBlendDithered(
-    in Texture2D input_texture,
-    in Texture2D prev_input_texture,
-    float2 uv,
-    float2 velocity,
-    float2 texel_size,
-    float feedback,
-    float velocity_rejection_pixels)
-{
-    const float4 color = RGBToYCoCg(ADJUST_COLOR_IN(ADJUST_COLOR_GAMMA_IN(SAMPLE_TEXTURE_2D_LOD(sampler_nearest, input_texture, uv, 0.0))));
-    const float4 previous_color = RGBToYCoCg(ADJUST_COLOR_IN(ADJUST_COLOR_GAMMA_IN(SAMPLE_TEXTURE_2D(sampler_linear, prev_input_texture, uv - velocity))));
-
-    float4 first_moment = (float4)0.0;
-    float4 second_moment = (float4)0.0;
-
-    for (int y = -1; y <= 1; y++)
-    {
-        for (int x = -1; x <= 1; x++)
-        {
-            const float4 neighbor = RGBToYCoCg(ADJUST_COLOR_IN(ADJUST_COLOR_GAMMA_IN(SAMPLE_TEXTURE_2D_LOD(sampler_nearest, input_texture, uv + float2(x, y) * texel_size, 0.0))));
-
-            first_moment += neighbor;
-            second_moment += neighbor * neighbor;
-        }
-    }
-
-    const float4 mean = first_moment / 9.0;
-    const float4 standard_deviation = sqrt(max(second_moment / 9.0 - mean * mean, 0.0));
-
-    const float variance_gamma = 1.25;
-
-    float4 box_center = mean;
-    box_center.w = previous_color.w;
-
-    float4 box_extent = standard_deviation * variance_gamma;
-    box_extent.w = 0.0;
-
-    const float4 clipped = ClipAABB(box_center - box_extent, box_center + box_extent, box_center, previous_color);
-
-    float4 resolved_yc = lerp(color, clipped, feedback);
-
-    const float pixel_velocity = length(velocity / max(float2(HYP_FMATH_EPSILON, HYP_FMATH_EPSILON), texel_size));
-    resolved_yc = lerp(resolved_yc, color, saturate(pixel_velocity / velocity_rejection_pixels));
-
-    return ADJUST_COLOR_GAMMA_OUT(ADJUST_COLOR_OUT(YCoCgToRGB(resolved_yc)));
 }
 
 #endif
