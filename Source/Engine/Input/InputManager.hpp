@@ -143,17 +143,7 @@ public:
     }
 
     HYP_METHOD()
-    HYP_FORCE_INLINE bool IsShortcutModifierDown() const
-    {
-#if HYP_APPLE
-        return IsSuperDown();
-#elif defined(HYP_WEB) && HYP_WEB
-        // Host OS isn't known at compile time; accept either
-        return IsCtrlDown() || IsSuperDown();
-#else
-        return IsCtrlDown();
-#endif
-    }
+    bool IsShortcutModifierDown() const;
 
     HYP_METHOD()
     bool IsButtonDown(MouseButtonKey btn) const;
