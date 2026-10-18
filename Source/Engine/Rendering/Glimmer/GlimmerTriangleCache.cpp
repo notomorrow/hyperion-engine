@@ -374,11 +374,14 @@ GlimmerTriangleCache::GlimmerTriangleCache()
     m_buildPool->Start();
 }
 
+// NOTE: Cleared in ~GlimmerTriangleCache.
+// Because the control block lives in g_glimmerPool, a weak ref left here
+// until static destruction would free into the pool after ShutdownGlimmerMemory() deleted it.
+static WeakPtr<GlimmerTriangleCache> s_triangleCache;
+
 SharedPtr<GlimmerTriangleCache> GlimmerTriangleCache::AcquireShared()
 {
     AssertOnThread(g_renderThread);
-
-    static WeakPtr<GlimmerTriangleCache> s_triangleCache;
 
     SharedPtr<GlimmerTriangleCache> triangleCache = s_triangleCache.Lock();
 
@@ -407,6 +410,11 @@ void GlimmerTriangleCache::UpdateOncePerFrame(Frame* frame)
 
 GlimmerTriangleCache::~GlimmerTriangleCache()
 {
+    if (s_triangleCache.GetUnsafe() == this)
+    {
+        s_triangleCache = WeakPtr<GlimmerTriangleCache>();
+    }
+
     for (auto& it : m_entries)
     {
         Entry& entry = *it.second;
