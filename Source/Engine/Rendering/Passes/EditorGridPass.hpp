@@ -18,6 +18,7 @@
 namespace Hyperion {
 
 class FontAtlas;
+class Texture;
 
 extern ENGINE_API CVar<bool> g_cvEditorGrid;
 
@@ -29,7 +30,7 @@ extern ENGINE_API CVar<float> g_cvEditorGridOffsetX;
 extern ENGINE_API CVar<float> g_cvEditorGridOffsetY;
 extern ENGINE_API CVar<float> g_cvEditorGridOffsetZ;
 
-class EditorGridLabelFont
+class ENGINE_API EditorGridLabelFont
 {
 public:
     static constexpr uint32 NumGlyphs = 15;
@@ -41,6 +42,17 @@ public:
         Vec4f advances[(NumGlyphs + 3) / 4];
     };
 
+    struct LoadedGlyphs
+    {
+        Glyphs glyphs {};
+        float distanceRange = 0.0f;
+
+        Handle<Texture> texture;
+    };
+
+    static Handle<Texture> BakeGlyphTexture(const FontAtlas& fontAtlas);
+    static Name GetGlyphTextureName();
+
     EditorGridLabelFont();
     EditorGridLabelFont(const EditorGridLabelFont& other) = delete;
     EditorGridLabelFont& operator=(const EditorGridLabelFont& other) = delete;
@@ -50,15 +62,21 @@ public:
 
     HYP_FORCE_INLINE const Glyphs& GetGlyphs() const
     {
-        return m_glyphs;
+        return m_loadedGlyphs.glyphs;
+    }
+
+    HYP_FORCE_INLINE float GetDistanceRange() const
+    {
+        return m_loadedGlyphs.distanceRange;
     }
 
     GpuImageView* GetAtlasImageView() const;
 
 private:
-    Task<Handle<FontAtlas>> m_fontAtlasTask;
-    Handle<FontAtlas> m_fontAtlas;
-    Glyphs m_glyphs {};
+    Task<LoadedGlyphs> m_loadTask;
+    LoadedGlyphs m_loadedGlyphs;
+    
+    bool m_isLoaded = false;
     bool m_isReady = false;
 };
 

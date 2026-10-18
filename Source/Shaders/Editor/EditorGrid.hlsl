@@ -65,7 +65,7 @@ DECLARE_SRV(EditorGrid, GlyphAtlas) Texture2D GlyphAtlas;
 
 static const float3 LabelColor = float3(1.0, 1.0, 1.0);
 static const float3 LabelOutlineColor = float3(0.0, 0.0, 0.0);
-static const float LabelOutlineOpacity = 0.3;
+static const float LabelOutlineOpacity = 0.9;
 
 static const float3 XAxisNameColor = float3(0.9, 0.25, 0.25);
 static const float3 ZAxisNameColor = float3(0.3, 0.3, 0.95);

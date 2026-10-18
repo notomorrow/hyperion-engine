@@ -8,13 +8,9 @@ static const float LabelPadding = 3.0;
 // what it is drawn at
 static const float GlyphHeight = 10.0;
 
-static const uint GlyphSamplesPerAxis = 4u;
+static const uint GlyphSamplesPerAxis = 2u;
 
 static const float GlyphOutlineRadius = 1.5;
-static const float2 GlyphOutlineDirections[8] = {
-    float2(1.0, 0.0), float2(0.7071, 0.7071), float2(0.0, 1.0), float2(-0.7071, 0.7071),
-    float2(-1.0, 0.0), float2(-0.7071, -0.7071), float2(0.0, -1.0), float2(0.7071, -0.7071)
-};
 
 static const uint NumGlyphs = 15u;
 
@@ -29,17 +25,11 @@ float GetGlyphAdvance(uint glyph)
     return glyphAdvances[glyph / 4u][glyph % 4u];
 }
 
-float SampleGlyphTap(float4 uvRect, float4 pixelRect, float2 offset)
+float SampleGlyphDistance(float4 uvRect, float4 pixelRect, float2 offset)
 {
-    const float2 glyphCoord = (offset - pixelRect.xy) / pixelRect.zw;
+    const float2 glyphCoord = saturate((offset - pixelRect.xy) / pixelRect.zw);
 
-    [branch]
-    if (any(glyphCoord < 0.0) || any(glyphCoord > 1.0))
-    {
-        return 0.0;
-    }
-
-    return GlyphAtlas.SampleLevel(SamplerLinear, uvRect.xy + glyphCoord * uvRect.zw, 0.0).r;
+    return (GlyphAtlas.SampleLevel(SamplerLinear, uvRect.xy + glyphCoord * uvRect.zw, 0.0).r - 0.5) * labelParams.y;
 }
 
 float2 SampleGlyph(uint glyph, float2 offset, float2 footprintX, float2 footprintY)
@@ -53,7 +43,7 @@ float2 SampleGlyph(uint glyph, float2 offset, float2 footprintX, float2 footprin
     const float4 uvRect = glyphUvRects[glyph];
     const float4 pixelRect = glyphPixelRects[glyph];
 
-    const float2 reach = (abs(footprintX) + abs(footprintY)) * 0.5 + GlyphOutlineRadius;
+    const float2 reach = (abs(footprintX) + abs(footprintY)) * 0.5;
 
     if (any(pixelRect.zw <= 0.0)
         || any(offset + reach < pixelRect.xy)
@@ -62,7 +52,9 @@ float2 SampleGlyph(uint glyph, float2 offset, float2 footprintX, float2 footprin
         return float2(0.0, 0.0);
     }
 
-    float coverage = 0.0;
+    const float edgeWidth = max(0.5 * (length(footprintX) + length(footprintY)) / float(GlyphSamplesPerAxis), 1e-3);
+
+    float2 coverage = float2(0.0, 0.0);
 
     [unroll]
     for (uint y = 0u; y < GlyphSamplesPerAxis; y++)
@@ -71,23 +63,13 @@ float2 SampleGlyph(uint glyph, float2 offset, float2 footprintX, float2 footprin
         for (uint x = 0u; x < GlyphSamplesPerAxis; x++)
         {
             const float2 tapPosition = (float2(x, y) + 0.5) / float(GlyphSamplesPerAxis) - 0.5;
-            const float2 tapOffset = offset + footprintX * tapPosition.x + footprintY * tapPosition.y;
+            const float distanceToEdge = SampleGlyphDistance(uvRect, pixelRect, offset + footprintX * tapPosition.x + footprintY * tapPosition.y);
 
-            coverage += SampleGlyphTap(uvRect, pixelRect, tapOffset);
+            coverage += saturate(float2(distanceToEdge, distanceToEdge + GlyphOutlineRadius) / edgeWidth + 0.5);
         }
     }
 
-    coverage /= float(GlyphSamplesPerAxis * GlyphSamplesPerAxis);
-
-    float ol = coverage;
-
-    for (uint ringIndex = 0u; ringIndex < 8u; ringIndex++)
-    {
-        ol = max(ol, SampleGlyphTap(uvRect, pixelRect, offset + GlyphOutlineDirections[ringIndex] * GlyphOutlineRadius));
-        ol = max(ol, SampleGlyphTap(uvRect, pixelRect, offset + GlyphOutlineDirections[ringIndex] * GlyphOutlineRadius * 0.5));
-    }
-
-    return float2(coverage, ol);
+    return coverage / float(GlyphSamplesPerAxis * GlyphSamplesPerAxis);
 }
 
 uint Pow10(uint exponent)

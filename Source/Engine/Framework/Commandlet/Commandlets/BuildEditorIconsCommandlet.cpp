@@ -5,24 +5,33 @@
  *
  *  Usage: BuildEditorIconsCommandlet [--ui-output-dir=Source/Editor/Managed/Assets/Icons/Generated]
  *    Rasterizes the SDF editor icons ahead of time: sprite textures go into the editor
- *    asset registry, and untinted PNGs are written out for the editor UI.
+ *    asset registry, and untinted PNGs are written out for the editor UI. Also bakes the
+ *    distance fields of the editor grid's label glyphs from the engine font.
  */
 
 #include <HyperionPch.hpp>
 
 #include <Framework/Commandlet/Commandlet.hpp>
 
+#include <Framework/EngineDefaults.hpp>
+
 #include <Asset/AssetRegistry.hpp>
 
 #include <Core/CLI/CommandLine.hpp>
+
 #include <Core/Core.hpp>
+
 #include <Core/FileSystem/FilePath.hpp>
+
 #include <Core/Utilities/GlobalContext.hpp>
 
 #include <Core/Reflection/ClassUtils.hpp>
 #include <Core/Reflection/ClassRegistry.hpp>
 
 #include <Rendering/Texture.hpp>
+#include <Rendering/Passes/EditorGridPass.hpp>
+
+#include <UI/Font/FontAtlas.hpp>
 
 #include <Scene/Systems/Editor/EditorIcons.hpp>
 
@@ -79,6 +88,32 @@ static void BakeSpriteTextures(const Handle<AssetRegistry>& editorRegistry)
     HYP_LOG(Engine, Info, "Editor icon sprite textures saved to editor registry");
 }
 
+static void BakeGridLabelGlyphs(const Handle<AssetRegistry>& editorRegistry)
+{
+    GlobalContextScope assetRegistryScope { AssetRegistryContext { editorRegistry } };
+
+    const Handle<FontAtlas> fontAtlas = EngineDefaults::LoadAsset<FontAtlas>(EngineDefaults::Get().font);
+
+    if (!fontAtlas.IsValid())
+    {
+        HYP_LOG(Engine, Error, "Failed to load the engine font to bake the editor grid label glyphs");
+
+        return;
+    }
+
+    Handle<Texture> glyphTexture = EditorGridLabelFont::BakeGlyphTexture(*fontAtlas);
+
+    if (!glyphTexture.IsValid())
+    {
+        return;
+    }
+
+    editorRegistry->PutAssetsDeep(glyphTexture, /* overwriteExisting */ true);
+    editorRegistry->SaveDirtyAssets();
+
+    HYP_LOG(Engine, Info, "Editor grid label glyphs saved to editor registry");
+}
+
 class BuildEditorIconsCommandlet : public CommandletBase
 {
     HYP_OBJECT_BODY(BuildEditorIconsCommandlet);
@@ -132,6 +167,7 @@ protected:
         }
 
         BakeSpriteTextures(editorRegistry);
+        BakeGridLabelGlyphs(editorRegistry);
 
         return result;
     }

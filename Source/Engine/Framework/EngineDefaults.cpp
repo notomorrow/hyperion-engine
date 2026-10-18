@@ -18,6 +18,13 @@
 
 namespace Hyperion {
 
+static constexpr const char* TerrainLayerNames[][2] = {
+    { "Terrain_Layer0_Albedo", "Terrain_Layer0_Normal" },
+    { "Terrain_Layer1_Albedo", "Terrain_Layer1_Normal" },
+    { "Terrain_Layer2_Albedo", "Terrain_Layer2_Normal" },
+    { "Terrain_Layer3_Albedo", "Terrain_Layer3_Normal" }
+};
+
 static AssetPath EngineAssetPath(const AssetBucket& bucket, ANSIStringView name)
 {
     return AssetPath(AssetRegistryId::Engine, bucket, CreateNameFromDynamicString(name));
@@ -37,13 +44,6 @@ const EngineDefaults& EngineDefaults::Get()
                        defaults.font = EngineAssetPath(AssetBuckets::FontAtlases, "Roboto_Regular");
 
                        defaults.terrain.groundCover = EngineAssetPath(AssetBuckets::Terrain, "DefaultGroundCover");
-
-                       static constexpr const char* TerrainLayerNames[][2] = {
-                           { "Terrain_Layer0_Albedo", "Terrain_Layer0_Normal" },
-                           { "Terrain_Layer1_Albedo", "Terrain_Layer1_Normal" },
-                           { "Terrain_Layer2_Albedo", "Terrain_Layer2_Normal" },
-                           { "Terrain_Layer3_Albedo", "Terrain_Layer3_Normal" }
-                       };
 
                        for (const auto& layerNames : TerrainLayerNames)
                        {
