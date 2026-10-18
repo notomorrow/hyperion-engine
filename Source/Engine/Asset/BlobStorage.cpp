@@ -793,6 +793,22 @@ bool BlobStorage::PutData(uint32 bucketIndex, StringHash key, const BlobHeader& 
     return true;
 }
 
+bool BlobStorage::PutAlias(StringHash key, StringHash existingKey)
+{
+    Mutex::Guard guard(m_mutex);
+
+    BlobTableOfContents::Value entryValue {};
+
+    if (!m_toc || !m_toc->Get(existingKey, entryValue))
+    {
+        return false;
+    }
+
+    m_toc->Put(key, entryValue);
+
+    return true;
+}
+
 Result BlobStorage::FinishCook()
 {
     Mutex::Guard guard(m_mutex);

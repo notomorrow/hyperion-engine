@@ -277,6 +277,115 @@
         }
     }, true);
 
+    async function loadBrotliCache(onProgress)
+    {
+        const listResponse = await fetch('Cache/brotli.json');
+
+        if (!listResponse.ok)
+        {
+            return null;
+        }
+
+        const list = await listResponse.json();
+        const names = Object.keys(list);
+
+        if (names.length === 0)
+        {
+            return null;
+        }
+
+        const decoderModule = await import('./brotli_dec_wasm.js');
+        await decoderModule.default();
+
+        const outputStep = 1 << 20;
+        const totalBytes = names.reduce((sum, name) => sum + list[name].compressedSize, 0);
+        let receivedBytes = 0;
+
+        const files = {};
+
+        await Promise.all(names.map(async (name) => {
+            const response = await fetch('Cache/' + name + '.br');
+
+            if (!response.ok)
+            {
+                throw new Error(name + '.br: ' + response.status);
+            }
+
+            const output = new Uint8Array(list[name].size);
+            const isDecodedByBrowser = (response.headers.get('Content-Encoding') || '').includes('br');
+            const decoder = isDecodedByBrowser ? null : new decoderModule.BrotliDecStream();
+            const reader = response.body.getReader();
+
+            let writtenBytes = 0;
+
+            const append = (bytes) => {
+                if (writtenBytes + bytes.byteLength > output.byteLength)
+                {
+                    throw new Error(name + ' decodes larger than expected');
+                }
+
+                output.set(bytes, writtenBytes);
+                writtenBytes += bytes.byteLength;
+            };
+
+            try
+            {
+                for (;;)
+                {
+                    const { done, value } = await reader.read();
+
+                    if (done)
+                    {
+                        break;
+                    }
+
+                    receivedBytes += value.byteLength;
+                    onProgress(Math.min(receivedBytes / totalBytes, 1));
+
+                    if (!decoder)
+                    {
+                        append(value);
+
+                        continue;
+                    }
+
+                    let input = value;
+
+                    for (;;)
+                    {
+                        const result = decoder.dec(input, outputStep);
+                        const code = result.code;
+
+                        append(result.buf);
+                        input = input.subarray(result.input_offset);
+                        result.free();
+
+                        if (code !== decoderModule.BrotliStreamResultCode.NeedsMoreOutput)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                if (decoder)
+                {
+                    decoder.free();
+                }
+            }
+
+            if (writtenBytes !== output.byteLength)
+            {
+                throw new Error(name + ' decoded to ' + writtenBytes + ' bytes, expected ' + output.byteLength);
+            }
+
+            files[name] = output;
+        }));
+
+        return files;
+    }
+
     if (!navigator.gpu)
     {
         statusElement.textContent = 'WebGPU is not available in this browser.';
@@ -285,9 +394,44 @@
     {
         sessionStorage.removeItem('isolationReload');
 
-        const engineScript = document.createElement('script');
-        engineScript.src = '@HYP_WEB_PAGE_NAME@.js';
-        document.body.appendChild(engineScript);
+        const startEngine = () => {
+            const engineScript = document.createElement('script');
+            engineScript.src = '@HYP_WEB_PAGE_NAME@.js';
+            document.body.appendChild(engineScript);
+        };
+
+        statusElement.textContent = 'Downloading data...';
+
+        const packageDownload = fetch('@HYP_WEB_PAGE_NAME@.data.gz')
+            .then((response) => {
+                if (!response.ok)
+                {
+                    return null;
+                }
+
+                const isDecodedByBrowser = (response.headers.get('Content-Encoding') || '').includes('gzip');
+
+                return isDecodedByBrowser ? response.arrayBuffer() : new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+            });
+
+        // the build stages the big cache files only Brotli compressed, the engine fetches the small ones itself
+        const cacheDownload = loadBrotliCache((fraction) => { statusElement.textContent = 'Downloading data... ' + Math.floor(100 * fraction) + '%'; });
+
+        Promise.all([packageDownload, cacheDownload])
+            .then(([packageData, cacheFiles]) => {
+                if (packageData)
+                {
+                    Module.getPreloadedPackage = () => packageData;
+                }
+
+                if (cacheFiles)
+                {
+                    Module.hypCacheFiles = cacheFiles;
+                }
+
+                startEngine();
+            })
+            .catch((error) => { statusElement.textContent = 'Could not download the package: ' + error; });
     }
     else if ('serviceWorker' in navigator && isSecureContext && !sessionStorage.getItem('isolationReload'))
     {

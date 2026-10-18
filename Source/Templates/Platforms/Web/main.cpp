@@ -36,6 +36,63 @@ EM_JS(char*, HypWeb_GetPackageUrl, (), {
     return stringToNewUTF8(new URL('Cache', self.location.href).href);
 });
 
+EM_JS_DEPS(HypWeb_CacheFiles, "$UTF8ToString");
+
+static bool CopyPageCacheFile(const char* name, const char* path)
+{
+    const double size = MAIN_THREAD_EM_ASM_DOUBLE({
+        const files = Module['hypCacheFiles'];
+        const data = files ? files[UTF8ToString($0)] : undefined;
+
+        return data ? data.byteLength : -1;
+    }, name);
+
+    if (size < 0.0)
+    {
+        return false;
+    }
+
+    const int file = open(path, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+
+    if (file < 0)
+    {
+        return false;
+    }
+
+    static constexpr size_t chunkSize = 4u * 1024u * 1024u;
+
+    const size_t totalSize = size_t(size);
+    void* buffer = std::malloc(chunkSize);
+    bool isCopied = buffer != nullptr;
+
+    for (size_t offset = 0; isCopied && offset < totalSize; offset += chunkSize)
+    {
+        const size_t count = totalSize - offset < chunkSize ? totalSize - offset : chunkSize;
+
+        MAIN_THREAD_EM_ASM({
+            const data = Module['hypCacheFiles'][UTF8ToString($0)];
+
+            HEAPU8.set(data.subarray($2, $2 + $3), $1);
+        }, name, buffer, offset, count);
+
+        isCopied = write(file, buffer, count) == ssize_t(count);
+    }
+
+    std::free(buffer);
+    close(file);
+
+    MAIN_THREAD_EM_ASM({
+        delete Module['hypCacheFiles'][UTF8ToString($0)];
+    }, name);
+
+    if (!isCopied)
+    {
+        unlink(path);
+    }
+
+    return isCopied;
+}
+
 #endif
 
 static void MountPackage()
@@ -80,6 +137,11 @@ static void MountPackage()
         char linkPath[512];
         snprintf(sourcePath, sizeof(sourcePath), "/package/%s", name);
         snprintf(linkPath, sizeof(linkPath), "/hyperion/Cache/%s", name);
+
+        if (CopyPageCacheFile(name, linkPath))
+        {
+            continue;
+        }
 
         close(wasmfs_create_file(sourcePath, 0444, backend));
         symlink(sourcePath, linkPath);

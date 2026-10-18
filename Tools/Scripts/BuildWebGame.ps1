@@ -272,7 +272,7 @@ Step 97 "Staging into $outputDir"
 
 New-Item -ItemType Directory -Force $outputDir | Out-Null
 
-$pageFiles = @("index.html", "isolation-worker.js", "$name.js", "$name.wasm", "$name.data")
+$pageFiles = @("index.html", "isolation-worker.js", "brotli_dec_wasm.js", "brotli_dec_wasm_bg.wasm", "$name.js", "$name.wasm", "$name.data")
 
 foreach ($fileName in $pageFiles)
 {
@@ -297,6 +297,23 @@ Copy-Item (Join-Path $packageDir "Cache") $outputCacheDir -Recurse
 
 # a static host has no directory listing, so the page reads the names from here
 (Get-ChildItem $outputCacheDir -File | Where-Object { $_.Name -ne "index.txt" } | ForEach-Object { $_.Name }) | Set-Content (Join-Path $outputCacheDir "index.txt") -Encoding ascii
+
+# hosts gzip the cache at best; Brotli downloads about a third smaller, so the large files only go up that way
+$pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
+
+if (-not $pwsh)
+{
+    Fail "PowerShell 7 (pwsh) is needed to compress the cache with Brotli. Install it from https://aka.ms/powershell"
+}
+
+Step 98 "Compressing the cache with Brotli"
+
+& $pwsh.Source -NoProfile -File (Join-Path $PSScriptRoot "CompressBrotli.ps1") -Directory $outputCacheDir -Quality $(if ($FastLink) { 5 } else { 11 })
+
+if ($LASTEXITCODE -ne 0)
+{
+    Fail "Compressing the cache with Brotli failed"
+}
 
 # GitHub Pages runs a site through Jekyll unless this is there
 Set-Content (Join-Path $outputDir ".nojekyll") "" -Encoding ascii

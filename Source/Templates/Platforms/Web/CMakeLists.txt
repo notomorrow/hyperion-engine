@@ -53,3 +53,5 @@ set_target_properties(${HYP_WEB_PAGE_NAME} PROPERTIES
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/index.html.in" "${HYP_WEB_OUTPUT}/index.html" @ONLY)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/isolation-worker.js" "${HYP_WEB_OUTPUT}/isolation-worker.js" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/brotli_dec_wasm.js" "${HYP_WEB_OUTPUT}/brotli_dec_wasm.js" COPYONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/brotli_dec_wasm_bg.wasm" "${HYP_WEB_OUTPUT}/brotli_dec_wasm_bg.wasm" COPYONLY)

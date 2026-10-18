@@ -103,13 +103,14 @@ public:
     bool HasData(StringHash key, size_t size);
     bool GetData(StringHash key, size_t size, void*& outRawData);
     bool PutData(uint32 bucketIndex, StringHash key, const BlobHeader& header, const void* rawData);
+    
+    bool PutAlias(StringHash key, StringHash existingKey);
 
     Result BeginCook(const Array<BlobBlockInfo>& blocks, bool zeroize = true, Array<uint32>* outResetBuckets = nullptr);
 
     /*! \brief Ends a cook pass, saving the table of contents and manifest and closing write streams. */
     Result FinishCook();
 
-    Result SaveManifest();
     Result SaveTOC();
 
     bool IsDirty() const;

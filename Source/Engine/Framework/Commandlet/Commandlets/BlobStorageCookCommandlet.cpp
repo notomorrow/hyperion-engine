@@ -379,6 +379,8 @@ protected:
     }
 
 private:
+    static constexpr size_t InvalidBlobIndex = size_t(-1);
+
       struct CollectedBlob
     {
         uint32 bucketIndex;
@@ -387,9 +389,128 @@ private:
         uint16 version;
         size_t size;
         BlobDataReference* reference;
+        size_t aliasOf = InvalidBlobIndex;
     };
 
     static inline uint32 s_maxTextureSize = 0;
+    static inline Set<const AssetObject*> s_dataOnlyTextures;
+
+    static bool IsDataTextureSlot(uint32 slotIndex)
+    {
+        const MaterialTextureKey key = MaterialTextureKey(1ull << slotIndex);
+
+        return key == MaterialTextureKey::Metalness || key == MaterialTextureKey::Roughness || key == MaterialTextureKey::AmbientOcclusion;
+    }
+
+    static void FindDataOnlyTextures(const Array<Handle<AssetObject>>& assetsToCook)
+    {
+        Set<const AssetObject*> dataTextures;
+        Set<const AssetObject*> detailTextures;
+
+        for (const Handle<AssetObject>& assetObject : assetsToCook)
+        {
+            const Handle<Material>& material = DynamicCast<Material>(assetObject);
+
+            if (!material.IsValid())
+            {
+                continue;
+            }
+
+            for (uint32 slotIndex = 0; slotIndex < MaterialTextures::MaxTextures; slotIndex++)
+            {
+                const Handle<Texture>& texture = material->GetTextureAtIndex(slotIndex);
+
+                if (!texture.IsValid())
+                {
+                    continue;
+                }
+
+                if (IsDataTextureSlot(slotIndex))
+                {
+                    dataTextures.Insert(texture.Get());
+                }
+                else
+                {
+                    detailTextures.Insert(texture.Get());
+                }
+            }
+        }
+
+        s_dataOnlyTextures.Clear();
+
+        for (const AssetObject* texture : dataTextures)
+        {
+            if (!detailTextures.Contains(texture))
+            {
+                s_dataOnlyTextures.Insert(texture);
+            }
+        }
+    }
+
+    static bool HaveSameContent(const CollectedBlob& a, const CollectedBlob& b)
+    {
+        if (a.bucketIndex != b.bucketIndex || a.size != b.size || a.version != b.version)
+        {
+            return false;
+        }
+
+        if ((a.magic == nullptr) != (b.magic == nullptr) || (a.magic != nullptr && std::strcmp(a.magic, b.magic) != 0))
+        {
+            return false;
+        }
+
+        return Memory::Compare(static_cast<const ubyte*>(a.reference->raw), static_cast<const ubyte*>(b.reference->raw), a.size) == 0;
+    }
+
+    static void DeduplicateBlobs(Array<CollectedBlob>& collectedBlobs, Array<uint64>& blockSizes)
+    {
+        Map<uint64, Array<size_t>> blobsByContent;
+
+        size_t numDuplicates = 0;
+        uint64 numBytesSaved = 0;
+
+        for (uint64& blockSize : blockSizes)
+        {
+            blockSize = 0;
+        }
+
+        for (size_t blobIndex = 0; blobIndex < collectedBlobs.Size(); blobIndex++)
+        {
+            CollectedBlob& blob = collectedBlobs[blobIndex];
+
+            const uint64 contentHash = FNV1::DoHashWords(blob.reference->raw, blob.size, (uint64(blob.bucketIndex) << 32) ^ blob.size);
+
+            Array<size_t>& candidates = blobsByContent[contentHash];
+
+            for (const size_t candidateIndex : candidates)
+            {
+                if (HaveSameContent(collectedBlobs[candidateIndex], blob))
+                {
+                    blob.aliasOf = candidateIndex;
+
+                    break;
+                }
+            }
+
+            if (blob.aliasOf != InvalidBlobIndex)
+            {
+                numDuplicates++;
+                numBytesSaved += blob.size;
+
+                continue;
+            }
+
+            candidates.PushBack(blobIndex);
+
+            const size_t headerOffset = ByteUtil::AlignAs(blockSizes[blob.bucketIndex], alignof(BlobHeader));
+            blockSizes[blob.bucketIndex] = headerOffset + sizeof(BlobHeader) + blob.size;
+        }
+
+        if (numDuplicates != 0)
+        {
+            HYP_LOG(Assets, Info, "Stored {} duplicate blob(s) once, saving {} KiB", numDuplicates, numBytesSaved / 1024);
+        }
+    }
 
     // Leaves out the mips above the size limit. The texture keeps the rest of its chain as it was stored.
     static void LimitTextureSize(Texture& texture, uint32 maxTextureSize)
@@ -478,7 +599,9 @@ private:
 
         if (s_maxTextureSize != 0 && assetObject->GetPath().GetBucket() == AssetBuckets::Textures)
         {
-            LimitTextureSize(*static_cast<Texture*>(assetObject.Get()), s_maxTextureSize);
+            const bool isDataOnly = s_dataOnlyTextures.Contains(assetObject.Get());
+
+            LimitTextureSize(*static_cast<Texture*>(assetObject.Get()), isDataOnly ? MathUtil::Max(s_maxTextureSize / 2, 1u) : s_maxTextureSize);
         }
 
         const uint32 bucketIndex = assetObject->GetPath().GetBucket().GetIndex();
@@ -1376,6 +1499,8 @@ private:
 
             uint32 numEngineAssets = 0;
 
+            FindDataOnlyTextures(assetsToCook);
+
             for (const Handle<AssetObject>& assetObject : assetsToCook)
             {
                 if (!assetObject.IsValid())
@@ -1408,6 +1533,8 @@ private:
             HYP_LOG(Assets, Info, "{} of the reachable asset(s) are engine content, cooked to \"{}\"", numEngineAssets, outputEngineContentDir);
         }
 #endif // HYP_EDITOR
+
+        DeduplicateBlobs(collectedBlobs, blockSizes);
 
         Array<BlobBlockInfo> blocks;
 
@@ -1442,6 +1569,16 @@ private:
             if (collectedBlob.reference->raw == nullptr || collectedBlob.reference->size != collectedBlob.size)
             {
                 return HYP_MAKE_ERROR(Error, "Blob data for key {} became invalid between collection and write (asset was unpaged or reallocated during cooking)", collectedBlob.key.GetHashCode().Value());
+            }
+
+            if (collectedBlob.aliasOf != InvalidBlobIndex)
+            {
+                if (!cookedStorage.PutAlias(collectedBlob.key, collectedBlobs[collectedBlob.aliasOf].key))
+                {
+                    return HYP_MAKE_ERROR(Error, "Failed to point cooked blob key {} at its duplicate", collectedBlob.key.GetHashCode().Value());
+                }
+
+                continue;
             }
 
             BlobHeader header {};

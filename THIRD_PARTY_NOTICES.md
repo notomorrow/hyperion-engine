@@ -27,6 +27,7 @@ Hyperion Engine is licensed under the MIT License (see `LICENSE`). Binary releas
 | zlib | Zlib | (C) 1995-2022 Jean-loup Gailly and Mark Adler | `zlib.txt` |
 | bzip2 | bzip2-1.0.6 | Copyright (C) 1996-2019 Julian R Seward | `bzip2.txt` |
 | Brotli | MIT | Copyright (c) 2009, 2010, 2013-2016 by the Brotli Authors | `brotli.txt` |
+| brotli-dec-wasm (web builds) | MIT or Apache-2.0 | Copyright (c) 2026 Yulong Ming | `brotli-dec-wasm.txt` |
 | curl | curl | Copyright (c) 1996 - 2025, Daniel Stenberg and contributors | `curl.txt` |
 | Microsoft Visual C++ Runtime | Microsoft redistributable | Copyright (c) Microsoft Corporation | |
 | Avalonia | MIT | Copyright 2013-2026 (c) The AvaloniaUI Project | `MIT-NuGet-packages.txt` |
