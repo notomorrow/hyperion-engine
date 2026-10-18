@@ -190,7 +190,7 @@ struct CORE_API BoundingBox
         return min.x <= max.x && min.y <= max.y && min.z <= max.z;
     }
 
-    HYP_FORCE_INLINE constexpr bool IsZero() const
+    HYP_FORCE_INLINE bool IsZero() const
     {
         return MathUtil::ApproxEqual(Vec3f(0.0f), GetExtent());
     }

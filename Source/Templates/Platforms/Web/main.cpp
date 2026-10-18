@@ -48,7 +48,7 @@ static void MountPackage()
     mkdir("/hyperion/Cache", 0777);
 
     char* packageUrl = HypWeb_GetPackageUrl();
-    backend_t backend = wasmfs_create_fetch_backend(packageUrl, 16 * 1024 * 1024);
+    backend_t backend = wasmfs_create_fetch_backend(packageUrl, 1u << 30);
     free(packageUrl);
     wasmfs_create_directory("/package", 0777, backend);
 

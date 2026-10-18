@@ -53,6 +53,12 @@ struct THashBucket
 
     struct Iterator
     {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = Value;
+        using difference_type = std::ptrdiff_t;
+        using pointer = Value*;
+        using reference = Value&;
+
         THashBucket<Value>* bucket;
         THashNode<Value>* element;
 
@@ -125,6 +131,12 @@ struct THashBucket
 
     struct ConstIterator
     {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = Value;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const Value*;
+        using reference = const Value&;
+
         const THashBucket<Value>* bucket;
         const THashNode<Value>* element;
 
@@ -579,6 +591,12 @@ public:
 
     struct Iterator
     {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = Value;
+        using difference_type = std::ptrdiff_t;
+        using pointer = Value*;
+        using reference = Value&;
+
         HashTable* map;
         typename Bucket::Iterator bucketIter;
 
@@ -658,6 +676,12 @@ public:
 
     struct ConstIterator
     {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = Value;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const Value*;
+        using reference = const Value&;
+
         const HashTable* map;
         typename Bucket::ConstIterator bucketIter;
 
