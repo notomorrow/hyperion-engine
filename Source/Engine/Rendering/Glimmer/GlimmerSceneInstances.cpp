@@ -270,9 +270,10 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
     const float tracedCellSize = MathUtil::Max(g_cvGlimmerBVHCellSize.Get(), 1.0f);
 
     // a cell in xz only: climbing and diving don't change the set or its LODs
-    const Vec2f tracedCenter = Vec2f(
+    const Vec2f tracedCenter = {
         (float(MathUtil::Floor(viewerPosition.x / tracedCellSize)) + 0.5f) * tracedCellSize,
-        (float(MathUtil::Floor(viewerPosition.z / tracedCellSize)) + 0.5f) * tracedCellSize);
+        (float(MathUtil::Floor(viewerPosition.z / tracedCellSize)) + 0.5f) * tracedCellSize
+    };
 
     const float tracedRadius = MathUtil::Max(g_cvGlimmerBVHRadius.Get(), 0.0f);
 
@@ -312,10 +313,11 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
                 return;
             }
 
-            const Vec3f nearestPoint = Vec3f(
+            const Vec3f nearestPoint = {
                 MathUtil::Clamp(viewerPosition.x, estimatedBounds.min.x, estimatedBounds.max.x),
                 MathUtil::Clamp(viewerPosition.y, estimatedBounds.min.y, estimatedBounds.max.y),
-                MathUtil::Clamp(viewerPosition.z, estimatedBounds.min.z, estimatedBounds.max.z));
+                MathUtil::Clamp(viewerPosition.z, estimatedBounds.min.z, estimatedBounds.max.z)
+            };
 
             priority = viewerPosition.Distance(nearestPoint);
         }
@@ -363,8 +365,11 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
 
             for (uint8 distance = 1; !hasFallback && distance < MaxMeshLods; distance++)
             {
-                hasFallback = (lodIndex + distance < MaxMeshLods && triangleCache.TryGetResident(proxy.mesh, uint8(lodIndex + distance), priority, triangleRef))
-                    || (lodIndex >= distance && triangleCache.TryGetResident(proxy.mesh, uint8(lodIndex - distance), priority, triangleRef));
+                hasFallback = (lodIndex + distance < MaxMeshLods
+                    && triangleCache.TryGetResident(proxy.mesh, uint8(lodIndex + distance), priority, triangleRef));
+
+                hasFallback |= (lodIndex >= distance
+                    && triangleCache.TryGetResident(proxy.mesh, uint8(lodIndex - distance), priority, triangleRef));
             }
 
             if (!hasFallback)
@@ -504,7 +509,8 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
 
         const MaterialAttributes& materialAttributes = proxy->attributes.GetMaterialAttributes();
 
-        if (materialAttributes.bucket != RenderBucket::Opaque && materialAttributes.bucket != RenderBucket::Lightmapped)
+        if (materialAttributes.bucket != RenderBucket::Opaque
+            && materialAttributes.bucket != RenderBucket::Lightmapped)
         {
             continue;
         }
@@ -568,7 +574,8 @@ void GlimmerSceneInstances::Gather(RenderProxyList& rpl, const BoundingBox& regi
         const InstanceData& instanceData = proxy->instanceData;
 
         // buffer 0 is always the instance transform, relative to the entity
-        if (instanceData.bufferStructSizes[0] != sizeof(Mat4f) || instanceData.buffers[0].Size() < proxy->numInstances * sizeof(Mat4f))
+        if (instanceData.bufferStructSizes[0] != sizeof(Mat4f)
+            || instanceData.buffers[0].Size() < proxy->numInstances * sizeof(Mat4f))
         {
             continue;
         }
@@ -616,6 +623,7 @@ GlimmerSceneInstances::BuildResult GlimmerSceneInstances::Build(BuildInput&& inp
         for (uint32 firstTriangle = 0; firstTriangle < triangleCount; firstTriangle += GlimmerSpanChunkTriangles)
         {
             GlimmerSpanChunkShaderData& chunk = result.spanChunks.EmplaceBack();
+
             Memory::Copy(chunk.boundsMin, &bounds.min.x, sizeof(chunk.boundsMin));
             chunk.spanInstance = uint32(spanIndex);
             Memory::Copy(chunk.boundsMax, &bounds.max.x, sizeof(chunk.boundsMax));
@@ -629,7 +637,13 @@ GlimmerSceneInstances::BuildResult GlimmerSceneInstances::Build(BuildInput&& inp
 
     for (size_t spanIndex = 0; spanIndex < result.spanInstances.Size(); spanIndex++)
     {
-        result.spanKeys.PushBack(SpanKey { FNV1::DoHashWords(&result.spanInstances[spanIndex], sizeof(GlimmerSpanInstanceShaderData), input.spanMaterialHashes[spanIndex]), input.spanInstanceBounds[spanIndex] });
+        result.spanKeys.PushBack(SpanKey {
+            FNV1::DoHashWords(
+                &result.spanInstances[spanIndex],
+                sizeof(GlimmerSpanInstanceShaderData),
+                input.spanMaterialHashes[spanIndex]),
+            input.spanInstanceBounds[spanIndex]
+        });
     }
 
     std::sort(result.spanKeys.Begin(), result.spanKeys.End());
@@ -656,11 +670,13 @@ GlimmerSceneInstances::BuildResult GlimmerSceneInstances::Build(BuildInput&& inp
 
         while (previousIndex < previousKeys.Size() || currentIndex < currentKeys.Size())
         {
-            if (currentIndex == currentKeys.Size() || (previousIndex < previousKeys.Size() && previousKeys[previousIndex].hash < currentKeys[currentIndex].hash))
+            if (currentIndex == currentKeys.Size()
+                || (previousIndex < previousKeys.Size() && previousKeys[previousIndex].hash < currentKeys[currentIndex].hash))
             {
                 addChanged(previousKeys[previousIndex++].bounds);
             }
-            else if (previousIndex == previousKeys.Size() || currentKeys[currentIndex].hash < previousKeys[previousIndex].hash)
+            else if (previousIndex == previousKeys.Size()
+                || currentKeys[currentIndex].hash < previousKeys[previousIndex].hash)
             {
                 addChanged(currentKeys[currentIndex++].bounds);
             }
@@ -694,16 +710,24 @@ GlimmerSceneInstances::BuildResult GlimmerSceneInstances::Build(BuildInput&& inp
 
         while (previousIndex < previousRecords.Size() || currentIndex < currentRecords.Size())
         {
-            if (currentIndex == currentRecords.Size() || (previousIndex < previousRecords.Size() && previousRecords[previousIndex].identity < currentRecords[currentIndex].identity))
+            if (currentIndex == currentRecords.Size()
+                || (previousIndex < previousRecords.Size() && previousRecords[previousIndex].identity < currentRecords[currentIndex].identity))
             {
-                result.changes.Add(GlimmerSceneChange { previousRecords[previousIndex++].bounds, false });
+                result.changes.Add(GlimmerSceneChange {
+                    previousRecords[previousIndex++].bounds,
+                    false
+                });
 
                 continue;
             }
 
-            if (previousIndex == previousRecords.Size() || currentRecords[currentIndex].identity < previousRecords[previousIndex].identity)
+            if (previousIndex == previousRecords.Size()
+                || currentRecords[currentIndex].identity < previousRecords[previousIndex].identity)
             {
-                result.changes.Add(GlimmerSceneChange { currentRecords[currentIndex++].bounds, false });
+                result.changes.Add(GlimmerSceneChange {
+                    currentRecords[currentIndex++].bounds,
+                    false
+                });
 
                 continue;
             }
@@ -713,12 +737,23 @@ GlimmerSceneInstances::BuildResult GlimmerSceneInstances::Build(BuildInput&& inp
 
             if (previous.worldHash != current.worldHash)
             {
-                result.changes.Add(GlimmerSceneChange { previous.bounds, false });
-                result.changes.Add(GlimmerSceneChange { current.bounds, false });
+                result.changes.Add(GlimmerSceneChange {
+                    previous.bounds,
+                    false
+                });
+
+                result.changes.Add(GlimmerSceneChange {
+                    current.bounds,
+                    false
+                });
             }
             else if (previous.geometryKey != current.geometryKey)
             {
-                result.changes.Add(GlimmerSceneChange { previous.bounds.Union(current.bounds), true });
+                result.changes.Add(GlimmerSceneChange {
+                    previous.bounds.Union(current.bounds),
+                    true
+                });
+
                 result.numLodOnlyChanges++;
             }
         }
@@ -862,17 +897,25 @@ void GlimmerSceneInstances::UploadTLAS(Frame* frame, BuildResult& result)
     m_tracedInstancesBuffer = std::move(instancesBuffer);
 }
 
-void GlimmerSceneInstances::Update(Frame* frame, RenderProxyList& rpl, const BoundingBox& region, const Vec3f& viewerPosition, GlimmerTriangleCache& triangleCache)
+void GlimmerSceneInstances::Update(
+    Frame* frame,
+    RenderProxyList& rpl,
+    const BoundingBox& region,
+    const Vec3f& viewerPosition,
+    GlimmerTriangleCache& triangleCache)
 {
     HYP_SCOPE;
     AssertOnThread(g_renderThread);
 
-    if (rpl.GetMeshEntities().GetDiff().NeedsUpdate() || rpl.GetMaterials().GetDiff().NeedsUpdate() || region != m_lastRegion)
+    if (rpl.GetMeshEntities().GetDiff().NeedsUpdate()
+        || rpl.GetMaterials().GetDiff().NeedsUpdate()
+        || region != m_lastRegion)
     {
         m_dirty = true;
     }
 
-    if (rpl.GetLightmapVolumes().GetDiff().NeedsUpdate() || g_cvLightmapVolumes.Get() != m_usesLightmaps)
+    if (rpl.GetLightmapVolumes().GetDiff().NeedsUpdate()
+        || g_cvLightmapVolumes.Get() != m_usesLightmaps)
     {
         m_dirty = true;
     }
@@ -884,7 +927,8 @@ void GlimmerSceneInstances::Update(Frame* frame, RenderProxyList& rpl, const Bou
 
     const float viewerMoved = viewerPosition.Distance(m_viewerPositionAtGather);
 
-    if ((m_waitingForTriangles && viewerMoved > ViewerMoveRegatherDistance) || viewerMoved > ViewerMoveLodRegatherDistance)
+    if ((m_waitingForTriangles && viewerMoved > ViewerMoveRegatherDistance)
+        || viewerMoved > ViewerMoveLodRegatherDistance)
     {
         m_dirty = true;
     }

@@ -209,9 +209,10 @@ void GlimmerGroundClipmap::Update(
         const float texelSize = GetGlimmerGroundTexelSize(levelIndex);
         const int32 half = int32(GlimmerGroundResolution / 2);
 
-        const Vec2i desiredOrigin = Vec2i(
+        const Vec2i desiredOrigin = {
             MathUtil::FloorToMultiple(int32(MathUtil::Floor(viewerPosition.x / texelSize)) - half, WindowSnapTexels),
-            MathUtil::FloorToMultiple(int32(MathUtil::Floor(viewerPosition.z / texelSize)) - half, WindowSnapTexels));
+            MathUtil::FloorToMultiple(int32(MathUtil::Floor(viewerPosition.z / texelSize)) - half, WindowSnapTexels)
+        };
 
         MoveWindow(levelIndex, desiredOrigin);
     }
