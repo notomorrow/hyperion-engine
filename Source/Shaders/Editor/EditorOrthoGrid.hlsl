@@ -178,7 +178,7 @@ PSOutput PSMain(PSInput i)
             {
                 const GridLabel label = MakeGridLabel(lineIndex * labelStep + planeOffset.x, GetLabelDecimals(labelStep, planeOffset.x));
 
-                labelCoverage = SampleGridLabel(label, float2(pixel.x - labelStartX, pixel.y - bottomLabelsTop), float2(1.0, 1.0)).x;
+                labelCoverage = SampleGridLabel(label, float2(pixel.x - labelStartX, pixel.y - bottomLabelsTop), float2(1.0, 0.0), float2(0.0, 1.0)).x;
             }
         }
 
@@ -193,7 +193,7 @@ PSOutput PSMain(PSInput i)
             {
                 const GridLabel label = MakeGridLabel(lineIndex * labelStep + planeOffset.y, GetLabelDecimals(labelStep, planeOffset.y));
 
-                labelCoverage = max(labelCoverage, SampleGridLabel(label, float2(pixel.x - LabelMargin, pixel.y - labelTopY), float2(1.0, 1.0)).x);
+                labelCoverage = max(labelCoverage, SampleGridLabel(label, float2(pixel.x - LabelMargin, pixel.y - labelTopY), float2(1.0, 0.0), float2(0.0, 1.0)).x);
             }
         }
 
@@ -210,8 +210,8 @@ PSOutput PSMain(PSInput i)
             clamp(axisPixel.x + LabelPadding, leftLabelsRight + LabelPadding, viewportSize.x - LabelMargin - GetGlyphAdvance(verticalAxisGlyph)),
             verticalWorldPerPixel < 0.0 ? LabelMargin : bottomLabelsTop - LabelPadding - GlyphHeight);
 
-        color = lerp(color, saturate(horizontalAxisColor * 2.0), SampleGlyph(horizontalAxisGlyph, pixel - horizontalAxisGlyphPosition, float2(1.0, 1.0)).x);
-        color = lerp(color, saturate(verticalAxisColor * 2.0), SampleGlyph(verticalAxisGlyph, pixel - verticalAxisGlyphPosition, float2(1.0, 1.0)).x);
+        color = lerp(color, saturate(horizontalAxisColor * 2.0), SampleGlyph(horizontalAxisGlyph, pixel - horizontalAxisGlyphPosition, float2(1.0, 0.0), float2(0.0, 1.0)).x);
+        color = lerp(color, saturate(verticalAxisColor * 2.0), SampleGlyph(verticalAxisGlyph, pixel - verticalAxisGlyphPosition, float2(1.0, 0.0), float2(0.0, 1.0)).x);
     }
 
     PSOutput output;
