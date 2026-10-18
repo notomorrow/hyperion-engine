@@ -76,7 +76,7 @@ float4 PSMain(PSInput input) : SV_Target0
     float4 color_output = float4(Tonemap(graded_color, world_shader_data.tonemap_operator), 1.0);
 
     // debug draws are premultiplied over a transparent clear, alpha being how much of the scene they cover
-    const float4 debug_overlay = SAMPLE_TEXTURE_2D(sampler_nearest, DebugOverlayTexture, texcoord);
+    const float4 debug_overlay = SAMPLE_TEXTURE_2D(sampler_linear, DebugOverlayTexture, texcoord);
     color_output.rgb = saturate(debug_overlay.rgb) + color_output.rgb * (1.0 - saturate(debug_overlay.a));
 
 #ifdef OUTPUT_PQ_HDR

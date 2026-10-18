@@ -161,6 +161,26 @@ void ThumbnailCaptureState::CaptureFrom(Frame* frame, const GpuImageViewRef& col
         return;
     }
 
+    // the final image can be larger than the gbuffer the capture was sized from, when TAA upsamples
+    const Vec2u sourceExtent = colorImageView->GetImage()->GetExtent().GetXY();
+
+    if (coverageImageView->GetImage()->GetExtent().GetXY() != sourceExtent)
+    {
+        HYP_LOG(Rendering, Warning, "Thumbnail capture color and coverage images differ in size, skipping capture.");
+
+        return;
+    }
+
+    if (sourceExtent != m_extent)
+    {
+        EnqueueDeletion(std::move(m_texture));
+        EnqueueDeletion(std::move(m_coverageTexture));
+
+        m_extent = sourceExtent;
+        m_texture = CreateCaptureTexture(m_extent, NAME("ThumbnailCaptureTarget"));
+        m_coverageTexture = CreateCaptureTexture(m_extent, NAME("ThumbnailCaptureCoverage"));
+    }
+
     if (!m_texture.IsValid() || !m_texture->IsCreated()
         || !m_coverageTexture.IsValid() || !m_coverageTexture->IsCreated())
     {

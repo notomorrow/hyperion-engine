@@ -222,6 +222,7 @@ void RenderThread::Update()
         target.windowId = window->Id().Value();
         target.swapchain = swapchain;
         target.viewport = Viewport { Vec2u(Vec2f(swapchain->GetExtent()) * window->GetRenderTargetScale()) };
+        target.outputExtent = swapchain->GetExtent();
     };
 
     if (mainWindow != nullptr)

@@ -41,8 +41,9 @@ extern CVar<float> g_cvTAACutoutFeedback;
 
 static EngineStatGpuTimer s_statTAA("Rendering/GPU/TAA");
 
-TAAPass::TAAPass(const Vec2u& extent, GBuffer* gbuffer)
+TAAPass::TAAPass(const Vec2u& extent, const Vec2u& outputExtent, GBuffer* gbuffer)
     : m_extent(extent),
+      m_outputExtent(outputExtent),
       m_gbuffer(gbuffer),
       m_pingPongIndex(0),
       m_isInitialized(false)
@@ -72,7 +73,7 @@ void TAAPass::CreateTextures()
     m_resultTexture = MakeHandle<Texture>(TextureDesc {
         TextureType::Texture2D,
         TextureFormat::RGBA16F,
-        Vec3u { m_extent.x, m_extent.y, 1 },
+        Vec3u { m_outputExtent.x, m_outputExtent.y, 1 },
         TextureFilterMode::Nearest,
         TextureFilterMode::Nearest,
         TextureWrapMode::ClampToEdge,
@@ -85,7 +86,7 @@ void TAAPass::CreateTextures()
     m_historyTexture = MakeHandle<Texture>(TextureDesc {
         TextureType::Texture2D,
         TextureFormat::RGBA16F,
-        Vec3u { m_extent.x, m_extent.y, 1 },
+        Vec3u { m_outputExtent.x, m_outputExtent.y, 1 },
         TextureFilterMode::Nearest,
         TextureFilterMode::Nearest,
         TextureWrapMode::ClampToEdge,
@@ -134,6 +135,7 @@ void TAAPass::Render(Frame* frame, const RenderSetup& renderSetup)
         {
             Vec4u dimensions;
             Vec4f jitter;
+            Vec2u outputDimensions;
             float feedback;
             float cutoutFeedback;
         };
@@ -141,6 +143,7 @@ void TAAPass::Render(Frame* frame, const RenderSetup& renderSetup)
         TAAConstants constants {};
         constants.dimensions = Vec4u { m_extent, depthTextureDimensions.GetXY() };
         constants.jitter = cameraProxy->bufferData.jitter;
+        constants.outputDimensions = m_outputExtent;
         constants.feedback = MathUtil::Clamp(g_cvTAAFeedback.Get(), 0.1f, 0.98f);
         constants.cutoutFeedback = MathUtil::Clamp(g_cvTAACutoutFeedback.Get(), 0.1f, 0.98f);
 
@@ -170,7 +173,7 @@ void TAAPass::Render(Frame* frame, const RenderSetup& renderSetup)
     frame->cr << SetShaderUniform(7, "TAAConstants"_sh, cbuffer, ShaderDataOffset(cbufferOffset, cbufferSize));
     frame->cr << SetShaderUniform(8, "InMaterialTexture"_sh, m_gbuffer->GetPass(GBufferPass::Opaque).GetAttachment(GBufferTarget::MatData)->GetImageView());
 
-    frame->cr << DispatchCompute(Vec3u { (m_extent.x + 7) / 8, (m_extent.y + 7) / 8, 1 });
+    frame->cr << DispatchCompute(Vec3u { (m_outputExtent.x + 7) / 8, (m_outputExtent.y + 7) / 8, 1 });
     frame->cr << InsertBarrier(activeTexture->GetGpuImage(), ResourceState::ShaderResource);
 
     m_pingPongIndex ^= 1;
