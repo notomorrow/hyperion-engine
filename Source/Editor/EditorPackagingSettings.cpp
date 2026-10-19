@@ -10,13 +10,12 @@
 
 #include <Asset/SerializationUtils.hpp>
 
-#include <Core/DataProcessing/JSON/JSON.hpp>
+#include <Core/Reflection/Class.hpp>
+#include <Core/Reflection/Field.hpp>
 
 #include <EditorPackagingSettings.generated.inl>
 
 namespace Hyperion {
-
-HYP_DECLARE_LOG_CHANNEL(Editor);
 
 namespace {
 
@@ -29,106 +28,116 @@ static const Pair<TargetPlatform, ANSIStringView> s_targetPlatformNames[] = {
     { TargetPlatform::Web, "web" }
 };
 
-// options are compared and merged as JSON, so any nesting of reflected structs works without per-field code
-JSON::Value OptionsToJSON(const PackagingOptions& options)
-{
-    JSON::Value json;
-
-    if (Result result = BoxedToJSON(BoxedValue(options), json); result.HasError())
+static const Pair<TargetPlatform, void (*)(PackagingOptions&)> s_platformDefaults[] = {
     {
-        HYP_LOG(Editor, Error, "Failed to convert packaging options to JSON: {}", result.GetError().GetMessage());
+        TargetPlatform::Web,
+        [](PackagingOptions& options)
+        {
+            // Web needs to be limited to reduce download size.
+            options.content.maxTextureSize = 256;
+        }
+    },
+    {
+        TargetPlatform::IOS,
+        [](PackagingOptions& options)
+        {
+            options.content.maxTextureSize = 512;
+        }
+    },
+    {
+        TargetPlatform::Android,
+        [](PackagingOptions& options)
+        {
+            options.content.maxTextureSize = 512;
+        }
     }
+};
 
-    return json;
+String MemberPath(const String& prefix, const IMember& member)
+{
+    const String name(member.GetName().LookupString());
+
+    return prefix.Any() ? prefix + "." + name : name;
 }
 
-PackagingOptions OptionsFromJSON(const JSON::Value& json)
+const Class* NestedClass(const IMember& member)
 {
-    BoxedValue boxed;
+    const Class* cls = member.GetTypeInfo().GetClass();
 
-    if (Result result = BoxedFromJSON(json, TypeOf<PackagingOptions>(), boxed); result.HasError() || !boxed.Is<PackagingOptions>())
-    {
-        HYP_LOG(Editor, Error, "Failed to read packaging options from JSON");
-
-        return {};
-    }
-
-    return boxed.Get<PackagingOptions>();
+    return cls != nullptr && cls->IsStructType() ? cls : nullptr;
 }
 
-void CollectDifferences(const JSON::Value& defaults, const JSON::Value& options, const String& path, Array<String>& outPaths)
+String ValueToHMF(const BoxedValue& value, const IMember& member)
 {
-    if (defaults.IsObject() && options.IsObject())
-    {
-        const JSON::Object& optionsObject = options.AsObject();
+    String text;
+    BoxedToHMF(value, text, &member.GetTypeInfo());
 
-        for (const auto& entry : defaults.AsObject())
+    return text;
+}
+
+void CollectDifferences(
+    const Class* cls,
+    const BoxedValue& defaults,
+    const BoxedValue& options,
+    const String& prefix,
+    Array<String>& outPaths)
+{
+    for (const IMember& member : cls->GetMembers(MemberType::Field, false))
+    {
+        const Field& field = static_cast<const Field&>(member);
+        const String path = MemberPath(prefix, member);
+
+        const BoxedValue defaultValue = field.Get(defaults);
+        const BoxedValue value = field.Get(options);
+
+        if (const Class* nestedClass = NestedClass(member))
         {
-            auto optionsIt = optionsObject.Find(entry.first);
-
-            if (optionsIt == optionsObject.End())
-            {
-                continue;
-            }
-
-            CollectDifferences(entry.second, optionsIt->second, path.Any() ? path + "." + entry.first : entry.first, outPaths);
+            CollectDifferences(nestedClass, defaultValue, value, path, outPaths);
         }
-
-        return;
-    }
-
-    if (defaults.ToString(true) != options.ToString(true))
-    {
-        outPaths.PushBack(path);
+        else if (ValueToHMF(defaultValue, member) != ValueToHMF(value, member))
+        {
+            outPaths.PushBack(path);
+        }
     }
 }
 
-const JSON::Value* FindPath(const JSON::Value& root, const String& path)
+void CopyOverriddenFields(
+    const Class* cls,
+    BoxedValue& target,
+    const BoxedValue& source,
+    const String& prefix,
+    const Array<String>& paths)
 {
-    const JSON::Value* current = &root;
-
-    for (const String& key : path.Split('.'))
+    for (const IMember& member : cls->GetMembers(MemberType::Field, false))
     {
-        if (!current->IsObject())
+        const Field& field = static_cast<const Field&>(member);
+        const String path = MemberPath(prefix, member);
+
+        if (paths.Contains(path))
         {
-            return nullptr;
+            field.Set(target, field.Get(source));
         }
-
-        auto it = current->AsObject().Find(key);
-
-        if (it == current->AsObject().End())
+        else if (const Class* nestedClass = NestedClass(member))
         {
-            return nullptr;
-        }
+            BoxedValue nested = field.Get(target);
+            CopyOverriddenFields(nestedClass, nested, field.Get(source), path, paths);
 
-        current = &it->second;
+            field.Set(target, nested);
+        }
     }
-
-    return current;
 }
 
-void SetPath(JSON::Value& root, const String& path, const JSON::Value& value)
+Array<String> FindOverriddenFields(const PackagingOptions& defaults, const PackagingOptions& options)
 {
-    JSON::Value* current = &root;
+    Array<String> paths;
+    CollectDifferences(
+        PackagingOptions::StaticClass(),
+        BoxedValue(defaults),
+        BoxedValue(options),
+        String::empty,
+        paths);
 
-    for (const String& key : path.Split('.'))
-    {
-        if (!current->IsObject())
-        {
-            return;
-        }
-
-        auto it = current->AsObject().Find(key);
-
-        if (it == current->AsObject().End())
-        {
-            return;
-        }
-
-        current = &it->second;
-    }
-
-    *current = value;
+    return paths;
 }
 
 PackagingOptions MergeOverride(const PackagingOptions& defaults, const PackagingPlatformOverride& platformOverride)
@@ -138,18 +147,16 @@ PackagingOptions MergeOverride(const PackagingOptions& defaults, const Packaging
         return defaults;
     }
 
-    JSON::Value merged = OptionsToJSON(defaults);
-    const JSON::Value overrideJson = OptionsToJSON(platformOverride.options);
+    BoxedValue merged { defaults };
 
-    for (const String& path : platformOverride.overriddenFields)
-    {
-        if (const JSON::Value* value = FindPath(overrideJson, path))
-        {
-            SetPath(merged, path, *value);
-        }
-    }
+    CopyOverriddenFields(
+        PackagingOptions::StaticClass(),
+        merged,
+        BoxedValue(platformOverride.options),
+        String::empty,
+        platformOverride.overriddenFields);
 
-    return OptionsFromJSON(merged);
+    return merged.Get<PackagingOptions>();
 }
 
 } // namespace
@@ -195,6 +202,18 @@ bool ParseTargetPlatform(ANSIStringView name, TargetPlatform& outPlatform)
 
 #pragma region PackagingSettings
 
+Handle<PackagingSettings> PackagingSettings::CreateDefault()
+{
+    Handle<PackagingSettings> settings = MakeHandle<PackagingSettings>();
+
+    for (const auto& entry : s_platformDefaults)
+    {
+        settings->AddPlatformOverride(entry.first);
+    }
+
+    return settings;
+}
+
 Handle<PackagingPlatformOverride> PackagingSettings::AddPlatformOverride(TargetPlatform platform)
 {
     for (const Handle<PackagingPlatformOverride>& platformOverride : m_platformOverrides)
@@ -206,6 +225,16 @@ Handle<PackagingPlatformOverride> PackagingSettings::AddPlatformOverride(TargetP
     }
 
     Handle<PackagingPlatformOverride> platformOverride = MakeHandle<PackagingPlatformOverride>(platform, defaults);
+
+    for (const auto& entry : s_platformDefaults)
+    {
+        if (entry.first == platform)
+        {
+            entry.second(platformOverride->options);
+        }
+    }
+
+    platformOverride->overriddenFields = FindOverriddenFields(defaults, platformOverride->options);
 
     m_platformOverrides.PushBack(platformOverride);
 
@@ -238,18 +267,12 @@ void PackagingSettings::ApplyDefaultsToOverrides()
 
 void PackagingSettings::UpdateOverriddenFields()
 {
-    const JSON::Value defaultsJson = OptionsToJSON(defaults);
-
     for (const Handle<PackagingPlatformOverride>& platformOverride : m_platformOverrides)
     {
-        if (!platformOverride.IsValid())
+        if (platformOverride.IsValid())
         {
-            continue;
+            platformOverride->overriddenFields = FindOverriddenFields(defaults, platformOverride->options);
         }
-
-        platformOverride->overriddenFields.Clear();
-
-        CollectDifferences(defaultsJson, OptionsToJSON(platformOverride->options), String(), platformOverride->overriddenFields);
     }
 }
 

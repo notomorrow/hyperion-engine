@@ -418,19 +418,19 @@ Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir,
 
     String args = String("--basedir=./ --startupworld=") + *startupWorldName;
 
-    if (packagingOptions.net.multiplayer)
-    {
-        if (packagingOptions.net.serverAddress.Any())
-        {
-            args += String(" --host=") + packagingOptions.net.serverAddress;
-        }
+    //if (packagingOptions.net.multiplayer)
+    //{
+    //    if (packagingOptions.net.serverAddress.Any())
+    //    {
+    //        args += String(" --host=") + packagingOptions.net.serverAddress;
+    //    }
 
-        args += HYP_FORMAT(" --gameport={}", packagingOptions.net.serverPort);
-    }
-    else
-    {
-        args += " --singleplayer";
-    }
+    //    args += HYP_FORMAT(" --gameport={}", packagingOptions.net.serverPort);
+    //}
+    //else
+    //{
+    //    args += " --singleplayer";
+    //}
 
     const String config = String("{\n  \"App\": {\n    \"Name\": \"") + name
         + "\",\n    \"Args\": \"" + args

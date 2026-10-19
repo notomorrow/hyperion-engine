@@ -167,9 +167,7 @@ EditorProject::EditorProject(Name name, const Handle<Game>& gameInstance)
     m_actionStack = MakeHandle<EditorActionStack>(WeakHandleFromThis());
 
     // replaced by the project file's own settings when it has them
-    m_packagingSettings = MakeHandle<PackagingSettings>();
-    m_packagingSettings->AddPlatformOverride(TargetPlatform::Web)->options.content.maxTextureSize = 512;
-    m_packagingSettings->UpdateOverriddenFields();
+    m_packagingSettings = PackagingSettings::CreateDefault();
 }
 
 EditorProject::~EditorProject()

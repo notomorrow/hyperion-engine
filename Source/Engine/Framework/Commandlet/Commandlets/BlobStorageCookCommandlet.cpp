@@ -156,7 +156,7 @@ public:
             s_definitions.Add(
                 "max-texture-size",
                 "",
-                "Largest width or height a cooked 2D texture keeps; the mips above it are left out (0 keeps every mip)",
+                "Largest texture dimension in the cooked game, textures larger than this will be downscaled. Use 0 for no limit",
                 CommandLineArgumentFlags::NONE,
                 {},
                 JSON::Value(""));
@@ -164,7 +164,7 @@ public:
             s_definitions.Add(
                 "target-platform",
                 "",
-                "Platform whose packaging settings in the project apply (windows, mac, linux, android, ios, web); --max-texture-size overrides its texture limit",
+                "Platform whose packaging settings in the project apply (windows, mac, linux, android, ios, web)",
                 CommandLineArgumentFlags::NONE,
                 {},
                 JSON::Value(""));

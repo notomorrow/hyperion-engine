@@ -84,7 +84,6 @@ namespace Hyperion
             Hyp_RequestQuit();
         }
 
-        // For a native host that starts the engine itself (the web page): registers the managed side, to run on Hyp_Initialize
         public static void InitializeHosted(Assembly gameAssembly)
         {
             s_gameAssembly = gameAssembly;
@@ -104,7 +103,6 @@ namespace Hyperion
             }
         }
 
-        // The native host then hands the returned Game to Hyp_SetGame; CurrentGame keeps it alive
         public static IntPtr StartHostedGame(Game game)
         {
             CurrentGame = game;
@@ -297,6 +295,8 @@ namespace Hyperion
             public delegate* unmanaged<IntPtr, IntPtr, IntPtr, int, int> initializeAssembly;
             public delegate* unmanaged<IntPtr, IntPtr, void> unloadAssembly;
         }
+
+        ////////////////////
 
         [DllImport("hyperion")]
         private static extern int Hyp_Initialize(int argc, IntPtr argv);

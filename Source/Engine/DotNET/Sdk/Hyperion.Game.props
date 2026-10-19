@@ -1,27 +1,4 @@
 <Project>
-  <!--
-    Import from a C# game project to build it against a Hyperion engine build:
-
-      <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <HyperionBinDir>C:/Path/To/HyperionEngine/Binaries/Windows-Runtime/Release</HyperionBinDir>
-      </PropertyGroup>
-      <Import Project="C:/Path/To/HyperionEngine/Source/Engine/DotNET/Sdk/Hyperion.Game.props" />
-
-    then start the engine from Main with HyperionApp.Run<MyGame>(args).
-
-    HyperionBinDir        Engine binaries (hyperion.dll + Hyperion.NET.*.dll). Prefer a runtime-only build
-                          (BuildHyperion runtime), which leaves out the editor.
-    HyperionBaseDir       Directory holding the engine's Content folder. Defaults to the repo root above HyperionBinDir.
-    HyperionOutputToBinDir  Build the game straight into HyperionBinDir instead of copying the engine next to the game.
-    HyperionManagedDir    Directory holding Hyperion.NET.*.dll. Defaults to HyperionBinDir, or its ref/ folder for a
-                          packaged editor (which keeps its own copies inside the single-file executable).
-    HyperionWriteGlobalConfig  Write Config/GlobalConfig.json next to the game with the engine arguments for running
-                          against HyperionBaseDir and HyperionContentDir (uncooked). Use with
-                          HyperionAppOptions.UseGlobalConfigArgs.
-    HyperionContentDir    The game's project directory (the one holding its Content folder), relative to the built game.
-  -->
-
   <PropertyGroup>
     <HyperionBinDir>$([MSBuild]::EnsureTrailingSlash('$(HyperionBinDir)'))</HyperionBinDir>
     <HyperionManagedDir Condition="'$(HyperionManagedDir)' == '' And !Exists('$(HyperionBinDir)Hyperion.NET.Runtime.dll') And Exists('$(HyperionBinDir)ref/Hyperion.NET.Runtime.dll')">$(HyperionBinDir)ref/</HyperionManagedDir>
@@ -57,13 +34,11 @@
     <Analyzer Include="$(HyperionManagedDir)Hyperion.NET.Generators.dll" Condition="Exists('$(HyperionManagedDir)Hyperion.NET.Generators.dll')" />
     <Analyzer Include="$(HyperionBinDir)Hyperion.NET.Generators.dll" Condition="!Exists('$(HyperionManagedDir)Hyperion.NET.Generators.dll') And Exists('$(HyperionBinDir)Hyperion.NET.Generators.dll')" />
 
-    <!-- read by HyperionApp and passed to the engine as its base directory -->
     <AssemblyMetadata Include="HyperionBaseDir" Value="$(HyperionBaseDir)" />
   </ItemGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)Hyperion.Web.targets" Condition="'$(HyperionWebBuild)' == 'true'" />
 
-  <!-- a standalone build compiles the project's scripts into the game; the editor compiles and reloads them on its own -->
   <PropertyGroup>
     <HyperionProjectDir Condition="'$(HyperionProjectDir)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../'))</HyperionProjectDir>
     <HyperionProjectDir>$([MSBuild]::EnsureTrailingSlash('$(HyperionProjectDir)'))</HyperionProjectDir>
@@ -96,7 +71,6 @@
            Text="HyperionBinDir must point at a Hyperion engine build (containing the native hyperion library); got '$(HyperionBinDir)'" />
   </Target>
 
-  <!-- Copy the native engine next to the game. DLLs are hardlinked; Config is copied since the game may write to it. -->
   <Target Name="HyperionCopyEngineRuntime" AfterTargets="Build" Condition="'$(HyperionOutputToBinDir)' != 'true' And '$(HyperionWebBuild)' != 'true'">
     <ItemGroup>
       <_HyperionNativeLibraries Include="$(HyperionBinDir)*.dll;$(HyperionBinDir)*.so;$(HyperionBinDir)*.dylib" Exclude="$(HyperionBinDir)Hyperion.NET.*.dll" />

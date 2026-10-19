@@ -36,23 +36,8 @@ struct ContentPackagingOptions
 {
     HYP_STRUCT_BODY(ContentPackagingOptions);
     
-    HYP_FIELD(Property = "MaxTextureSize", Serialize, Editor, Title = "Max Texture Size", Description = "Largest texture dimension in the cooked game, textures larger than this will be downscaled. Use 0 for limit")
+    HYP_FIELD(Property = "MaxTextureSize", Serialize, Editor, Title = "Max Texture Size", Description = "Largest texture dimension in the cooked game, textures larger than this will be downscaled. Use 0 for no limit")
     uint32 maxTextureSize = 0;
-};
-
-HYP_STRUCT()
-struct NetPackagingOptions
-{
-    HYP_STRUCT_BODY(NetPackagingOptions);
-    
-    HYP_FIELD(Property = "Multiplayer", Serialize, Editor, Title = "Multiplayer", Description = "Connect to a game server on launch instead of playing single player")
-    bool multiplayer = false;
-
-    HYP_FIELD(Property = "ServerAddress", Serialize, Editor, Title = "Server Address", Description = "Host the game connects to when multiplayer")
-    String serverAddress;
-
-    HYP_FIELD(Property = "ServerPort", Serialize, Editor, Title = "Server Port")
-    uint32 serverPort = 9192;
 };
 
 HYP_STRUCT()
@@ -62,9 +47,6 @@ struct PackagingOptions
 
     HYP_FIELD(Property = "Content", Serialize, Editor)
     ContentPackagingOptions content;
-    
-    HYP_FIELD(Property = "Net", Serialize, Editor)
-    NetPackagingOptions net;
 };
 
 HYP_CLASS()
@@ -104,6 +86,8 @@ class EDITOR_API PackagingSettings final : public ObjectBase
 
 public:
     PackagingSettings() = default;
+
+    static Handle<PackagingSettings> CreateDefault();
 
     HYP_METHOD()
     HYP_FORCE_INLINE const Array<Handle<PackagingPlatformOverride>>& GetPlatformOverrides() const

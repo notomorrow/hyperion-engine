@@ -616,8 +616,10 @@ if(HYP_MONOLITHIC AND NOT HYP_BUILD_STATIC)
   add_definitions(-DHYP_MONOLITHIC=1)
 endif()
 
-# managed code always starts the engine and registers through InitFromManaged: Hyperion.Editor.exe, a C# game via
-# HyperionApp, or a game's NativeAOT code (an executable, a library linked into a C++ launcher, or the web page)
+# managed code always starts the engine and registers through InitFromManaged.
+#  - Hyperion.Editor.exe
+#  - a C# game via HyperionApp
+#  - or a game's NativeAOT code (eg an executable, a library linked into a C++ launcher, or the web page)
 if(HYP_EDITOR OR HYP_RUNTIME_ONLY OR HYP_WEB OR (NOT DEFINED HYP_DOTNET AND NOT HYP_ANDROID AND NOT HYP_IOS))
   set(HYP_DOTNET 1)
 endif()
