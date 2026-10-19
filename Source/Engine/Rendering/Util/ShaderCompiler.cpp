@@ -2399,17 +2399,7 @@ bool ShaderCompiler::CanCompileShaders(const ShaderCompileParams& params) const
 
 #ifdef HYP_DXC
 #ifdef HYP_WINDOWS
-    static const bool s_hasDXC = []()
-    {
-        const bool hasDXC = (CoreApi::GetExecutablePath() / "dxcompiler.dll").Exists();
-
-        if (!hasDXC)
-        {
-            HYP_LOG(ShaderCompiler, Info, "No dxcompiler.dll next to the executable: only cooked shaders can be loaded");
-        }
-
-        return hasDXC;
-    }();
+    static const bool s_hasDXC = (CoreApi::GetExecutablePath() / "dxcompiler.dll").Exists();
 
     if (!s_hasDXC)
     {

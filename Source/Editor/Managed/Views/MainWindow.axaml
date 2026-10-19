@@ -1232,10 +1232,10 @@
                                     <MenuItem Command="{Binding BuildNativeGame}" Header="Build Game" />
                                     <MenuItem Command="{Binding ReloadGameModule}" Header="Reload Game" />
                                     <MenuItem Command="{Binding PackageGame}" Header="Package Game" />
-                                    <MenuItem Click="OnPackagingSettingsClick" Header="Packaging Settings..." />
                                     <Separator />
-                                    <MenuItem Command="{Binding BuildWebGame}" Header="Build for Web" />
-                                    <MenuItem Command="{Binding RunWebGame}" Header="Run in Browser" />
+                                    <MenuItem Command="{Binding BuildWebGame}" Header="Package for Web" />
+                                    <Separator />
+                                    <MenuItem Click="OnPackagingSettingsClick" Header="Packaging Settings..." />
                                 </MenuFlyout>
                             </DropDownButton.Flyout>
                         </DropDownButton>
@@ -1265,19 +1265,19 @@
                                         <MenuFlyout Placement="Bottom">
                                             <MenuItem
                                                 Command="{Binding SetPlayNetModeStandalone}"
-                                                Header="Standalone"
+                                                Header="Play Local"
                                                 IsChecked="{Binding IsPlayNetModeStandalone, Mode=OneWay}"
                                                 ToggleType="CheckBox"
                                                 ToolTip.Tip="Play locally with no network connection" />
                                             <MenuItem
                                                 Command="{Binding SetPlayNetModeClient}"
-                                                Header="Play As Client"
+                                                Header="Play as Client"
                                                 IsChecked="{Binding IsPlayNetModeClient, Mode=OneWay}"
                                                 ToggleType="CheckBox"
                                                 ToolTip.Tip="Connect to the server set in Network Settings once play starts" />
                                             <MenuItem
                                                 Command="{Binding SetPlayNetModeDedicatedServer}"
-                                                Header="Play As Dedicated Server"
+                                                Header="Play as Dedicated Server"
                                                 IsChecked="{Binding IsPlayNetModeDedicatedServer, Mode=OneWay}"
                                                 ToggleType="CheckBox"
                                                 ToolTip.Tip="Host the play session as a server on the port set in Network Settings" />
@@ -1285,6 +1285,10 @@
                                             <MenuItem
                                                 Command="{Binding OpenNetworkSettings}"
                                                 Header="Network Settings..." />
+                                            <Separator />
+                                            <MenuItem
+                                              Command="{Binding RunWebGame}"
+                                              Header="Play in Web Browser" />
                                         </MenuFlyout>
                                     </Button.Flyout>
                                 </Button>
