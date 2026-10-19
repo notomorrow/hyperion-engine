@@ -2365,7 +2365,7 @@ struct ShaderPropertySet
     }
 
     Array<ShaderPropertyId> ToArray() const;
-    String GetDebugString() const;
+    ENGINE_API String GetDebugString() const;
 
     void WriteToBinary(ByteWriter& stream) const;
 

@@ -1260,7 +1260,7 @@ private:
         const ShaderPropertyId backendPropertyId = propertyDictionary.Intern(ShaderProperty(NAME("BACKEND"), shaderTarget.backendPropertyValue));
         const ShaderPropertyId numGBufferTexturesPropertyId = propertyDictionary.Intern(ShaderProperty(NAME("NUM_GBUFFER_TEXTURES"), int(NumGBufferTargets)));
 
-        Map<Name, Set<HashCode>> requestedVariants;
+        Map<Name, Map<HashCode, ShaderPropertySet>> requestedVariants;
 
         for (const VariantRequest& request : requests)
         {
@@ -1274,7 +1274,7 @@ private:
             targetProperties.Add(targetPropertyId);
             targetProperties.Add(backendPropertyId);
 
-            requestedVariants[request.shaderName].Insert(targetProperties.GetHashCode());
+            requestedVariants[request.shaderName][targetProperties.GetHashCode()] = targetProperties;
         }
 
         uint32 numVariants = 0;
@@ -1289,6 +1289,8 @@ private:
             }
 
             const ShaderBundle* bundle = static_cast<const ShaderBundle*>(bundleAsset.Get());
+
+            Set<HashCode> collectedVariants;
 
             outAssets.PushBack(bundleAsset);
 
@@ -1312,6 +1314,16 @@ private:
                 {
                     outAssets.PushBack(shader);
                     ++numVariants;
+                    collectedVariants.Insert(requestedProperties.GetHashCode());
+                }
+            }
+
+            for (const auto& requested : it.second)
+            {
+                if (!collectedVariants.Contains(requested.first))
+                {
+                    HYP_LOG(Assets, Warning, "Compiled {} {} for {} but found no matching variant in its bundle",
+                        it.first, requested.second.GetDebugString(), shaderTarget.name);
                 }
             }
         }
@@ -1409,7 +1421,8 @@ private:
             }
         }
 
-        // meshes the engine builds at run time (terrain, debug draw, particles, MeshBuilder shapes) are all VT_Simple
+        /// meshes the engine builds at run time (debug draw, particles, MeshBuilder shapes) are VT_Simple.
+        /// terrain adds its own layout
         Set<uint8> meshLayouts = projectMeshLayouts;
         meshLayouts.Insert(uint8(VT_Simple));
 
@@ -1652,6 +1665,12 @@ private:
                 {
                     projectMeshLayouts.Insert(static_cast<const Mesh*>(assetObject.Get())->GetMeshAttributes().inputLayout.mask);
                 }
+            }
+
+            // terrain cells are built at run time with a second UV set
+            if (usesTerrain)
+            {
+                projectMeshLayouts.Insert(uint8(VT_Simple | VT_UV1));
             }
 
             if (shaderTarget.isEnabled && engineRegistry)
