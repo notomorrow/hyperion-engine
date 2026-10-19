@@ -498,7 +498,7 @@ private:
             []()
             { /* no tick function */ },
             "Packaging Game",
-            "Cooking content",
+            "Cooking and building the game",
             /* isForegroundTask */ true);
 
         TaskSystem::GetInstance().Enqueue(
@@ -506,29 +506,14 @@ private:
                 name,
                 outputDir,
                 projectFilepath = project->GetFilePath(),
-                projectDir = project->GetFilePath().BasePath(),
                 binariesDir = GetNativeModulePath(project->GetFilePath()).BasePath(),
                 startupWorldName = project->GetEditWorldName()]()
             {
-                CommandLineArguments args;
-                args.Set("project", projectDir);
-                args.Set("out-cache", outputDir / "Cache");
-                args.Set("out-content", outputDir / "Content");
-                // where a game looks for engine content relative to its base directory
-                args.Set("out-engine-content", outputDir / "Content" / "Engine");
-                args.Set("shader-target", String("host"));
-                args.Set("target-config", CoreApi::GetExecutablePath() / "Config" / "EngineConfig.json");
+                Result result;
 
-                Result result = g_appContext->RunCommandlet("BlobStorageCookCommandlet", args);
-
-                if (!result.HasError())
+                if (!g_editorState->OnBuildPackageRequested(String(projectFilepath), String(binariesDir), String(outputDir)))
                 {
-                    editorTaskScope->GetEditorTask()->SetDescription("Building the game");
-
-                    if (!g_editorState->OnBuildPackageRequested(String(projectFilepath), String(binariesDir), String(outputDir)))
-                    {
-                        result = HYP_MAKE_ERROR(Error, "Building the game failed, see the GameBuild log");
-                    }
+                    result = HYP_MAKE_ERROR(Error, "Cooking or building the game failed, see the GameBuild log");
                 }
 
                 if (!result.HasError())

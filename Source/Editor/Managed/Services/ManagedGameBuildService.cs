@@ -20,6 +20,10 @@ namespace Hyperion.Editor.Services
 
         private static readonly Regex ErrorLineRegex = new Regex(@"\berror\b", RegexOptions.Compiled);
 
+        private static readonly string CookCommandletExeName = OperatingSystem.IsWindows()
+            ? "BlobStorageCookCommandlet.exe"
+            : "BlobStorageCookCommandlet";
+
         private const string ScriptsLibraryName = "HyperionScripts";
 
         private int _isBuilding;
@@ -115,15 +119,78 @@ namespace Hyperion.Editor.Services
             return Directory.Exists(scriptsDirectory) && Directory.EnumerateFiles(scriptsDirectory, "*.cs", SearchOption.AllDirectories).Any();
         }
 
-        // a C# game or scripts are published with NativeAOT; a C++ game is built into the package, linking its scripts if it has any
         public bool BuildPackage(string projectFilePath, string binariesDirectory, string outputDirectory)
         {
+            if (!CookPackage(projectFilePath, outputDirectory))
+            {
+                return false;
+            }
+
             if (FindProjectFile(projectFilePath) == null && !HasScripts(projectFilePath))
             {
                 return NativeGameBuildService.Instance.BuildPackage(projectFilePath, outputDirectory, scriptsLinkInputsFile: null);
             }
 
             return PublishAot(projectFilePath, binariesDirectory, outputDirectory);
+        }
+
+        private static bool CookPackage(string projectFilePath, string outputDirectory)
+        {
+            string editorDirectory = AppContext.BaseDirectory;
+            string cookExecutable = Path.Combine(editorDirectory, CookCommandletExeName);
+
+            if (!File.Exists(cookExecutable))
+            {
+                Logger.Log(BuildLogChannel, LogLevel.Error, "The cook commandlet is missing ({0})", cookExecutable);
+
+                ShowMessage(MessageBox.Critical("Cook failed", $"The cook commandlet is missing ({cookExecutable}).").Button("OK", () => { }));
+
+                return false;
+            }
+
+            string projectDirectory = Path.GetDirectoryName(Path.GetFullPath(projectFilePath))!;
+            string cookCacheDirectory = Path.Combine(projectDirectory, "Build", "PackageCook");
+            Directory.CreateDirectory(cookCacheDirectory);
+
+            string[] arguments =
+            {
+                "--project=" + projectDirectory,
+                "--out-cache=" + Path.Combine(outputDirectory, "Cache"),
+                "--out-content=" + Path.Combine(outputDirectory, "Content"),
+                "--out-engine-content=" + Path.Combine(outputDirectory, "Content", "Engine"),
+                "--shader-target=host",
+                "--target-config=" + Path.Combine(editorDirectory, "Config", "EngineConfig.json"),
+                "--cachedir=" + cookCacheDirectory
+            };
+
+            Logger.Log(BuildLogChannel, LogLevel.Info, "Cooking {0} into {1}", projectDirectory, outputDirectory);
+
+            bool isComplete = false;
+            string? firstError = null;
+
+            int exitCode = RunProcessAsync(cookExecutable, editorDirectory, arguments, null, line =>
+            {
+                if (line.Contains("Blob storage cook complete."))
+                {
+                    isComplete = true;
+                }
+                else if (firstError == null && line.Contains("[Error]"))
+                {
+                    firstError = line;
+                }
+            }).GetAwaiter().GetResult();
+
+            // the commandlet can crash shutting down after a finished cook, so its log decides
+            if (!isComplete)
+            {
+                Logger.Log(BuildLogChannel, LogLevel.Error, "Cook failed (exit code {0})", exitCode);
+
+                ShowMessage(MessageBox.Critical("Cook failed", firstError ?? "See the log for details.").Button("OK", () => { }));
+
+                return false;
+            }
+
+            return true;
         }
 
         private bool PublishAot(string projectFilePath, string binariesDirectory, string outputDirectory)
@@ -318,10 +385,39 @@ namespace Hyperion.Editor.Services
 
         private static string GetRuntimeIdentifier()
         {
-            string os = OperatingSystem.IsWindows() ? "win" : OperatingSystem.IsMacOS() ? "osx" : "linux";
-            string architecture = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "x64";
+            string? osName = null;
+            if (OperatingSystem.IsWindows())
+            {
+                osName = "win";
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                osName = "osx";
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                osName = "linux";
+            }
 
-            return os + "-" + architecture;
+            string? archName = null;
+            switch (RuntimeInformation.OSArchitecture)
+            {
+                case Architecture.Arm64:
+                    archName = "arm64";
+                    break;
+                case Architecture.X64:
+                    archName = "x64";
+                    break;
+            }
+
+            Debug.Assert(osName != null && archName != null);
+
+            if (osName == null || archName == null)
+            {
+                return "invalid-invalid";
+            }
+
+            return osName + "-" + archName;
         }
 
         private static string? FindNativeToolchain(out string? toolchainPath)
@@ -382,7 +478,6 @@ namespace Hyperion.Editor.Services
             return extension == ".pdb" || extension == ".dbg" || extension == ".dSYM";
         }
 
-        // the engine library and what it loads, written by the engine build; without it, every native library beside the editor
         private static IEnumerable<string> GetRuntimeLibraries()
         {
             string runtimeLibrariesFile = Path.Combine(AppContext.BaseDirectory, "Sdk", "RuntimeLibraries.txt");
@@ -420,12 +515,19 @@ namespace Hyperion.Editor.Services
             }
         }
 
-        private static async Task<int> RunDotNetAsync(string managedProjectFile, string[] arguments, string? extraPath, Action<string> onOutputLine)
+        private static Task<int> RunDotNetAsync(string managedProjectFile, string[] arguments, string? extraPath, Action<string> onOutputLine)
+        {
+            string dotnet = OperatingSystem.IsMacOS() && File.Exists("/usr/local/share/dotnet/dotnet") ? "/usr/local/share/dotnet/dotnet" : "dotnet";
+
+            return RunProcessAsync(dotnet, Path.GetDirectoryName(managedProjectFile)!, arguments, extraPath, onOutputLine);
+        }
+
+        private static async Task<int> RunProcessAsync(string fileName, string workingDirectory, string[] arguments, string? extraPath, Action<string> onOutputLine)
         {
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                FileName = OperatingSystem.IsMacOS() && File.Exists("/usr/local/share/dotnet/dotnet") ? "/usr/local/share/dotnet/dotnet" : "dotnet",
-                WorkingDirectory = Path.GetDirectoryName(managedProjectFile)!,
+                FileName = fileName,
+                WorkingDirectory = workingDirectory,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
@@ -437,7 +539,6 @@ namespace Hyperion.Editor.Services
                 startInfo.ArgumentList.Add(argument);
             }
 
-            // a stale MSBuildSdksPath breaks resolution of Microsoft.NET.Sdk
             startInfo.Environment.Remove("MSBuildSdksPath");
 
             if (extraPath != null)
