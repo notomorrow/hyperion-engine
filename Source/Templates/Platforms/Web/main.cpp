@@ -297,6 +297,20 @@ EMSCRIPTEN_KEEPALIVE const char* HypWeb_GetFrameStats()
     return s_stats.Data();
 }
 
+EMSCRIPTEN_KEEPALIVE float HypWeb_GetStatAverage(const char* path)
+{
+    const Handle<EngineStats>& engineStats = EngineStats::GetInstance();
+
+    if (!engineStats.IsValid())
+    {
+        return -1.0f;
+    }
+
+    EngineStatBase* stat = engineStats->GetStat(ANSIStringView(path));
+
+    return stat != nullptr ? engineStats->GetCurrentSnapshot()[*stat].avg : -1.0f;
+}
+
 } // extern "C"
 
 int main(int argc, char** argv)

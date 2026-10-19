@@ -1,12 +1,4 @@
 <Project>
-  <!--
-    Imported by Hyperion.Game.props when HyperionWebBuild is true: publishes the game with NativeAOT-LLVM
-    (dotnet publish -r browser-wasm) into a static library that the web page links with the engine.
-
-    HyperionWebEmsdk   An emsdk whose LLVM matches NativeAOT-LLVM's (3.1.56). Only its clang turns the compiler's
-                       bitcode into wasm objects; the page itself links with the engine's own emsdk.
-  -->
-
   <PropertyGroup>
     <HyperionNativeAotLlvmVersion Condition="'$(HyperionNativeAotLlvmVersion)' == ''">10.0.0-rc.1.26357.1</HyperionNativeAotLlvmVersion>
 
@@ -19,6 +11,11 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <InvariantTimezone>true</InvariantTimezone>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
+    <EventSourceSupport>false</EventSourceSupport>
+    <DebuggerSupport>false</DebuggerSupport>
+    <MetricsSupport>false</MetricsSupport>
     <DebugType>none</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
 
