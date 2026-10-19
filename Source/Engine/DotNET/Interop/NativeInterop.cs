@@ -25,9 +25,6 @@ namespace Hyperion
     {
         private static readonly ConcurrentDictionary<IntPtr, int> s_liveObjectCounts = new ConcurrentDictionary<IntPtr, int>();
 
-        // native keeps these function pointers around, so the delegates must stay rooted
-        private static readonly AddObjectToCacheDelegate s_addObjectToCacheDelegate = AddObjectToCache;
-
         private static bool VerifyEngineVersion(string versionString, bool major, bool minor, bool patch)
         {
             var versionParts = versionString.Split('.');
@@ -166,7 +163,7 @@ namespace Hyperion
 
                 currentDomain.UnhandledException += new UnhandledExceptionEventHandler(HandleUnhandledException);
 
-                NativeInterop_SetAddObjectToCacheFunction(Marshal.GetFunctionPointerForDelegate<AddObjectToCacheDelegate>(s_addObjectToCacheDelegate));
+                NativeInterop_SetAddObjectToCacheFunction((IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, byte, void>)&AddObjectToCacheUnmanaged);
                 NativeInterop_SetSetKeepAliveFunction((delegate* unmanaged<IntPtr, int*, void>)&SetKeepAlive);
                 NativeInterop_SetTriggerGCFunction((delegate* unmanaged<void>)&TriggerGC);
                 NativeInterop_SetCollectGarbageAndWaitFunction((delegate* unmanaged<void>)&CollectGarbageAndWait);
@@ -805,6 +802,12 @@ namespace Hyperion
 
                 s_registrationStats.ReflectedProperties++;
             }
+        }
+
+        [UnmanagedCallersOnly]
+        private static void AddObjectToCacheUnmanaged(IntPtr objectWrapperPtr, IntPtr outClassObjectPtr, IntPtr outObjectReferencePtr, byte weak)
+        {
+            AddObjectToCache(objectWrapperPtr, outClassObjectPtr, outObjectReferencePtr, weak != 0);
         }
 
         public static unsafe void AddObjectToCache(IntPtr objectWrapperPtr, IntPtr outClassObjectPtr, IntPtr outObjectReferencePtr, bool weak)

@@ -560,6 +560,8 @@ set(HYP_GENERATED_DIR "${CMAKE_SOURCE_DIR}/Generated")
 if(HYP_RUNTIME_ONLY)
   # kept apart so configuring a runtime build doesn't overwrite the editor build's generated projects
   set(CSHARP_PROJECTS_DIR "${CMAKE_SOURCE_DIR}/../Build/CSharpProjects-Runtime")
+elseif(HYP_WEB)
+  set(CSHARP_PROJECTS_DIR "${CMAKE_SOURCE_DIR}/../Build/CSharpProjects-Web")
 elseif(HYP_OUTPUT_DIRECTORY_SUFFIX STREQUAL "Distribution")
   set(CSHARP_PROJECTS_DIR "${CMAKE_SOURCE_DIR}/../Build/CSharpProjects-Distribution")
 else()
@@ -618,7 +620,7 @@ endif()
 # .NET is necessary for the editor, but for a leaner build this is recommended to disable if not using C# for scripts.
 # set(HYP_DOTNET_ONLY_FOR_EDITOR true)
 
-# the web has no .NET runtime, and its 32-bit pointers don't fit the interop structs
+# the web has no hostfxr: a C# game is compiled with NativeAOT-LLVM and linked into the page, and calls InitFromManaged
 if(NOT HYP_DOTNET_ONLY_FOR_EDITOR AND NOT DEFINED HYP_DOTNET_HOST AND NOT HYP_WEB)
   set(HYP_DOTNET_HOST 1)
 endif()
@@ -726,7 +728,7 @@ endif()
 
 # /Strata lang integration
 
-if(HYP_EDITOR OR HYP_RUNTIME_ONLY)
+if(HYP_EDITOR OR HYP_RUNTIME_ONLY OR HYP_WEB)
   # for editor and runtime builds, we don't actually need .NET host as the managed application
   # (Hyperion.Editor.exe, or a C# game via HyperionApp) will call into the engine via InitFromManaged.
   if(HYP_DOTNET_HOST)

@@ -6,6 +6,6 @@ project(hyperion-sample CXX C)
 # Each sample subdirectory with a CMakeLists.txt defines its own target.
 add_subdirectory(DefaultGame)
 
-if(HYP_DOTNET AND NOT HYP_ANDROID AND NOT HYP_IOS)
+if(HYP_DOTNET AND NOT HYP_ANDROID AND NOT HYP_IOS AND NOT HYP_WEB)
   add_subdirectory(CSharpGame)
 endif()

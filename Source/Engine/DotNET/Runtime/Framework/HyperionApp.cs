@@ -44,19 +44,7 @@ namespace Hyperion
                 throw new InvalidOperationException("HyperionApp is already running");
             }
 
-            s_coreAssemblies.Clear();
-            s_coreAssemblies.Add(typeof(ObjectBase).Assembly);
-            s_coreAssemblies.Add(typeof(Game).Assembly);
-
-            if (!s_coreAssemblies.Contains(typeof(TGame).Assembly))
-            {
-                s_coreAssemblies.Add(typeof(TGame).Assembly);
-            }
-
-            unsafe
-            {
-                Hyp_SetInitFromManagedCallback(&InitFromManagedCallback);
-            }
+            InitializeHosted(typeof(TGame).Assembly);
 
             if (!Initialize(BuildEngineArgs(typeof(TGame).Assembly, args, options)))
             {
@@ -89,6 +77,32 @@ namespace Hyperion
         public static void Quit()
         {
             Hyp_RequestQuit();
+        }
+
+        // For a native host that starts the engine itself (the web page): registers the managed side, to run on Hyp_Initialize
+        public static void InitializeHosted(Assembly gameAssembly)
+        {
+            s_coreAssemblies.Clear();
+            s_coreAssemblies.Add(typeof(ObjectBase).Assembly);
+            s_coreAssemblies.Add(typeof(Game).Assembly);
+
+            if (!s_coreAssemblies.Contains(gameAssembly))
+            {
+                s_coreAssemblies.Add(gameAssembly);
+            }
+
+            unsafe
+            {
+                Hyp_SetInitFromManagedCallback(&InitFromManagedCallback);
+            }
+        }
+
+        // The native host then hands the returned Game to Hyp_SetGame; CurrentGame keeps it alive
+        public static IntPtr StartHostedGame(Game game)
+        {
+            CurrentGame = game;
+
+            return game.NativeAddress;
         }
 
         private static List<string> BuildEngineArgs(Assembly gameAssembly, string[] args, HyperionAppOptions options)

@@ -403,6 +403,26 @@ private:
         return key == MaterialTextureKey::Metalness || key == MaterialTextureKey::Roughness || key == MaterialTextureKey::AmbientOcclusion;
     }
 
+    // the engine assets engine code uses whatever the content is; the terrain ones only for a project with terrain
+    static void AddEngineDefaults(const Handle<AssetRegistry>& engineRegistry, bool usesTerrain, const ProcRef<void(const Handle<AssetObject>&)>& onAssetFound)
+    {
+        if (!engineRegistry.IsValid())
+        {
+            return;
+        }
+
+        GlobalContextScope engineContextScope { AssetRegistryContext { engineRegistry } };
+
+        EngineDefaults engineDefaults = EngineDefaults::Get();
+
+        if (!usesTerrain)
+        {
+            engineDefaults.terrain = EngineTerrainDefaults {};
+        }
+
+        AssetRegistry::WalkAssetDeep(BoxedValue(engineDefaults), onAssetFound);
+    }
+
     static void FindDataOnlyTextures(const Array<Handle<AssetObject>>& assetsToCook)
     {
         Set<const AssetObject*> dataTextures;
@@ -1517,20 +1537,7 @@ private:
 
                 HYP_LOG(Assets, Info, "Found {} asset(s) reachable from project at \"{}\"", assetsToCook.Size(), projectPath);
 
-                // the engine assets engine code uses whatever the content is; the terrain ones only for a project with terrain
-                if (engineRegistry)
-                {
-                    GlobalContextScope engineContextScope { AssetRegistryContext { engineRegistry } };
-
-                    EngineDefaults engineDefaults = EngineDefaults::Get();
-
-                    if (!usesTerrain)
-                    {
-                        engineDefaults.terrain = EngineTerrainDefaults {};
-                    }
-
-                    AssetRegistry::WalkAssetDeep(BoxedValue(engineDefaults), callback);
-                }
+                AddEngineDefaults(engineRegistry, usesTerrain, callback);
 
                 const EditorCookSettings& cookSettings = loadProjectResult.GetValue()->GetPlatformSettings().cook;
 
@@ -1568,6 +1575,26 @@ private:
                         assetsToCook.PushBack(gameRegistry->GetAsset(bucket, assetDesc.name));
                     }
                 }
+
+                // the engine code still needs its own assets, and with no worlds walked, terrain can't be ruled out
+                usesTerrain = true;
+
+                Set<AssetObject*> seenAssets;
+
+                for (const Handle<AssetObject>& assetObject : assetsToCook)
+                {
+                    seenAssets.Insert(assetObject.Get());
+                }
+
+                auto addUnseen = [&assetsToCook, &seenAssets](const Handle<AssetObject>& assetObject)
+                    {
+                        if (assetObject.IsValid() && seenAssets.Insert(assetObject.Get()).second)
+                        {
+                            assetsToCook.PushBack(assetObject);
+                        }
+                    };
+
+                AddEngineDefaults(engineRegistry, usesTerrain, addUnseen);
             }
 
             for (const Handle<AssetObject>& assetObject : assetsToCook)

@@ -110,7 +110,7 @@ namespace Hyperion
         private static extern void StaticField_GetTypeId([In] IntPtr constantPtr, [Out] out TypeId typeId);
 
         [DllImport("hyperion", EntryPoint = "StaticField_Get")]
-        private static extern bool StaticField_Get([In] IntPtr staticFieldPtr, out BoxedValueInternal outData);
+        private static extern void StaticField_Get([In] IntPtr staticFieldPtr, out BoxedValueInternal outData);
 
         [DllImport("hyperion", EntryPoint = "StaticField_GetDataPointer")]
         private static extern IntPtr StaticField_GetDataPointer([In] IntPtr staticFieldPtr);

@@ -51,14 +51,18 @@ extern "C"
         taskBatch->AddTask(delegate);
     }
 
-    HYP_EXPORT void TaskBatch_Launch(TaskBatch* taskBatch, void (*callback)(void))
+    HYP_EXPORT void TaskBatch_Launch(TaskBatch* taskBatch, void (*callback)(void*), void* context)
     {
         if (!taskBatch)
         {
             return;
         }
 
-        taskBatch->OnComplete.Bind(callback).Detach();
+        taskBatch->OnComplete.Bind([callback, context]()
+                                 {
+                                     callback(context);
+                                 })
+            .Detach();
 
         TaskSystem::GetInstance().EnqueueBatch(taskBatch);
     }

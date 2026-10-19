@@ -76,37 +76,46 @@ namespace Hyperion
     }
 
     [ClassBinding(Name="CharacterControllerComponent")]
-    [StructLayout(LayoutKind.Explicit, Size = 208, Pack = 16)]
+    [StructLayout(LayoutKind.Explicit, Size = Layout.Size, Pack = 16)]
     public ref struct CharacterControllerComponent : IComponent
     {
+        private static class Layout
+        {
+#if HYP_WEB
+            public const int InputHandler = 4, PhysicsHandle = 8, Base = 16, Size = 192;
+#else
+            public const int InputHandler = 8, PhysicsHandle = 16, Base = 32, Size = 208;
+#endif
+        }
+
         [FieldOffset(0)]
         public Handle<PhysicsShape> Shape;
-        [FieldOffset(8)]
+        [FieldOffset(Layout.InputHandler)]
         public Handle<InputHandlerBase> InputHandler;
-        [FieldOffset(16)]
+        [FieldOffset(Layout.PhysicsHandle)]
         public SharedPtr PhysicsHandle; // SharedPtr<void> - internal, do not access directly
 
-        [FieldOffset(32)]
+        [FieldOffset(Layout.Base)]
         public Vec3f ViewDirection = new Vec3f(0.0f, 0.0f, 1.0f);
-        [FieldOffset(48)]
+        [FieldOffset(Layout.Base + 16)]
         public Vec3f Translation;
-        [FieldOffset(64)]
+        [FieldOffset(Layout.Base + 32)]
         public Vec3f Heading;
 
-        [FieldOffset(80)]
+        [FieldOffset(Layout.Base + 48)]
         public CharacterMovementSettings Movement = new CharacterMovementSettings();
-        [FieldOffset(136)]
+        [FieldOffset(Layout.Base + 104)]
         public CharacterJumpSettings Jump = new CharacterJumpSettings();
-        [FieldOffset(168)]
+        [FieldOffset(Layout.Base + 136)]
         public CharacterPushSettings Push = new CharacterPushSettings();
-        [FieldOffset(188)]
+        [FieldOffset(Layout.Base + 156)]
         public CharacterShadowBodySettings ShadowBody = new CharacterShadowBodySettings();
 
-        [FieldOffset(196)]
+        [FieldOffset(Layout.Base + 164)]
         [MarshalAs(UnmanagedType.I1)]
         public bool IsOnGround;
 
-        [FieldOffset(200)]
+        [FieldOffset(Layout.Base + 168)]
         public float JumpWindupRemaining;
 
         public CharacterControllerComponent()

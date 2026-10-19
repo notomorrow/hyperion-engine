@@ -15,9 +15,18 @@ namespace Hyperion
     }
 
     [ClassBinding(Name = "UIEventHandlerResult")]
-    [StructLayout(LayoutKind.Explicit, Size = 24, Pack = 8)]
+    [StructLayout(LayoutKind.Explicit, Size = Layout.Size, Pack = 8)]
     public struct UIEventHandlerResult
     {
+        private static class Layout
+        {
+#if HYP_WEB
+            public const int Message = 4, FunctionName = 8, Size = 16;
+#else
+            public const int Message = 8, FunctionName = 16, Size = 24;
+#endif
+        }
+
         public static readonly UIEventHandlerResult Error = new UIEventHandlerResult(0x1u << 31);
         public static readonly UIEventHandlerResult Ok = new UIEventHandlerResult(0x0);
         public static readonly UIEventHandlerResult StopBubbling = new UIEventHandlerResult(0x1);
@@ -25,10 +34,10 @@ namespace Hyperion
         [FieldOffset(0)]
         private uint code;
 
-        [FieldOffset(8)]
+        [FieldOffset(Layout.Message)]
         private IntPtr messagePtr;
 
-        [FieldOffset(8)]
+        [FieldOffset(Layout.FunctionName)]
         private IntPtr functionNamePtr;
 
         public UIEventHandlerResult(uint code)

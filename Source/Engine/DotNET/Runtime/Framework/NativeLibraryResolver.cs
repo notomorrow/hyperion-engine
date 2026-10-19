@@ -10,6 +10,12 @@ namespace Hyperion
         [ModuleInitializer]
         internal static void Initialize()
         {
+            // the web links the engine statically (DirectPInvoke), there's no library to resolve
+            if (OperatingSystem.IsBrowser())
+            {
+                return;
+            }
+
             NativeLibrary.SetDllImportResolver(typeof(NativeLibraryResolver).Assembly, Resolve);
         }
 

@@ -61,13 +61,15 @@
     <AssemblyMetadata Include="HyperionBaseDir" Value="$(HyperionBaseDir)" />
   </ItemGroup>
 
-  <Target Name="HyperionCheckBinDir" BeforeTargets="ResolveAssemblyReferences">
+  <Import Project="$(MSBuildThisFileDirectory)Hyperion.Web.targets" Condition="'$(HyperionWebBuild)' == 'true'" />
+
+  <Target Name="HyperionCheckBinDir" BeforeTargets="ResolveAssemblyReferences" Condition="'$(HyperionWebBuild)' != 'true'">
     <Error Condition="'$(HyperionBinDir)' == '/' Or (!Exists('$(HyperionBinDir)hyperion.dll') And !Exists('$(HyperionBinDir)libhyperion.so') And !Exists('$(HyperionBinDir)libhyperion.dylib'))"
            Text="HyperionBinDir must point at a Hyperion engine build (containing the native hyperion library); got '$(HyperionBinDir)'" />
   </Target>
 
   <!-- Copy the native engine next to the game. DLLs are hardlinked; Config is copied since the game may write to it. -->
-  <Target Name="HyperionCopyEngineRuntime" AfterTargets="Build" Condition="'$(HyperionOutputToBinDir)' != 'true'">
+  <Target Name="HyperionCopyEngineRuntime" AfterTargets="Build" Condition="'$(HyperionOutputToBinDir)' != 'true' And '$(HyperionWebBuild)' != 'true'">
     <ItemGroup>
       <_HyperionNativeLibraries Include="$(HyperionBinDir)*.dll;$(HyperionBinDir)*.so;$(HyperionBinDir)*.dylib" Exclude="$(HyperionBinDir)Hyperion.NET.*.dll" />
       <_HyperionConfigFiles Include="$(HyperionBinDir)Config/**/*" />

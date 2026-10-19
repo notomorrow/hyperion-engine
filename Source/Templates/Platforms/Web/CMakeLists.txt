@@ -32,6 +32,8 @@ target_link_libraries(${HYP_WEB_PAGE_NAME} PRIVATE ${HYPERION_WEB_LIBRARIES})
 if(HYP_WEB_GAME_DIR)
   target_include_directories(${HYP_WEB_PAGE_NAME} PRIVATE "${HYP_WEB_GAME_DIR}")
   target_compile_definitions(${HYP_WEB_PAGE_NAME} PRIVATE HYP_WEB_GAME_MODULE=1)
+elseif(HYP_WEB_GAME_CLASS)
+  target_compile_definitions(${HYP_WEB_PAGE_NAME} PRIVATE "HYP_WEB_GAME_CLASS=\"${HYP_WEB_GAME_CLASS}\"")
 else()
   # a project without game code runs the engine's own game class
   target_compile_definitions(${HYP_WEB_PAGE_NAME} PRIVATE [==[HYP_WEB_GAME_CLASS="Game"]==])
@@ -46,6 +48,23 @@ target_link_options(${HYP_WEB_PAGE_NAME} PRIVATE
   -sOFFSCREENCANVAS_SUPPORT=1
   "--preload-file=${HYP_WEB_PACKAGE}/Config@/hyperion/Config"
   "--preload-file=${HYP_WEB_PACKAGE}/Content@/hyperion/Content")
+
+# a C# game: its NativeAOT-LLVM static library and the runtime libraries, one path per line
+if(HYP_WEB_MANAGED_LINK_INPUTS)
+  file(STRINGS "${HYP_WEB_MANAGED_LINK_INPUTS}" managedLinkInputs)
+
+  target_compile_definitions(${HYP_WEB_PAGE_NAME} PRIVATE HYP_WEB_MANAGED=1)
+  target_link_libraries(${HYP_WEB_PAGE_NAME} PRIVATE ${managedLinkInputs})
+
+  # the runtime is built without shared memory; managed code only ever runs on one thread at a time
+  target_link_options(${HYP_WEB_PAGE_NAME} PRIVATE
+    -Wl,--no-check-features
+    # bindings for classes another platform has (Android, Cocoa) become imports that abort if ever called
+    -sERROR_ON_UNDEFINED_SYMBOLS=0
+    -sEXPORTED_RUNTIME_METHODS=ccall,HEAP8,HEAP16,HEAP32,HEAPU8,HEAPU16,HEAPU32)
+
+  set_property(TARGET ${HYP_WEB_PAGE_NAME} APPEND PROPERTY LINK_DEPENDS ${managedLinkInputs})
+endif()
 
 set_target_properties(${HYP_WEB_PAGE_NAME} PROPERTIES
   SUFFIX ".js"

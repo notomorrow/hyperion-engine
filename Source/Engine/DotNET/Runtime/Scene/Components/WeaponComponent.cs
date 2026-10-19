@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace Hyperion
 {
     [ClassBinding(Name="WeaponComponent")]
-    [StructLayout(LayoutKind.Sequential, Size = 8)]
+    [StructLayout(LayoutKind.Sequential)]
     public ref struct WeaponComponent : IComponent
     {
         public Handle<Weapon> Weapon;

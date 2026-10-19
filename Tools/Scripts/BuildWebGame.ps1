@@ -79,10 +79,8 @@ if ($name -eq "")
     $name = "MyGame"
 }
 
-if (Test-Path (Join-Path $Project "Source\$name.csproj"))
-{
-    Fail "C# projects can't be built for the web yet"
-}
+$managedProject = Join-Path $Project "Source\$name.csproj"
+$isManaged = Test-Path $managedProject
 
 $projectText = Get-Content $projectFile.FullName -Raw
 
@@ -215,6 +213,28 @@ if ($sdkLibraries -and $engineSourceDirs)
     }
 }
 
+# a C# game is compiled with NativeAOT-LLVM, whose bitcode needs the LLVM of emsdk 3.1.56 to become wasm objects;
+# the page still links with the engine's emsdk
+$managedEmsdk = if ($env:HYP_WEB_DOTNET_EMSDK) { $env:HYP_WEB_DOTNET_EMSDK } else { Join-Path (Split-Path $env:EMSDK -Parent) "emsdk-3.1.56" }
+
+if ($isManaged)
+{
+    if (-not (Get-Command dotnet -ErrorAction SilentlyContinue))
+    {
+        Fail "dotnet not found on PATH, which compiling the C# game needs"
+    }
+
+    if (-not (Test-Path (Join-Path $managedEmsdk "upstream\bin\clang.exe")))
+    {
+        Fail "C# games need emsdk 3.1.56 for NativeAOT-LLVM at $managedEmsdk (or set HYP_WEB_DOTNET_EMSDK): git clone https://github.com/emscripten-core/emsdk `"$managedEmsdk`" && `"$managedEmsdk\emsdk.bat`" install 3.1.56"
+    }
+
+    if (-not (Test-Path (Join-Path $rootDir "Binaries\Web\Release\Hyperion.NET.Runtime.dll")))
+    {
+        Fail "The engine's web build has no C# assemblies. Rebuild it: Tools\Scripts\BuildHyperion.bat web"
+    }
+}
+
 $cookDir = Join-Path $rootDir "Binaries\Windows\Release"
 $cookExe = Join-Path $cookDir "BlobStorageCookCommandlet.exe"
 
@@ -269,7 +289,38 @@ if (Test-Path $pipelineManifest)
     Copy-Item $pipelineManifest (Join-Path $packageDir "Cache\pipelinevariants.bin") -Force
 }
 
-# 3. the page: the launch layer and the project's game code, linked against the engine's web build
+# 3. a C# game: compiled ahead of time into a static library, linked into the page with the engine
+
+$managedLinkInputs = ""
+$gameClassArgument = ""
+
+if ($isManaged)
+{
+    Step 30 "Compiling the C# game"
+
+    $managedDir = Join-Path $buildDir "Managed"
+    $managedLinkInputs = Join-Path $managedDir "LinkInputs.txt"
+    Remove-Item $managedLinkInputs -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force $managedDir | Out-Null
+
+    $engineWebDir = (Join-Path $rootDir "Binaries\Web\Release\") -replace '\\', '/'
+
+    Invoke-Cmd ("set `"MSBuildSdksPath=`" && dotnet publish `"$managedProject`" -c Release -r browser-wasm --disable-build-servers -nologo " + `
+        "-p:HyperionWebBuild=true -p:HyperionBinDir=`"$engineWebDir`" -p:HyperionWebEmsdk=`"$managedEmsdk`" -p:HyperionWebGameClass=${name}Game -p:HyperionWriteGlobalConfig=false " + `
+        "-p:OutputPath=`"$managedDir\bin\\`" -p:IntermediateOutputPath=`"$managedDir\obj\\`" -p:MSBuildProjectExtensionsPath=`"$managedDir\ext\\`" " + `
+        "-p:HyperionWebLinkInputsFile=`"$managedLinkInputs`" > `"$managedDir\Publish.log`" 2>&1") `
+        "Compiling the C# game failed, see $managedDir\Publish.log"
+
+    if (-not (Test-Path $managedLinkInputs))
+    {
+        Fail "Compiling the C# game wrote no link inputs, see $managedDir\Publish.log"
+    }
+
+    # the editor's convention: a C# project's game class is <Name>Game
+    $gameClassArgument = "${name}Game"
+}
+
+# 4. the page: the launch layer and the project's game code, linked against the engine's web build
 
 Step 40 "Building the page"
 
@@ -284,10 +335,11 @@ $linkOptimization = if ($FastLink) { "-O1" } else { "-O3" }
 
 Invoke-Cmd ("set `"EMSDK_QUIET=1`" && call `"$env:EMSDK\emsdk_env.bat`" >nul && emcmake cmake -S `"$templateDir`" -B `"$cmakeDir`" -G Ninja -DCMAKE_BUILD_TYPE=Release " + `
     "-DHYPERION_WEB_SDK=`"$($webSdk -replace '\\', '/')`" -DHYP_WEB_PAGE_NAME=$name -DHYP_WEB_PACKAGE=`"$($packageDir -replace '\\', '/')`" " + `
-    "-DHYP_WEB_GAME_DIR=`"$gameDirArgument`" -DHYP_WEB_OUTPUT=`"$($pageDir -replace '\\', '/')`" -DHYP_WEB_LINK_OPTIMIZATION=$linkOptimization && cmake --build `"$cmakeDir`"") `
+    "-DHYP_WEB_GAME_DIR=`"$gameDirArgument`" -DHYP_WEB_OUTPUT=`"$($pageDir -replace '\\', '/')`" -DHYP_WEB_LINK_OPTIMIZATION=$linkOptimization " + `
+    "-DHYP_WEB_MANAGED_LINK_INPUTS=`"$($managedLinkInputs -replace '\\', '/')`" -DHYP_WEB_GAME_CLASS=`"$gameClassArgument`" && cmake --build `"$cmakeDir`"") `
     "Building the page failed"
 
-# 4. stage everything a host needs into Binaries/Web, leaving anything else the folder holds (a CNAME, say) alone
+# 5. stage everything a host needs into Binaries/Web, leaving anything else the folder holds (a CNAME, say) alone
 
 Step 97 "Staging into $outputDir"
 
@@ -360,7 +412,7 @@ Write-Host ("Built {0} for the web: {1} ({2:N0} MB)" -f $name, $outputDir, ($tot
 # moving keeps the time the build started, so anything saved during the build still counts as newer
 Move-Item $buildingStamp $builtStamp -Force
 
-# 5. serve it, when asked
+# 6. serve it, when asked
 
 if ($Run)
 {
