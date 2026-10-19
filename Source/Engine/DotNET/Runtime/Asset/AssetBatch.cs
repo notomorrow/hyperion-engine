@@ -2,8 +2,6 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    internal delegate void HandleAssetResultsDelegate(IntPtr assetMapPtr);
-
     public class AssetBatch : IDisposable
     {
         private IntPtr _ptr;
@@ -64,34 +62,24 @@ namespace Hyperion
                 throw new InvalidOperationException("Load has already been called on this AssetBatch");
             }
 
-            GCHandle? gcHandle = null;
-
             var completionSource = new TaskCompletionSource<AssetMap>();
 
-            var del = new HandleAssetResultsDelegate((pAssetMap) =>
+            IntPtr context = ManagedCallback.Create((IntPtr pAssetMap) =>
             {
-                if (gcHandle == null)
-                {
-                    throw new Exception("GCHandle is null in callback");
-                }
-
                 if (pAssetMap == IntPtr.Zero)
                 {
                     completionSource.SetException(new Exception("Failed to load assets"));
-
-                    gcHandle.Value.Free();
 
                     return;
                 }
 
                 completionSource.SetResult(new AssetMap(pAssetMap));
+            });
 
-                gcHandle.Value.Free();
-            }); 
-            
-            gcHandle = GCHandle.Alloc(del);
-
-            AssetBatch_LoadAsync(_ptr, Marshal.GetFunctionPointerForDelegate(del));
+            unsafe
+            {
+                AssetBatch_LoadAsync(_ptr, ManagedCallback.InvokeWithArgument, context);
+            }
 
             _wasLoadEnqueued = true;
 
@@ -108,7 +96,7 @@ namespace Hyperion
         private static extern void AssetBatch_AddToBatch(IntPtr pBatch, [MarshalAs(UnmanagedType.LPStr)] string key, [MarshalAs(UnmanagedType.LPStr)] string path);
 
         [DllImport("hyperion", EntryPoint = "AssetBatch_LoadAsync")]
-        private static extern void AssetBatch_LoadAsync(IntPtr pBatch, IntPtr pFnCallback);
+        private static extern unsafe void AssetBatch_LoadAsync(IntPtr pBatch, delegate* unmanaged<IntPtr, IntPtr, void> callback, IntPtr context);
 
         [DllImport("hyperion", EntryPoint = "AssetBatch_AwaitResults")]
         private static extern IntPtr AssetBatch_AwaitResults(IntPtr pBatch);

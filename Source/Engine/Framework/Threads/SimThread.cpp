@@ -44,6 +44,10 @@
 #include <Editor/EditorState.hpp>
 #endif
 
+#ifdef HYP_DOTNET
+#include <DotNET/DotNETHost.hpp>
+#endif
+
 namespace Hyperion {
 
 HYP_DEFINE_LOG_CHANNEL(SimThread);
@@ -186,6 +190,13 @@ void SimThread::Update()
         }
     }
 
+#ifdef HYP_DOTNET
+    if (const SimTickFunction simTick = DotNETHost::GetInstance().GetGlobalFunctions().simTickFptr)
+    {
+        simTick(m_counter.delta);
+    }
+#endif
+
     if (m_gameInstance != nullptr && m_gameInstance->m_gameState.IsSimulating())
     {
         m_gameInstance->m_gameState.deltaTime = m_counter.delta;
@@ -232,6 +243,14 @@ void SimThread::operator()()
     {
         InitThreadAllocator();
     }
+
+#ifdef HYP_DOTNET
+    // before the game launches, so code awaiting in the first scripts' callbacks already resumes on this thread
+    if (const SimTickFunction simTick = DotNETHost::GetInstance().GetGlobalFunctions().simTickFptr)
+    {
+        simTick(0.0f);
+    }
+#endif
 
     if (m_gameInstance != nullptr)
     {

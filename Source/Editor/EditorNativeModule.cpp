@@ -806,7 +806,8 @@ EDITOR_API Result WriteManagedProjectProps(const FilePath& projectFilepath)
 EDITOR_API TResult<Handle<Game>> CreateGameFromManagedModule(const FilePath& projectFilepath)
 {
 #ifdef HYP_DOTNET
-    if (!IsManagedProject(projectFilepath))
+    // without a .NET runtime (a commandlet such as the cook), the project keeps the Game its file describes
+    if (!IsManagedProject(projectFilepath) || !DotNETHost::GetInstance().IsInitialized())
     {
         return Handle<Game>();
     }

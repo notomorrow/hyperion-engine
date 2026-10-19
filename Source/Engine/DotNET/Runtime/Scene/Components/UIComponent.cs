@@ -4,10 +4,9 @@ using System.Runtime.InteropServices;
 namespace Hyperion
 {   
     [ClassBinding(Name="UIComponent")]
-    [StructLayout(LayoutKind.Explicit, Size = 8)]
+    [StructLayout(LayoutKind.Sequential)]
     public ref struct UIComponent : IComponent
     {
-        [FieldOffset(0)]
         private WeakHandle<UIObject> _uiObject;
 
         public UIComponent()

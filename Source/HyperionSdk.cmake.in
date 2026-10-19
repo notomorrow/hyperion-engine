@@ -1,7 +1,14 @@
 set(HYPERION_SDK_VERSION "@HYP_VERSION_MAJOR@.@HYP_VERSION_MINOR@.@HYP_VERSION_PATCH@")
 set(HYPERION_SDK_COMPILER "@HYP_SDK_COMPILER@")
 set(HYPERION_SDK_THIRD_PARTY_DIRS "@HYP_SDK_THIRD_PARTY_SUBDIRS@")
-set(HYPERION_SDK_RUNTIME_LIBRARIES "@HYP_SDK_RUNTIME_LIBRARIES@")
+set(HYPERION_SDK_RUNTIME_LIBRARIES "")
+set(HYPERION_SDK_SHADER_COMPILER_LIBRARIES "@HYP_SDK_SHADER_COMPILER_LIBRARIES@")
+
+set(HYPERION_PACKAGE OFF CACHE BOOL "Build for a specific package")
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../RuntimeLibraries.txt")
+  file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/../RuntimeLibraries.txt" HYPERION_SDK_RUNTIME_LIBRARIES)
+endif()
 
 # only present next to an engine build tree; a packaged SDK uses the layout below
 include("${CMAKE_CURRENT_LIST_DIR}/HyperionSdkDevPaths.cmake" OPTIONAL)
@@ -44,7 +51,13 @@ function(hyperion_copy_runtime target content_dir)
   set(runtime_files "")
 
   if(HYPERION_SDK_RUNTIME_LIBRARIES)
-    foreach(runtime_library ${HYPERION_SDK_RUNTIME_LIBRARIES})
+    set(runtime_libraries ${HYPERION_SDK_RUNTIME_LIBRARIES})
+
+    if(NOT HYPERION_PACKAGE)
+      list(APPEND runtime_libraries ${HYPERION_SDK_SHADER_COMPILER_LIBRARIES})
+    endif()
+
+    foreach(runtime_library ${runtime_libraries})
       list(APPEND runtime_files "${HYPERION_SDK_RUNTIME_DIR}/${runtime_library}")
     endforeach()
   else()
@@ -76,4 +89,21 @@ function(hyperion_copy_runtime target content_dir)
 }
 ")
   endif()
+endfunction()
+
+set(HYPERION_SCRIPTS_LINK_INPUTS "" CACHE FILEPATH "Link inputs of the game's NativeAOT scripts library, written by Package Game")
+
+# the NativeAOT runtime is built against the static VC runtime with the dynamic UCRT, so the executable linking it is as well.
+function(hyperion_link_scripts target)
+  if(NOT HYPERION_SCRIPTS_LINK_INPUTS)
+    return()
+  endif()
+
+  file(STRINGS "${HYPERION_SCRIPTS_LINK_INPUTS}" scripts_link_inputs)
+  file(TO_CMAKE_PATH "${scripts_link_inputs}" scripts_link_inputs)
+
+  set_property(TARGET ${target} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
+  target_link_libraries(${target} PRIVATE ${scripts_link_inputs})
+  target_link_options(${target} PRIVATE /NODEFAULTLIB:libucrt.lib /DEFAULTLIB:ucrt.lib)
+  target_compile_definitions(${target} PRIVATE HYP_GAME_SCRIPTS=1)
 endfunction()

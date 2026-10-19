@@ -58,7 +58,7 @@ public:
         bool blockingWait = false,
         const ProcRef<void(uint64 current, uint64 total)>& callback = nullptr);
 
-    void WriteShaderCache(const FilePath& outDir);
+    void WriteShaderCache(const FilePath& outDir, bool writePreloadEntries = true);
 
     size_t CalculateMemoryUsage() const;
 

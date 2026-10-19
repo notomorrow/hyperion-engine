@@ -593,9 +593,12 @@ Result StrataModuleGenerator::EmitMethods(const Analyzer& analyzer, const Module
                 {
                     paramDecls.PushBack(HYP_FORMAT("{}{} {}", StructParamModifier(parameter->type.Get()), paramTypeMapping.typeName, paramName));
                 }
+                else if (paramTypeMapping.isVector)
+                {
+                    paramDecls.PushBack(HYP_FORMAT("const ref {} {}", paramTypeMapping.typeName, paramName));
+                }
                 else
                 {
-                    // Scalars and vector types (float2/float3/float4) pass by value.
                     paramDecls.PushBack(HYP_FORMAT("{} {}", paramTypeMapping.typeName, paramName));
                 }
             }
@@ -609,7 +612,7 @@ Result StrataModuleGenerator::EmitMethods(const Analyzer& analyzer, const Module
             // Need to go through return-params
             const bool propertySetterIdiom = IsPropertySetterIdiom(cls, member);
             const bool returnsViaOutParam = !propertySetterIdiom
-                && (returnTypeMapping.isStructValue || returnTypeMapping.isArray || returnTypeMapping.isString);
+                && (returnTypeMapping.isStructValue || returnTypeMapping.isVector || returnTypeMapping.isArray || returnTypeMapping.isString);
             String strataReturnType = returnTypeMapping.typeName;
 
             if (propertySetterIdiom)
@@ -673,7 +676,7 @@ Result StrataModuleGenerator::EmitMethods(const Analyzer& analyzer, const Module
                 {
                     // Synthesized string getters need an explicit extern decl
                     // (the compiler bans direct string returns).
-                    if (binding.getterSynthesized && prop.mapping.isString)
+                    if (binding.getterSynthesized && (prop.mapping.isString || prop.mapping.isVector))
                     {
                         classOutput += HYP_FORMAT("    extern void {}_Get_{}({}, return {} outReturn);\n",
                             cls.name, prop.name, SelfParamDecl(cls, true), prop.mapping.typeName);
@@ -689,6 +692,12 @@ Result StrataModuleGenerator::EmitMethods(const Analyzer& analyzer, const Module
 
                 if (binding.setterSymbol.Any())
                 {
+                    if (binding.setterSynthesized && prop.mapping.isVector)
+                    {
+                        classOutput += HYP_FORMAT("    extern void {}_Set_{}({}, const ref {} value);\n",
+                            cls.name, prop.name, SelfParamDecl(cls, false), prop.mapping.typeName);
+                    }
+
                     accessors += HYP_FORMAT("{}set = {};", accessors.Any() ? " " : "", binding.setterSymbol);
 
                     if (binding.setterSynthesized)

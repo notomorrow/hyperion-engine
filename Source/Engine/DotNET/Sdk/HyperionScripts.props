@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <HyperionIncludeScripts>true</HyperionIncludeScripts>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)HyperionScriptsProgram.cs" Condition="'$(HyperionScriptsProgram)' == 'true'" />
+  </ItemGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)Hyperion.Game.props" />
+</Project>

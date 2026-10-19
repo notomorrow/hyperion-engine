@@ -250,6 +250,11 @@ namespace Hyperion
                 dependenciesDirectory = referenceDirectory;
             }
 
+            string generatorPath = System.IO.Path.Combine(dependenciesDirectory, "Hyperion.NET.Generators.dll");
+            string generatorItem = System.IO.File.Exists(generatorPath)
+                ? $"<Analyzer Include=\"{EscapePath(generatorPath)}\" />\n"
+                : string.Empty;
+
             List<string> csFiles = System.IO.Directory.GetFiles(scriptDirectory, "*.cs")
                 .ToList();
 
@@ -279,6 +284,7 @@ namespace Hyperion
                         + $"<HintPath>{EscapePath(System.IO.Path.Combine(dependenciesDirectory, "Hyperion.NET.Runtime.dll"))}</HintPath>\n"
                         + "<Private>false</Private>\n"
                     + "</Reference>\n"
+                    + generatorItem
                     + string.Join("", csFiles.Select(script => $"<Compile Include=\"{EscapePath(script)}\" />\n"))
                     + "</ItemGroup>\n"
                 + "</Project>\n";

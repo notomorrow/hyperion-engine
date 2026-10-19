@@ -80,6 +80,37 @@ EDITOR_API HYP_DECLARE_LOG_CHANNEL(Editor);
 
 struct CookingContext {};
 
+#if defined(HYP_WEBGPU)
+static constexpr const char* s_hostBackend = "WEBGPU";
+static constexpr ShaderCompileTargetBackend s_hostCompileBackend = ShaderCompileTargetBackend::WebGPU;
+#elif defined(HYP_DX12)
+static constexpr const char* s_hostBackend = "DX12";
+static constexpr ShaderCompileTargetBackend s_hostCompileBackend = ShaderCompileTargetBackend::DX12;
+#else
+static constexpr const char* s_hostBackend = "VULKAN";
+static constexpr ShaderCompileTargetBackend s_hostCompileBackend = ShaderCompileTargetBackend::Vulkan;
+#endif
+
+#if defined(HYP_WEB) || defined(HYP_WEBGPU)
+static constexpr const char* s_hostTarget = "WEB";
+static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::Web;
+#elif defined(HYP_WINDOWS)
+static constexpr const char* s_hostTarget = "WINDOWS";
+static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::Windows;
+#elif defined(HYP_MACOS)
+static constexpr const char* s_hostTarget = "MAC";
+static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::Mac;
+#elif defined(HYP_ANDROID)
+static constexpr const char* s_hostTarget = "ANDROID";
+static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::Android;
+#elif defined(HYP_IOS)
+static constexpr const char* s_hostTarget = "IOS";
+static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::IOS;
+#else
+static constexpr const char* s_hostTarget = "LINUX";
+static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::Linux;
+#endif
+
 class BlobStorageCookCommandlet final : public CommandletBase
 {
     HYP_OBJECT_BODY(BlobStorageCookCommandlet);
@@ -140,7 +171,7 @@ public:
             s_definitions.Add(
                 "shader-target",
                 "",
-                "Platform to compile shaders for and include them in the cook.",
+                "Compiles and cooks shaders for a target. Possible values: `web`, or `host` to use the active platform and graphics backend.",
                 CommandLineArgumentFlags::NONE,
                 {},
                 JSON::Value(""));
@@ -401,6 +432,26 @@ private:
         const MaterialTextureKey key = MaterialTextureKey(1ull << slotIndex);
 
         return key == MaterialTextureKey::Metalness || key == MaterialTextureKey::Roughness || key == MaterialTextureKey::AmbientOcclusion;
+    }
+
+    // the engine assets engine code uses whatever the content is; the terrain ones only for a project with terrain
+    static void AddEngineDefaults(const Handle<AssetRegistry>& engineRegistry, bool usesTerrain, const ProcRef<void(const Handle<AssetObject>&)>& onAssetFound)
+    {
+        if (!engineRegistry.IsValid())
+        {
+            return;
+        }
+
+        GlobalContextScope engineContextScope { AssetRegistryContext { engineRegistry } };
+
+        EngineDefaults engineDefaults = EngineDefaults::Get();
+
+        if (!usesTerrain)
+        {
+            engineDefaults.terrain = EngineTerrainDefaults {};
+        }
+
+        AssetRegistry::WalkAssetDeep(BoxedValue(engineDefaults), onAssetFound);
     }
 
     static void FindDataOnlyTextures(const Array<Handle<AssetObject>>& assetsToCook)
@@ -669,6 +720,47 @@ private:
         return {};
     }
 
+    static bool IsShaderForThisBuild(const Shader& shader)
+    {
+        static const Array<ShaderPropertyId> s_foreignPropertyIds = []()
+        {
+            static const char* const s_backends[] = { "VULKAN", "DX12", "WEBGPU" };
+            static const char* const s_targets[] = { "WINDOWS", "MAC", "LINUX", "ANDROID", "IOS", "WEB" };
+
+            ShaderPropertyDictionary& dictionary = ShaderPropertyDictionary::GetInstance();
+
+            Array<ShaderPropertyId> ids;
+
+            for (const char* backend : s_backends)
+            {
+                if (std::strcmp(backend, s_hostBackend) != 0)
+                {
+                    ids.PushBack(dictionary.Intern(ShaderProperty(NAME("BACKEND"), CreateNameFromDynamicString(backend))));
+                }
+            }
+
+            for (const char* target : s_targets)
+            {
+                if (std::strcmp(target, s_hostTarget) != 0)
+                {
+                    ids.PushBack(dictionary.Intern(ShaderProperty(NAME("TARGET"), CreateNameFromDynamicString(target))));
+                }
+            }
+
+            return ids;
+        }();
+
+        for (ShaderPropertyId propertyId : s_foreignPropertyIds)
+        {
+            if (shader.properties.Test(propertyId))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     static Result CookBucketInFull(
         AssetRegistry* registry,
         uint32 bucketIndex,
@@ -683,14 +775,58 @@ private:
         Array<AssetDesc> assetDescs;
         registry->GetBucketAssetDescs(bucketIndex, assetDescs);
 
+        uint32 numForeignShaders = 0;
+
         for (const AssetDesc& assetDesc : assetDescs)
         {
             Handle<AssetObject> assetObject = registry->GetAsset(bucket, assetDesc.name);
+
+            if (bucket == AssetBuckets::Shaders && assetObject.IsValid() && !IsShaderForThisBuild(*static_cast<const Shader*>(assetObject.Get())))
+            {
+                ++numForeignShaders;
+
+                continue;
+            }
+
+            if (bucket == AssetBuckets::ShaderBundles && assetObject.IsValid())
+            {
+                ShaderBundle* shaderBundle = static_cast<ShaderBundle*>(assetObject.Get());
+
+                Array<Handle<Shader>> allShaders = shaderBundle->compiledShaders;
+
+                for (auto it = shaderBundle->compiledShaders.Begin(); it != shaderBundle->compiledShaders.End();)
+                {
+                    if (it->IsValid() && !IsShaderForThisBuild(**it))
+                    {
+                        it = shaderBundle->compiledShaders.Erase(it);
+
+                        continue;
+                    }
+
+                    ++it;
+                }
+
+                Result result = CookAsset(outputContentDir, assetObject, readLocks, collectedBlobs, blockSizes, cookedAssets);
+
+                shaderBundle->compiledShaders = std::move(allShaders);
+
+                if (result.HasError())
+                {
+                    return result;
+                }
+
+                continue;
+            }
 
             if (Result result = CookAsset(outputContentDir, assetObject, readLocks, collectedBlobs, blockSizes, cookedAssets); result.HasError())
             {
                 return result;
             }
+        }
+
+        if (numForeignShaders != 0)
+        {
+            HYP_LOG(Assets, Info, "Left out {} shader variant(s) compiled for other backends or targets", numForeignShaders);
         }
 
         return {};
@@ -699,6 +835,11 @@ private:
     struct ShaderTarget
     {
         bool isEnabled = false;
+        String name;
+        ShaderCompileTargetPlatform platform = ShaderCompileTargetPlatform::None;
+        ShaderCompileTargetBackend backend = ShaderCompileTargetBackend::None;
+        Name targetPropertyValue;
+        Name backendPropertyValue;
         JSON::Value config;
         Set<Name> materialShaderNames;
     };
@@ -750,12 +891,27 @@ private:
         ShaderTarget& outShaderTarget,
         Array<Handle<AssetObject>>& outAssets)
     {
-        if (target != "web")
+        if (target == "web")
         {
-            return HYP_MAKE_ERROR(Error, "Unknown shader target '{}', expected web", target);
+            outShaderTarget.platform = ShaderCompileTargetPlatform::Web;
+            outShaderTarget.backend = ShaderCompileTargetBackend::WebGPU;
+            outShaderTarget.targetPropertyValue = NAME("WEB");
+            outShaderTarget.backendPropertyValue = NAME("WEBGPU");
+        }
+        else if (target == "host")
+        {
+            outShaderTarget.platform = s_hostCompilePlatform;
+            outShaderTarget.backend = s_hostCompileBackend;
+            outShaderTarget.targetPropertyValue = CreateNameFromDynamicString(s_hostTarget);
+            outShaderTarget.backendPropertyValue = CreateNameFromDynamicString(s_hostBackend);
+        }
+        else
+        {
+            return HYP_MAKE_ERROR(Error, "Unknown shader target '{}', expected web or host", target);
         }
 
         outShaderTarget.isEnabled = true;
+        outShaderTarget.name = target;
 
         JSON::Value& targetConfig = outShaderTarget.config;
 
@@ -824,18 +980,23 @@ private:
         }
 
         ShaderCompileParams params;
-        params.SetTargetPlatforms(ShaderCompileTargetPlatform::Web);
-        params.SetTargetBackends(ShaderCompileTargetBackend::WebGPU);
+        params.SetTargetPlatforms(outShaderTarget.platform);
+        params.SetTargetBackends(outShaderTarget.backend);
         params.shaderFilters = passShaderNames;
         params.exactShaderFilters = true;
+
+        // the editor cooks in its own process, and its compiler has to keep compiling everything afterwards
+        const ShaderCompileParams previousParams = g_shaderCompiler->GetCompileParams();
 
         if (!g_shaderCompiler->Initialize(/* precompileShaders */ true, params))
         {
             HYP_LOG(Assets, Warning, "Some pass shaders failed to compile for {} (see the errors above); the package goes without them", target);
         }
 
-        const ShaderPropertyId backendPropertyId = ShaderPropertyDictionary::GetInstance().Intern(ShaderProperty(NAME("BACKEND"), NAME("WEBGPU")));
-        const ShaderPropertyId targetPropertyId = ShaderPropertyDictionary::GetInstance().Intern(ShaderProperty(NAME("TARGET"), NAME("WEB")));
+        g_shaderCompiler->Initialize(/* precompileShaders */ false, previousParams);
+
+        const ShaderPropertyId backendPropertyId = ShaderPropertyDictionary::GetInstance().Intern(ShaderProperty(NAME("BACKEND"), outShaderTarget.backendPropertyValue));
+        const ShaderPropertyId targetPropertyId = ShaderPropertyDictionary::GetInstance().Intern(ShaderProperty(NAME("TARGET"), outShaderTarget.targetPropertyValue));
 
         uint32 numVariants = 0;
 
@@ -1064,6 +1225,21 @@ private:
             }
         }
 
+        // the renderer adds bindless textures where the device supports them, so a target that can have them gets both variants
+        if (shaderTarget.backend != ShaderCompileTargetBackend::WebGPU)
+        {
+            const ShaderPropertyId bindlessTexturesPropertyId = propertyDictionary.Intern(ShaderProperty(NAME("HYP_FEATURES_BINDLESS_TEXTURES")));
+            const size_t numRequests = requests.Size();
+
+            for (size_t requestIndex = 0; requestIndex < numRequests; requestIndex++)
+            {
+                VariantRequest bindlessRequest = requests[requestIndex];
+                bindlessRequest.properties.Add(bindlessTexturesPropertyId);
+
+                requests.PushBack(std::move(bindlessRequest));
+            }
+        }
+
         Map<Name, uint32> numRequestsPerShader;
 
         for (const VariantRequest& request : requests)
@@ -1080,17 +1256,17 @@ private:
                     return HYP_FORMAT("{} {}", it.second, it.first);
                 }));
 
-        const ShaderPropertyId targetPropertyId = propertyDictionary.Intern(ShaderProperty(NAME("TARGET"), NAME("WEB")));
-        const ShaderPropertyId backendPropertyId = propertyDictionary.Intern(ShaderProperty(NAME("BACKEND"), NAME("WEBGPU")));
+        const ShaderPropertyId targetPropertyId = propertyDictionary.Intern(ShaderProperty(NAME("TARGET"), shaderTarget.targetPropertyValue));
+        const ShaderPropertyId backendPropertyId = propertyDictionary.Intern(ShaderProperty(NAME("BACKEND"), shaderTarget.backendPropertyValue));
         const ShaderPropertyId numGBufferTexturesPropertyId = propertyDictionary.Intern(ShaderProperty(NAME("NUM_GBUFFER_TEXTURES"), int(NumGBufferTargets)));
 
         Map<Name, Set<HashCode>> requestedVariants;
 
         for (const VariantRequest& request : requests)
         {
-            if (!g_shaderCompiler->CompileVariantForTarget(request.shaderName, request.properties, VertexInputLayoutDesc { VT_Simple }, ShaderCompileTargetPlatform::Web, ShaderCompileTargetBackend::WebGPU))
+            if (!g_shaderCompiler->CompileVariantForTarget(request.shaderName, request.properties, VertexInputLayoutDesc { VT_Simple }, shaderTarget.platform, shaderTarget.backend))
             {
-                HYP_LOG(Assets, Warning, "Failed to compile a {} variant for web (see the errors above)", request.shaderName);
+                HYP_LOG(Assets, Warning, "Failed to compile a {} variant for {} (see the errors above)", request.shaderName, shaderTarget.name);
                 continue;
             }
 
@@ -1140,7 +1316,7 @@ private:
             }
         }
 
-        HYP_LOG(Assets, Info, "{} material shader variant(s) for web", numVariants);
+        HYP_LOG(Assets, Info, "{} material shader variant(s) for {}", numVariants, shaderTarget.name);
     }
 #endif // HYP_EDITOR
 
@@ -1410,20 +1586,7 @@ private:
 
                 HYP_LOG(Assets, Info, "Found {} asset(s) reachable from project at \"{}\"", assetsToCook.Size(), projectPath);
 
-                // the engine assets engine code uses whatever the content is; the terrain ones only for a project with terrain
-                if (engineRegistry)
-                {
-                    GlobalContextScope engineContextScope { AssetRegistryContext { engineRegistry } };
-
-                    EngineDefaults engineDefaults = EngineDefaults::Get();
-
-                    if (!usesTerrain)
-                    {
-                        engineDefaults.terrain = EngineTerrainDefaults {};
-                    }
-
-                    AssetRegistry::WalkAssetDeep(BoxedValue(engineDefaults), callback);
-                }
+                AddEngineDefaults(engineRegistry, usesTerrain, callback);
 
                 const EditorCookSettings& cookSettings = loadProjectResult.GetValue()->GetPlatformSettings().cook;
 
@@ -1461,6 +1624,26 @@ private:
                         assetsToCook.PushBack(gameRegistry->GetAsset(bucket, assetDesc.name));
                     }
                 }
+
+                // the engine code still needs its own assets, and with no worlds walked, terrain can't be ruled out
+                usesTerrain = true;
+
+                Set<AssetObject*> seenAssets;
+
+                for (const Handle<AssetObject>& assetObject : assetsToCook)
+                {
+                    seenAssets.Insert(assetObject.Get());
+                }
+
+                auto addUnseen = [&assetsToCook, &seenAssets](const Handle<AssetObject>& assetObject)
+                    {
+                        if (assetObject.IsValid() && seenAssets.Insert(assetObject.Get()).second)
+                        {
+                            assetsToCook.PushBack(assetObject);
+                        }
+                    };
+
+                AddEngineDefaults(engineRegistry, usesTerrain, addUnseen);
             }
 
             for (const Handle<AssetObject>& assetObject : assetsToCook)
@@ -1614,7 +1797,7 @@ private:
 
         // Write shader cache here as well
         HYP_LOG(Assets, Info, "Writing shader cache data...");
-        g_shaderManager->WriteShaderCache(outputCacheDir);
+        g_shaderManager->WriteShaderCache(outputCacheDir, /* writePreloadEntries */ !shaderTarget.isEnabled);
         HYP_LOG(Assets, Info, "Shader cache data written.");
 
         // For webGPU, collecting minimal pipelines

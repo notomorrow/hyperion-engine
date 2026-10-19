@@ -5,7 +5,6 @@ namespace Hyperion.Editor
 {
     public unsafe delegate void InitFromManagedDelegate(ManagedDelegates* pManagedDelegates);
 
-    public unsafe delegate int InitializeRuntimeDelegate();
     public unsafe delegate int InitializeAssemblyDelegate(IntPtr* pAssemblyGuid, IntPtr pAssembly, IntPtr pFilePath, int isCoreAssembly);
     public unsafe delegate void UnloadAssemblyDelegate(IntPtr pAssemblyGuid, IntPtr pResult);
 
@@ -26,7 +25,6 @@ namespace Hyperion.Editor
 
     public unsafe struct ManagedDelegates
     {
-        public delegate* unmanaged<int> initializeRuntime;
         public delegate* unmanaged<IntPtr, IntPtr, IntPtr, int, int> initializeAssembly;
         public delegate* unmanaged<IntPtr, IntPtr, void> unloadAssembly;
     }

@@ -40,6 +40,8 @@ hyp_link_core_library(${BUILD_NAME})
 
 # Hyperion.NET.Scripting compiles and hot reloads C# scripts, which only the editor does
 if(HYP_DOTNET AND HYP_EDITOR)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/../Generators/Generators.cmake)
+
   file(GLOB_RECURSE CSHARP_SCRIPTING_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/**.cs")
 
   if(CSHARP_SCRIPTING_SOURCES)
@@ -70,6 +72,7 @@ if(HYP_DOTNET AND HYP_EDITOR)
 
     file(APPEND ${CSPROJ_PATH} "  <ItemGroup>\n")
     file(APPEND ${CSPROJ_PATH} "    <PackageReference Include=\"Microsoft.NETCore.DotNetAppHost\" Version=\"8.0.1\" />\n")
+    hyp_append_type_registry_generator(${CSPROJ_PATH})
 
     file(APPEND ${CSPROJ_PATH} "    <PackageReference Include=\"Microsoft.CodeAnalysis\" Version=\"4.9.2\" />\n")
     file(APPEND ${CSPROJ_PATH} "    <PackageReference Include=\"Microsoft.CodeAnalysis.CSharp\" Version=\"4.9.2\" />\n")
@@ -157,6 +160,10 @@ if(HYP_DOTNET AND HYP_EDITOR)
             )
 
       add_dependencies(Hyperion.NET.Scripting hyperion-dotnet-shared hyperion-dotnet-runtime)
+    endif()
+
+    if(TARGET Hyperion.NET.Generators)
+      add_dependencies(Hyperion.NET.Scripting Hyperion.NET.Generators)
     endif()
 
     add_dependencies(${BUILD_NAME} Hyperion.NET.Scripting)

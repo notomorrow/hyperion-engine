@@ -226,6 +226,11 @@ foreach ($file in $ManagedEditorFiles)
     [void]$StagedBinaries.Add($file)
 }
 
+$generatorFile = "Hyperion.NET.Generators.dll"
+if (-not (Test-Path (Join-Path $BinDir $generatorFile))) { throw "Missing $generatorFile in $BinDir" }
+Copy-StagedFile (Join-Path $BinDir $generatorFile) (Join-Path $StageDir $(if ($IsMonolithic) { "ref/$generatorFile" } else { $generatorFile }))
+[void]$StagedBinaries.Add($generatorFile)
+
 $depsLibraries = @()
 if (-not $IsMonolithic)
 {
@@ -427,6 +432,10 @@ if ($IsMonolithic -and (Test-Path $SdkCMakeFile) -and (Test-Path $SdkImportLibra
     }
 
     Copy-StagedFile $SdkCMakeFile (Join-Path $SdkStageDir "CMake/HyperionSdk.cmake")
+
+    $SdkRuntimeLibrariesFile = Join-Path $BinDir "Sdk/RuntimeLibraries.txt"
+    if (Test-Path $SdkRuntimeLibrariesFile) { Copy-StagedFile $SdkRuntimeLibrariesFile (Join-Path $SdkStageDir "RuntimeLibraries.txt") }
+    else { Add-Warning "Sdk/RuntimeLibraries.txt is missing so all .dlls will be copied without whitelist!" }
     Copy-StagedFile $SdkImportLibrary (Join-Path $SdkStageDir "Lib/hyperion.lib")
 
     if ($sdkCMakeText.Contains($RootDir.Replace("\", "/"))) { Add-Warning "Sdk/CMake/HyperionSdk.cmake has the source tree path ($RootDir) in it" }

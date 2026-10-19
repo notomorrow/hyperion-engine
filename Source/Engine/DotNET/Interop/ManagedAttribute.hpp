@@ -25,7 +25,7 @@ extern "C"
         ObjectReference objectReference;
     };
 
-    static_assert(sizeof(ManagedAttribute) == 24, "sizeof(ManagedAttribute) must match C# struct size");
+    static_assert(sizeof(ManagedAttribute) == sizeof(void*) * 3, "sizeof(ManagedAttribute) must match C# struct size");
 
     struct ManagedAttributeHolder
     {
@@ -33,7 +33,7 @@ extern "C"
         ManagedAttribute* managedAttributesPtr;
     };
 
-    static_assert(sizeof(ManagedAttributeHolder) == 16, "sizeof(ManagedAttributeHolder) must match C# struct size");
+    static_assert(sizeof(ManagedAttributeHolder) == sizeof(void*) * 2, "sizeof(ManagedAttributeHolder) must match C# struct size");
 } // extern "C"
 
 } // namespace Hyperion::dotnet

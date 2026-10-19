@@ -67,7 +67,7 @@ cp "$BIN_DIR/Hyperion.NET.Scripting.dll" "$APP_ROOT/"
 
 # script projects compile against these; at runtime the published copies are used
 mkdir -p "$APP_ROOT/ref"
-for name in Hyperion.NET.Shared.dll Hyperion.NET.Runtime.dll Hyperion.NET.Interop.dll; do
+for name in Hyperion.NET.Shared.dll Hyperion.NET.Runtime.dll Hyperion.NET.Interop.dll Hyperion.NET.Generators.dll; do
     cp "$BIN_DIR/$name" "$APP_ROOT/ref/"
 done
 

@@ -4,37 +4,48 @@ using System.Runtime.InteropServices;
 namespace Hyperion
 {
     [ClassBinding(Name="MeshComponent")]
-    [StructLayout(LayoutKind.Explicit, Size = 176, Pack = 16)]
+    [StructLayout(LayoutKind.Explicit, Size = Layout.Size, Pack = 16)]
     public unsafe ref struct MeshComponent : IComponent
     {
+        private static class Layout
+        {
+#if HYP_WEB
+            public const int Material = 4, Skeleton = 8, EnableAutoInstancing = 12, InstanceData = 16, NumInstances = 32,
+                PreviousModelMatrix = 48, UserData = 112, ForcedLod = 144, LodBias = 145, Size = 160;
+#else
+            public const int Material = 8, Skeleton = 16, EnableAutoInstancing = 24, InstanceData = 32, NumInstances = 56,
+                PreviousModelMatrix = 64, UserData = 128, ForcedLod = 160, LodBias = 161, Size = 176;
+#endif
+        }
+
         [FieldOffset(0)]
         private Handle<Mesh> _meshHandle;
 
-        [FieldOffset(8)]
+        [FieldOffset(Layout.Material)]
         private Handle<Material> _materialHandle;
 
-        [FieldOffset(16)]
+        [FieldOffset(Layout.Skeleton)]
         private Handle<Skeleton> _skeletonHandle;
 
-        [FieldOffset(24)]
+        [FieldOffset(Layout.EnableAutoInstancing)]
         private bool _enableAutoInstancing;
-        
-        [FieldOffset(32)]
+
+        [FieldOffset(Layout.InstanceData)]
         private AssetReference _instanceData;
 
-        [FieldOffset(56)]
+        [FieldOffset(Layout.NumInstances)]
         private uint _numInstances;
 
-        [FieldOffset(64)]
+        [FieldOffset(Layout.PreviousModelMatrix)]
         private Mat4f _previousModelMatrix;
 
-        [FieldOffset(128)]
+        [FieldOffset(Layout.UserData)]
         private fixed byte _userData[32];
 
-        [FieldOffset(160)]
+        [FieldOffset(Layout.ForcedLod)]
         private byte _forcedLod;
 
-        [FieldOffset(161)]
+        [FieldOffset(Layout.LodBias)]
         private sbyte _lodBias;
 
         public MeshComponent()

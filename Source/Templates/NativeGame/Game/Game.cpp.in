@@ -114,8 +114,6 @@ void @CLASS@::OnLaunch()
     Game::OnLaunch();
 
     HYP_LOG(Game, Info, "@CLASS@ launched");
-
-    StartSimulating();
 }
 
 void @CLASS@::OnUpdate(float delta)

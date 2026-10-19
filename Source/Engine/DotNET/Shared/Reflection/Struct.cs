@@ -1,11 +1,7 @@
 using System;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics;
 
 namespace Hyperion
 {
@@ -35,11 +31,6 @@ namespace Hyperion
 
     internal static class ManagedLayout
     {
-        private static readonly MethodInfo sizeOfMethod = typeof(Unsafe).GetMethod(nameof(Unsafe.SizeOf))!;
-        private static readonly MethodInfo containsReferencesMethod = typeof(RuntimeHelpers).GetMethod(nameof(RuntimeHelpers.IsReferenceOrContainsReferences))!;
-        private static readonly MethodInfo writeValueMethod = typeof(ManagedLayout).GetMethod(nameof(WriteValue), BindingFlags.NonPublic | BindingFlags.Static)!;
-        private static readonly MethodInfo readValueMethod = typeof(ManagedLayout).GetMethod(nameof(ReadValue), BindingFlags.NonPublic | BindingFlags.Static)!;
-
         public static bool IsUnmanagedStruct(Type type)
         {
             if (!type.IsValueType || type.IsEnum || type.ContainsGenericParameters)
@@ -47,30 +38,12 @@ namespace Hyperion
                 return false;
             }
 
-            return !(bool)containsReferencesMethod.MakeGenericMethod(type).Invoke(null, null)!;
+            return HypTypeRegistry.GetStructLayout(type) != null;
         }
 
         public static int SizeOf(Type type)
         {
-            return (int)sizeOfMethod.MakeGenericMethod(type).Invoke(null, null)!;
-        }
-
-        // There's no API for a field's in-memory offset, so it's measured: the address of the field minus the address of the struct
-        public static int OffsetOf(FieldInfo field)
-        {
-            DynamicMethod method = new DynamicMethod("OffsetOf_" + field.Name, typeof(int), Type.EmptyTypes, restrictedSkipVisibility: true);
-
-            ILGenerator generator = method.GetILGenerator();
-            LocalBuilder instance = generator.DeclareLocal(field.DeclaringType!);
-
-            generator.Emit(OpCodes.Ldloca, instance);
-            generator.Emit(OpCodes.Ldflda, field);
-            generator.Emit(OpCodes.Ldloca, instance);
-            generator.Emit(OpCodes.Sub);
-            generator.Emit(OpCodes.Conv_I4);
-            generator.Emit(OpCodes.Ret);
-
-            return method.CreateDelegate<Func<int>>()();
+            return GetLayout(type).Size;
         }
 
         /// <summary>
@@ -78,7 +51,7 @@ namespace Hyperion
         /// </summary>
         public static void Write(object value, IntPtr destination)
         {
-            writeValueMethod.MakeGenericMethod(value.GetType()).Invoke(null, new object[] { value, destination });
+            GetLayout(value.GetType()).Write(value, destination);
         }
 
         /// <summary>
@@ -86,17 +59,17 @@ namespace Hyperion
         /// </summary>
         public static Func<IntPtr, object> CreateReader(Type type)
         {
-            return readValueMethod.MakeGenericMethod(type).CreateDelegate<Func<IntPtr, object>>();
+            return GetLayout(type).Read;
         }
 
-        private static unsafe void WriteValue<T>(object value, IntPtr destination) where T : unmanaged
+        public static HypStructLayout GetLayout(Type type)
         {
-            *(T*)destination = (T)value;
+            return HypTypeRegistry.GetStructLayout(type) ?? throw MissingLayout(type);
         }
 
-        private static unsafe object ReadValue<T>(IntPtr source) where T : unmanaged
+        internal static NotSupportedException MissingLayout(Type type)
         {
-            return *(T*)source;
+            return new NotSupportedException("No generated layout for " + type.FullName + "; build its assembly with Hyperion.NET.Generators");
         }
     }
 
@@ -162,7 +135,7 @@ namespace Hyperion
             Logger.Log(LogLevel.Verbose, "Creating dynamic Struct for type: " + type.Name);
 
             IntPtr defaultValuePtr = CreateDefaultValue(type);
-            DynamicStructField[] fields = GetReflectedFields(type);
+            DynamicStructField[] fields = GetLayoutFields(type, ManagedLayout.GetLayout(type));
             IntPtr classPtr;
 
             try
@@ -285,7 +258,7 @@ namespace Hyperion
 
             try
             {
-                defaultInstance = Activator.CreateInstance(type);
+                defaultInstance = ManagedLayout.GetLayout(type).CreateDefault();
             }
             catch (Exception ex)
             {
@@ -317,19 +290,18 @@ namespace Hyperion
             return defaultValuePtr;
         }
 
-        private static DynamicStructField[] GetReflectedFields(Type type)
+        private static DynamicStructField[] GetLayoutFields(Type type, HypStructLayout layout)
         {
             List<DynamicStructField> fields = new List<DynamicStructField>();
 
-            foreach (FieldInfo field in type.GetFields(BindingFlags.Instance | BindingFlags.Public))
+            foreach (HypFieldLayout field in layout.Fields)
             {
-                if (field.IsNotSerialized)
+                if (!field.IsPublic || field.IsNotSerialized)
                 {
                     continue;
                 }
 
-                Type fieldType = field.FieldType.IsEnum ? Enum.GetUnderlyingType(field.FieldType) : field.FieldType;
-                TypeInfo nativeTypeInfo = GetNativeTypeInfo(fieldType);
+                TypeInfo nativeTypeInfo = GetNativeTypeInfoForValue(field.DefaultValue);
 
                 if (nativeTypeInfo.IsNull)
                 {
@@ -341,8 +313,8 @@ namespace Hyperion
                 fields.Add(new DynamicStructField
                 {
                     Name = Marshal.StringToHGlobalAnsi(field.Name),
-                    Offset = (uint)ManagedLayout.OffsetOf(field),
-                    Size = (uint)ManagedLayout.SizeOf(fieldType),
+                    Offset = (uint)field.Offset,
+                    Size = (uint)field.Size,
                     TypeInfo = nativeTypeInfo.Address
                 });
             }
@@ -350,11 +322,11 @@ namespace Hyperion
             return fields.ToArray();
         }
 
-        private static TypeInfo GetNativeTypeInfo(Type fieldType)
+        private static TypeInfo GetNativeTypeInfoForValue(object? value)
         {
             try
             {
-                using BoxedValue boxed = new BoxedValue(Activator.CreateInstance(fieldType));
+                using BoxedValue boxed = new BoxedValue(value);
 
                 return boxed.TypeInfo;
             }
@@ -366,9 +338,9 @@ namespace Hyperion
 
         private static string GetLayoutSignature(Type type)
         {
-            FieldInfo[] fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            HypStructLayout layout = ManagedLayout.GetLayout(type);
 
-            return ManagedLayout.SizeOf(type) + ":" + string.Join(";", fields.Select(field => field.FieldType.FullName + " " + field.Name + "@" + ManagedLayout.OffsetOf(field)));
+            return layout.Size + ":" + string.Join(";", layout.Fields.Select(field => field.FieldType.FullName + " " + field.Name + "@" + field.Offset));
         }
 
         public static bool TryGet(Type type, [NotNullWhen(true)] out DynamicStruct? dynamicStruct)

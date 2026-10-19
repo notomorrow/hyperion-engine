@@ -19,7 +19,11 @@ namespace Hyperion
         [FieldOffset(48)]
         public Handle<PhysicsShape> Shape;
 
+#if HYP_WEB
+        [FieldOffset(52)]
+#else
         [FieldOffset(56)]
+#endif
         public Handle<RigidBody> RigidBody;
 
         public void Dispose()

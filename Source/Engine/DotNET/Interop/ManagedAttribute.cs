@@ -3,23 +3,19 @@ using System.Runtime.InteropServices;
 
 namespace Hyperion
 {
-    [StructLayout(LayoutKind.Explicit, Size = 24, Pack = 8)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct ManagedAttribute
     {
-        [FieldOffset(0)]
         public IntPtr pClass;
 
-        [FieldOffset(8)]
         public ObjectReference objectReference;
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 16, Pack = 8)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct ManagedAttributeHolder : IDisposable
     {
-        [FieldOffset(0)]
         public uint managedAttributesSize;
 
-        [FieldOffset(8)]
         public IntPtr managedAttributesPtr;
 
         public void Dispose()

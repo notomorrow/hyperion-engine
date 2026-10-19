@@ -1052,6 +1052,44 @@ static TResult<Array<MemberDef>, AnalyzerError> BuildClassMembers(const Analyzer
 
     String docComment;
 
+    bool isPublicSection = !classDefinition.isCXXClass;
+    int braceDepth = 0;
+
+    auto trackAccess = [&isPublicSection, &braceDepth](const String& trimmedLine)
+    {
+        if (braceDepth == 1)
+        {
+            if (trimmedLine.StartsWith("public:"))
+            {
+                isPublicSection = true;
+            }
+            else if (trimmedLine.StartsWith("protected:") || trimmedLine.StartsWith("private:"))
+            {
+                isPublicSection = false;
+            }
+        }
+
+        if (trimmedLine.StartsWith("//"))
+        {
+            return;
+        }
+
+        const size_t commentIndex = trimmedLine.FindFirstIndex("//");
+        const String code = commentIndex == String::NotFound ? trimmedLine : String(trimmedLine.Substr(0, commentIndex));
+
+        for (size_t c = 0; c < code.Size(); c++)
+        {
+            if (code.GetChar(c) == '{')
+            {
+                braceDepth++;
+            }
+            else if (code.GetChar(c) == '}')
+            {
+                braceDepth--;
+            }
+        }
+    };
+
     for (size_t i = 0; i < lines.Size(); i++)
     {
         const String& line = lines[i];
@@ -1061,6 +1099,8 @@ static TResult<Array<MemberDef>, AnalyzerError> BuildClassMembers(const Analyzer
         {
             continue;
         }
+
+        trackAccess(trimmedLine);
 
         if (trimmedLine.StartsWith("///"))
         {
@@ -1112,12 +1152,18 @@ static TResult<Array<MemberDef>, AnalyzerError> BuildClassMembers(const Analyzer
             if (remainingContent.GetChar(pos) == '\n')
             {
                 i++;
+
+                if (i < lines.Size())
+                {
+                    trackAccess(lines[i].Trimmed());
+                }
             }
         }
 
         MemberDef& result = results.EmplaceBack();
         result.type = parseMacroResult.GetValue().first;
         result.attributes = parseMacroResult.GetValue().second;
+        result.isPublic = isPublicSection;
 
         if (docComment.Any())
         {

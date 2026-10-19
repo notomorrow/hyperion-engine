@@ -511,18 +511,10 @@ extern "C"
 #if HYP_DOTNET && !defined(HYP_COMMANDLET_NAME)
         if (!EngineGlobals::IsCommandlet())
         {
-            // A managed host (the editor, or a C# game via HyperionApp) registers its callback before Hyp_Initialize()
-            const bool initFromManaged = s_initFromManagedCallback != nullptr;
-
-            bool shouldInitializeDotNetHost = true;
-
-#if defined(HYP_DOTNET_ONLY_FOR_EDITOR) && HYP_DOTNET_ONLY_FOR_EDITOR
-            shouldInitializeDotNetHost = EngineGlobals::IsEditor() || initFromManaged;
-#endif // HYP_DOTNET_ONLY_FOR_EDITOR
-
-            if (shouldInitializeDotNetHost)
+            // A managed host (the editor, a C# game via HyperionApp, or a game's NativeAOT scripts) registers its callback before Hyp_Initialize()
+            if (s_initFromManagedCallback != nullptr)
             {
-                DotNETHost::GetInstance().Initialize(basePath, initFromManaged, s_initFromManagedCallback);
+                DotNETHost::GetInstance().Initialize(basePath, s_initFromManagedCallback);
             }
         }
 #endif // HYP_DOTNET

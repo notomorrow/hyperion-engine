@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 
@@ -25,6 +26,11 @@ namespace Hyperion
 
         public static Assembly LoadGlobalAssembly(string path)
         {
+            if (!RuntimeFeature.IsDynamicCodeSupported)
+            {
+                throw new PlatformNotSupportedException("Assemblies can't be loaded at runtime in a NativeAOT build: " + path);
+            }
+
             Logger.Log(LogLevel.Verbose, "Loading global assembly from path: " + path);
 
             // single-file publish: core assemblies are in the bundle rather than on disk
@@ -172,6 +178,18 @@ namespace Hyperion
             this.referencedAssemblies = new List<AssemblyInstance>();
         }
 
+        public AssemblyInstance(string basePath, Guid guid, Assembly assembly, IntPtr assemblyPtr, bool ownsAssemblyPtr, bool isCoreAssembly)
+        {
+            this.basePath = basePath;
+            this.guid = guid;
+            this.assembly = assembly;
+            this.assemblyName = assembly.GetName();
+            this.assemblyPtr = assemblyPtr;
+            this.ownsAssemblyPtr = ownsAssemblyPtr;
+            this.isCoreAssembly = isCoreAssembly;
+            this.referencedAssemblies = new List<AssemblyInstance>();
+        }
+
         ~AssemblyInstance()
         {
             if (ownsAssemblyPtr && assemblyPtr != IntPtr.Zero)
@@ -255,6 +273,11 @@ namespace Hyperion
             if (assemblyName == null && assemblyPath == null)
             {
                 throw new Exception("Assembly name and path are null");
+            }
+
+            if (!RuntimeFeature.IsDynamicCodeSupported)
+            {
+                throw new PlatformNotSupportedException("Assemblies can't be loaded at runtime in a NativeAOT build; register compiled-in assemblies with NativeInterop.InitializeLoadedAssembly");
             }
 
             if (isCoreAssembly)
@@ -376,7 +399,6 @@ namespace Hyperion
 
             /// \todo Remove DynamicStruct instances for the assembly
 
-            int numMethodsRemoved = ManagedMethodCache.Instance.RemoveForAssembly(guid);
             int numDelegatesRemoved = DelegateCache.Instance.RemoveForAssembly(guid);
 
             Dictionary<Type, int> numCachedObjectsRemoved = new Dictionary<Type, int>();
@@ -388,7 +410,7 @@ namespace Hyperion
                 numCachedObjectsRemoved.Add(kvp.Key, numRemoved);
             }
 
-            Logger.Log(LogLevel.Verbose, $"Unloaded assembly {guid}, removed:\n\t{numMethodsRemoved} method(s)\n\t{numDelegatesRemoved} delegate(s)");
+            Logger.Log(LogLevel.Verbose, $"Unloaded assembly {guid}, removed:\n\t{numDelegatesRemoved} delegate(s)");
 
             foreach (KeyValuePair<Type, int> kvp in numCachedObjectsRemoved)
             {
@@ -408,7 +430,7 @@ namespace Hyperion
         }
 
         [DllImport("hyperion")]
-        private static extern int NativeInterop_NewAssembly(Guid guid, out IntPtr outAssemblyPtr);
+        internal static extern int NativeInterop_NewAssembly(Guid guid, out IntPtr outAssemblyPtr);
 
         [DllImport("hyperion")]
         private static extern void NativeInterop_FreeAssembly(IntPtr assemblyPtr);
@@ -518,7 +540,7 @@ namespace Hyperion
         {
             AssemblyInstance? assemblyInstance = GetByReference(assembly);
 
-            if (assemblyInstance != null)
+            if (assemblyInstance != null || !RuntimeFeature.IsDynamicCodeSupported)
             {
                 return assemblyInstance;
             }
@@ -591,6 +613,40 @@ namespace Hyperion
                 }
 
                 assemblyInstance.Load();
+
+                return assemblyInstance;
+            }
+        }
+
+        public AssemblyInstance GetOrAdd(Assembly assembly, bool isCoreAssembly)
+        {
+            lock (lockObject)
+            {
+                AssemblyInstance? existing = GetByReference(assembly);
+
+                if (existing != null)
+                {
+                    return existing;
+                }
+
+                Guid guid = Guid.NewGuid();
+
+                int result = AssemblyInstance.NativeInterop_NewAssembly(guid, out IntPtr assemblyPtr);
+
+                if (result != (int)LoadAssemblyResult.Ok || assemblyPtr == IntPtr.Zero)
+                {
+                    throw new Exception("Failed to create native assembly for " + assembly.GetName().Name + ". Error code: " + (LoadAssemblyResult)result);
+                }
+
+                AssemblyInstance assemblyInstance = new AssemblyInstance(
+                    basePath: AppContext.BaseDirectory,
+                    guid: guid,
+                    assembly: assembly,
+                    assemblyPtr: assemblyPtr,
+                    ownsAssemblyPtr: true,
+                    isCoreAssembly: isCoreAssembly);
+
+                assemblies.Add(guid, assemblyInstance);
 
                 return assemblyInstance;
             }

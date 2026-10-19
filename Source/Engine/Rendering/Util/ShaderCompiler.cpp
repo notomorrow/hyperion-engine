@@ -2185,15 +2185,6 @@ bool ShaderCompiler::LoadBundle(
 {
     outBundle.Reset();
 
-#ifdef HYP_EDITOR
-    if (!CanCompileShaders())
-    {
-        HYP_LOG(ShaderCompiler, Warning,
-                "Not compiled with shader compilation support... Shaders may become out of date.\n"
-                "If any shader bundle files are missing, they will not be compiled on the fly.");
-    }
-#endif
-
     if (!m_definitions)
     {
         Mutex::Guard guard(m_initMutex);
@@ -2412,6 +2403,25 @@ bool ShaderCompiler::CanCompileShaders(const ShaderCompileParams& params) const
     const bool needsDX12 = params.ShouldCompileDX12();
 
 #ifdef HYP_DXC
+#ifdef HYP_WINDOWS
+    static const bool s_hasDXC = []()
+    {
+        const bool hasDXC = (CoreApi::GetExecutablePath() / "dxcompiler.dll").Exists();
+
+        if (!hasDXC)
+        {
+            HYP_LOG(ShaderCompiler, Info, "No dxcompiler.dll next to the executable: only cooked shaders can be loaded");
+        }
+
+        return hasDXC;
+    }();
+
+    if (!s_hasDXC)
+    {
+        return false;
+    }
+#endif // HYP_WINDOWS
+
     return true;
 #endif
 

@@ -23,7 +23,6 @@ class Assembly;
 struct ManagedGuid;
 } // namespace dotnet
 
-class DotNetImplBase;
 class DotNetImpl;
 
 using AddObjectToCacheFunction = void (*)(void* ptr, dotnet::ManagedClass** outClass, dotnet::ObjectReference* outObjectReference, int8 isWeak);
@@ -35,16 +34,15 @@ using RemoveObjectFromCacheFunction = void (*)(void* classPtr);
 using FreeObjectReferenceFunction = void (*)(dotnet::ObjectReference* objectReference);
 using QueryManagedObjectCountsFunction = int (*)(void** outPairs, int maxPairs);
 using GetTotalMemoryFunction = int64 (*)(void);
+using SimTickFunction = void (*)(float deltaTime);
 
 using InitFromManagedCallback = void (*)(struct ManagedDelegates*);
 
-using InitializeRuntimeDelegate = int (*)(void);
 using InitializeAssemblyDelegate = int (*)(dotnet::ManagedGuid*, dotnet::Assembly*, const char*, int32);
 using UnloadAssemblyDelegate = void (*)(dotnet::ManagedGuid*, int32*);
 
 struct ManagedDelegates
 {
-    InitializeRuntimeDelegate initializeRuntime;
     InitializeAssemblyDelegate initializeAssembly;
     UnloadAssemblyDelegate unloadAssembly;
 };
@@ -72,6 +70,7 @@ public:
         FreeObjectReferenceFunction freeObjectReferenceFptr = nullptr;
         QueryManagedObjectCountsFunction queryManagedObjectCountsFptr = nullptr;
         GetTotalMemoryFunction getTotalMemoryFptr = nullptr;
+        SimTickFunction simTickFptr = nullptr;
     };
 
     static DotNETHost& GetInstance();
@@ -103,16 +102,18 @@ public:
 
     SharedPtr<dotnet::Assembly> LoadAssembly(const char* path) const;
     bool UnloadAssembly(dotnet::ManagedGuid guid) const;
+
+    /*! \brief Script assemblies resolve to this one instead of loading from disk: a game hosted by HyperionApp has its scripts compiled in. */
+    void SetHostedScriptAssembly(dotnet::Assembly* assembly);
     bool IsCoreAssembly(const dotnet::Assembly* assembly) const;
 
     bool IsInitialized() const;
 
-    /*! \brief Initializes the .NET runtime and loads core assemblies.
+    /*! \brief Connects to the .NET runtime of the managed code that started the engine.
         \param basePath The base path where assemblies are located.
-        \param initFromManaged Whether this initialization is being initiated from managed code. If true, some initialization steps may be skipped.
-        \param callback An optional callback function, used to initialize from managed code (only when \p initFromManaged is true).
+        \param initFromManagedCb Fills in the managed delegates the host calls.
     */
-    void Initialize(const FilePath& basePath, bool initFromManaged = false, InitFromManagedCallback initFromManagedCb = nullptr);
+    void Initialize(const FilePath& basePath, InitFromManagedCallback initFromManagedCb);
 
     void Shutdown();
 
@@ -123,7 +124,9 @@ private:
     bool m_isInitialized;
     bool m_isShuttingDown;
 
-    DotNetImplBase* m_impl;
+    DotNetImpl* m_impl;
+
+    SharedPtr<dotnet::Assembly> m_hostedScriptAssembly;
 
     GlobalFunctions m_globalFunctions;
 };

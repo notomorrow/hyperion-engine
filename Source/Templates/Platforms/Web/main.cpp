@@ -28,6 +28,30 @@ using namespace Hyperion;
 extern "C" const char* HypGameModule_GetGameClassName();
 #endif
 
+#ifdef HYP_WEB_MANAGED
+extern "C"
+{
+void HypManaged_Initialize();
+Hyperion::Game* HypManaged_CreateGame();
+
+int32_t SystemJS_RandomBytes(uint8_t* buffer, int32_t length)
+{
+    for (int32_t offset = 0; offset < length; offset += 256)
+    {
+        const int32_t chunk = length - offset < 256 ? length - offset : 256;
+
+        if (getentropy(buffer + offset, size_t(chunk)) != 0)
+        {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+}
+#endif
+
 #ifndef HYP_WEB_NODE_PACKAGE_DIR
 
 EM_JS_DEPS(HypWeb_PackageUrl, "$stringToNewUTF8");
@@ -306,6 +330,10 @@ int main(int argc, char** argv)
     argc = int(sizeof(defaultArguments) / sizeof(defaultArguments[0]));
     argv = const_cast<char**>(defaultArguments);
 
+#ifdef HYP_WEB_MANAGED
+    HypManaged_Initialize();
+#endif
+
     if (!Hyp_Initialize(argc, argv))
     {
         return 1;
@@ -332,6 +360,16 @@ int main(int argc, char** argv)
 
     EngineGlobals::GetBlobStorage()->Lock(EngineGlobals::GetCacheDirectory(), /* readOnly */ true);
 
+#if defined(HYP_WEB_MANAGED) && !defined(HYP_WEB_GAME_MODULE)
+    Game* managedGame = HypManaged_CreateGame();
+
+    if (!managedGame)
+    {
+        HYP_FAIL("Failed to create the C# game {}", HYP_WEB_GAME_CLASS);
+    }
+
+    Hyp_SetGame(managedGame);
+#else
 #ifdef HYP_WEB_GAME_MODULE
     // the project's game code names its game class
     const char* gameClassName = HypGameModule_GetGameClassName();
@@ -343,10 +381,11 @@ int main(int argc, char** argv)
 
     if (!game.IsValid())
     {
-        HYP_FAIL("Failed to create the game!");
+        HYP_FAIL("Failed to create the game {}", gameClassName);
     }
 
     Hyp_SetGame(game.Get());
+#endif
 
     if (!Hyp_LaunchThreads())
     {

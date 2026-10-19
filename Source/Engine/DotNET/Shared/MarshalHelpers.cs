@@ -98,7 +98,7 @@ namespace Hyperion
             if (type.IsValueType)
             {
                 Debug.Assert(obj != null);
-                Marshal.StructureToPtr(obj, outPtr, false);
+                HypMarshal.StructureToPtr(obj!, outPtr);
 
                 return;
             }

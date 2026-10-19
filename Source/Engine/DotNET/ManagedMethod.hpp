@@ -22,20 +22,17 @@ struct ObjectReference;
 class ManagedMethod
 {
 public:
-    ManagedMethod()
-        : m_invokeFptr(nullptr)
+    ManagedMethod() = default;
+
+    ManagedMethod(ManagedGuid guid, ManagedInvoker invoker)
+        : m_guid(guid),
+          m_invoker(invoker)
     {
     }
 
-    ManagedMethod(ManagedGuid guid, InvokeMethodFunction invokeFptr)
+    ManagedMethod(ManagedGuid guid, ManagedInvoker invoker, ManagedAttributeSet&& attributes)
         : m_guid(guid),
-          m_invokeFptr(invokeFptr)
-    {
-    }
-
-    ManagedMethod(ManagedGuid guid, InvokeMethodFunction invokeFptr, ManagedAttributeSet&& attributes)
-        : m_guid(guid),
-          m_invokeFptr(invokeFptr),
+          m_invoker(invoker),
           m_attributes(std::move(attributes))
     {
     }
@@ -53,9 +50,9 @@ public:
         return m_guid;
     }
 
-    HYP_FORCE_INLINE InvokeMethodFunction GetFunctionPointer() const
+    HYP_FORCE_INLINE const ManagedInvoker& GetInvoker() const
     {
-        return m_invokeFptr;
+        return m_invoker;
     }
 
     HYP_FORCE_INLINE const ManagedAttributeSet& GetAttributes() const
@@ -65,12 +62,12 @@ public:
 
     HYP_FORCE_INLINE bool Invoke(ObjectReference* thisObjectReference, const BoxedValue** argsBoxed, BoxedValue* outBoxed) const
     {
-        return m_invokeFptr(thisObjectReference, argsBoxed, outBoxed);
+        return m_invoker(thisObjectReference, argsBoxed, outBoxed);
     }
 
 private:
     ManagedGuid m_guid;
-    InvokeMethodFunction m_invokeFptr;
+    ManagedInvoker m_invoker;
     ManagedAttributeSet m_attributes;
 };
 

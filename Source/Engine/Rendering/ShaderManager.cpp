@@ -945,7 +945,7 @@ public:
             callback);
     }
 
-    void WriteShaderCache(const FilePath& outDir)
+    void WriteShaderCache(const FilePath& outDir, bool writePreloadEntries)
     {
         Mutex::Guard guard(m_cacheWriteMutex);
 
@@ -969,11 +969,15 @@ public:
 #ifdef HYP_GENERATE_SHADER_PRELOAD_CACHE
         { // Save preload cache - always written (even when empty) so it can't be left paired with a newer shaderprops.bin
             Array<ShaderPreloadEntry, ShaderAllocator> preloadEntries;
-            preloadEntries.Reserve(m_shaderPreloadEntriesToWrite.Size());
 
-            for (const auto& it : m_shaderPreloadEntriesToWrite)
+            if (writePreloadEntries)
             {
-                preloadEntries.PushBack(it.second);
+                preloadEntries.Reserve(m_shaderPreloadEntriesToWrite.Size());
+
+                for (const auto& it : m_shaderPreloadEntriesToWrite)
+                {
+                    preloadEntries.PushBack(it.second);
+                }
             }
 
             preloadCacheHeader.entryCount = uint32(preloadEntries.Size());
@@ -1325,9 +1329,9 @@ void ShaderManager::PreloadShaders(
     m_impl->PreloadShaders(shadersToPreload, blockingWait, callback);
 }
 
-void ShaderManager::WriteShaderCache(const FilePath& outDir)
+void ShaderManager::WriteShaderCache(const FilePath& outDir, bool writePreloadEntries)
 {
-    m_impl->WriteShaderCache(outDir);
+    m_impl->WriteShaderCache(outDir, writePreloadEntries);
 }
 
 void ShaderManager::ExpireShaderEntries(const Shader* shader)

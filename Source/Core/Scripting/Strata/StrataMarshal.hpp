@@ -7,6 +7,12 @@
 #pragma once
 
 #include <Core/Memory/Memory.hpp>
+#include <Core/Containers/Array.hpp>
+#include <Core/Reflection/Handle.hpp>
+
+#include <bit>
+#include <cstring>
+#include <type_traits>
 
 #include <Core/Math/Vector2.hpp>
 #include <Core/Math/Vector3.hpp>
@@ -175,6 +181,114 @@ template <class StringType>
 HYP_FORCE_INLINE void SetReturnString(SString* outString, const StringType& str)
 {
     SetReturnString(outString, str.Data(), str.Size());
+}
+
+// Struct pointers from foreign callers (C#, wasm) are only naturally aligned, not to the engine type's alignas
+template <class T>
+HYP_FORCE_INLINE T LoadUnaligned(const T* source)
+{
+    if constexpr (std::is_trivially_copyable_v<T>)
+    {
+        struct Bytes
+        {
+            unsigned char data[sizeof(T)];
+        } bytes;
+
+        std::memcpy(bytes.data, source, sizeof(T));
+
+        return std::bit_cast<T>(bytes);
+    }
+    else
+    {
+        return *source;
+    }
+}
+
+template <class T, class ValueType>
+HYP_FORCE_INLINE void StoreUnaligned(T* destination, ValueType&& value)
+{
+    if constexpr (std::is_trivially_copyable_v<T>)
+    {
+        const T temp = std::forward<ValueType>(value);
+
+        std::memcpy(destination, &temp, sizeof(T));
+    }
+    else
+    {
+        *destination = std::forward<ValueType>(value);
+    }
+}
+
+// Returned objects carry one strong reference, which the caller releases
+template <class T>
+HYP_FORCE_INLINE T* RetainObject(T* ptr)
+{
+    if (ptr && !reinterpret_cast<const ObjectBase*>(ptr)->GetObjectHeader_Internal()->TryIncRefStrong())
+    {
+        return nullptr;
+    }
+
+    return ptr;
+}
+
+template <class T>
+HYP_FORCE_INLINE T* RetainObject(const Handle<T>& handle)
+{
+    return RetainObject(handle.Get());
+}
+
+template <class T>
+HYP_FORCE_INLINE Handle<T> ToHandle(T* ptr)
+{
+    return Handle<T>::FromPointer(reinterpret_cast<ObjectBase*>(ptr));
+}
+
+template <class T>
+HYP_FORCE_INLINE Array<Handle<T>> ToHandleArray(const SArray<T*>* objects)
+{
+    Array<Handle<T>> result;
+    result.Reserve(objects->length);
+
+    for (uint32 i = 0; i < objects->length; i++)
+    {
+        result.PushBack(ToHandle(objects->data[i]));
+    }
+
+    return result;
+}
+
+template <class T, class ContainerType>
+HYP_FORCE_INLINE void SetReturnObjectArray(SArray<T*>* outArray, const ContainerType& objects)
+{
+    const size_t count = objects.Size();
+
+    T** data = count > 0 ? reinterpret_cast<T**>(Alloc(count * sizeof(T*))) : nullptr;
+
+    for (size_t i = 0; i < count; i++)
+    {
+        data[i] = RetainObject(objects[i]);
+    }
+
+    outArray->data = data;
+    outArray->length = uint32(count);
+    outArray->cap = uint32(count);
+}
+
+template <class ContainerType>
+HYP_FORCE_INLINE void SetReturnStringArray(SArray<SString>* outArray, const ContainerType& strings)
+{
+    const size_t count = strings.Size();
+
+    SString* data = count > 0 ? reinterpret_cast<SString*>(Alloc(count * sizeof(SString))) : nullptr;
+
+    for (size_t i = 0; i < count; i++)
+    {
+        SetReturnString(&data[i], strings[i]);
+    }
+
+    outArray->data = data;
+    outArray->length = uint32(count);
+    outArray->cap = uint32(count);
 }
 
 } // namespace Strata

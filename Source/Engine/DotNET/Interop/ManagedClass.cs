@@ -4,10 +4,6 @@ using System.Collections.Generic;
 
 namespace Hyperion
 {
-    public delegate ObjectReference NewObjectDelegate([MarshalAs(UnmanagedType.I1)] bool keepAlive, IntPtr pManagedClass, IntPtr nativeAddress, IntPtr pCtx, IntPtr pCallback);
-    public delegate void FreeObjectDelegate(ObjectReference obj);
-    public delegate ObjectReference MarshalObjectDelegate(IntPtr ptr, uint size);
-
     internal struct StoredDelegate
     {
         public Guid AssemblyGuid { get; set; }
@@ -102,9 +98,6 @@ namespace Hyperion
         internal long typeHash;
         internal IntPtr pClass;
         internal Guid assemblyGuid;
-        internal Guid newObjectGuid;
-        internal Guid freeObjectGuid;
-        internal Guid marshalObjectGuid;
         internal ManagedClassFlags flags;
 
         public void SetAttributes(ref ManagedAttributeHolder managedAttributeHolder)
@@ -118,30 +111,30 @@ namespace Hyperion
             }
         }
 
-        public void AddMethod(string methodName, Guid guid, IntPtr functionPointer, ref ManagedAttributeHolder managedAttributeHolder)
+        public void AddMethod(string methodName, Guid guid, IntPtr invokeFptr, IntPtr invokeContext, ref ManagedAttributeHolder managedAttributeHolder)
         {
             IntPtr methodNamePtr = Marshal.StringToCoTaskMemUTF8(methodName);
-            
+
             unsafe
             {
                 fixed (ManagedAttributeHolder* managedAttributeHolderPtr = &managedAttributeHolder)
                 {
-                    ManagedClass_AddMethod(pClass, methodNamePtr, guid, functionPointer, (IntPtr)managedAttributeHolderPtr);
+                    ManagedClass_AddMethod(pClass, methodNamePtr, guid, invokeFptr, invokeContext, (IntPtr)managedAttributeHolderPtr);
                 }
             }
 
             Marshal.FreeCoTaskMem(methodNamePtr);
         }
 
-        public void AddProperty(string propertyName, Guid guid, ref ManagedAttributeHolder managedAttributeHolder)
+        public void AddProperty(string propertyName, Guid guid, IntPtr getterFptr, IntPtr getterContext, IntPtr setterFptr, IntPtr setterContext, ref ManagedAttributeHolder managedAttributeHolder)
         {
             IntPtr propertyNamePtr = Marshal.StringToCoTaskMemUTF8(propertyName);
-            
+
             unsafe
             {
                 fixed (ManagedAttributeHolder* managedAttributeHolderPtr = &managedAttributeHolder)
                 {
-                    ManagedClass_AddProperty(pClass, propertyNamePtr, guid, (IntPtr)managedAttributeHolderPtr);
+                    ManagedClass_AddProperty(pClass, propertyNamePtr, guid, getterFptr, getterContext, setterFptr, setterContext, (IntPtr)managedAttributeHolderPtr);
                 }
             }
 
@@ -159,45 +152,29 @@ namespace Hyperion
             }
         }
 
-        public void SetNewObjectFunction(Guid assemblyGuid, NewObjectDelegate value)
+        public void SetNewObjectFunction(IntPtr newObjectFptr, IntPtr newObjectContext)
         {
-            if (newObjectGuid != Guid.Empty)
-                DelegateCache.Instance.Remove(newObjectGuid);
-
-            newObjectGuid = Guid.NewGuid();
-
-            GCHandle handle = GCHandle.Alloc(value);
-            DelegateCache.Instance.Add(assemblyGuid, newObjectGuid, handle);
-
-            ManagedClass_SetNewObjectFunction(pClass, Marshal.GetFunctionPointerForDelegate(value));
+            ManagedClass_SetNewObjectFunction(pClass, newObjectFptr, newObjectContext);
         }
 
-        public void SetMarshalObjectFunction(Guid assemblyGuid, MarshalObjectDelegate value)
+        public void SetMarshalObjectFunction(IntPtr marshalObjectFptr, IntPtr marshalObjectContext)
         {
-            if (marshalObjectGuid != Guid.Empty)
-                DelegateCache.Instance.Remove(marshalObjectGuid);
-
-            marshalObjectGuid = Guid.NewGuid();
-
-            GCHandle handle = GCHandle.Alloc(value);
-            DelegateCache.Instance.Add(assemblyGuid, marshalObjectGuid, handle);
-
-            ManagedClass_SetMarshalObjectFunction(pClass, Marshal.GetFunctionPointerForDelegate(value));
+            ManagedClass_SetMarshalObjectFunction(pClass, marshalObjectFptr, marshalObjectContext);
         }
 
         [DllImport("hyperion", EntryPoint = "ManagedClass_SetAttributes")]
         private static extern void ManagedClass_SetAttributes([In] IntPtr managedClass, IntPtr managedAttributeHolderPtr);
 
         [DllImport("hyperion", EntryPoint = "ManagedClass_AddMethod")]
-        private static extern void ManagedClass_AddMethod([In] IntPtr managedClass, IntPtr methodNamePtr, Guid guid, IntPtr functionPointer, IntPtr managedAttributeHolderPtr);
+        private static extern void ManagedClass_AddMethod([In] IntPtr managedClass, IntPtr methodNamePtr, Guid guid, IntPtr invokeFptr, IntPtr invokeContext, IntPtr managedAttributeHolderPtr);
 
         [DllImport("hyperion", EntryPoint = "ManagedClass_AddProperty")]
-        private static extern void ManagedClass_AddProperty([In] IntPtr managedClass, IntPtr propertyNamePtr, Guid guid, IntPtr managedAttributeHolderPtr);
+        private static extern void ManagedClass_AddProperty([In] IntPtr managedClass, IntPtr propertyNamePtr, Guid guid, IntPtr getterFptr, IntPtr getterContext, IntPtr setterFptr, IntPtr setterContext, IntPtr managedAttributeHolderPtr);
 
         [DllImport("hyperion", EntryPoint = "ManagedClass_SetNewObjectFunction")]
-        private static extern void ManagedClass_SetNewObjectFunction([In] IntPtr managedClass, IntPtr newObjectFunctionPtr);
+        private static extern void ManagedClass_SetNewObjectFunction([In] IntPtr managedClass, IntPtr newObjectFptr, IntPtr newObjectContext);
 
         [DllImport("hyperion", EntryPoint = "ManagedClass_SetMarshalObjectFunction")]
-        private static extern void ManagedClass_SetMarshalObjectFunction([In] IntPtr managedClass, IntPtr marshalObjectFunctionPtr);
+        private static extern void ManagedClass_SetMarshalObjectFunction([In] IntPtr managedClass, IntPtr marshalObjectFptr, IntPtr marshalObjectContext);
     }
 }

@@ -15,7 +15,7 @@ namespace Hyperion
 
                 if (message == null || ((string)message).Length == 0)
                 {
-                    Assert_Throw(null, frame.GetMethod()?.Name ?? null, (uint)frame.GetFileLineNumber());
+                    Assert_Throw(null, System.Diagnostics.DiagnosticMethodInfo.Create(frame)?.Name, (uint)frame.GetFileLineNumber());
                 }
                 else
                 {
@@ -28,12 +28,12 @@ namespace Hyperion
                     {
                         string formattedMessage = string.Format((string)message, args);
 
-                        Assert_Throw((string)message, frame.GetMethod()?.Name ?? null, (uint)frame.GetFileLineNumber());
+                        Assert_Throw((string)message, System.Diagnostics.DiagnosticMethodInfo.Create(frame)?.Name, (uint)frame.GetFileLineNumber());
                     }
                     catch (FormatException)
                     {
                         // Do nothing, just log as is
-                        Assert_Throw((string)message, frame.GetMethod()?.Name ?? null, (uint)frame.GetFileLineNumber());
+                        Assert_Throw((string)message, System.Diagnostics.DiagnosticMethodInfo.Create(frame)?.Name, (uint)frame.GetFileLineNumber());
                     }
                 }
             }
