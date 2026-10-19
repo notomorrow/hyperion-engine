@@ -95,10 +95,22 @@ static String EnumUnderlyingCSharpType(const Analyzer& analyzer, const String& e
     return it != s_underlyingTypes.End() ? it->second : String::empty;
 }
 
+static String ArrayElementCSharpType(const StrataTypeMapping& mapping)
+{
+    static const Map<String, String> s_elementTypes {
+        { "float2", "Vec2f" },
+        { "float3", "Vec3f" },
+        { "float4", "Vec4f" }
+    };
+
+    auto it = s_elementTypes.Find(mapping.elementTypeName);
+
+    return it != s_elementTypes.End() ? it->second : mapping.elementTypeName;
+}
+
 static bool TryEmitDirectBinding(
     const Analyzer& analyzer,
     const ClassDefinition& cls,
-    const MemberDef& member,
     const BindingsShared::MethodThunk& thunk,
     const String& managedName,
     const String& libraryName,
@@ -112,7 +124,10 @@ static bool TryEmitDirectBinding(
         "int", "uint", "float", "double", "long", "ulong", "short", "ushort", "byte", "sbyte", "IntPtr", "bool"
     };
 
-    if (!libraryName.Any() || thunk.isStatic || member.condition.Any() || cls.condition.Any())
+    static const String s_bindings = "global::Hyperion.NativeBindings";
+    static const String s_strataArray = "global::Hyperion.StrataArray";
+
+    if (!libraryName.Any() || thunk.isStatic)
     {
         return false;
     }
@@ -124,6 +139,8 @@ static bool TryEmitDirectBinding(
 
     Array<String> nativeParams;
     Array<String> nativeArgs;
+    Array<String> prelude;
+    Array<String> fixedStatements;
     bool usesStrings = false;
 
     if (cls.type == ClassDefinitionType::Class)
@@ -131,10 +148,14 @@ static bool TryEmitDirectBinding(
         nativeParams.PushBack("nint self");
         nativeArgs.PushBack("obj.NativeAddress");
     }
-    else
+    else if (BindingsShared::IsBlittableStruct(analyzer, cls.name))
     {
         nativeParams.PushBack(HYP_FORMAT("{}* self", cls.name));
         nativeArgs.PushBack("&obj");
+    }
+    else
+    {
+        return false;
     }
 
     for (size_t i = 0; i < thunk.paramMappings.Size(); i++)
@@ -142,13 +163,27 @@ static bool TryEmitDirectBinding(
         const StrataTypeMapping& strataMapping = thunk.paramMappings[i];
         const CSharpTypeMapping& csharpMapping = paramTypeMappings[i];
         const String& name = methodArgNames[i];
+        const String localName = name.StartsWith("@") ? String(name.Substr(1)) : name;
 
         if (strataMapping.isArray)
         {
-            return false;
-        }
+            if (strataMapping.isStringArray || csharpMapping.typeName != "Array")
+            {
+                return false;
+            }
 
-        if (strataMapping.isString)
+            const String elementType = strataMapping.isHandleArray ? String("nint") : ArrayElementCSharpType(strataMapping);
+
+            prelude.PushBack(strataMapping.isHandleArray
+                    ? HYP_FORMAT("nint[] {}Elements = {}.ToNativeAddresses({});", localName, s_bindings, name)
+                    : HYP_FORMAT("{}[] {}Elements = {}.ToTypedArray<{}>({});", elementType, localName, s_bindings, elementType, name));
+
+            fixedStatements.PushBack(HYP_FORMAT("fixed ({}* {}Data = {}Elements)", elementType, localName, localName));
+
+            nativeParams.PushBack(HYP_FORMAT("{}* {}", s_strataArray, name));
+            nativeArgs.PushBack(HYP_FORMAT("&{}Array", localName));
+        }
+        else if (strataMapping.isString)
         {
             if (csharpMapping.typeName != "string")
             {
@@ -183,7 +218,8 @@ static bool TryEmitDirectBinding(
         }
         else if (strataMapping.isVector || strataMapping.isStructValue)
         {
-            if (csharpMapping.isNullable)
+            if (csharpMapping.isNullable
+                || (strataMapping.isStructValue && (csharpMapping.typeName != strataMapping.typeName || !BindingsShared::IsBlittableStruct(analyzer, strataMapping.typeName))))
             {
                 return false;
             }
@@ -232,7 +268,28 @@ static bool TryEmitDirectBinding(
     }
     else if (strataReturn.isArray)
     {
-        return false;
+        if (returnTypeMapping.typeName != "Array")
+        {
+            return false;
+        }
+
+        nativeParams.PushBack(HYP_FORMAT("{}* outReturn", s_strataArray));
+        nativeArgs.PushBack("&result");
+        body.PushBack(HYP_FORMAT("{} result = default;", s_strataArray));
+        body.PushBack(nativeCall() + ";");
+
+        if (strataReturn.isHandleArray)
+        {
+            body.PushBack(HYP_FORMAT("return {}.TakeObjectArray<{}>(&result);", s_bindings, strataReturn.elementTypeName));
+        }
+        else if (strataReturn.isStringArray)
+        {
+            body.PushBack(HYP_FORMAT("return {}.TakeStringArray(&result);", s_bindings));
+        }
+        else
+        {
+            body.PushBack(HYP_FORMAT("return {}.TakeArray<{}>(&result);", s_bindings, ArrayElementCSharpType(strataReturn)));
+        }
     }
     else if (strataReturn.isString)
     {
@@ -245,11 +302,12 @@ static bool TryEmitDirectBinding(
         nativeArgs.PushBack("&result");
         body.PushBack("global::Hyperion.StrataString result = default;");
         body.PushBack(nativeCall() + ";");
-        body.PushBack("return global::Hyperion.NativeBindings.TakeString(&result);");
+        body.PushBack(HYP_FORMAT("return {}.TakeString(&result);", s_bindings));
     }
     else if (strataReturn.isVector || strataReturn.isStructValue)
     {
-        if (returnTypeMapping.isNullable)
+        if (returnTypeMapping.isNullable
+            || (strataReturn.isStructValue && (returnTypeMapping.typeName != strataReturn.typeName || !BindingsShared::IsBlittableStruct(analyzer, strataReturn.typeName))))
         {
             return false;
         }
@@ -268,7 +326,8 @@ static bool TryEmitDirectBinding(
         }
 
         nativeReturnType = "nint";
-        body.PushBack(HYP_FORMAT("return global::Hyperion.NativeBindings.GetManagedObject<{}>({});", returnTypeMapping.typeName, nativeCall()));
+        body.PushBack(HYP_FORMAT("return {}.{}<{}>({});", s_bindings,
+            strataReturn.isStrongHandle ? "TakeManagedObject" : "GetManagedObject", returnTypeMapping.typeName, nativeCall()));
     }
     else if (strataReturn.isEnum)
     {
@@ -309,9 +368,45 @@ static bool TryEmitDirectBinding(
         methodArgDecls.Any() ? ", " + String::Join(methodArgDecls, ", ") : "");
     out += "        {\n";
 
+    String indent = "            ";
+
+    for (const String& line : prelude)
+    {
+        out += indent + line + "\n";
+    }
+
+    if (fixedStatements.Any())
+    {
+        for (const String& statement : fixedStatements)
+        {
+            out += indent + statement + "\n";
+        }
+
+        out += indent + "{\n";
+        indent += "    ";
+
+        for (size_t i = 0; i < thunk.paramMappings.Size(); i++)
+        {
+            if (!thunk.paramMappings[i].isArray)
+            {
+                continue;
+            }
+
+            const String& name = methodArgNames[i];
+            const String localName = name.StartsWith("@") ? String(name.Substr(1)) : name;
+
+            out += indent + HYP_FORMAT("{} {}Array = new {}({}Data, {}Elements.Length);\n", s_strataArray, localName, s_strataArray, localName, localName);
+        }
+    }
+
     for (const String& line : body)
     {
-        out += "            " + line + "\n";
+        out += indent + line + "\n";
+    }
+
+    if (fixedStatements.Any())
+    {
+        out += "            }\n";
     }
 
     out += "        }\n";
@@ -545,7 +640,7 @@ Result CSharpModuleGenerator::Generate(const Analyzer& analyzer, const Module& m
                 {
                     String directBinding;
 
-                    if (TryEmitDirectBinding(analyzer, cls, member, *thunk, managedName, libraryName, returnTypeMapping, paramTypeMappings, methodArgDecls, methodArgNames, directBinding))
+                    if (TryEmitDirectBinding(analyzer, cls, *thunk, managedName, libraryName, returnTypeMapping, paramTypeMappings, methodArgDecls, methodArgNames, directBinding))
                     {
                         writer.WriteString(directBinding);
 

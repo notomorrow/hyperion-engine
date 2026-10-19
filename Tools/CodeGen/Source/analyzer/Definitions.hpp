@@ -52,6 +52,7 @@ struct MemberDef
     SharedPtr<ASTType> cxxType;
     SharedPtr<ASTMemberDecl> cxxDecl;
     String source;
+    bool isPublic = true;
 
     bool HasAttribute(const String& key) const
     {

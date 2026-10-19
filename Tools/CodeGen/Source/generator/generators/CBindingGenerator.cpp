@@ -41,7 +41,8 @@ String UnwrappedTypeName(const ASTType* type)
 TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const Set<String>& allHandleNames,
     const ASTType* paramType, const String& paramName, Array<String>& sigParams, Array<String>& callArgs)
 {
-    TResult<StrataTypeMapping> paramRes = MapToStrataType(analyzer, paramType);
+    bool strataCompatible = true;
+    TResult<StrataTypeMapping> paramRes = MapToThunkType(analyzer, paramType, strataCompatible);
 
     if (paramRes.HasError())
     {
@@ -61,7 +62,24 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
         ? paramType->refTo.Get()
         : paramType;
 
-    if (paramTypeMapping.isString)
+    if (paramTypeMapping.isStrongHandle)
+    {
+        sigParams.PushBack(HYP_FORMAT("{}* {}", paramTypeMapping.CxxTypeName(), paramName));
+        callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::ToHandle({})", paramName));
+    }
+    else if (paramTypeMapping.isEnumFlags)
+    {
+        sigParams.PushBack(HYP_FORMAT("{} {}", paramTypeMapping.CxxTypeName(), paramName));
+        callArgs.PushBack(paramName);
+    }
+    else if (paramTypeMapping.isHandleArray)
+    {
+        sigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::SArray<{}*>* {}", paramTypeMapping.elementCxxType, paramName));
+        callArgs.PushBack(paramTypeMapping.isRawPointerElement
+                ? HYP_FORMAT("Array<{}*>({}->data, size_t({}->length))", paramTypeMapping.elementCxxType, paramName, paramName)
+                : HYP_FORMAT("::Hyperion::Strata::ToHandleArray({})", paramName));
+    }
+    else if (paramTypeMapping.isString)
     {
         // Strata strings have no length; pass the raw char*.
         const String stringCxxTypeName = unwrappedParamType->typeName->ToString(/* includeNamespace */ false);
@@ -117,7 +135,37 @@ String FormatThunkDefinition(const String& externName, const StrataTypeMapping& 
 {
     String methodOutput;
 
-    if (returnTypeMapping.isArray)
+    if (returnTypeMapping.isStrongHandle)
+    {
+        methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT {}* {}({})", returnTypeMapping.CxxTypeName(), externName, sigParamsString);
+        methodOutput += " { return ::Hyperion::Strata::RetainObject(";
+        methodOutput += callExpr;
+        methodOutput += "); }\n";
+    }
+    else if (returnTypeMapping.isEnumFlags)
+    {
+        methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT {} {}({})", returnTypeMapping.CxxTypeName(), externName, sigParamsString);
+        methodOutput += " { return ";
+        methodOutput += returnTypeMapping.CxxTypeName();
+        methodOutput += "(";
+        methodOutput += callExpr;
+        methodOutput += "); }\n";
+    }
+    else if (returnTypeMapping.isHandleArray)
+    {
+        methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
+        methodOutput += " { ::Hyperion::Strata::SetReturnObjectArray(outReturn, ";
+        methodOutput += callExpr;
+        methodOutput += "); }\n";
+    }
+    else if (returnTypeMapping.isStringArray)
+    {
+        methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
+        methodOutput += " { ::Hyperion::Strata::SetReturnStringArray(outReturn, ";
+        methodOutput += callExpr;
+        methodOutput += "); }\n";
+    }
+    else if (returnTypeMapping.isArray)
     {
         methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
         methodOutput += " { const auto& hypReturnValue = ";
@@ -231,7 +279,15 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
                 allSigParams.PushBack(sigParam);
             }
 
-            if (returnTypeMapping.isArray)
+            if (returnTypeMapping.isHandleArray)
+            {
+                allSigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::SArray<{}*>* outReturn", returnTypeMapping.elementCxxType));
+            }
+            else if (returnTypeMapping.isStringArray)
+            {
+                allSigParams.PushBack("::Hyperion::Strata::SArray<::Hyperion::Strata::SString>* outReturn");
+            }
+            else if (returnTypeMapping.isArray)
             {
                 // Reference-stripping like params: getters return `const Array<T>&`.
                 const ASTType* unwrappedReturnType = (functionType->returnType->isLvalueReference || functionType->returnType->isRvalueReference)
@@ -272,8 +328,12 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
                 propertySetterIdiom ? nullptr : functionType->returnType.Get(), sigParamsString, callExpr);
 
             // Register for static init.
-            methodOutput += HYP_FORMAT("#ifdef HYP_STRATA\nstatic const bool s_strataBinding_{}_{} = ::Hyperion::Strata::ThunkDrawer::Register(\"{}\"_sh, reinterpret_cast<void*>(&{}_{}));\n#endif\n",
-                cls.name, managedName, externName, cls.name, managedName);
+            if (thunk.strataCompatible)
+            {
+                methodOutput += HYP_FORMAT("#ifdef HYP_STRATA\nstatic const bool s_strataBinding_{}_{} = ::Hyperion::Strata::ThunkDrawer::Register(\"{}\"_sh, reinterpret_cast<void*>(&{}_{}));\n#endif\n",
+                    cls.name, managedName, externName, cls.name, managedName);
+            }
+
             if (member.condition.Any())
             {
                 classThunks += HYP_FORMAT("#if {}\n", member.condition);

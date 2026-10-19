@@ -26,6 +26,14 @@ extern "C"
         return cls->GetManagedObject(objectPtr, *outObjectReference) ? 1 : 0;
     }
 
+    HYP_EXPORT void NativeBindings_ReleaseObject(void* objectPtr)
+    {
+        if (objectPtr)
+        {
+            reinterpret_cast<const ObjectBase*>(objectPtr)->GetObjectHeader_Internal()->DecRefStrong();
+        }
+    }
+
     HYP_EXPORT void NativeBindings_FreeString(void* data)
     {
         Strata::Free(data);
