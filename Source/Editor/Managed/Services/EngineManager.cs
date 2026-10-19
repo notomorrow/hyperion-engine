@@ -34,6 +34,7 @@ namespace Hyperion.Editor
         private static DelegateHandler? _onBuildNativeGameRequestedHandler;
         private static DelegateHandler? _onBuildWebGameRequestedHandler;
         private static DelegateHandler? _onRunWebGameRequestedHandler;
+        private static DelegateHandler? _onPublishManagedGameRequestedHandler;
         private static DelegateHandler? _onViewportLayoutRequestedHandler;
 
         public static event Action<World, Scene>? SceneAdded;
@@ -179,6 +180,12 @@ namespace Hyperion.Editor
                 string? projectFilePath = CurrentProject?.FilePath;
 
                 _ = Task.Run(() => Services.WebGameBuildService.Instance.RunInBrowserAsync(projectFilePath, hasUnsavedChanges));
+            });
+
+            _onPublishManagedGameRequestedHandler?.Remove();
+            _onPublishManagedGameRequestedHandler = editorState.GetOnPublishManagedGameRequestedDelegate().Bind((string projectFilePath, string binariesDirectory, string outputDirectory) =>
+            {
+                return Services.ManagedGameBuildService.Instance.PublishAot(projectFilePath, binariesDirectory, outputDirectory);
             });
 
             _onViewportLayoutRequestedHandler?.Remove();

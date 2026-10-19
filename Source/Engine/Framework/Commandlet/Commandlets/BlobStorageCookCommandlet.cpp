@@ -669,6 +669,69 @@ private:
         return {};
     }
 
+    static bool IsShaderForThisBuild(const Shader& shader)
+    {
+#if defined(HYP_WEBGPU)
+        static const char* const s_hostBackend = "WEBGPU";
+#elif defined(HYP_DX12)
+        static const char* const s_hostBackend = "DX12";
+#else
+        static const char* const s_hostBackend = "VULKAN";
+#endif
+
+#if defined(HYP_WEB) || defined(HYP_WEBGPU)
+        static const char* const s_hostTarget = "WEB";
+#elif defined(HYP_WINDOWS)
+        static const char* const s_hostTarget = "WINDOWS";
+#elif defined(HYP_MACOS)
+        static const char* const s_hostTarget = "MAC";
+#elif defined(HYP_ANDROID)
+        static const char* const s_hostTarget = "ANDROID";
+#elif defined(HYP_IOS)
+        static const char* const s_hostTarget = "IOS";
+#else
+        static const char* const s_hostTarget = "LINUX";
+#endif
+
+        static const Array<ShaderPropertyId> s_foreignPropertyIds = []()
+        {
+            static const char* const s_backends[] = { "VULKAN", "DX12", "WEBGPU" };
+            static const char* const s_targets[] = { "WINDOWS", "MAC", "LINUX", "ANDROID", "IOS", "WEB" };
+
+            ShaderPropertyDictionary& dictionary = ShaderPropertyDictionary::GetInstance();
+
+            Array<ShaderPropertyId> ids;
+
+            for (const char* backend : s_backends)
+            {
+                if (std::strcmp(backend, s_hostBackend) != 0)
+                {
+                    ids.PushBack(dictionary.Intern(ShaderProperty(NAME("BACKEND"), CreateNameFromDynamicString(backend))));
+                }
+            }
+
+            for (const char* target : s_targets)
+            {
+                if (std::strcmp(target, s_hostTarget) != 0)
+                {
+                    ids.PushBack(dictionary.Intern(ShaderProperty(NAME("TARGET"), CreateNameFromDynamicString(target))));
+                }
+            }
+
+            return ids;
+        }();
+
+        for (ShaderPropertyId propertyId : s_foreignPropertyIds)
+        {
+            if (shader.properties.Test(propertyId))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     static Result CookBucketInFull(
         AssetRegistry* registry,
         uint32 bucketIndex,
@@ -683,14 +746,58 @@ private:
         Array<AssetDesc> assetDescs;
         registry->GetBucketAssetDescs(bucketIndex, assetDescs);
 
+        uint32 numForeignShaders = 0;
+
         for (const AssetDesc& assetDesc : assetDescs)
         {
             Handle<AssetObject> assetObject = registry->GetAsset(bucket, assetDesc.name);
+
+            if (bucket == AssetBuckets::Shaders && assetObject.IsValid() && !IsShaderForThisBuild(*static_cast<const Shader*>(assetObject.Get())))
+            {
+                ++numForeignShaders;
+
+                continue;
+            }
+
+            if (bucket == AssetBuckets::ShaderBundles && assetObject.IsValid())
+            {
+                ShaderBundle* shaderBundle = static_cast<ShaderBundle*>(assetObject.Get());
+
+                Array<Handle<Shader>> allShaders = shaderBundle->compiledShaders;
+
+                for (auto it = shaderBundle->compiledShaders.Begin(); it != shaderBundle->compiledShaders.End();)
+                {
+                    if (it->IsValid() && !IsShaderForThisBuild(**it))
+                    {
+                        it = shaderBundle->compiledShaders.Erase(it);
+
+                        continue;
+                    }
+
+                    ++it;
+                }
+
+                Result result = CookAsset(outputContentDir, assetObject, readLocks, collectedBlobs, blockSizes, cookedAssets);
+
+                shaderBundle->compiledShaders = std::move(allShaders);
+
+                if (result.HasError())
+                {
+                    return result;
+                }
+
+                continue;
+            }
 
             if (Result result = CookAsset(outputContentDir, assetObject, readLocks, collectedBlobs, blockSizes, cookedAssets); result.HasError())
             {
                 return result;
             }
+        }
+
+        if (numForeignShaders != 0)
+        {
+            HYP_LOG(Assets, Info, "Left out {} shader variant(s) compiled for other backends or targets", numForeignShaders);
         }
 
         return {};

@@ -83,6 +83,8 @@ namespace Hyperion
 
             s_registrationStats = default;
 
+            Stopwatch registrationTimer = Stopwatch.StartNew();
+
             foreach (Type type in types)
             {
                 if (type.IsGenericType)
@@ -104,7 +106,7 @@ namespace Hyperion
                 }
             }
 
-            Logger.Log(LogLevel.Info, "Registered {0} managed class(es) from {1} ({2}): methods {3} generated / {4} reflected, properties {5} / {6}, constructors {7} / {8}",
+            Logger.Log(LogLevel.Info, "Registered {0} managed class(es) from {1} ({2}) in {9} ms: methods {3} generated / {4} reflected, properties {5} / {6}, constructors {7} / {8}",
                 s_registrationStats.Classes,
                 assembly.GetName().Name,
                 HypTypeRegistry.HasRegistry(assembly) ? "type registry" : "no type registry",
@@ -113,7 +115,8 @@ namespace Hyperion
                 s_registrationStats.GeneratedProperties,
                 s_registrationStats.ReflectedProperties,
                 s_registrationStats.GeneratedConstructors,
-                s_registrationStats.ReflectedConstructors);
+                s_registrationStats.ReflectedConstructors,
+                registrationTimer.ElapsedMilliseconds);
         }
 
         private static void RegisterComponentType(Type type)
@@ -676,6 +679,20 @@ namespace Hyperion
             return GCHandle.ToIntPtr(handle);
         }
 
+        private static bool IsEngineCallable(Type type, MemberInfo member)
+        {
+            Assembly? declaringAssembly = member.DeclaringType?.Assembly;
+
+            if (declaringAssembly == null)
+            {
+                return false;
+            }
+
+            return declaringAssembly == type.Assembly
+                || (declaringAssembly.GetName().Name?.StartsWith("Hyperion.") ?? false)
+                || HypTypeRegistry.HasRegistry(declaringAssembly);
+        }
+
         private static unsafe void RegisterMethods(Type type, HypTypeEntry? typeEntry, Guid assemblyGuid, IntPtr assemblyPtr, ref ManagedClassDesc managedClassDesc)
         {
             HashSet<string> methodNames = new HashSet<string>();
@@ -711,7 +728,7 @@ namespace Hyperion
 
             foreach (var item in CollectMethods(type))
             {
-                if (!methodNames.Add(item.Key))
+                if (!IsEngineCallable(type, item.Value) || item.Value.IsSpecialName || item.Key.Contains('<') || (item.Value.Attributes & MethodAttributes.PinvokeImpl) != 0 || !methodNames.Add(item.Key))
                 {
                     continue;
                 }
@@ -768,7 +785,7 @@ namespace Hyperion
 
             foreach (var item in CollectProperties(type))
             {
-                if (!propertyNames.Add(item.Key))
+                if (!IsEngineCallable(type, item.Value) || !propertyNames.Add(item.Key))
                 {
                     continue;
                 }

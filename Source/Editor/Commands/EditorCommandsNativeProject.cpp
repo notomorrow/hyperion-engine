@@ -346,13 +346,16 @@ Result CopyFilesWithExtensions(const FilePath& sourceDir, const FilePath& target
 }
 
 // Game executable, engine libraries and config from the project's build output, set up to run from its own cooked content
-Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir, const String& name, Name startupWorldName)
+Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir, const String& name, Name startupWorldName, bool copyBinaries)
 {
     static const char* const s_binaryExtensions[] = { ".exe", ".dll", ".so", ".dylib", ".json", "" };
 
-    if (Result result = CopyFilesWithExtensions(binariesDir, outputDir, Span<const char* const>(s_binaryExtensions)); result.HasError())
+    if (copyBinaries)
     {
-        return result;
+        if (Result result = CopyFilesWithExtensions(binariesDir, outputDir, Span<const char* const>(s_binaryExtensions)); result.HasError())
+        {
+            return result;
+        }
     }
 
     // a redistributed editor carries the C++ runtime next to it; a dev build relies on the installed one
@@ -485,8 +488,10 @@ private:
             [editorTaskScope,
                 name,
                 outputDir,
+                projectFilepath = project->GetFilePath(),
                 projectDir = project->GetFilePath().BasePath(),
                 binariesDir = GetNativeModulePath(project->GetFilePath()).BasePath(),
+                isManaged = IsManagedProject(project->GetFilePath()),
                 startupWorldName = project->GetEditWorldName()]()
             {
                 CommandLineArguments args;
@@ -498,11 +503,21 @@ private:
 
                 Result result = g_appContext->RunCommandlet("BlobStorageCookCommandlet", args);
 
+                if (!result.HasError() && isManaged)
+                {
+                    editorTaskScope->GetEditorTask()->SetDescription("Compiling the game with NativeAOT");
+
+                    if (!g_editorState->OnPublishManagedGameRequested(String(projectFilepath), String(binariesDir), String(outputDir)))
+                    {
+                        result = HYP_MAKE_ERROR(Error, "NativeAOT publish failed, see the GameBuild log");
+                    }
+                }
+
                 if (!result.HasError())
                 {
                     editorTaskScope->GetEditorTask()->SetDescription("Copying the game");
 
-                    result = StagePackagedGame(binariesDir, outputDir, name, startupWorldName);
+                    result = StagePackagedGame(binariesDir, outputDir, name, startupWorldName, /* copyBinaries */ !isManaged);
                 }
 
                 if (result.HasError())

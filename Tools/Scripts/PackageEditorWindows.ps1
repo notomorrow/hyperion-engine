@@ -226,6 +226,12 @@ foreach ($file in $ManagedEditorFiles)
     [void]$StagedBinaries.Add($file)
 }
 
+# source generator that C# games and scripts compile with; it sits next to the assemblies they reference
+$generatorFile = "Hyperion.NET.Generators.dll"
+if (-not (Test-Path (Join-Path $BinDir $generatorFile))) { throw "Missing $generatorFile in $BinDir" }
+Copy-StagedFile (Join-Path $BinDir $generatorFile) (Join-Path $StageDir $(if ($IsMonolithic) { "ref/$generatorFile" } else { $generatorFile }))
+[void]$StagedBinaries.Add($generatorFile)
+
 $depsLibraries = @()
 if (-not $IsMonolithic)
 {
