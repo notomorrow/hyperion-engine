@@ -13,6 +13,8 @@
 
 #include <cstdint>
 #include <cstring>
+#include <string_view>
+#include <type_traits>
 
 // #ifdef __MINGW32__
 // #undef _WIN32
@@ -31,8 +33,6 @@ namespace utf {
 
 static constexpr size_t InvalidUTF8 = SIZE_MAX;
 
-// #define HYP_UTF8_CHECKED
-
 #define HYP_UTF8_ASSERT(cond)      \
     do                             \
     {                              \
@@ -42,22 +42,6 @@ static constexpr size_t InvalidUTF8 = SIZE_MAX;
         }                          \
     }                              \
     while (0)
-
-#ifdef HYP_UTF8_CHECKED
-
-#define HYP_UTF8_CHECK_BOUNDS(idx, max) \
-    do                                  \
-    {                                   \
-        if ((idx) == (max))             \
-        {                               \
-            return -1;                  \
-        }                               \
-    }                                   \
-    while (0)
-
-#else
-#define HYP_UTF8_CHECK_BOUNDS(...)
-#endif
 
 using Char32 = char32_t;
 using Char16 = char16_t;
@@ -70,126 +54,152 @@ inline void Init()
 #endif
 }
 
-constexpr inline bool IsWhitespace(Char32 ch)
+inline constexpr bool IsWhitespace(Char32 ch)
 {
     return ch == Char32(' ') || ch == Char32('\n') || ch == Char32('\t') || ch == Char32('\r');
 }
 
-constexpr inline bool IsDecimal(Char32 ch)
+inline constexpr bool IsDecimal(Char32 ch)
 {
     return (ch >= Char32('0')) && (ch <= Char32('9'));
 }
 
-constexpr inline bool IsHexadecimal(Char32 ch)
+inline constexpr bool IsHexadecimal(Char32 ch)
 {
     return (ch >= Char32('0')) && (ch <= Char32('9'))
         || ((ch >= Char32('A') && ch <= Char32('F')))
         || ((ch >= Char32('a') && ch <= Char32('f')));
 }
 
-constexpr inline bool IsAlphabetical(Char32 ch)
+inline constexpr bool IsAlphabetical(Char32 ch)
 {
     return (ch >= 0xC0) || ((ch >= Char32('A') && ch <= Char32('Z')) || (ch >= Char32('a') && ch <= Char32('z')));
 }
 
 // Byte width of the utf-8 sequence starting with lead, or 0 if lead is not a valid lead byte
-constexpr inline size_t Utf8SequenceWidth(Char8 lead)
+inline constexpr size_t Utf8SequenceWidth(Char8 lead)
 {
-    if (lead >= 0 && lead <= 127)
-        return 1;
-    else if ((lead & 0xE0) == 0xC0)
-        return 2;
-    else if ((lead & 0xF0) == 0xE0)
-        return 3;
-    else if ((lead & 0xF8) == 0xF0)
-        return 4;
+    const uint8 b = uint8(lead);
 
-    return 0;
+    return b >= 0xF8 ? 0 : size_t((0x4322000011111111ull >> ((b >> 4) * 4)) & 0xF);
 }
 
-// True if none of the continuation bytes of the sequence at str hit the null terminator
-constexpr inline bool IsUtf8SequenceComplete(const Char8* str, size_t width)
+inline constexpr bool IsUtf8Continuation(Char8 ch)
 {
-    for (size_t i = 1; i < width; i++)
+    return (uint8(ch) & 0xC0) == 0x80;
+}
+
+inline bool IsAscii(const Char8* str, size_t size)
+{
+    uint64 bits = 0;
+    size_t i = 0;
+
+    for (; i + sizeof(uint64) <= size; i += sizeof(uint64))
     {
-        if (str[i] == '\0')
-        {
-            return false;
-        }
+        uint64 word;
+        std::memcpy(&word, str + i, sizeof(uint64));
+
+        bits |= word;
     }
 
-    return true;
+    for (; i < size; i++)
+    {
+        bits |= uint8(str[i]);
+    }
+
+    return (bits & 0x8080808080808080ull) == 0;
 }
 
-constexpr inline size_t StringLength(const Char8* first, const Char8* last, size_t& outCodepoints)
+// Stops at a null terminator or truncated sequence, InvalidUTF8 on a bad lead or continuation byte
+inline constexpr size_t StringLengthScalar(const Char8* first, const Char8* last, size_t& outBytes)
+{
+    size_t count = 0;
+    const Char8* pos = first;
+
+    while (pos != last && *pos != '\0')
+    {
+        const size_t width = Utf8SequenceWidth(*pos);
+
+        if (width == 0)
+        {
+            return InvalidUTF8;
+        }
+
+        if (size_t(last - pos) < width)
+        {
+            break;
+        }
+
+        size_t i = 1;
+
+        while (i < width && IsUtf8Continuation(pos[i]))
+        {
+            i++;
+        }
+
+        if (i != width)
+        {
+            if (pos[i] == '\0')
+            {
+                break;
+            }
+
+            return InvalidUTF8;
+        }
+
+        pos += width;
+        count++;
+    }
+
+    outBytes = size_t(pos - first);
+
+    return count;
+}
+
+inline constexpr size_t StringLengthSized(const Char8* str, size_t size, size_t& outBytes)
+{
+    if (!std::is_constant_evaluated() && IsAscii(str, size))
+    {
+        outBytes = size;
+
+        return size;
+    }
+
+    return StringLengthScalar(str, str + size, outBytes);
+}
+
+inline constexpr size_t StringLength(const Char8* first, const Char8* last, size_t& outBytes)
 {
     if (first == last)
     {
-        outCodepoints = 0;
+        outBytes = 0;
 
         return 0;
     }
 
-    size_t count = 0;
-    size_t codepoints = 0;
+    size_t size = size_t(last - first);
 
-    for (; first[codepoints] != '\0' && (first + codepoints) != last; count++)
+    if (!std::is_constant_evaluated())
     {
-        const Char8* position = first + codepoints;
-        const size_t width = Utf8SequenceWidth(*position);
-
-        if (width == 0)
+        if (const void* nul = std::memchr(first, 0, size))
         {
-            return InvalidUTF8; // invalid utf8
+            size = size_t(static_cast<const Char8*>(nul) - first);
         }
-
-        // truncated sequence - treat as the end of the string
-        if (size_t(last - position) < width || !IsUtf8SequenceComplete(position, width))
-        {
-            break;
-        }
-
-        codepoints += width;
     }
 
-    outCodepoints = codepoints;
-
-    return count;
+    return StringLengthSized(first, size, outBytes);
 }
 
-constexpr inline size_t StringLength(const Char8* first, const Char8* last)
+inline constexpr size_t StringLength(const Char8* first, const Char8* last)
 {
-    size_t codepoints = 0;
+    size_t bytes = 0;
 
-    return StringLength(first, last, codepoints);
+    return StringLength(first, last, bytes);
 }
 
-constexpr inline size_t StringLength(const Char8* str, size_t& outCodepoints)
+inline constexpr size_t StringLength(const Char8* str, size_t& outBytes)
 {
-    size_t count = 0;
-    size_t codepoints = 0;
-
-    for (; str[codepoints] != '\0'; count++)
-    {
-        const size_t width = Utf8SequenceWidth(str[codepoints]);
-
-        if (width == 0)
-        {
-            return InvalidUTF8; // invalid utf8
-        }
-
-        // truncated sequence - treat as the end of the string
-        if (!IsUtf8SequenceComplete(str + codepoints, width))
-        {
-            break;
-        }
-
-        codepoints += width;
-    }
-
-    outCodepoints = codepoints;
-
-    return count;
+    return StringLengthSized(str, std::char_traits<Char8>::length(str), outBytes);
 }
 
 template <class T, bool IsUtf8>
@@ -197,21 +207,12 @@ static inline constexpr size_t StringLength(const T* str)
 {
     if constexpr (IsUtf8)
     {
-        size_t codepoints = 0;
-        return StringLength(str, codepoints);
-    }
-    else if constexpr (sizeof(T) == sizeof(char))
-    {
-        return std::strlen(str);
+        size_t bytes = 0;
+        return StringLength(str, bytes);
     }
     else
     {
-        size_t count = 0;
-        const T* pos = str;
-        for (; *pos; ++pos, count++)
-            ;
-
-        return count;
+        return std::char_traits<T>::length(str);
     }
 }
 
@@ -222,96 +223,44 @@ static inline constexpr size_t StringLength(const T* str, size_t& outCodepoints)
     {
         return StringLength(str, outCodepoints);
     }
-    else if constexpr (sizeof(T) == sizeof(char))
-    {
-        return (outCodepoints = std::strlen(str));
-    }
     else
     {
-        size_t cp = 0;
-        const T* pos = str;
-        for (; *pos; ++pos, cp++)
-            ;
-
-        return (outCodepoints = cp);
+        return (outCodepoints = std::char_traits<T>::length(str));
     }
 }
 
+// utf-8 byte order matches codepoint order. count is in characters, 0 for unbounded
 static inline int StringCompare(const Char8* s1, const Char8* s2, size_t count)
 {
-    for (size_t i = 0; (*s1 || *s2) && (i < count || count == 0); i++)
+    if (count == 0)
     {
-        unsigned char c;
+        const int result = std::strcmp(s1, s2);
 
-        Char32 c1 = 0;
-        ubyte* c1Bytes = reinterpret_cast<ubyte*>(&c1);
-
-        Char32 c2 = 0;
-        ubyte* c2Bytes = reinterpret_cast<ubyte*>(&c2);
-
-        // get the character for s1
-        c = (ubyte)*s1;
-
-        if (c >= 0 && c <= 127)
-        {
-            c1Bytes[0] = *(s1++);
-        }
-        else if ((c & 0xE0) == 0xC0)
-        {
-            c1Bytes[0] = *(s1++);
-            c1Bytes[1] = *(s1++);
-        }
-        else if ((c & 0xF0) == 0xE0)
-        {
-            c1Bytes[0] = *(s1++);
-            c1Bytes[1] = *(s1++);
-            c1Bytes[2] = *(s1++);
-        }
-        else if ((c & 0xF8) == 0xF0)
-        {
-            c1Bytes[0] = *(s1++);
-            c1Bytes[1] = *(s1++);
-            c1Bytes[2] = *(s1++);
-            c1Bytes[3] = *(s1++);
-        }
-
-        // get the character for s2
-        c = (ubyte)*s2;
-
-        if (c >= 0 && c <= 127)
-        {
-            c2Bytes[0] = *(s2++);
-        }
-        else if ((c & 0xE0) == 0xC0)
-        {
-            c2Bytes[0] = *(s2++);
-            c2Bytes[1] = *(s2++);
-        }
-        else if ((c & 0xF0) == 0xE0)
-        {
-            c2Bytes[0] = *(s2++);
-            c2Bytes[1] = *(s2++);
-            c2Bytes[2] = *(s2++);
-        }
-        else if ((c & 0xF8) == 0xF0)
-        {
-            c2Bytes[0] = *(s2++);
-            c2Bytes[1] = *(s2++);
-            c2Bytes[2] = *(s2++);
-            c2Bytes[3] = *(s2++);
-        }
-
-        if (c1 < c2)
-        {
-            return -1;
-        }
-        else if (c1 > c2)
-        {
-            return 1;
-        }
+        return (result > 0) - (result < 0);
     }
 
-    return 0;
+    size_t characters = 0;
+
+    for (;; s1++, s2++)
+    {
+        if (!IsUtf8Continuation(*s1) && characters++ == count)
+        {
+            return 0;
+        }
+
+        const uint8 c1 = uint8(*s1);
+        const uint8 c2 = uint8(*s2);
+
+        if (c1 != c2)
+        {
+            return c1 < c2 ? -1 : 1;
+        }
+
+        if (c1 == 0)
+        {
+            return 0;
+        }
+    }
 }
 
 template <class T, bool IsUtf8>
@@ -346,112 +295,62 @@ static inline int StringCompare(const T* lhs, const T* rhs)
     return StringCompare<T, IsUtf8>(lhs, rhs, 0);
 }
 
-/*! \brief Convert a single utf-8 character (multiple code units) into a single utf-32 char
- *   \p str _must_ be at least sizeof(Char32)
- */
-static inline Char32 Char8to32(const Char8* str)
-{
-    union
-    {
-        Char32 ret;
-        Char8 retBytes[sizeof(Char32)];
-    };
-
-    ret = 0;
-
-    Hyperion::uint32 i = 0;
-
-    const uint8 ch = (uint8)str[0];
-
-    if (ch <= 0x7F)
-    {
-        retBytes[0] = str[i];
-    }
-    else if ((ch & 0xE0) == 0xC0)
-    {
-        retBytes[0] = str[i++];
-        HYP_UTF8_CHECK_BOUNDS(i, sizeof(Char32));
-        retBytes[1] = str[i];
-    }
-    else if ((ch & 0xF0) == 0xE0)
-    {
-        retBytes[0] = str[i++];
-        HYP_UTF8_CHECK_BOUNDS(i, sizeof(Char32));
-        retBytes[1] = str[i++];
-        HYP_UTF8_CHECK_BOUNDS(i, sizeof(Char32));
-        retBytes[2] = str[i];
-    }
-    else if ((ch & 0xF8) == 0xF0)
-    {
-        retBytes[0] = str[i++];
-        HYP_UTF8_CHECK_BOUNDS(i, sizeof(Char32));
-        retBytes[1] = str[i++];
-        HYP_UTF8_CHECK_BOUNDS(i, sizeof(Char32));
-        retBytes[2] = str[i++];
-        HYP_UTF8_CHECK_BOUNDS(i, sizeof(Char32));
-        retBytes[3] = str[i];
-    }
-    else
-    {
-        // invalid utf-8
-        return -1;
-    }
-
-    return ret;
-}
-
-/*! \brief Convert a single utf-8 character (multiple code units) into a single utf-32 char
- *   \p str _must_ be at least the the size of `max` (defaults to sizeof(Char32))
+/*! \brief Decode a single utf-8 character (multiple code units) into a utf-32 codepoint.
+ *   Reads at most \p max bytes of \p str. On invalid or truncated input returns Char32(-1)
+ *   and sets \p outCodepoints to 1 (0 if \p max is 0), so callers can skip the bad byte.
  */
 static inline Char32 Char8to32(const Char8* str, size_t max, size_t& outCodepoints)
 {
-    union
+    if (max == 0)
     {
-        Char32 ret;
-        Char8 retBytes[sizeof(Char32)];
-    };
+        outCodepoints = 0;
 
-    ret = 0;
-
-    outCodepoints = 0;
-
-    const uint8 ch = (uint8)str[0];
-
-    if (ch <= 0x7F)
-    {
-        retBytes[0] = str[outCodepoints++];
-    }
-    else if ((ch & 0xE0) == 0xC0)
-    {
-        retBytes[0] = str[outCodepoints++];
-        HYP_UTF8_CHECK_BOUNDS(outCodepoints, max);
-        retBytes[1] = str[outCodepoints++];
-    }
-    else if ((ch & 0xF0) == 0xE0)
-    {
-        retBytes[0] = str[outCodepoints++];
-        HYP_UTF8_CHECK_BOUNDS(outCodepoints, max);
-        retBytes[1] = str[outCodepoints++];
-        HYP_UTF8_CHECK_BOUNDS(outCodepoints, max);
-        retBytes[2] = str[outCodepoints++];
-    }
-    else if ((ch & 0xF8) == 0xF0)
-    {
-        retBytes[0] = str[outCodepoints++];
-        HYP_UTF8_CHECK_BOUNDS(outCodepoints, max);
-        retBytes[1] = str[outCodepoints++];
-        HYP_UTF8_CHECK_BOUNDS(outCodepoints, max);
-        retBytes[2] = str[outCodepoints++];
-        HYP_UTF8_CHECK_BOUNDS(outCodepoints, max);
-        retBytes[3] = str[outCodepoints++];
-    }
-    else
-    {
-        // invalid utf-8
-        return -1;
+        return Char32(-1);
     }
 
-    return ret;
+    const uint8 lead = uint8(str[0]);
+
+    if (lead < 0x80)
+    {
+        outCodepoints = 1;
+
+        return Char32(lead);
+    }
+
+    const size_t width = Utf8SequenceWidth(Char8(lead));
+
+    outCodepoints = 1;
+
+    if (width == 0 || width > max)
+    {
+        return Char32(-1);
+    }
+
+    uint32 cp = lead & (0x7Fu >> width);
+
+    for (size_t i = 1; i < width; i++)
+    {
+        if (!IsUtf8Continuation(str[i]))
+        {
+            return Char32(-1);
+        }
+
+        cp = (cp << 6) | (uint8(str[i]) & 0x3Fu);
+    }
+
+    outCodepoints = width;
+
+    return Char32(cp);
+}
+
+/*! \brief Decode a single utf-8 character (multiple code units) into a utf-32 codepoint.
+ *   \p str _must_ be at least sizeof(Char32), or null terminated
+ */
+static inline Char32 Char8to32(const Char8* str)
+{
+    size_t codepoints = 0;
+
+    return Char8to32(str, sizeof(Char32), codepoints);
 }
 
 /*! \brief Convert a single UTF-32 codepoint into its UTF-8 encoded byte sequence.
@@ -858,67 +757,27 @@ inline Char32 CharAt(const utf::Char8* str, size_t max, size_t index)
 {
     size_t characterIndex = 0;
 
-    for (size_t i = 0; i < max; characterIndex++)
+    for (size_t i = 0; i < max; i++)
     {
-        Char8 c(str[i]);
-
-        union
+        if (IsUtf8Continuation(str[i]))
         {
-            Char32 ret;
-            char retBytes[sizeof(Char32)];
-        };
-
-        ret = 0;
-
-        if (c <= 0x7F)
-        {
-            retBytes[0] = str[i++];
-        }
-        else if ((c & 0xE0) == 0xC0)
-        {
-            retBytes[0] = str[i++];
-            HYP_UTF8_CHECK_BOUNDS(i, max);
-            retBytes[1] = str[i++];
-        }
-        else if ((c & 0xF0) == 0xE0)
-        {
-            retBytes[0] = str[i++];
-            HYP_UTF8_CHECK_BOUNDS(i, max);
-            retBytes[1] = str[i++];
-            HYP_UTF8_CHECK_BOUNDS(i, max);
-            retBytes[2] = str[i++];
-        }
-        else if ((c & 0xF8) == 0xF0)
-        {
-            retBytes[0] = str[i++];
-            HYP_UTF8_CHECK_BOUNDS(i, max);
-            retBytes[1] = str[i++];
-            HYP_UTF8_CHECK_BOUNDS(i, max);
-            retBytes[2] = str[i++];
-            HYP_UTF8_CHECK_BOUNDS(i, max);
-            retBytes[3] = str[i++];
-        }
-        else
-        {
-            // invalid utf-8
-            return -1;
+            continue;
         }
 
-        if (characterIndex == index)
+        if (characterIndex++ == index)
         {
-            // reached index
-            return ret;
+            size_t codepoints = 0;
+
+            return Char8to32(str + i, max - i, codepoints);
         }
 
-        // end reached
-        if (c == Char8('\0'))
+        if (str[i] == '\0')
         {
-            return -1;
+            return Char32(-1);
         }
     }
 
-    // error
-    return -1;
+    return Char32(-1);
 }
 
 /*! \brief Get the UTF-8 char (array of code points) at the specific index of the string.

@@ -69,6 +69,7 @@
 
 #include <Editor/EditorProject.hpp>
 #include <Editor/EditorState.hpp>
+#include <Editor/EditorPackagingSettings.hpp>
 
 #endif // HYP_EDITOR
 
@@ -81,34 +82,34 @@ EDITOR_API HYP_DECLARE_LOG_CHANNEL(Editor);
 struct CookingContext {};
 
 #if defined(HYP_WEBGPU)
-static constexpr const char* s_hostBackend = "WEBGPU";
-static constexpr ShaderCompileTargetBackend s_hostCompileBackend = ShaderCompileTargetBackend::WebGPU;
+static constexpr ANSIStringView HostBackendName = "WEBGPU";
+static constexpr ShaderCompileTargetBackend HostShaderCompileBackend = ShaderCompileTargetBackend::WebGPU;
 #elif defined(HYP_DX12)
-static constexpr const char* s_hostBackend = "DX12";
-static constexpr ShaderCompileTargetBackend s_hostCompileBackend = ShaderCompileTargetBackend::DX12;
+static constexpr ANSIStringView HostBackendName = "DX12";
+static constexpr ShaderCompileTargetBackend HostShaderCompileBackend = ShaderCompileTargetBackend::DX12;
 #else
-static constexpr const char* s_hostBackend = "VULKAN";
-static constexpr ShaderCompileTargetBackend s_hostCompileBackend = ShaderCompileTargetBackend::Vulkan;
+static constexpr ANSIStringView HostBackendName = "VULKAN";
+static constexpr ShaderCompileTargetBackend HostShaderCompileBackend = ShaderCompileTargetBackend::Vulkan;
 #endif
 
 #if defined(HYP_WEB) || defined(HYP_WEBGPU)
-static constexpr const char* s_hostTarget = "WEB";
-static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::Web;
+static constexpr ANSIStringView HostTargetName = "WEB";
+static constexpr ShaderCompileTargetPlatform HostShaderCompilePlatform = ShaderCompileTargetPlatform::Web;
 #elif defined(HYP_WINDOWS)
-static constexpr const char* s_hostTarget = "WINDOWS";
-static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::Windows;
+static constexpr ANSIStringView HostTargetName = "WINDOWS";
+static constexpr ShaderCompileTargetPlatform HostShaderCompilePlatform = ShaderCompileTargetPlatform::Windows;
 #elif defined(HYP_MACOS)
-static constexpr const char* s_hostTarget = "MAC";
-static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::Mac;
+static constexpr ANSIStringView HostTargetName = "MAC";
+static constexpr ShaderCompileTargetPlatform HostShaderCompilePlatform = ShaderCompileTargetPlatform::Mac;
 #elif defined(HYP_ANDROID)
-static constexpr const char* s_hostTarget = "ANDROID";
-static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::Android;
+static constexpr ANSIStringView HostTargetName = "ANDROID";
+static constexpr ShaderCompileTargetPlatform HostShaderCompilePlatform = ShaderCompileTargetPlatform::Android;
 #elif defined(HYP_IOS)
-static constexpr const char* s_hostTarget = "IOS";
-static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::IOS;
+static constexpr ANSIStringView HostTargetName = "IOS";
+static constexpr ShaderCompileTargetPlatform HostShaderCompilePlatform = ShaderCompileTargetPlatform::IOS;
 #else
-static constexpr const char* s_hostTarget = "LINUX";
-static constexpr ShaderCompileTargetPlatform s_hostCompilePlatform = ShaderCompileTargetPlatform::Linux;
+static constexpr ANSIStringView HostTargetName = "LINUX";
+static constexpr ShaderCompileTargetPlatform HostShaderCompilePlatform = ShaderCompileTargetPlatform::Linux;
 #endif
 
 class BlobStorageCookCommandlet final : public CommandletBase
@@ -747,7 +748,7 @@ private:
 
             for (const char* backend : s_backends)
             {
-                if (std::strcmp(backend, s_hostBackend) != 0)
+                if (HostBackendName == backend)
                 {
                     ids.PushBack(dictionary.Intern(ShaderProperty(NAME("BACKEND"), CreateNameFromDynamicString(backend))));
                 }
@@ -755,7 +756,7 @@ private:
 
             for (const char* target : s_targets)
             {
-                if (std::strcmp(target, s_hostTarget) != 0)
+                if (HostTargetName == target)
                 {
                     ids.PushBack(dictionary.Intern(ShaderProperty(NAME("TARGET"), CreateNameFromDynamicString(target))));
                 }
@@ -914,13 +915,15 @@ private:
         }
         else if (target == "host")
         {
-            outShaderTarget.platform = s_hostCompilePlatform;
-            outShaderTarget.backend = s_hostCompileBackend;
-            outShaderTarget.targetPropertyValue = CreateNameFromDynamicString(s_hostTarget);
-            outShaderTarget.backendPropertyValue = CreateNameFromDynamicString(s_hostBackend);
+            outShaderTarget.platform = HostShaderCompilePlatform;
+            outShaderTarget.backend = HostShaderCompileBackend;
+            outShaderTarget.targetPropertyValue = CreateNameFromDynamicString(HostTargetName);
+            outShaderTarget.backendPropertyValue = CreateNameFromDynamicString(HostBackendName);
         }
         else
         {
+            //.. @TODO Others ...
+
             return HYP_MAKE_ERROR(Error, "Unknown shader target '{}', expected web or host", target);
         }
 
@@ -1563,9 +1566,7 @@ private:
 
                 if (s_hasTargetPlatform && !s_hasMaxTextureSizeArgument && packagingSettings.IsValid())
                 {
-                    s_maxTextureSize = packagingSettings->Resolve(s_targetPlatform).maxTextureSize;
-
-                    HYP_LOG(Assets, Info, "Packaging settings for {}: textures up to {}", GetTargetPlatformName(s_targetPlatform), s_maxTextureSize);
+                    s_maxTextureSize = packagingSettings->Resolve(s_targetPlatform).content.maxTextureSize;
                 }
 
                 Set<AssetObject*> seenAssets;
