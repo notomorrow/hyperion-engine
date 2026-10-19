@@ -11,9 +11,9 @@ param(
 # Builds a project for the browser into <project>/Binaries/Web, a folder any static host can serve as it is.
 # Intermediates go to <project>/Build/Web. Settings come from the project's PlatformSettings.Web, the arguments override.
 #
-#   -Run        serve Binaries/Web on localhost afterwards and open it in the browser
+#   -Run        serve Binaries/Web on localhost afterwards and open it in the browser; keeps function names in the wasm for readable stacks
 #   -ServeOnly  skip the build: serve the last one and open it in the browser
-#   -FastLink   link at -O1: minutes faster, for testing locally; a build to host links at -O3
+#   -FastLink   link at -O1: minutes faster, for testing locally; a build to host links at -Oz
 #
 # Build/Web/Built.stamp is written by a finished build, dated when that build started.
 
@@ -369,11 +369,12 @@ if (Test-Path $pageDir)
 }
 
 $gameDirArgument = if ($hasGameCode) { $gameSourceDir -replace '\\', '/' } else { "" }
-$linkOptimization = if ($FastLink) { "-O1" } else { "-O3" }
+$linkOptimization = if ($FastLink) { "-O1" } else { "-Oz" }
+$keepsFunctionNames = if ($Run) { "ON" } else { "OFF" }
 
 Invoke-Cmd ("set `"EMSDK_QUIET=1`" && call `"$env:EMSDK\emsdk_env.bat`" >nul && emcmake cmake -S `"$templateDir`" -B `"$cmakeDir`" -G Ninja -DCMAKE_BUILD_TYPE=Release " + `
     "-DHYPERION_WEB_SDK=`"$($webSdk -replace '\\', '/')`" -DHYP_WEB_PAGE_NAME=$name -DHYP_WEB_PACKAGE=`"$($packageDir -replace '\\', '/')`" " + `
-    "-DHYP_WEB_GAME_DIR=`"$gameDirArgument`" -DHYP_WEB_OUTPUT=`"$($pageDir -replace '\\', '/')`" -DHYP_WEB_LINK_OPTIMIZATION=$linkOptimization " + `
+    "-DHYP_WEB_GAME_DIR=`"$gameDirArgument`" -DHYP_WEB_OUTPUT=`"$($pageDir -replace '\\', '/')`" -DHYP_WEB_LINK_OPTIMIZATION=$linkOptimization -DHYP_WEB_FUNCTION_NAMES=$keepsFunctionNames " + `
     "-DHYP_WEB_MANAGED_LINK_INPUTS=`"$($managedLinkInputs -replace '\\', '/')`" -DHYP_WEB_GAME_CLASS=`"$gameClassArgument`" && cmake --build `"$cmakeDir`"") `
     "Building the page failed"
 

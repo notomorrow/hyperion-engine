@@ -44,23 +44,20 @@ target_link_options(${HYP_WEB_PAGE_NAME} PRIVATE
   ${HYPERION_WEB_LINK_OPTIONS}
   ${HYP_WEB_LINK_OPTIMIZATION}
   -g0
-  --profiling-funcs
+  $<IF:$<BOOL:${HYP_WEB_FUNCTION_NAMES}>,--profiling-funcs,--emit-symbol-map>
   -sJSPI=1
   -sOFFSCREENCANVAS_SUPPORT=1
   "--preload-file=${HYP_WEB_PACKAGE}/Config@/hyperion/Config"
   "--preload-file=${HYP_WEB_PACKAGE}/Content@/hyperion/Content")
 
-# a C# game: its NativeAOT-LLVM static library and the runtime libraries, one path per line
 if(HYP_WEB_MANAGED_LINK_INPUTS)
   file(STRINGS "${HYP_WEB_MANAGED_LINK_INPUTS}" managedLinkInputs)
 
   target_compile_definitions(${HYP_WEB_PAGE_NAME} PRIVATE HYP_WEB_MANAGED=1)
   target_link_libraries(${HYP_WEB_PAGE_NAME} PRIVATE ${managedLinkInputs})
 
-  # the runtime is built without shared memory; managed code only ever runs on one thread at a time
   target_link_options(${HYP_WEB_PAGE_NAME} PRIVATE
     -Wl,--no-check-features
-    # bindings for classes another platform has (Android, Cocoa) become imports that abort if ever called
     -sERROR_ON_UNDEFINED_SYMBOLS=0
     -sEXPORTED_RUNTIME_METHODS=ccall,HEAP8,HEAP16,HEAP32,HEAPU8,HEAPU16,HEAPU32)
 
