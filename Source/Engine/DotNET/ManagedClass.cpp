@@ -33,7 +33,7 @@ ManagedObject* ManagedClass::NewObject()
 {
     Assert(m_newObjectFptr != nullptr, "New object function pointer not set for managed class {}", m_name);
 
-    ObjectReference objectReference = m_newObjectFptr(/* keepAlive */ true, nullptr, nullptr, nullptr, nullptr);
+    ObjectReference objectReference = m_newObjectFptr(m_newObjectContext, /* keepAlive */ true, nullptr, nullptr, nullptr, nullptr);
 
     if (objectReference.weakHandle == nullptr)
     {
@@ -50,7 +50,7 @@ ManagedObject* ManagedClass::NewObject(const Class* cls, void* owner)
 
     Assert(m_newObjectFptr != nullptr, "New object function pointer not set for managed class {}", m_name);
 
-    ObjectReference objectReference = m_newObjectFptr(/* keepAlive */ true, cls, owner, nullptr, nullptr);
+    ObjectReference objectReference = m_newObjectFptr(m_newObjectContext, /* keepAlive */ true, cls, owner, nullptr, nullptr);
 
     if (objectReference.weakHandle == nullptr)
     {
@@ -64,7 +64,7 @@ ObjectReference ManagedClass::NewManagedObject(void* pCtx, InitializeObjectCallb
 {
     Assert(m_newObjectFptr != nullptr, "New object function pointer not set for managed class {}", m_name);
 
-    return m_newObjectFptr(/* keepAlive */ false, nullptr, nullptr, pCtx, pCallback);
+    return m_newObjectFptr(m_newObjectContext, /* keepAlive */ false, nullptr, nullptr, pCtx, pCallback);
 }
 
 bool ManagedClass::HasParentClass(ANSIStringView parentClassName) const

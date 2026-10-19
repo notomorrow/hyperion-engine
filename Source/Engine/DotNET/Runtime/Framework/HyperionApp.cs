@@ -31,7 +31,7 @@ namespace Hyperion
     /// C# bindings for the native Hyp_* C functions, for managing global engine state.
     public static class HyperionApp
     {
-        private static readonly List<string> s_coreAssemblyPaths = new();
+        private static readonly List<Assembly> s_coreAssemblies = new();
 
         public static Game? CurrentGame { get; private set; }
 
@@ -44,15 +44,13 @@ namespace Hyperion
                 throw new InvalidOperationException("HyperionApp is already running");
             }
 
-            s_coreAssemblyPaths.Clear();
-            s_coreAssemblyPaths.Add(typeof(ObjectBase).Assembly.Location);
-            s_coreAssemblyPaths.Add(typeof(Game).Assembly.Location);
+            s_coreAssemblies.Clear();
+            s_coreAssemblies.Add(typeof(ObjectBase).Assembly);
+            s_coreAssemblies.Add(typeof(Game).Assembly);
 
-            string gameAssemblyPath = typeof(TGame).Assembly.Location;
-
-            if (!s_coreAssemblyPaths.Contains(gameAssemblyPath))
+            if (!s_coreAssemblies.Contains(typeof(TGame).Assembly))
             {
-                s_coreAssemblyPaths.Add(gameAssemblyPath);
+                s_coreAssemblies.Add(typeof(TGame).Assembly);
             }
 
             unsafe
@@ -97,7 +95,7 @@ namespace Hyperion
         {
             List<string> engineArgs = new List<string>
             {
-                Environment.ProcessPath ?? gameAssembly.Location,
+                Environment.ProcessPath ?? AppContext.BaseDirectory,
                 "--detached"
             };
 
@@ -255,32 +253,14 @@ namespace Hyperion
             pManagedDelegates->initializeAssembly = (delegate* unmanaged<IntPtr, IntPtr, IntPtr, int, int>)&NativeInterop.InitializeAssembly;
             pManagedDelegates->unloadAssembly = (delegate* unmanaged<IntPtr, IntPtr, void>)&NativeInterop.UnloadAssembly;
 
-            IntPtr assemblyGuidPtr = Marshal.AllocHGlobal(Marshal.SizeOf<Guid>());
-
-            try
+            foreach (Assembly assembly in s_coreAssemblies)
             {
-                foreach (string assemblyPath in s_coreAssemblyPaths)
+                result = NativeInterop.InitializeLoadedAssembly(assembly, isCoreAssembly: true);
+
+                if (result != (int)LoadAssemblyResult.Ok)
                 {
-                    IntPtr assemblyPathPtr = Marshal.StringToCoTaskMemUTF8(assemblyPath);
-
-                    try
-                    {
-                        result = NativeInterop.InitializeAssemblyManaged(assemblyGuidPtr, IntPtr.Zero, assemblyPathPtr, /* isCoreAssembly */ 1);
-                    }
-                    finally
-                    {
-                        Marshal.FreeCoTaskMem(assemblyPathPtr);
-                    }
-
-                    if (result != (int)LoadAssemblyResult.Ok)
-                    {
-                        throw new Exception("Failed to initialize assembly at: " + assemblyPath + ". Error code: " + (LoadAssemblyResult)result);
-                    }
+                    throw new Exception("Failed to initialize assembly " + assembly.GetName().Name + ". Error code: " + (LoadAssemblyResult)result);
                 }
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(assemblyGuidPtr);
             }
         }
 

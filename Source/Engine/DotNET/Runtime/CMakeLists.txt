@@ -39,6 +39,8 @@ endif()
 hyp_link_core_library(${BUILD_NAME})
 
 if(HYP_DOTNET)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/../Generators/Generators.cmake)
+
   file(GLOB_RECURSE CSHARP_RUNTIME_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/**.cs" "${HYP_GENERATED_DIR}/CSharp/**.cs")
 
   if(NOT HYP_EDITOR)
@@ -72,6 +74,7 @@ if(HYP_DOTNET)
 
     file(APPEND ${CSPROJ_PATH} "  <ItemGroup>\n")
     file(APPEND ${CSPROJ_PATH} "    <PackageReference Include=\"Microsoft.NETCore.DotNetAppHost\" Version=\"8.0.1\" />\n")
+    hyp_append_type_registry_generator(${CSPROJ_PATH})
     foreach(CSHARP_RUNTIME_SOURCE ${CSHARP_RUNTIME_SOURCES})
       file(APPEND ${CSPROJ_PATH} "    <Compile Include=\"${CSHARP_RUNTIME_SOURCE}\" />\n")
     endforeach()
@@ -150,6 +153,10 @@ if(HYP_DOTNET)
             )
 
       add_dependencies(Hyperion.NET.Runtime hyperion-dotnet-shared Hyperion.NET.Interop)
+    endif()
+
+    if(TARGET Hyperion.NET.Generators)
+      add_dependencies(Hyperion.NET.Runtime Hyperion.NET.Generators)
     endif()
 
     add_dependencies(${BUILD_NAME} Hyperion.NET.Runtime)

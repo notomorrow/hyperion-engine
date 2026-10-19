@@ -479,9 +479,9 @@ extern "C"
 
         if (SharedPtr<dotnet::ManagedClass> managedClass = cls->GetManagedClass())
         {
-            Assert(managedClass->GetMarshalObjectFunction() != nullptr);
+            Assert(managedClass->HasMarshalObjectFunction());
 
-            *pOutObjectReference = managedClass->GetMarshalObjectFunction()(ref.GetPointer(), uint32(cls->GetSize()));
+            *pOutObjectReference = managedClass->MarshalObject(ref.GetPointer(), uint32(cls->GetSize()));
 
             return pOutObjectReference->weakHandle != nullptr;
         }

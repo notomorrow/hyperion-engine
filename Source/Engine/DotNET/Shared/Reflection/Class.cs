@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
@@ -342,6 +343,11 @@ namespace Hyperion
                     throw new Exception($"Struct size mismatch: Class struct size ({size}) does not match C# struct size ({Marshal.SizeOf(type)})");
                 }
 #endif // DEBUG
+            }
+
+            if (!RuntimeFeature.IsDynamicCodeSupported)
+            {
+                return;
             }
 
             // Validate that all fields from the struct are present in the Class

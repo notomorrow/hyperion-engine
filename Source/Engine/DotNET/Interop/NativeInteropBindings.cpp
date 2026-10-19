@@ -87,20 +87,6 @@ extern "C"
         return true;
     }
 
-    HYP_EXPORT void NativeInterop_SetInvokeGetterFunction(ManagedGuid* assemblyGuid, Assembly* pAssembly, InvokeGetterFunction invokeGetterFptr)
-    {
-        Assert(pAssembly != nullptr);
-
-        pAssembly->SetInvokeGetterFunction(invokeGetterFptr);
-    }
-
-    HYP_EXPORT void NativeInterop_SetInvokeSetterFunction(ManagedGuid* assemblyGuid, Assembly* pAssembly, InvokeSetterFunction invokeSetterFptr)
-    {
-        Assert(pAssembly != nullptr);
-
-        pAssembly->SetInvokeSetterFunction(invokeSetterFptr);
-    }
-
     HYP_EXPORT void NativeInterop_SetAddObjectToCacheFunction(AddObjectToCacheFunction addObjectToCacheFptr)
     {
         DotNETHost::GetInstance().GetGlobalFunctions().addObjectToCacheFunction = addObjectToCacheFptr;
@@ -265,7 +251,7 @@ extern "C"
         managedClass->SetAttributes(std::move(attributes));
     }
 
-    HYP_EXPORT void ManagedClass_AddMethod(ManagedClass* managedClass, const char* methodName, ManagedGuid guid, InvokeMethodFunction invokeFptr, ManagedAttributeHolder* managedAttributeHolderPtr)
+    HYP_EXPORT void ManagedClass_AddMethod(ManagedClass* managedClass, const char* methodName, ManagedGuid guid, InvokeMethodFunction invokeFptr, void* invokeContext, ManagedAttributeHolder* managedAttributeHolderPtr)
     {
         Assert(managedClass != nullptr);
         Assert(invokeFptr != nullptr);
@@ -286,10 +272,18 @@ extern "C"
 
         managedClass->AddMethod(
             methodName,
-            ManagedMethod(guid, invokeFptr, std::move(attributes)));
+            ManagedMethod(guid, ManagedInvoker { invokeFptr, invokeContext }, std::move(attributes)));
     }
 
-    HYP_EXPORT void ManagedClass_AddProperty(ManagedClass* managedClass, const char* propertyName, ManagedGuid guid, ManagedAttributeHolder* managedAttributeHolderPtr)
+    HYP_EXPORT void ManagedClass_AddProperty(
+        ManagedClass* managedClass,
+        const char* propertyName,
+        ManagedGuid guid,
+        InvokeMethodFunction getterFptr,
+        void* getterContext,
+        InvokeMethodFunction setterFptr,
+        void* setterContext,
+        ManagedAttributeHolder* managedAttributeHolderPtr)
     {
         Assert(managedClass != nullptr);
 
@@ -309,21 +303,21 @@ extern "C"
 
         managedClass->AddProperty(
             propertyName,
-            ManagedProperty(guid, std::move(attributes)));
+            ManagedProperty(guid, ManagedInvoker { getterFptr, getterContext }, ManagedInvoker { setterFptr, setterContext }, std::move(attributes)));
     }
 
-    HYP_EXPORT void ManagedClass_SetNewObjectFunction(ManagedClass* managedClass, ManagedClass::NewObjectFunction newObjectFptr)
+    HYP_EXPORT void ManagedClass_SetNewObjectFunction(ManagedClass* managedClass, ManagedClass::NewObjectFunction newObjectFptr, void* newObjectContext)
     {
         Assert(managedClass != nullptr);
 
-        managedClass->SetNewObjectFunction(newObjectFptr);
+        managedClass->SetNewObjectFunction(newObjectFptr, newObjectContext);
     }
 
-    HYP_EXPORT void ManagedClass_SetMarshalObjectFunction(ManagedClass* managedClass, ManagedClass::MarshalObjectFunction marshalObjectFptr)
+    HYP_EXPORT void ManagedClass_SetMarshalObjectFunction(ManagedClass* managedClass, ManagedClass::MarshalObjectFunction marshalObjectFptr, void* marshalObjectContext)
     {
         Assert(managedClass != nullptr);
 
-        managedClass->SetMarshalObjectFunction(marshalObjectFptr);
+        managedClass->SetMarshalObjectFunction(marshalObjectFptr, marshalObjectContext);
     }
 
 } // extern "C"

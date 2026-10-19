@@ -54,6 +54,9 @@
       <HintPath>$(HyperionManagedDir)Hyperion.NET.Runtime.dll</HintPath>
     </Reference>
 
+    <Analyzer Include="$(HyperionManagedDir)Hyperion.NET.Generators.dll" Condition="Exists('$(HyperionManagedDir)Hyperion.NET.Generators.dll')" />
+    <Analyzer Include="$(HyperionBinDir)Hyperion.NET.Generators.dll" Condition="!Exists('$(HyperionManagedDir)Hyperion.NET.Generators.dll') And Exists('$(HyperionBinDir)Hyperion.NET.Generators.dll')" />
+
     <!-- read by HyperionApp and passed to the engine as its base directory -->
     <AssemblyMetadata Include="HyperionBaseDir" Value="$(HyperionBaseDir)" />
   </ItemGroup>
