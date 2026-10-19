@@ -771,7 +771,7 @@ public:
 
         const FilePath path = NumArguments() >= 1 && !GetArgument(0).Empty()
             ? FilePath(GetArgument(0))
-            : CoreApi::GetExecutablePath() / "Screenshots" / "Viewport.png";
+            : EngineGlobals::GetUserDataDirectory() / "Screenshots" / "Viewport.png";
 
         CaptureViewToPng(captureView, path, wireframeExtent);
     }

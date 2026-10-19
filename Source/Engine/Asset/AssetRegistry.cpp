@@ -752,7 +752,7 @@ Handle<AssetObject> AssetRegistry::GetAsset(const AssetBucket& bucket, StringHas
 
     const AssetPath assetPath { m_registryId, bucket, Name(name) };
 
-    const FilePath manifestPath = GetManifestPath(assetPath);
+    const FilePath manifestPath = FindManifestPath(assetPath);
     FileByteReader stream { manifestPath };
 
     BoxedValue objectBoxed;
@@ -1039,7 +1039,7 @@ void AssetRegistry::PutAsset(const AssetBucket& bucket, const Handle<AssetObject
     if (!IsGlobalContextActive<AssetLoadingContext>())
     {
         // Blob data must be persisted before it can be unpaged on last read scope release
-        const FilePath localBlobDir = GetRootPath() / bucket.GetName();
+        const FilePath localBlobDir = GetBucketDirectory(bucket);
         if (Result persistResult = assetObject->PersistBlobData(nullptr, localBlobDir); persistResult.HasError())
         {
             HYP_LOG(Assets, Warning, "Failed to persist blob data for asset '{}': {}",
@@ -1119,7 +1119,7 @@ void AssetRegistry::PutAssetUnique(const AssetBucket& bucket, const Handle<Asset
 
     // Blob data must be persisted before it can be unpaged (last read scope release),
     // otherwise unpaging a never-saved asset would lose its data.
-    const FilePath localBlobDir = GetRootPath() / bucket.GetName();
+    const FilePath localBlobDir = GetBucketDirectory(bucket);
     if (Result persistResult = assetObject->PersistBlobData(nullptr, localBlobDir); persistResult.HasError())
     {
         HYP_LOG(Assets, Warning, "Failed to persist blob data for asset '{}': {}",
@@ -1532,7 +1532,7 @@ void AssetRegistry::SyncAssetName(const AssetBucket& bucket, Name oldName, Name 
     data.assetDescs.Add(std::move(newDesc));
 
     // Remove old file, leave new file to be written by SaveDirtyAssets
-    const FilePath oldFilePath = GetRootPath() / bucket.GetName() / (oldName.ToString() + ".hmf");
+    const FilePath oldFilePath = GetBucketDirectory(bucket) / (oldName.ToString() + ".hmf");
 
     if (oldFilePath.Exists())
     {
@@ -1573,23 +1573,32 @@ bool AssetRegistry::LoadAssetDescs()
 
         Array<FilePath> assetFiles;
 
-        FilePath subdir = rootPath / bucket->GetName();
+        // a bucket with its own write directory can have assets in both places; the same name is only added once
+        FixedArray<FilePath, 2> subdirs { rootPath / bucket->GetName(), m_bucketWriteDirectories[bucket->GetIndex()] };
 
-        for (auto iter = subdir.OpenDirectory(); iter.HasNext(); iter.Advance())
+        for (const FilePath& subdir : subdirs)
         {
-            if (iter.CurrentIsDirectory())
+            if (subdir.Empty())
             {
                 continue;
             }
 
-            const FilePath curr = iter.Current();
-
-            if (curr.GetExtension() != "hmf")
+            for (auto iter = subdir.OpenDirectory(); iter.HasNext(); iter.Advance())
             {
-                continue;
-            }
+                if (iter.CurrentIsDirectory())
+                {
+                    continue;
+                }
 
-            assetFiles.PushBack(curr);
+                const FilePath curr = iter.Current();
+
+                if (curr.GetExtension() != "hmf")
+                {
+                    continue;
+                }
+
+                assetFiles.PushBack(curr);
+            }
         }
 
         Array<AssetDesc> assetDescs;
@@ -1635,8 +1644,6 @@ bool AssetRegistry::LoadAssetDescs()
 
 void AssetRegistry::SaveDirtyAssets()
 {
-    const FilePath rootPath = GetRootPath();
-
     if (m_rootPath.Exists())
     {
         if (!m_rootPath.IsDirectory())
@@ -1720,7 +1727,7 @@ void AssetRegistry::SaveDirtyAssets()
             continue;
         }
 
-        const FilePath bucketDir = rootPath / bucketName;
+        const FilePath bucketDir = GetBucketDirectory(bucketIndex);
 
         if (!bucketDir.Exists())
         {
@@ -1999,12 +2006,48 @@ void AssetRegistry::Update()
     }
 }
 
-FilePath AssetRegistry::GetManifestPath(const AssetPath& assetPath) const
+void AssetRegistry::SetBucketWriteDirectory(const AssetBucket& bucket, const FilePath& directory)
 {
-    const char* bucketName = GetAssetBucketName(assetPath.bucketIndex);
+    AssertDebug(bucket.GetIndex() < MaxAssetBuckets);
+
+    m_bucketWriteDirectories[bucket.GetIndex()] = directory;
+}
+
+FilePath AssetRegistry::GetBucketDirectory(const AssetBucket& bucket) const
+{
+    return GetBucketDirectory(bucket.GetIndex());
+}
+
+FilePath AssetRegistry::GetBucketDirectory(uint32 bucketIndex) const
+{
+    AssertDebug(bucketIndex < MaxAssetBuckets);
+
+    if (m_bucketWriteDirectories[bucketIndex].Any())
+    {
+        return m_bucketWriteDirectories[bucketIndex];
+    }
+
+    const char* bucketName = GetAssetBucketName(bucketIndex);
     AssertDebug(bucketName != nullptr);
 
-    return GetRootPath() / bucketName / (String(*assetPath.assetName) + ".hmf");
+    return GetRootPath() / bucketName;
+}
+
+FilePath AssetRegistry::GetManifestPath(const AssetPath& assetPath) const
+{
+    return GetBucketDirectory(assetPath.bucketIndex) / (String(*assetPath.assetName) + ".hmf");
+}
+
+FilePath AssetRegistry::FindManifestPath(const AssetPath& assetPath) const
+{
+    const FilePath manifestPath = GetManifestPath(assetPath);
+
+    if (m_bucketWriteDirectories[assetPath.bucketIndex].Empty() || manifestPath.Exists())
+    {
+        return manifestPath;
+    }
+
+    return GetRootPath() / GetAssetBucketName(assetPath.bucketIndex) / (String(*assetPath.assetName) + ".hmf");
 }
 
 void AssetRegistry::MarkIfCreatedByCook(AssetObject& assetObject)

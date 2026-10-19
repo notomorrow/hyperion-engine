@@ -2263,7 +2263,7 @@ bool ShaderCompiler::LoadBundle(
 
     Assert(outBundle != nullptr);
 
-    const FilePath manifestPath = GetEngineAssetRegistry()->GetManifestPath(outBundle->GetPath());
+    const FilePath manifestPath = GetEngineAssetRegistry()->FindManifestPath(outBundle->GetPath());
     const Time lastSavedTimestamp = manifestPath.LastModifiedTimestamp();
 
     return HandleBundle(decl, shaderRequest, lastSavedTimestamp, outBundle);
@@ -4282,7 +4282,7 @@ bool ShaderCompiler::IsShaderBundleOutdated(Name name) const
     }
 
     const AssetPath bundleAssetPath = AssetPath(AssetRegistryId::Engine, AssetBuckets::ShaderBundles, name);
-    const FilePath bundleManifestFilePath = GetEngineAssetRegistry()->GetManifestPath(bundleAssetPath);
+    const FilePath bundleManifestFilePath = GetEngineAssetRegistry()->FindManifestPath(bundleAssetPath);
 
     const Time bundleManifestModifiedTimestamp = bundleManifestFilePath.LastModifiedTimestamp();
 

@@ -95,6 +95,11 @@ namespace Hyperion {
 void HandleExit();
 void HandleSignal(int signum);
 
+// defined in PlatformUtils.[cpp|mm]
+namespace PlatformUtils {
+ENGINE_API extern bool IsInsideAppBundle();
+} // namespace PlatformUtils
+
 #pragma region Stats
 
 EngineStatTimer g_statRenderUpdate("Rendering/CPU/RenderThread");
@@ -468,6 +473,15 @@ void EngineDriver::LoadEngineContent()
     Handle<AssetRegistry> engineRegistry = MakeHandle<AssetRegistry>(
         AssetRegistryId::Engine,
         EngineGlobals::GetContentDirectory<HYP_STATIC_STRING("Engine")>());
+
+    // engine content inside an app bundle is read-only, so shaders compiled at runtime are saved with the user's data
+    if (PlatformUtils::IsInsideAppBundle())
+    {
+        const FilePath compiledContentDir = EngineGlobals::GetUserDataDirectory() / "Content" / "Engine";
+
+        engineRegistry->SetBucketWriteDirectory(AssetBuckets::Shaders, compiledContentDir / AssetBuckets::Shaders.GetName());
+        engineRegistry->SetBucketWriteDirectory(AssetBuckets::ShaderBundles, compiledContentDir / AssetBuckets::ShaderBundles.GetName());
+    }
 
 #if !defined(HYP_SHIPPING) && !defined(HYP_ANDROID)
     ProcRef<void()> doSync;

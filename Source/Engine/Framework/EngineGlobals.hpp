@@ -114,6 +114,8 @@ ENGINE_API const FilePath& GetCacheDirectory();
 
 ENGINE_API const FilePath& GetConfigDirectory();
 
+ENGINE_API const FilePath& GetUserDataDirectory();
+
 ENGINE_API const FilePath& GetTempDirectory();
 ENGINE_API HYP_NODISCARD Optional<FilePath> CreateTempDirectory(const char* prefix = nullptr);
 

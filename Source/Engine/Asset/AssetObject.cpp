@@ -480,7 +480,7 @@ Result AssetObject::PersistBlobData(
         return HYP_MAKE_ERROR(Error, "Asset '{}' does not have a valid bucket, cannot persist blob data", m_name);
     }
 
-    const FilePath bucketDir = registry->GetRootPath() / bucket.GetName();
+    const FilePath bucketDir = registry->GetBucketDirectory(bucket);
 
     if (!bucketDir.Exists() && !bucketDir.MkDir())
     {
@@ -655,7 +655,7 @@ bool AssetObject::PageBlobDataFromLocalFile(BlobDataReference& reference, const 
     const Name blobKey = reference.key;
     const uint64 expectedSize = reference.size;
 
-    FileByteReader stream { registry->GetRootPath() / GetPath().GetBucket().GetName() / (String(*GetName()) + "." + magic + ".raw.blob") };
+    FileByteReader stream { registry->FindManifestPath(GetPath()).BasePath() / (String(*GetName()) + "." + magic + ".raw.blob") };
 
     if (stream.Eof())
     {

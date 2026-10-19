@@ -40,6 +40,39 @@ ENGINE_API PlatformString GetExecutableAbsolutePath()
     return PlatformString(buffer, buffer + pathLength);
 }
 
+ENGINE_API bool IsInsideAppBundle()
+{
+    @autoreleasepool
+    {
+        return [[[NSBundle mainBundle] bundlePath] hasSuffix:@".app"];
+    }
+}
+
+static PlatformString GetUserDomainDirectory(NSSearchPathDirectory directory)
+{
+    @autoreleasepool
+    {
+        NSArray<NSString*>* paths = NSSearchPathForDirectoriesInDomains(directory, NSUserDomainMask, YES);
+
+        if ([paths count] == 0)
+        {
+            return PlatformString();
+        }
+
+        return PlatformString([[paths firstObject] UTF8String]);
+    }
+}
+
+ENGINE_API PlatformString GetUserApplicationDataDirectory()
+{
+    return GetUserDomainDirectory(NSApplicationSupportDirectory);
+}
+
+ENGINE_API PlatformString GetUserDocumentsDirectory()
+{
+    return GetUserDomainDirectory(NSDocumentDirectory);
+}
+
 ENGINE_API bool IsOnBatteryPower()
 {
     // TODO: implement for macOS using IOPowerSources or IOPS

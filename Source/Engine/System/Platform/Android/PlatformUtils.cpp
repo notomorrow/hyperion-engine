@@ -22,6 +22,21 @@ ENGINE_API PlatformString GetExecutableAbsolutePath()
     return PlatformString(buffer, buffer + result);
 }
 
+ENGINE_API bool IsInsideAppBundle()
+{
+    return false;
+}
+
+ENGINE_API PlatformString GetUserApplicationDataDirectory()
+{
+    return PlatformString();
+}
+
+ENGINE_API PlatformString GetUserDocumentsDirectory()
+{
+    return PlatformString();
+}
+
 ENGINE_API bool IsOnBatteryPower()
 {
     // TODO: implement for Android using BatteryManager

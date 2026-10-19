@@ -165,7 +165,12 @@ public:
 
     /// End new assetbucket based stuff
 
+    void SetBucketWriteDirectory(const AssetBucket& bucket, const FilePath& directory);
+
+    FilePath GetBucketDirectory(const AssetBucket& bucket) const;
+
     FilePath GetManifestPath(const AssetPath& assetPath) const;
+    FilePath FindManifestPath(const AssetPath& assetPath) const;
 
     /*! \param outSyncContentTask if not nullptr, will attempt to download cache from url pointed to at CacheServer CLI arg
      *      The Task itself will be set to a task that on completes indicates the download has completed.
@@ -184,9 +189,12 @@ public:
 
 private:
     static void MarkIfCreatedByCook(AssetObject& assetObject);
+    
+    FilePath GetBucketDirectory(uint32 bucketIndex) const;
 
     AssetRegistryId m_registryId;
     FilePath m_rootPath;
+    FilePath m_bucketWriteDirectories[MaxAssetBuckets];
 
     bool m_isInitialized;
     bool m_isSyncingCache;

@@ -101,7 +101,7 @@ void Shader::PageBlobData()
             const Name blobKey = ref.key;
             const uint64 expectedSize = ref.size;
 
-            FileByteReader stream { registry->GetRootPath() / AssetBuckets::Shaders.GetName() / (String(*GetName()) + "." + moduleTypeString + ".raw.blob") };
+            FileByteReader stream { registry->FindManifestPath(GetPath()).BasePath() / (String(*GetName()) + "." + moduleTypeString + ".raw.blob") };
             if (!stream.Eof())
             {
                 if (stream.Max() != expectedSize)

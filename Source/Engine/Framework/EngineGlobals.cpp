@@ -35,6 +35,13 @@ struct CookingContext;
 
 struct CacheServerContext;
 
+// defined in PlatformUtils.[cpp|mm]
+namespace PlatformUtils {
+ENGINE_API extern bool IsInsideAppBundle();
+ENGINE_API extern PlatformString GetUserApplicationDataDirectory();
+ENGINE_API extern PlatformString GetUserDocumentsDirectory();
+} // namespace PlatformUtils
+
 namespace EngineGlobals {
 
 static CommandLineArgumentRegistration g_argCacheDir { "cachedir", {}, "Directory for loading blob cache data (or saving for cook)", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING };
@@ -46,6 +53,26 @@ static CommandLineArgumentRegistration g_argServer { "server", {}, "Launch stand
 static CommandLineArgumentRegistration g_argHost { "host", {}, "Provide host address for connecting to a game server", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING };
 static CommandLineArgumentRegistration g_argGamePort { "gameport", {}, "Game server port to listen on / connect to. Overrides the Net.GameServerPort CVar", CommandLineArgumentFlags::NONE, CommandLineArgumentType::INTEGER };
 static CommandLineArgumentRegistration g_argEditor { "editor", {}, {}, CommandLineArgumentFlags::NONE, CommandLineArgumentType::BOOLEAN, false };
+
+static FilePath MakeWritableDirectory(const FilePath& path)
+{
+    if (!path.Exists() && !path.MkDir())
+    {
+        HYP_LOG(Engine, Error, "Failed to create directory {}", path);
+    }
+
+    return path;
+}
+
+HYP_EXPORT const FilePath& GetUserDataDirectory()
+{
+    // inside an app bundle the executable's directory is part of the signed bundle, so it must not be written to
+    static const FilePath s_userDataDirectory = MakeWritableDirectory(PlatformUtils::IsInsideAppBundle()
+            ? FilePath(PlatformUtils::GetUserApplicationDataDirectory().ToUtf8()) / "Hyperion"
+            : CoreApi::GetExecutablePath());
+
+    return s_userDataDirectory;
+}
 
 /// Editor build only
 #ifdef HYP_EDITOR
@@ -59,10 +86,11 @@ ENGINE_API bool IsEditor()
 
 HYP_EXPORT const FilePath& GetProjectsDirectory()
 {
-    // @TODO Use configuration value for this path. can be in Documents folder eg
+    static const FilePath s_projectsDirectory = MakeWritableDirectory(PlatformUtils::IsInsideAppBundle()
+            ? FilePath(PlatformUtils::GetUserDocumentsDirectory().ToUtf8()) / "Hyperion"
+            : CoreApi::GetExecutablePath() / "Projects");
 
-    static DirectoryInitializer<HYP_STATIC_STRING("Projects")> s_projectsDirectory;
-    return s_projectsDirectory.path;
+    return s_projectsDirectory;
 }
 
 HYP_EXPORT const FilePath& GetDataDirectory()
@@ -167,7 +195,7 @@ HYP_EXPORT const FilePath& GetCacheDirectory()
             }
             else
             {
-                s_cacheDirectory = CoreApi::GetExecutablePath() / "Cache";
+                s_cacheDirectory = GetUserDataDirectory() / "Cache";
             }
 
             if (s_cacheDirectory.Empty() || (!s_cacheDirectory.Exists() && !s_cacheDirectory.MkDir()))
@@ -247,8 +275,8 @@ HYP_EXPORT const FilePath& GetTempDirectory()
     static const FilePath s_emptyPath;
     return s_emptyPath;
 #else  // !HYP_ANDROID
-    static DirectoryInitializer<HYP_STATIC_STRING("Temp")> s_tempDirectory;
-    return s_tempDirectory.path;
+    static const FilePath s_tempDirectory = MakeWritableDirectory(GetUserDataDirectory() / "Temp");
+    return s_tempDirectory;
 #endif // HYP_ANDROID
 }
 

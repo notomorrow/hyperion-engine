@@ -80,7 +80,7 @@ is_macho() { file -b "$1" | grep -q "Mach-O"; }
 for path in "$BIN_DIR"/*.dylib; do
     cp "$path" "$APP_ROOT/"
     # the debug map names the build machine's object files
-    strip -S "$APP_ROOT/$(basename "$path")"
+    strip -S "$APP_ROOT/$(basename "$path")" 2> >(grep -v "invalidate the code signature" >&2)
 done
 
 # --- Bundle non-system libraries --------------------------------------------------------------------------------------
@@ -284,27 +284,6 @@ done
 iconutil -c icns "$ICONSET_DIR" -o "$APP_RESOURCES/AppIcon.icns"
 rm -rf "$ICONSET_DIR"
 
-# --- Re-sign ----------------------------------------------------------------------------------------------------------
-
-# Apple Silicon refuses to run a binary whose signature no longer matches, and install_name_tool invalidates it.
-# This is an ad-hoc signature: enough to run, but Gatekeeper still treats the download as unidentified.
-step "Ad-hoc signing"
-ad_hoc_sign() {
-    codesign --force --sign - "$1" 2>/dev/null || warn "codesign failed for $(basename "$1")"
-    codesign --verify "$1" 2>/dev/null || warn "$(basename "$1") has an invalid signature and won't launch"
-}
-
-while read -r binary; do
-    if [[ "$binary" == "$APP_ROOT/Hyperion.Editor" ]]; then
-        # codesign treats a bundle's main executable as the whole bundle, which fails on the .dll files beside it
-        cp "$binary" "$OUTPUT_DIR/Hyperion.Editor.signing"
-        ad_hoc_sign "$OUTPUT_DIR/Hyperion.Editor.signing"
-        mv "$OUTPUT_DIR/Hyperion.Editor.signing" "$binary"
-    else
-        ad_hoc_sign "$binary"
-    fi
-done < <(macho_files)
-
 # --- Config -----------------------------------------------------------------------------------------------------------
 
 step "Staging config"
@@ -361,6 +340,31 @@ if [[ -d "$ROOT_DIR/Data/Scripts/Strata" ]]; then
 else
     warn "Data/Scripts/Strata not found; Strata scripts won't resolve engine modules"
 fi
+
+# --- Sign -------------------------------------------------------------------------------------------------------------
+
+# codesign expects only code in Contents/MacOS, so the data folders move to Resources and keep their old paths as
+# symlinks (the engine resolves them next to its executable). The .NET files have to stay beside the executable for the
+# host to find them, and are signed one by one, which stores their signature in extended attributes.
+step "Moving data folders to Resources"
+for directory in "$APP_ROOT"/*/; do
+    name="$(basename "$directory")"
+    mv "$APP_ROOT/$name" "$APP_RESOURCES/$name"
+    ln -s "../Resources/$name" "$APP_ROOT/$name"
+done
+
+# Apple Silicon refuses to run a binary whose signature no longer matches, and install_name_tool invalidates it.
+# The signature is ad-hoc: Gatekeeper still treats the download as unidentified, but sees an intact app rather than a
+# damaged one.
+step "Ad-hoc signing"
+for path in "$APP_ROOT"/*; do
+    # the main executable is signed along with the bundle
+    [[ -L "$path" || "$path" == "$APP_ROOT/Hyperion.Editor" ]] && continue
+    codesign --force --sign - "$path" 2>/dev/null || warn "codesign failed for $(basename "$path")"
+done
+
+codesign --force --sign - "$APP_DIR"
+codesign --verify --deep --strict "$APP_DIR"
 
 # --- Legal ------------------------------------------------------------------------------------------------------------
 

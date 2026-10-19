@@ -15,8 +15,6 @@
 #include <Asset/AssetObject.hpp>
 #include <Asset/AssetBucket.hpp>
 
-#include <System/DirectoryInitializer.hpp>
-
 #include <Core/Containers/Set.hpp>
 #include <Core/Containers/StaticString.hpp>
 
@@ -74,8 +72,15 @@ static Array<Handle<AssetObject>> CollectDependencies(const Handle<Prefab>& pref
 
 const FilePath& EditorTemplateLibrary::GetDirectory()
 {
-    static DirectoryInitializer<HYP_STATIC_STRING("Templates")> s_templatesDirectory;
-    return s_templatesDirectory.path;
+    static const FilePath s_templatesDirectory = []
+    {
+        const FilePath path = EngineGlobals::GetUserDataDirectory() / "Templates";
+        path.MkDir();
+
+        return path;
+    }();
+
+    return s_templatesDirectory;
 }
 
 Array<Name> EditorTemplateLibrary::GetTemplateNames()
