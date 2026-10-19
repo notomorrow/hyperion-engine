@@ -74,6 +74,7 @@ namespace Hyperion.Editor
 
         private EditorViewportControl? _editorViewport;
         private WorldSettingsWindow? _worldSettingsWindow;
+        private PackagingSettingsWindow? _packagingSettingsWindow;
         private IDock? _dynamicPanelsDock;
         private readonly Dictionary<EditorPanelViewModel, Tool> _dynamicPanelTools = new();
         private int _frameCounter;
@@ -859,6 +860,30 @@ namespace Hyperion.Editor
         /// dynamic panel) - it is a long-lived properties surface similar in spirit to
         /// VS Code's settings editor, so it bypasses the dock layout and panel stack.
         /// </summary>
+        private void OnPackagingSettingsClick(object? sender, RoutedEventArgs e)
+        {
+            ShowPackagingSettingsWindow();
+        }
+
+        private async void ShowPackagingSettingsWindow()
+        {
+            if (_packagingSettingsWindow != null)
+            {
+                _packagingSettingsWindow.Activate();
+                return;
+            }
+
+            var window = new PackagingSettingsWindow
+            {
+                DataContext = new PackagingSettingsViewModel()
+            };
+
+            _packagingSettingsWindow = window;
+            window.Closed += (_, _) => _packagingSettingsWindow = null;
+
+            await window.ShowDialog(this);
+        }
+
         private async void ShowWorldSettingsWindow()
         {
             if (_worldSettingsWindow != null)

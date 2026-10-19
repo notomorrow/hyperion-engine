@@ -136,6 +136,10 @@ struct CloudReconstructConstants
     uint32 _pad0;
 };
 
+static const LightShaderData s_noLightShaderData {};
+
+#pragma region CloudPass
+
 CloudPass::CloudPass(const Vec2u& extent)
     : m_extent(extent),
       m_historyIndex(0),
@@ -744,7 +748,11 @@ const GpuImageViewRef& CloudPass::GetShadowMapView() const
     return RI.textureViewCache->GetOrCreate(m_shadowMap.Get());
 }
 
-void CloudPass::CompositeSkyProbe(Texture* skyTexture, Texture* skyProbeTexture, const EnvProbeShaderData& skyProbeShaderData, const LightShaderData* sunShaderData)
+void CloudPass::CompositeSkyProbe(
+    Texture* skyTexture,
+    Texture* skyProbeTexture,
+    const EnvProbeShaderData& skyProbeShaderData,
+    const LightShaderData* sunShaderData)
 {
     HYP_SCOPE;
     AssertOnThread(g_renderThread);
@@ -770,19 +778,27 @@ void CloudPass::CompositeSkyProbe(Texture* skyTexture, Texture* skyProbeTexture,
     constants.lightSteps = SkyProbeLightSteps;
     constants.hasSun = sunShaderData ? 1u : 0u;
 
-    const LightShaderData sun = sunShaderData ? *sunShaderData : LightShaderData {};
+    if (!sunShaderData)
+    {
+        sunShaderData = &s_noLightShaderData;
+    }
 
     GpuBuffer* cbuffer = nullptr;
     size_t cbufferOffset = 0;
     size_t cbufferSize = 0;
 
-    RI.cbufferAllocator->Write(&sun);
+    RI.cbufferAllocator->Write(sunShaderData);
     RI.cbufferAllocator->Write(&skyProbeShaderData);
     WriteShaderData(*RI.cbufferAllocator);
     RI.cbufferAllocator->Write(&constants);
     RI.cbufferAllocator->Commit(cbuffer, cbufferOffset, cbufferSize);
 
-    const ImageSubResource facesSubResource { .baseMipLevel = 0, .numLevels = 1, .baseArrayLayer = 0, .numLayers = 6 };
+    const ImageSubResource facesSubResource {
+        .baseMipLevel = 0,
+        .numLevels = 1,
+        .baseArrayLayer = 0,
+        .numLayers = 6
+    };
 
     cr << InsertBarrier(skyTexture->GetGpuImage(), ResourceState::ShaderResource);
     cr << InsertBarrier(skyProbeTexture->GetGpuImage(), ResourceState::UnorderedAccess, facesSubResource);
@@ -901,8 +917,7 @@ bool CloudPass::Trace(Frame* frame, const RenderSetup& renderSetup)
 
     ENGINE_STAT_GPU_SCOPE(&s_statCloudTrace);
 
-    LightShaderData sunShaderData {};
-    bool hasSun = false;
+    const LightShaderData* sunShaderData = nullptr;
 
     for (Light* light : rpl.GetLights())
     {
@@ -913,8 +928,7 @@ bool CloudPass::Trace(Frame* frame, const RenderSetup& renderSetup)
 
         if (RenderProxyLight* lightProxy = static_cast<RenderProxyLight*>(GetRenderProxy(light)))
         {
-            sunShaderData = lightProxy->bufferData;
-            hasSun = true;
+            sunShaderData = &lightProxy->bufferData;
 
             break;
         }
@@ -949,16 +963,21 @@ bool CloudPass::Trace(Frame* frame, const RenderSetup& renderSetup)
     traceConstants.traceSteps = MathUtil::Max(g_cvCloudsTraceSteps.Get(), 1u);
     traceConstants.lightSteps = g_cvCloudsLightSteps.Get();
     traceConstants.frameCounter = frameCounter;
-    traceConstants.hasSun = hasSun ? 1u : 0u;
+    traceConstants.hasSun = sunShaderData ? 1u : 0u;
     traceConstants.traceOffset = traceOffset;
     traceConstants.historyDimensions = m_historyExtent;
+
+    if (!sunShaderData)
+    {
+        sunShaderData = &s_noLightShaderData;
+    }
 
     GpuBuffer* cbuffer = nullptr;
     size_t cbufferOffset = 0;
     size_t cbufferSize = 0;
 
     RI.cbufferAllocator->Write(&cameraProxy->bufferData);
-    RI.cbufferAllocator->Write(&sunShaderData);
+    RI.cbufferAllocator->Write(sunShaderData);
     RI.cbufferAllocator->Write(&skyProbeShaderData);
     WriteShaderData(*RI.cbufferAllocator);
     RI.cbufferAllocator->Write(&traceConstants);

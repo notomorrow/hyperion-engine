@@ -161,6 +161,14 @@ public:
                 JSON::Value(""));
 
             s_definitions.Add(
+                "target-platform",
+                "",
+                "Platform whose packaging settings in the project apply (windows, mac, linux, android, ios, web); --max-texture-size overrides its texture limit",
+                CommandLineArgumentFlags::NONE,
+                {},
+                JSON::Value(""));
+
+            s_definitions.Add(
                 "engine-assets",
                 "",
                 "A file listing Engine assets to cook besides what the project reaches, one Bucket/Name per line",
@@ -382,6 +390,9 @@ protected:
         s_maxTextureSize = 0;
         StringUtil::Parse(args["max-texture-size"].ToString(), &s_maxTextureSize);
 
+        s_hasMaxTextureSizeArgument = args["max-texture-size"].ToString().Any();
+        s_hasTargetPlatform = ParseTargetPlatform(args["target-platform"].ToString().ToAnsi(), s_targetPlatform);
+
         ShaderTarget shaderTarget;
         Array<Handle<AssetObject>> targetShaderAssets;
 
@@ -424,6 +435,9 @@ private:
     };
 
     static inline uint32 s_maxTextureSize = 0;
+    static inline bool s_hasMaxTextureSizeArgument = false;
+    static inline bool s_hasTargetPlatform = false;
+    static inline TargetPlatform s_targetPlatform = TargetPlatform::Windows;
     static inline Set<const AssetObject*> s_dataOnlyTextures;
 
 #ifdef HYP_EDITOR
@@ -1545,6 +1559,15 @@ private:
 
             if (loadProjectResult.HasValue())
             {
+                const Handle<PackagingSettings>& packagingSettings = loadProjectResult.GetValue()->GetPackagingSettings();
+
+                if (s_hasTargetPlatform && !s_hasMaxTextureSizeArgument && packagingSettings.IsValid())
+                {
+                    s_maxTextureSize = packagingSettings->Resolve(s_targetPlatform).maxTextureSize;
+
+                    HYP_LOG(Assets, Info, "Packaging settings for {}: textures up to {}", GetTargetPlatformName(s_targetPlatform), s_maxTextureSize);
+                }
+
                 Set<AssetObject*> seenAssets;
 
                 auto callback = [&assetsToCook, &seenAssets](const Handle<AssetObject>& assetObject)

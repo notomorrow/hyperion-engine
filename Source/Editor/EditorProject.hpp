@@ -29,6 +29,7 @@
 #include <Baking/BakeLayer.hpp>
 
 #include <Editor/EditorMemory.hpp>
+#include <Editor/EditorPackagingSettings.hpp>
 
 namespace Hyperion {
 
@@ -45,16 +46,12 @@ struct EditorWebSettings
 {
     HYP_STRUCT_BODY(EditorWebSettings);
 
-    HYP_FIELD(Property = "MaxTextureSize", Serialize)
-    uint32 maxTextureSize = 512;
-
     HYP_FIELD(Property = "Worlds", Serialize)
     String worlds;
 
     HYP_FORCE_INLINE HashCode GetHashCode() const
     {
         HashCode hashCode;
-        hashCode.Add(maxTextureSize);
         hashCode.Add(worlds);
 
         return hashCode;
@@ -153,6 +150,19 @@ public:
     HYP_FORCE_INLINE const EditorPlatformSettings& GetPlatformSettings() const
     {
         return m_platformSettings;
+    }
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE const Handle<PackagingSettings>& GetPackagingSettings() const
+    {
+        return m_packagingSettings;
+    }
+
+    /// For edits outside the asset registry, which IsDirty() can't see
+    HYP_METHOD()
+    void MarkSettingsDirty()
+    {
+        m_hasUnsavedSettings = true;
     }
 
     HYP_METHOD(Property = "GameInstance")
@@ -279,6 +289,11 @@ private:
 
     HYP_FIELD(Property = "PlatformSettings", Serialize)
     EditorPlatformSettings m_platformSettings;
+
+    HYP_FIELD(Property = "PackagingSettings", Serialize)
+    Handle<PackagingSettings> m_packagingSettings;
+
+    bool m_hasUnsavedSettings = false;
 
     HYP_FIELD(Transient)
     Handle<EditorActionStack> m_actionStack;
