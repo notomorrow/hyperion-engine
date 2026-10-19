@@ -1784,18 +1784,20 @@ auto String<TStringType, TAllocator>::ToLower() const -> String
         if constexpr (isUtf8)
         {
             size_t codepoints = 0;
+            const utf::Char32 ch = utf::Char8to32(Data() + i, Size() - i, codepoints);
 
-            union
+            if (ch < 0x80)
             {
-                utf::Char32 charU32;
-                int charI32;
-            };
-
-            // evil union byte magic
-            charU32 = utf::Char8to32(Data() + i, sizeof(utf::Char32), codepoints);
-            charI32 = tolower(charI32);
-
-            result.Append(charU32);
+                result.Append(CharType(tolower(int(ch))));
+            }
+            else if (ch == utf::Char32(-1))
+            {
+                result.Append(Data()[i]);
+            }
+            else
+            {
+                result.Append(ch);
+            }
 
             i += codepoints;
         }
@@ -1829,18 +1831,20 @@ auto String<TStringType, TAllocator>::ToUpper() const -> String
         if constexpr (isUtf8)
         {
             size_t codepoints = 0;
+            const utf::Char32 ch = utf::Char8to32(Data() + i, Size() - i, codepoints);
 
-            union
+            if (ch < 0x80)
             {
-                utf::Char32 charU32;
-                int charI32;
-            };
-
-            // evil union byte magic
-            charU32 = utf::Char8to32(Data() + i, sizeof(utf::Char32), codepoints);
-            charI32 = toupper(charI32);
-
-            result.Append(charU32);
+                result.Append(CharType(toupper(int(ch))));
+            }
+            else if (ch == utf::Char32(-1))
+            {
+                result.Append(Data()[i]);
+            }
+            else
+            {
+                result.Append(ch);
+            }
 
             i += codepoints;
         }
