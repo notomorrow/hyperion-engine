@@ -2323,11 +2323,6 @@ bool ShaderCompiler::Initialize(bool precompileShaders, const ShaderCompileParam
     HYP_LOG(ShaderCompiler, Info, "Target platforms: {}", EnumToString(params.targetPlatforms));
     HYP_LOG(ShaderCompiler, Info, "Target backends: {}", EnumToString(params.targetBackends));
 
-    if (params.HasShaderFilters())
-    {
-        HYP_LOG(ShaderCompiler, Info, "Shader filters: {}", String::Join(params.shaderFilters, ", "));
-    }
-
     PrecompileShadersWorkerPool pool;
     s_precompileShadersPool = &pool;
 
