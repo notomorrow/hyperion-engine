@@ -16,6 +16,7 @@
 #include <Framework/Server/GameServer.hpp>
 
 #include <Framework/Util/FrameLimiter.hpp>
+#include <Framework/CVarManager.hpp>
 
 #include <Core/Threading/Threads.hpp>
 #include <Core/Threading/ThreadSignal.hpp>
@@ -43,6 +44,7 @@ CORE_API extern const CommandLineArguments& GetCommandLineArguments();
 
 // Main thread gets locked at this tick rate unless we are using RenderOnMainThread or SimulateOnMainThread.
 static constexpr uint32 MainThreadLockedHz = 120;
+CVar<float> g_cvHeadlessTickRate("Sim.HeadlessTickRate", 60.0f);
 
 extern ThreadSignal g_renderInitSignal;
 
@@ -190,11 +192,21 @@ void MainThread::operator()()
         // Keep main thread locked, unless we're simulating or rendering on the main thread
         FrameLimiter frameLimiter { MainThreadLockedHz };
 
+        const bool isHeadless = EngineGlobals::IsHeadless();
+
         while (m_isRunning.LoadVolatile())
         {
             Update();
 
-            if (!isSimulateOnMainThread && !isRenderOnMainThread)
+            if (isHeadless)
+            {
+                if (const float tickRate = g_cvHeadlessTickRate.Get(); tickRate > 0.0f)
+                {
+                    frameLimiter.SetTargetRate(int(tickRate));
+                    frameLimiter.Wait();
+                }
+            }
+            else if (!isSimulateOnMainThread && !isRenderOnMainThread)
             {
                 frameLimiter.Wait();
             }

@@ -944,6 +944,11 @@ void Game::OnLaunch()
         m_camera = MakeStrongRef(camera);
         m_camera->SetCameraFlags(m_camera->GetCameraFlags() | CameraFlags::MatchWindowSize);
 
+        if (EngineGlobals::IsHeadless())
+        {
+            return;
+        }
+
         ViewDesc viewDesc;
         viewDesc.flags = ViewFlags::DEFAULT | ViewFlags::GBUFFER | ViewFlags::MATCH_CAMERA_DIMENSIONS;
         viewDesc.framebufferDesc = { Vec2u(m_camera->GetDimensions()) };
