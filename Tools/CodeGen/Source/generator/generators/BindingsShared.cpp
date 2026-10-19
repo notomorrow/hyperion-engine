@@ -543,6 +543,108 @@ bool ResolvePropertyAccessorBinding(const Analyzer& analyzer, const ClassDefinit
     return true;
 }
 
+Array<MethodThunk> CollectMethodThunks(const Analyzer& analyzer, const ClassDefinition& cls, const Set<String>& allHandleNames)
+{
+    Array<MethodThunk> thunks;
+
+    if ((cls.type != ClassDefinitionType::Class && cls.type != ClassDefinitionType::Struct && cls.type != ClassDefinitionType::Enum)
+        || !IsStrataScriptable(analyzer, cls))
+    {
+        return thunks;
+    }
+
+    Set<String> symbols;
+
+    for (const MemberDef& member : cls.members)
+    {
+        if (!MemberIsStrataScriptable(member) || member.type != MemberType::Method)
+        {
+            continue;
+        }
+
+        if (!member.cxxType || !member.cxxType->isFunction)
+        {
+            continue;
+        }
+
+        const ASTFunctionType* functionType = dynamic_cast<const ASTFunctionType*>(member.cxxType.Get());
+
+        if (!functionType)
+        {
+            continue;
+        }
+
+        const bool isStatic = member.cxxType->isStatic;
+
+        // C++ enums cannot declare instance members
+        if (cls.type == ClassDefinitionType::Enum && !isStatic)
+        {
+            continue;
+        }
+
+        TResult<StrataTypeMapping> returnRes = MapToStrataType(analyzer, functionType->returnType);
+
+        if (returnRes.HasError())
+        {
+            continue;
+        }
+
+        const StrataTypeMapping& returnMapping = returnRes.GetValue();
+
+        if ((returnMapping.isHandle || returnMapping.isEnum) && !allHandleNames.Contains(returnMapping.typeName))
+        {
+            continue;
+        }
+
+        if (functionType->parameters.Size() > 2)
+        {
+            continue;
+        }
+
+        Array<StrataTypeMapping> paramMappings;
+        bool paramsOk = true;
+
+        for (const ASTMemberDecl* parameter : functionType->parameters)
+        {
+            TResult<StrataTypeMapping> paramRes = MapToStrataType(analyzer, parameter->type.Get());
+
+            if (paramRes.HasError()
+                || ((paramRes.GetValue().isHandle || paramRes.GetValue().isEnum) && !allHandleNames.Contains(paramRes.GetValue().typeName)))
+            {
+                paramsOk = false;
+                break;
+            }
+
+            paramMappings.PushBack(paramRes.GetValue());
+        }
+
+        if (!paramsOk)
+        {
+            continue;
+        }
+
+        String symbol = HYP_FORMAT("{}_{}", cls.name, ResolveManagedName(member));
+
+        if (!symbols.Insert(symbol).second)
+        {
+            continue;
+        }
+
+        MethodThunk& thunk = thunks.EmplaceBack();
+        thunk.member = &member;
+        thunk.functionType = functionType;
+        thunk.symbol = std::move(symbol);
+        thunk.isStatic = isStatic;
+        thunk.propertySetterIdiom = IsPropertySetterIdiom(cls, member);
+        thunk.returnsViaOutParam = !thunk.propertySetterIdiom
+            && (returnMapping.isStructValue || returnMapping.isVector || returnMapping.isArray || returnMapping.isString);
+        thunk.returnMapping = returnMapping;
+        thunk.paramMappings = std::move(paramMappings);
+    }
+
+    return thunks;
+}
+
 Set<String> CollectDeclaredTypeNames(const Analyzer& analyzer)
 {
     Set<String> typeNames;

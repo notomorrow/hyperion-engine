@@ -265,10 +265,10 @@ function(RunCodeGen version_major version_minor)
   endif()
 endfunction()
 
-# Run CodeGen with version 0.13
+# Run CodeGen with version 0.14
 # HYP_CODEGEN_VERSION_MAJOR 0
-# HYP_CODEGEN_VERSION_MINOR 13
-RunCodeGen(0 13)
+# HYP_CODEGEN_VERSION_MINOR 14
+RunCodeGen(0 15)
 
 # set HYP_DEBUG_MODE to 1 for debug builds, 0 for release builds
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

@@ -5,6 +5,7 @@
 */
 
 #include <generator/generators/CSharpModuleGenerator.hpp>
+#include <generator/generators/BindingsShared.hpp>
 
 #include <analyzer/Analyzer.hpp>
 #include <analyzer/Module.hpp>
@@ -45,6 +46,277 @@ static const Map<String, String> s_getValueOverloads = {
 static String AppendNullable(const String& typeName, bool isNullable)
 {
     return isNullable ? typeName + "?" : typeName;
+}
+
+static const String s_interop = "global::System.Runtime.InteropServices";
+
+static String NativeLibraryForModule(const Analyzer& analyzer, const Module& mod)
+{
+    const String relativePath = String(FileSystem::RelativePath(mod.GetPath().Data(), analyzer.GetSourceDirectory().Data()).c_str()).ReplaceAll("\\", "/");
+
+    if (relativePath.StartsWith("Core/"))
+    {
+        return "hyperion-core";
+    }
+
+    if (relativePath.StartsWith("Engine/Net/"))
+    {
+        return "hyperion-net";
+    }
+
+    return "hyperion";
+}
+
+static String EnumUnderlyingCSharpType(const Analyzer& analyzer, const String& enumName)
+{
+    static const Map<String, String> s_underlyingTypes {
+        { "int", "int" },
+        { "uint8", "byte" },
+        { "uint16", "ushort" },
+        { "uint32", "uint" },
+        { "uint64", "ulong" },
+        { "int8", "sbyte" },
+        { "int16", "short" },
+        { "int32", "int" },
+        { "int64", "long" }
+    };
+
+    const ClassDefinition* enumDefinition = analyzer.FindClassDefinition(enumName);
+
+    if (!enumDefinition || enumDefinition->type != ClassDefinitionType::Enum || enumDefinition->baseClassNames.Size() > 1)
+    {
+        return String::empty;
+    }
+
+    const String cxxUnderlying = enumDefinition->baseClassNames.Any() ? enumDefinition->baseClassNames.Front() : String("int");
+
+    auto it = s_underlyingTypes.Find(cxxUnderlying);
+
+    return it != s_underlyingTypes.End() ? it->second : String::empty;
+}
+
+static bool TryEmitDirectBinding(
+    const Analyzer& analyzer,
+    const ClassDefinition& cls,
+    const MemberDef& member,
+    const BindingsShared::MethodThunk& thunk,
+    const String& managedName,
+    const String& libraryName,
+    const CSharpTypeMapping& returnTypeMapping,
+    const Array<CSharpTypeMapping>& paramTypeMappings,
+    const Array<String>& methodArgDecls,
+    const Array<String>& methodArgNames,
+    String& out)
+{
+    static const Set<String> s_scalarTypes {
+        "int", "uint", "float", "double", "long", "ulong", "short", "ushort", "byte", "sbyte", "IntPtr", "bool"
+    };
+
+    if (!libraryName.Any() || thunk.isStatic || member.condition.Any() || cls.condition.Any())
+    {
+        return false;
+    }
+
+    if (cls.type != ClassDefinitionType::Class && cls.type != ClassDefinitionType::Struct)
+    {
+        return false;
+    }
+
+    Array<String> nativeParams;
+    Array<String> nativeArgs;
+    bool usesStrings = false;
+
+    if (cls.type == ClassDefinitionType::Class)
+    {
+        nativeParams.PushBack("nint self");
+        nativeArgs.PushBack("obj.NativeAddress");
+    }
+    else
+    {
+        nativeParams.PushBack(HYP_FORMAT("{}* self", cls.name));
+        nativeArgs.PushBack("&obj");
+    }
+
+    for (size_t i = 0; i < thunk.paramMappings.Size(); i++)
+    {
+        const StrataTypeMapping& strataMapping = thunk.paramMappings[i];
+        const CSharpTypeMapping& csharpMapping = paramTypeMappings[i];
+        const String& name = methodArgNames[i];
+
+        if (strataMapping.isArray)
+        {
+            return false;
+        }
+
+        if (strataMapping.isString)
+        {
+            if (csharpMapping.typeName != "string")
+            {
+                return false;
+            }
+
+            nativeParams.PushBack(HYP_FORMAT("string {}", name));
+            nativeArgs.PushBack(name);
+            usesStrings = true;
+        }
+        else if (strataMapping.isHandle)
+        {
+            if (csharpMapping.typeName == "Object" || csharpMapping.typeName == "object")
+            {
+                return false;
+            }
+
+            nativeParams.PushBack(HYP_FORMAT("nint {}", name));
+            nativeArgs.PushBack(HYP_FORMAT("({} == null ? 0 : {}.NativeAddress)", name, name));
+        }
+        else if (strataMapping.isEnum)
+        {
+            const String underlying = EnumUnderlyingCSharpType(analyzer, strataMapping.typeName);
+
+            if (!underlying.Any())
+            {
+                return false;
+            }
+
+            nativeParams.PushBack(HYP_FORMAT("{} {}", underlying, name));
+            nativeArgs.PushBack(HYP_FORMAT("({}){}", underlying, name));
+        }
+        else if (strataMapping.isVector || strataMapping.isStructValue)
+        {
+            if (csharpMapping.isNullable)
+            {
+                return false;
+            }
+
+            nativeParams.PushBack(HYP_FORMAT("{}* {}", csharpMapping.typeName, name));
+            nativeArgs.PushBack(HYP_FORMAT("&{}", name));
+        }
+        else if (s_scalarTypes.Contains(csharpMapping.typeName))
+        {
+            nativeParams.PushBack(csharpMapping.typeName == "bool"
+                    ? HYP_FORMAT("[{}.MarshalAs({}.UnmanagedType.U1)] bool {}", s_interop, s_interop, name)
+                    : HYP_FORMAT("{} {}", csharpMapping.typeName, name));
+            nativeArgs.PushBack(name);
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    const StrataTypeMapping& strataReturn = thunk.returnMapping;
+    const ASTFunctionType* functionType = thunk.functionType;
+
+    String nativeReturnType = "void";
+    bool returnsBool = false;
+    Array<String> body;
+
+    auto nativeCall = [&]()
+    {
+        return HYP_FORMAT("Native{}({})", managedName, String::Join(nativeArgs, ", "));
+    };
+
+    if (thunk.propertySetterIdiom)
+    {
+        if (returnTypeMapping.typeName != cls.name)
+        {
+            return false;
+        }
+
+        body.PushBack(nativeCall() + ";");
+        body.PushBack("return obj;");
+    }
+    else if (functionType->returnType->IsVoid())
+    {
+        body.PushBack(nativeCall() + ";");
+    }
+    else if (strataReturn.isArray)
+    {
+        return false;
+    }
+    else if (strataReturn.isString)
+    {
+        if (returnTypeMapping.typeName != "string")
+        {
+            return false;
+        }
+
+        nativeParams.PushBack("global::Hyperion.StrataString* outReturn");
+        nativeArgs.PushBack("&result");
+        body.PushBack("global::Hyperion.StrataString result = default;");
+        body.PushBack(nativeCall() + ";");
+        body.PushBack("return global::Hyperion.NativeBindings.TakeString(&result);");
+    }
+    else if (strataReturn.isVector || strataReturn.isStructValue)
+    {
+        if (returnTypeMapping.isNullable)
+        {
+            return false;
+        }
+
+        nativeParams.PushBack(HYP_FORMAT("{}* outReturn", returnTypeMapping.typeName));
+        nativeArgs.PushBack("&result");
+        body.PushBack(HYP_FORMAT("{} result = default;", returnTypeMapping.typeName));
+        body.PushBack(nativeCall() + ";");
+        body.PushBack("return result;");
+    }
+    else if (strataReturn.isHandle)
+    {
+        if (returnTypeMapping.typeName == "Object" || returnTypeMapping.typeName == "object")
+        {
+            return false;
+        }
+
+        nativeReturnType = "nint";
+        body.PushBack(HYP_FORMAT("return global::Hyperion.NativeBindings.GetManagedObject<{}>({});", returnTypeMapping.typeName, nativeCall()));
+    }
+    else if (strataReturn.isEnum)
+    {
+        const String underlying = EnumUnderlyingCSharpType(analyzer, strataReturn.typeName);
+
+        if (!underlying.Any())
+        {
+            return false;
+        }
+
+        nativeReturnType = underlying;
+        body.PushBack(HYP_FORMAT("return ({}){};", returnTypeMapping.typeName, nativeCall()));
+    }
+    else if (s_scalarTypes.Contains(returnTypeMapping.typeName))
+    {
+        nativeReturnType = returnTypeMapping.typeName;
+        returnsBool = returnTypeMapping.typeName == "bool";
+        body.PushBack(HYP_FORMAT("return {};", nativeCall()));
+    }
+    else
+    {
+        return false;
+    }
+
+    out += HYP_FORMAT("        [{}.LibraryImport(\"{}\", EntryPoint = \"{}\"{})]\n",
+        s_interop, libraryName, thunk.symbol,
+        usesStrings ? HYP_FORMAT(", StringMarshalling = {}.StringMarshalling.Utf8", s_interop) : String::empty);
+
+    if (returnsBool)
+    {
+        out += HYP_FORMAT("        [return: {}.MarshalAs({}.UnmanagedType.U1)]\n", s_interop, s_interop);
+    }
+
+    out += HYP_FORMAT("        private static partial {} Native{}({});\n\n", nativeReturnType, managedName, String::Join(nativeParams, ", "));
+
+    out += HYP_FORMAT("        public static {} {}(this {} obj{})\n",
+        AppendNullable(returnTypeMapping.typeName, returnTypeMapping.isNullable), managedName, cls.name,
+        methodArgDecls.Any() ? ", " + String::Join(methodArgDecls, ", ") : "");
+    out += "        {\n";
+
+    for (const String& line : body)
+    {
+        out += "            " + line + "\n";
+    }
+
+    out += "        }\n";
+
+    return true;
 }
 
 FilePath CSharpModuleGenerator::GetOutputFilePath(const Analyzer& analyzer, const Module& mod) const
@@ -110,6 +382,10 @@ Result CSharpModuleGenerator::Generate(const Analyzer& analyzer, const Module& m
         }
     });
 
+    static const Set<String> allHandleNames = BindingsShared::CollectDeclaredTypeNames(analyzer);
+
+    const String libraryName = mod.GetPath().Any() ? NativeLibraryForModule(analyzer, mod) : String::empty;
+
     writer.WriteString(GetGeneratedFilePreamble(FilePath::Relative(mod.GetPath(), analyzer.GetSourceDirectory())));
 
     writer.WriteString("namespace Hyperion\n");
@@ -152,8 +428,10 @@ Result CSharpModuleGenerator::Generate(const Analyzer& analyzer, const Module& m
             continue;
         }
 
-        writer.WriteString(HYP_FORMAT("    public static class {}Extensions\n", cls.name));
+        writer.WriteString(HYP_FORMAT("    public static unsafe partial class {}Extensions\n", cls.name));
         writer.WriteString("    {\n");
+
+        const Array<BindingsShared::MethodThunk> thunks = BindingsShared::CollectMethodThunks(analyzer, cls, allHandleNames);
 
         for (size_t i = 0; i < cls.members.Size(); ++i)
         {
@@ -216,6 +494,7 @@ Result CSharpModuleGenerator::Generate(const Analyzer& analyzer, const Module& m
 
                 Array<String> methodArgDecls;
                 Array<String> methodArgNames;
+                Array<CSharpTypeMapping> paramTypeMappings;
 
                 auto MapParameterName = [](const String& paramName) -> String
                 {
@@ -248,6 +527,32 @@ Result CSharpModuleGenerator::Generate(const Analyzer& analyzer, const Module& m
 
                     methodArgDecls.PushBack(HYP_FORMAT("{} {}", AppendNullable(parameterTypeMapping.typeName, parameterTypeMapping.isNullable), parameterName));
                     methodArgNames.PushBack(parameterName);
+                    paramTypeMappings.PushBack(parameterTypeMapping);
+                }
+
+                const BindingsShared::MethodThunk* thunk = nullptr;
+
+                for (const BindingsShared::MethodThunk& candidate : thunks)
+                {
+                    if (candidate.member == &member)
+                    {
+                        thunk = &candidate;
+                        break;
+                    }
+                }
+
+                if (thunk)
+                {
+                    String directBinding;
+
+                    if (TryEmitDirectBinding(analyzer, cls, member, *thunk, managedName, libraryName, returnTypeMapping, paramTypeMappings, methodArgDecls, methodArgNames, directBinding))
+                    {
+                        writer.WriteString(directBinding);
+
+                        ++numMembersWritten;
+
+                        continue;
+                    }
                 }
 
                 writer.WriteString(HYP_FORMAT("        public static {} {}(this {} obj{})\n", AppendNullable(returnTypeMapping.typeName, returnTypeMapping.isNullable), managedName, cls.name, methodArgDecls.Any() ? ", " + String::Join(methodArgDecls, ", ") : ""));

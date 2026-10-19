@@ -8,6 +8,10 @@
 
 #include <Core/Memory/Memory.hpp>
 
+#include <bit>
+#include <cstring>
+#include <type_traits>
+
 #include <Core/Math/Vector2.hpp>
 #include <Core/Math/Vector3.hpp>
 #include <Core/Math/Vector4.hpp>
@@ -175,6 +179,42 @@ template <class StringType>
 HYP_FORCE_INLINE void SetReturnString(SString* outString, const StringType& str)
 {
     SetReturnString(outString, str.Data(), str.Size());
+}
+
+// Struct pointers from foreign callers (C#, wasm) are only naturally aligned, not to the engine type's alignas
+template <class T>
+HYP_FORCE_INLINE T LoadUnaligned(const T* source)
+{
+    if constexpr (std::is_trivially_copyable_v<T>)
+    {
+        struct Bytes
+        {
+            unsigned char data[sizeof(T)];
+        } bytes;
+
+        std::memcpy(bytes.data, source, sizeof(T));
+
+        return std::bit_cast<T>(bytes);
+    }
+    else
+    {
+        return *source;
+    }
+}
+
+template <class T, class ValueType>
+HYP_FORCE_INLINE void StoreUnaligned(T* destination, ValueType&& value)
+{
+    if constexpr (std::is_trivially_copyable_v<T>)
+    {
+        const T temp = std::forward<ValueType>(value);
+
+        std::memcpy(destination, &temp, sizeof(T));
+    }
+    else
+    {
+        *destination = std::forward<ValueType>(value);
+    }
 }
 
 } // namespace Strata

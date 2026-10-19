@@ -31,6 +31,13 @@ using namespace BindingsShared;
 
 namespace {
 
+String UnwrappedTypeName(const ASTType* type)
+{
+    const ASTType* unwrapped = (type->isLvalueReference || type->isRvalueReference) ? type->refTo.Get() : type;
+
+    return unwrapped->typeName->ToString(/* includeNamespace */ false);
+}
+
 TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const Set<String>& allHandleNames,
     const ASTType* paramType, const String& paramName, Array<String>& sigParams, Array<String>& callArgs)
 {
@@ -73,30 +80,27 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
     }
     else if (paramTypeMapping.isVector)
     {
-        // float2/float3/float4 cross as raw SIMD values; convert explicitly.
         const String vectorCxxTypeName = unwrappedParamType->typeName->ToString(/* includeNamespace */ false);
 
-        String convertFnName;
-        String carrierTypeName;
-
-        if (paramTypeMapping.typeName == "float2")
-        {
-            convertFnName = "SimdVector2ToVec2f";
-            carrierTypeName = "::Hyperion::Strata::SimdVector2";
-        }
-        else
-        {
-            convertFnName = vectorCxxTypeName == "Vec4f" ? "SimdVectorToVec4f" : "SimdVectorToVec3f";
-            carrierTypeName = "::Hyperion::Strata::SimdVector";
-        }
-
-        sigParams.PushBack(HYP_FORMAT("{} {}", carrierTypeName, paramName));
-        callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::{}({})", convertFnName, paramName));
+        sigParams.PushBack(HYP_FORMAT("const {}* {}", vectorCxxTypeName, paramName));
+        callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::LoadUnaligned({})", paramName));
     }
     else if (paramTypeMapping.isStructValue)
     {
         sigParams.PushBack(HYP_FORMAT("{}* {}", paramTypeMapping.CxxTypeName(), paramName));
-        callArgs.PushBack(paramType->isPointer ? paramName : HYP_FORMAT("*{}", paramName));
+
+        if (paramType->isPointer)
+        {
+            callArgs.PushBack(paramName);
+        }
+        else if (paramType->isLvalueReference && !(paramType->refTo && paramType->refTo->isConst))
+        {
+            callArgs.PushBack(HYP_FORMAT("*{}", paramName));
+        }
+        else
+        {
+            callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::LoadUnaligned({})", paramName));
+        }
     }
     else
     {
@@ -115,52 +119,38 @@ String FormatThunkDefinition(const String& externName, const StrataTypeMapping& 
 
     if (returnTypeMapping.isArray)
     {
-        methodOutput += HYP_FORMAT("extern \"C\" void {}({})", externName, sigParamsString);
+        methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
         methodOutput += " { const auto& hypReturnValue = ";
         methodOutput += callExpr;
         methodOutput += "; ::Hyperion::Strata::SetReturnArray(outReturn, hypReturnValue.Data(), hypReturnValue.Size()); }\n";
     }
-    else if (returnTypeMapping.isStructValue)
+    else if (returnTypeMapping.isStructValue || returnTypeMapping.isVector)
     {
-        methodOutput += HYP_FORMAT("extern \"C\" void {}({})", externName, sigParamsString);
-        methodOutput += " { *outReturn = ";
+        methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
+        methodOutput += " { ::Hyperion::Strata::StoreUnaligned(outReturn, ";
         methodOutput += callExpr;
-        methodOutput += "; }\n";
+        methodOutput += "); }\n";
     }
     else if (returnTypeMapping.isString)
     {
         // `string` returns come back through the out-param ({ptr, len} fat).
-        methodOutput += HYP_FORMAT("extern \"C\" void {}({})", externName, sigParamsString);
+        methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
         methodOutput += " { ::Hyperion::Strata::SetReturnString(outReturn, ";
         methodOutput += callExpr;
         methodOutput += "); }\n";
     }
     else if (cxxReturnType == nullptr || cxxReturnType->IsVoid())
     {
-        methodOutput += HYP_FORMAT("extern \"C\" void {}({})", externName, sigParamsString);
+        methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
         methodOutput += " { ";
         methodOutput += callExpr;
         methodOutput += "; }\n";
-    }
-    else if (returnTypeMapping.isVector)
-    {
-        // float2/float3/float4 return as raw SIMD values; convert explicitly.
-        const bool isFloat2 = returnTypeMapping.typeName == "float2";
-        const char* carrierTypeName = isFloat2 ? "::Hyperion::Strata::SimdVector2" : "::Hyperion::Strata::SimdVector";
-        const char* convertFnName = isFloat2 ? "ToSimdVector2" : "ToSimdVector";
-
-        methodOutput += HYP_FORMAT("extern \"C\" {} {}({})", carrierTypeName, externName, sigParamsString);
-        methodOutput += " { return ::Hyperion::Strata::";
-        methodOutput += convertFnName;
-        methodOutput += "(";
-        methodOutput += callExpr;
-        methodOutput += "); }\n";
     }
     else
     {
         const String returnTypeString = cxxReturnType->Format();
 
-        methodOutput += HYP_FORMAT("extern \"C\" {} {}({})", returnTypeString, externName, sigParamsString);
+        methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT {} {}({})", returnTypeString, externName, sigParamsString);
         methodOutput += " { return ";
         methodOutput += callExpr;
         methodOutput += "; }\n";
@@ -200,64 +190,15 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
         Set<String> emittedExternNames;
         String classThunks;
 
-        for (const MemberDef& member : cls.members)
+        for (const MethodThunk& thunk : CollectMethodThunks(analyzer, cls, allHandleNames))
         {
-            if (!MemberIsStrataScriptable(member))
-            {
-                continue;
-            }
-
-            if (member.type != MemberType::Method)
-            {
-                continue;
-            }
-
-            if (!member.cxxType || !member.cxxType->isFunction)
-            {
-                continue;
-            }
-
-            const ASTFunctionType* functionType = dynamic_cast<const ASTFunctionType*>(member.cxxType.Get());
-
-            if (!functionType)
-            {
-                continue;
-            }
-
-            const bool isStatic = member.cxxType->isStatic;
-
-            // C++ enums cannot declare instance members
-            if (cls.type == ClassDefinitionType::Enum && !isStatic)
-            {
-                continue;
-            }
-
-            // Predicate must match StrataModuleGenerator::EmitMethods exactly.
-            StrataTypeMapping returnTypeMapping;
-
-            if (TResult<StrataTypeMapping> res = MapToStrataType(analyzer, functionType->returnType); res.HasError())
-            {
-                continue;
-            }
-            else
-            {
-                returnTypeMapping = res.GetValue();
-            }
-
-            if ((returnTypeMapping.isHandle || returnTypeMapping.isEnum)
-                && !allHandleNames.Contains(returnTypeMapping.typeName))
-            {
-                continue;
-            }
-
-            if (functionType->parameters.Size() > 2)
-            {
-                continue;
-            }
+            const MemberDef& member = *thunk.member;
+            const ASTFunctionType* functionType = thunk.functionType;
+            const bool isStatic = thunk.isStatic;
+            const StrataTypeMapping& returnTypeMapping = thunk.returnMapping;
 
             Array<String> sigParams; // "Type name" for the thunk signature
             Array<String> callArgs;  // "name" for the forwarded call
-            bool paramsOk = true;
 
             for (size_t j = 0; j < functionType->parameters.Size(); ++j)
             {
@@ -265,32 +206,17 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
 
                 const String paramName = parameter->name.Any() ? parameter->name : HYP_FORMAT("arg{}", j);
 
-                if (TResult<StrataTypeMapping> paramRes = BuildThunkInputParam(analyzer, allHandleNames, parameter->type.Get(), paramName, sigParams, callArgs); paramRes.HasError())
-                {
-                    paramsOk = false;
-                    break;
-                }
-            }
-
-            if (!paramsOk)
-            {
-                continue;
+                (void)BuildThunkInputParam(analyzer, allHandleNames, parameter->type.Get(), paramName, sigParams, callArgs);
             }
 
             const String managedName = ResolveManagedName(member);
-            const String externName = HYP_FORMAT("{}_{}", cls.name, managedName);
-
-            if (emittedExternNames.Contains(externName))
-            {
-                continue;
-            }
+            const String& externName = thunk.symbol;
 
             emittedExternNames.Insert(externName);
 
             // Chained setters emit void-shaped; the fluent return is discarded.
-            const bool propertySetterIdiom = IsPropertySetterIdiom(cls, member);
-            const bool returnsViaOutParam = !propertySetterIdiom
-                && (returnTypeMapping.isStructValue || returnTypeMapping.isArray || returnTypeMapping.isString);
+            const bool propertySetterIdiom = thunk.propertySetterIdiom;
+            const bool returnsViaOutParam = thunk.returnsViaOutParam;
 
             // Build the signature param list: [<Class>* self, ]<params...>[, <Ret>(*) outReturn]
             Array<String> allSigParams;
@@ -320,6 +246,10 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
             {
                 // `string` is a {ptr, len} fat; the host writes it via SetReturnString.
                 allSigParams.PushBack("::Hyperion::Strata::SString* outReturn");
+            }
+            else if (returnTypeMapping.isVector && returnsViaOutParam)
+            {
+                allSigParams.PushBack(HYP_FORMAT("{}* outReturn", UnwrappedTypeName(functionType->returnType.Get())));
             }
             else if (returnsViaOutParam)
             {
@@ -388,6 +318,10 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
                     if (prop.mapping.isString)
                     {
                         getterSigParams.PushBack("::Hyperion::Strata::SString* outReturn");
+                    }
+                    else if (prop.mapping.isVector)
+                    {
+                        getterSigParams.PushBack(HYP_FORMAT("{}* outReturn", UnwrappedTypeName(prop.getterValueType)));
                     }
 
                     String getterThunk = FormatThunkDefinition(prop.getterSymbol, prop.mapping, prop.getterValueType,
