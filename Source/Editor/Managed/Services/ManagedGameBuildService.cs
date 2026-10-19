@@ -159,6 +159,7 @@ namespace Hyperion.Editor.Services
                 "--out-content=" + Path.Combine(outputDirectory, "Content"),
                 "--out-engine-content=" + Path.Combine(outputDirectory, "Content", "Engine"),
                 "--shader-target=host",
+                "--target-platform=" + (OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "mac" : "linux"),
                 "--target-config=" + Path.Combine(editorDirectory, "Config", "EngineConfig.json"),
                 "--cachedir=" + cookCacheDirectory
             };

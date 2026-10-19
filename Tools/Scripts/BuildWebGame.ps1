@@ -9,7 +9,7 @@ param(
 )
 
 # Builds a project for the browser into <project>/Binaries/Web, a folder any static host can serve as it is.
-# Intermediates go to <project>/Build/Web. Settings come from the project's PlatformSettings.Web, the arguments override.
+# Intermediates go to <project>/Build/Web. The texture limit comes from the project's packaging settings for web, the worlds from PlatformSettings.Web; the arguments override both.
 #
 #   -Run        serve Binaries/Web on localhost afterwards and open it in the browser; keeps function names in the wasm for readable stacks
 #   -ServeOnly  skip the build: serve the last one and open it in the browser
@@ -103,7 +103,6 @@ function Get-ProjectSetting([string]$key, [string]$fallback)
 
 $editWorld = [regex]::Match($projectText, "EditWorldName\s*=\s*(\S+)").Groups[1].Value
 
-if ($MaxTextureSize -le 0) { $MaxTextureSize = [int](Get-ProjectSetting "MaxTextureSize" "512") }
 if ($Worlds -eq "") { $Worlds = Get-ProjectSetting "Worlds" $editWorld }
 
 $worldList = @($Worlds -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
@@ -164,7 +163,8 @@ if ($ServeOnly)
 
 Set-Content $buildingStamp "" -Encoding ascii
 
-Write-Host "Building $name for the web: worlds $($worldList -join ', '), textures up to $MaxTextureSize"
+$textureLimit = if ($MaxTextureSize -gt 0) { "textures up to $MaxTextureSize" } else { "texture limit from the project's packaging settings" }
+Write-Host "Building $name for the web: worlds $($worldList -join ', '), $textureLimit"
 
 # 1. the toolchain
 
@@ -262,12 +262,17 @@ New-Item -ItemType Directory -Force $packageDir | Out-Null
 $emptyShaderCache = Join-Path $buildDir "NoShaderLists"
 New-Item -ItemType Directory -Force $emptyShaderCache | Out-Null
 
-$cookArguments = @("--project=$Project", "--out-cache=$packageDir\Cache", "--out-content=$packageDir\Content", "--max-texture-size=$MaxTextureSize",
+$cookArguments = @("--project=$Project", "--out-cache=$packageDir\Cache", "--out-content=$packageDir\Content", "--target-platform=web",
     "--shader-target=web", "--target-config=$webConfig", "--cachedir=$emptyShaderCache")
 
 if ($worldList.Count -gt 0)
 {
     $cookArguments += "--worlds=$($worldList -join ',')"
+}
+
+if ($MaxTextureSize -gt 0)
+{
+    $cookArguments += "--max-texture-size=$MaxTextureSize"
 }
 
 $cookLog = Join-Path $buildDir "Cook.log"

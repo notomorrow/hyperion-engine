@@ -165,6 +165,11 @@ EditorProject::EditorProject(Name name, const Handle<Game>& gameInstance)
       m_gameInstance(gameInstance)
 {
     m_actionStack = MakeHandle<EditorActionStack>(WeakHandleFromThis());
+
+    // replaced by the project file's own settings when it has them
+    m_packagingSettings = MakeHandle<PackagingSettings>();
+    m_packagingSettings->AddPlatformOverride(TargetPlatform::Web)->options.content.maxTextureSize = 512;
+    m_packagingSettings->UpdateOverriddenFields();
 }
 
 EditorProject::~EditorProject()
@@ -485,6 +490,7 @@ Result EditorProject::SaveAs(FilePath filepath)
     OnProjectSaved(MakeStrongRef(this));
 
     m_lastSavedTime = Time::Now();
+    m_hasUnsavedSettings = false;
 
     return {};
 }
@@ -511,7 +517,7 @@ bool EditorProject::IsDirty() const
         return false;
     }
 
-    return !IsSaved() || registry->HasDirtyAssets();
+    return !IsSaved() || m_hasUnsavedSettings || registry->HasDirtyAssets();
 }
 
 BakeLayer& EditorProject::GetActiveBakeLayer()
@@ -671,6 +677,12 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
     Assert(project->m_gameInstance != nullptr);
 
     project->m_gameInstance->SetAssetRegistry(registry);
+
+    // files saved before overrides recorded their fields have none listed
+    if (project->m_packagingSettings.IsValid())
+    {
+        project->m_packagingSettings->UpdateOverriddenFields();
+    }
 
     // set transient properties
     project->m_lastSavedTime = projectFilepath.LastModifiedTimestamp();

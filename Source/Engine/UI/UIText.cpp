@@ -580,9 +580,6 @@ void UIText::UpdateSize_Internal(bool updateChildren)
 
     if (extentWithBearing.y <= MathUtil::epsilonF || extentWithoutBearing.y <= MathUtil::epsilonF)
     {
-        HYP_LOG_ONCE(UI, Warning, "Text AABB has zero height, cannot update size for UIText {} (text: \"{}\")\tExtent with bearing: {}\tExtent without bearing: {}",
-                     GetName(), GetText(), extentWithBearing, extentWithoutBearing);
-
         return;
     }
 

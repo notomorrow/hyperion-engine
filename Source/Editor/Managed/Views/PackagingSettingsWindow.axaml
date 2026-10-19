@@ -1,0 +1,121 @@
+<Window
+    x:Class="Hyperion.Editor.Views.PackagingSettingsWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Hyperion.Editor.Controls;assembly=Hyperion.Editor"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:inspector="clr-namespace:Hyperion.Editor.Views.Inspector;assembly=Hyperion.Editor"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="clr-namespace:Hyperion.Editor.ViewModels;assembly=Hyperion.Editor"
+    x:CompileBindings="False"
+    x:DataType="vm:PackagingSettingsViewModel"
+    mc:Ignorable="d"
+    Title="Packaging Settings"
+    Icon="/Assets/Branding/hyperion-icon.ico"
+    Width="620"
+    Height="640"
+    MinWidth="480"
+    MinHeight="360"
+    Background="{DynamicResource Brush.Background}">
+
+    <DockPanel>
+        <Border
+            DockPanel.Dock="Bottom"
+            Padding="12,8"
+            Background="{DynamicResource Brush.Panel}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+                <Button
+                    Grid.Column="1"
+                    Click="OnCloseClick"
+                    Content="Close"
+                    ToolTip.Tip="Close (Esc)" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer Padding="0">
+            <StackPanel Margin="16,14" Spacing="14">
+                <TextBlock
+                    Classes="muted"
+                    FontSize="11.5"
+                    IsVisible="{Binding !HasProject}"
+                    Text="No project is open." />
+
+                <StackPanel IsVisible="{Binding HasProject}" Spacing="14">
+                    <TextBlock Classes="section-label" Text="Defaults" />
+
+                    <Border
+                        Padding="14,8,12,10"
+                        Background="{DynamicResource Brush.PanelRaised}"
+                        BorderBrush="{DynamicResource Brush.BorderLight}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource Radius.Medium}">
+                        <inspector:InspectorPropertyItemsControl ItemsSource="{Binding DefaultProperties}" ShowDescriptions="True" />
+                    </Border>
+
+                    <TextBlock Classes="section-label" Text="Platform Overrides" />
+
+                    <ItemsControl ItemsSource="{Binding Overrides}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PackagingPlatformOverrideViewModel">
+                                <Border
+                                    Margin="0,0,0,8"
+                                    Background="{DynamicResource Brush.PanelRaised}"
+                                    BorderBrush="{DynamicResource Brush.BorderLight}"
+                                    BorderThickness="1"
+                                    CornerRadius="{DynamicResource Radius.Medium}">
+                                    <StackPanel>
+                                        <Grid Margin="14,6,10,2" ColumnDefinitions="*,Auto">
+                                            <TextBlock
+                                                VerticalAlignment="Center"
+                                                FontWeight="SemiBold"
+                                                Text="{Binding DisplayName}" />
+                                            <Button
+                                                Grid.Column="1"
+                                                Classes="gizmo"
+                                                Command="{Binding $parent[ItemsControl].DataContext.RemoveOverrideCommand}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="Remove override">
+                                                <controls:Codicon Kind="Trash" Size="14" />
+                                            </Button>
+                                        </Grid>
+                                        <inspector:InspectorPropertyItemsControl
+                                            Margin="14,0,12,10"
+                                            ItemsSource="{Binding Properties}"
+                                            ShowDescriptions="True" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <DropDownButton
+                        Classes="gizmo"
+                        HorizontalAlignment="Left"
+                        IsEnabled="{Binding CanAddOverride}"
+                        ToolTip.Tip="Add settings for one platform">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <controls:Codicon Kind="Add" Size="14" />
+                            <TextBlock Text="Platform Override" />
+                        </StackPanel>
+                        <DropDownButton.Flyout>
+                            <Flyout Placement="Bottom">
+                                <ItemsControl ItemsSource="{Binding AvailablePlatforms}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:TargetPlatformItemViewModel">
+                                            <MenuItem
+                                                Command="{Binding $parent[ItemsControl].DataContext.AddOverrideCommand}"
+                                                CommandParameter="{Binding}"
+                                                Header="{Binding DisplayName}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Flyout>
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

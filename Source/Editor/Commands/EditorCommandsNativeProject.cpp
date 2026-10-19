@@ -372,7 +372,7 @@ bool HasNativeGameCode(const FilePath& projectFilepath)
     return (projectFilepath.BasePath() / "Source" / "Game").Exists();
 }
 
-Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir, const String& name, Name startupWorldName)
+Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir, const String& name, Name startupWorldName, const PackagingOptions& packagingOptions)
 {
     // a redistributed editor carries the C++ runtime next to it; a dev build relies on the installed one
     static const char* const s_runtimeLibraries[] = {
@@ -416,8 +416,24 @@ Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir,
         return HYP_MAKE_ERROR(Error, "Failed to write {}", configDir / "GlobalConfig.json");
     }
 
+    String args = String("--basedir=./ --startupworld=") + *startupWorldName;
+
+    if (packagingOptions.net.multiplayer)
+    {
+        if (packagingOptions.net.serverAddress.Any())
+        {
+            args += String(" --host=") + packagingOptions.net.serverAddress;
+        }
+
+        args += HYP_FORMAT(" --gameport={}", packagingOptions.net.serverPort);
+    }
+    else
+    {
+        args += " --singleplayer";
+    }
+
     const String config = String("{\n  \"App\": {\n    \"Name\": \"") + name
-        + "\",\n    \"Args\": \"--basedir=./ --singleplayer --startupworld=" + *startupWorldName
+        + "\",\n    \"Args\": \"" + args
         + "\"\n  }\n}\n";
 
     writer.Write(config.Data(), config.Size());
@@ -507,7 +523,8 @@ private:
                 outputDir,
                 projectFilepath = project->GetFilePath(),
                 binariesDir = GetNativeModulePath(project->GetFilePath()).BasePath(),
-                startupWorldName = project->GetEditWorldName()]()
+                startupWorldName = project->GetEditWorldName(),
+                packagingOptions = project->GetPackagingSettings()->Resolve(GetHostTargetPlatform())]()
             {
                 Result result;
 
@@ -520,7 +537,7 @@ private:
                 {
                     editorTaskScope->GetEditorTask()->SetDescription("Copying the game");
 
-                    result = StagePackagedGame(binariesDir, outputDir, name, startupWorldName);
+                    result = StagePackagedGame(binariesDir, outputDir, name, startupWorldName, packagingOptions);
                 }
 
                 if (result.HasError())
