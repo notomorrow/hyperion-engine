@@ -427,7 +427,7 @@ public:
 
                 ShaderInstanceRef result = CompileShaderWork(shaderName, properties, inputLayout, entry);
 
-                HYP_LOG(Shader, Info, "[ShaderTiming] {} queued {} ms, work {} ms", shaderName, uint32(queuedMs), uint32(workClock.ElapsedMs()));
+                HYP_LOG(Shader, Debug, "[ShaderTiming] {} queued {} ms, work {} ms", shaderName, uint32(queuedMs), uint32(workClock.ElapsedMs()));
 
                 return result;
             },

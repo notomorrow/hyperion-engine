@@ -87,7 +87,7 @@ namespace Hyperion
                 }
             }
 
-            Logger.Log(LogLevel.Info, "Registered {0} managed class(es) from {1} in {5} ms: {2} methods, {3} properties, {4} constructors",
+            Logger.Log(LogLevel.Debug, "Registered {0} managed class(es) from {1} in {5} ms: {2} methods, {3} properties, {4} constructors",
                 s_registrationStats.Classes,
                 assembly.GetName().Name,
                 s_registrationStats.Methods,
