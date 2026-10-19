@@ -1,0 +1,1028 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+
+namespace Hyperion.Generators
+{
+    [Generator(LanguageNames.CSharp)]
+    public sealed class HypTypeRegistryGenerator : IIncrementalGenerator
+    {
+        public const int RegistryVersion = 1;
+
+        private static readonly DiagnosticDescriptor UnsafeDisabledDescriptor = new DiagnosticDescriptor(
+            "HYPGEN001",
+            "Type registry not generated",
+            "Hyperion type registry not generated for {0}: AllowUnsafeBlocks must be enabled. Calls from the engine will use reflection, which NativeAOT does not support.",
+            "Hyperion",
+            DiagnosticSeverity.Warning,
+            isEnabledByDefault: true);
+
+        public void Initialize(IncrementalGeneratorInitializationContext context)
+        {
+            context.RegisterSourceOutput(context.CompilationProvider, static (sourceContext, compilation) => Execute(sourceContext, compilation));
+        }
+
+        private static void Execute(SourceProductionContext context, Compilation compilation)
+        {
+            if (compilation.GetTypeByMetadataName("Hyperion.HypTypeRegistryAttribute`1") == null)
+            {
+                return;
+            }
+
+            if (compilation is CSharpCompilation csharpCompilation && !csharpCompilation.Options.AllowUnsafe)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(UnsafeDisabledDescriptor, Location.None, compilation.AssemblyName));
+
+                return;
+            }
+
+            RegistryEmitter emitter = new RegistryEmitter(compilation);
+
+            foreach (INamedTypeSymbol type in EnumerateExportedTypes(compilation.Assembly.GlobalNamespace))
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+
+                emitter.AddType(type);
+            }
+
+            context.AddSource("HypTypeRegistry.g.cs", emitter.Build());
+        }
+
+        private static IEnumerable<INamedTypeSymbol> EnumerateExportedTypes(INamespaceSymbol ns)
+        {
+            foreach (INamespaceOrTypeSymbol member in ns.GetMembers())
+            {
+                if (member is INamespaceSymbol childNamespace)
+                {
+                    foreach (INamedTypeSymbol type in EnumerateExportedTypes(childNamespace))
+                    {
+                        yield return type;
+                    }
+                }
+                else if (member is INamedTypeSymbol type)
+                {
+                    foreach (INamedTypeSymbol exported in EnumerateExportedTypes(type))
+                    {
+                        yield return exported;
+                    }
+                }
+            }
+        }
+
+        private static IEnumerable<INamedTypeSymbol> EnumerateExportedTypes(INamedTypeSymbol type)
+        {
+            if (type.DeclaredAccessibility != Accessibility.Public)
+            {
+                yield break;
+            }
+
+            yield return type;
+
+            foreach (INamedTypeSymbol nested in type.GetTypeMembers())
+            {
+                foreach (INamedTypeSymbol exported in EnumerateExportedTypes(nested))
+                {
+                    yield return exported;
+                }
+            }
+        }
+    }
+
+    internal sealed class RegistryEmitter
+    {
+        private const string BoxedValuePtr = "global::Hyperion.BoxedValueInternal*";
+        private const string Helpers = "global::Hyperion.HypThunkHelpers";
+        private const string ThunkSignature = "delegate*<object, global::Hyperion.BoxedValueInternal**, global::Hyperion.BoxedValueInternal*, void>";
+
+        private readonly Compilation _compilation;
+        private readonly INamedTypeSymbol? _objectBaseType;
+        private readonly INamedTypeSymbol? _conditionalAttributeType;
+        private readonly INamedTypeSymbol? _obsoleteAttributeType;
+        private readonly INamedTypeSymbol? _unmanagedCallersOnlyAttributeType;
+        private readonly INamedTypeSymbol? _experimentalAttributeType;
+
+        private readonly StringBuilder _members = new StringBuilder();
+        private readonly StringBuilder _register = new StringBuilder();
+        private readonly List<string> _skipped = new List<string>();
+
+        private int _typeIndex;
+
+        public RegistryEmitter(Compilation compilation)
+        {
+            _compilation = compilation;
+            _objectBaseType = compilation.GetTypeByMetadataName("Hyperion.ObjectBase");
+            _conditionalAttributeType = compilation.GetTypeByMetadataName("System.Diagnostics.ConditionalAttribute");
+            _obsoleteAttributeType = compilation.GetTypeByMetadataName("System.ObsoleteAttribute");
+            _unmanagedCallersOnlyAttributeType = compilation.GetTypeByMetadataName("System.Runtime.InteropServices.UnmanagedCallersOnlyAttribute");
+            _experimentalAttributeType = compilation.GetTypeByMetadataName("System.Diagnostics.CodeAnalysis.ExperimentalAttribute");
+        }
+
+        public void AddType(INamedTypeSymbol type)
+        {
+            if (IsGenericContext(type) || IsUnusable(type))
+            {
+                return;
+            }
+
+            if (type.TypeKind == TypeKind.Enum || (type.TypeKind == TypeKind.Struct && type.IsRefLikeType))
+            {
+                string sizeName = "Z" + _typeIndex++;
+
+                _members.Append("        private static int ").Append(sizeName).AppendLine("()");
+                _members.AppendLine("        {");
+                _members.Append("            return global::System.Runtime.CompilerServices.Unsafe.SizeOf<").Append(Format(type)).AppendLine(">();");
+                _members.AppendLine("        }");
+                _members.AppendLine();
+
+                _register.Append("            builder.Add(typeof(").Append(Format(type)).Append("), global::System.Array.Empty<global::Hyperion.HypMethodThunk>(), global::System.Array.Empty<global::Hyperion.HypPropertyThunk>(), null, null, &")
+                    .Append(sizeName).AppendLine(", null);");
+
+                return;
+            }
+
+            if (type.TypeKind != TypeKind.Class && type.TypeKind != TypeKind.Struct)
+            {
+                return;
+            }
+
+            int typeIndex = _typeIndex++;
+            string typeName = Format(type);
+
+            List<string> methodEntries = new List<string>();
+            List<string> propertyEntries = new List<string>();
+            HashSet<string> methodNames = new HashSet<string>();
+            HashSet<string> propertyNames = new HashSet<string>();
+
+            int memberIndex = 0;
+
+            foreach (ISymbol member in type.GetMembers())
+            {
+                if (member.IsImplicitlyDeclared)
+                {
+                    continue;
+                }
+
+                if (member is IMethodSymbol method && method.MethodKind == MethodKind.Ordinary)
+                {
+                    if (!methodNames.Add(method.Name))
+                    {
+                        continue;
+                    }
+
+                    string? reason = EmitMethod(type, typeName, method, typeIndex, memberIndex++, methodEntries);
+
+                    if (reason != null)
+                    {
+                        _skipped.Add(type.Name + "." + method.Name + ": " + reason);
+                    }
+                }
+                else if (member is IPropertySymbol property && !property.IsIndexer && property.ExplicitInterfaceImplementations.Length == 0)
+                {
+                    if (!propertyNames.Add(property.Name))
+                    {
+                        continue;
+                    }
+
+                    string? reason = EmitProperty(type, typeName, property, typeIndex, memberIndex++, propertyEntries);
+
+                    if (reason != null)
+                    {
+                        _skipped.Add(type.Name + "." + property.Name + ": " + reason);
+                    }
+                }
+            }
+
+            string newObject = EmitNewObject(type, typeName, typeIndex) ?? "null";
+            string marshalObject = EmitMarshalObject(type, typeName, typeIndex) ?? "null";
+
+            _register.Append("            builder.Add(typeof(").Append(typeName).AppendLine("),");
+            AppendArray(_register, "global::Hyperion.HypMethodThunk", methodEntries);
+            _register.AppendLine(",");
+            AppendArray(_register, "global::Hyperion.HypPropertyThunk", propertyEntries);
+            _register.AppendLine(",");
+            _register.Append("                ").Append(newObject).AppendLine(",");
+            _register.Append("                ").Append(marshalObject).AppendLine(",");
+            _register.Append("                ").Append(EmitNativeSize(type, typeName, typeIndex) ?? "null").AppendLine(",");
+            _register.Append("                ").Append(EmitMarshalOut(type, typeName, typeIndex) ?? "null").AppendLine(");");
+
+            if (type.TypeKind == TypeKind.Struct && type.IsUnmanagedType)
+            {
+                string? reason = EmitStructLayout(type, typeName, typeIndex);
+
+                if (reason != null)
+                {
+                    _skipped.Add(type.Name + " layout: " + reason);
+                }
+            }
+        }
+
+        private string? EmitStructLayout(INamedTypeSymbol type, string typeName, int typeIndex)
+        {
+            List<IFieldSymbol> fields = type.GetMembers().OfType<IFieldSymbol>().Where(field => !field.IsStatic && !field.IsConst).ToList();
+
+            foreach (IFieldSymbol field in fields)
+            {
+                if (field.IsFixedSizeBuffer)
+                {
+                    return "fixed size buffer " + field.Name;
+                }
+
+                if (!IsNameable(field.Type))
+                {
+                    return "field type " + field.Type.ToDisplayString();
+                }
+            }
+
+            const string UnsafeType = "global::System.Runtime.CompilerServices.Unsafe";
+
+            List<string> fieldEntries = new List<string>();
+
+            for (int fieldIndex = 0; fieldIndex < fields.Count; fieldIndex++)
+            {
+                IFieldSymbol field = fields[fieldIndex];
+
+                string fieldType = Format(field.Type);
+                ITypeSymbol storageType = field.Type is INamedTypeSymbol { TypeKind: TypeKind.Enum, EnumUnderlyingType: { } underlyingType } ? underlyingType : field.Type;
+                string storageTypeName = Format(storageType);
+
+                string fieldRef;
+
+                if (IsAccessible(field.DeclaredAccessibility) && !field.IsImplicitlyDeclared)
+                {
+                    fieldRef = UnsafeType + ".AsRef(in __s." + EscapeIdentifier(field.Name) + ")";
+                }
+                else
+                {
+                    string accessorName = "LA" + typeIndex + "_" + fieldIndex;
+
+                    _members.Append("        [global::System.Runtime.CompilerServices.UnsafeAccessor(global::System.Runtime.CompilerServices.UnsafeAccessorKind.Field, Name = ")
+                        .Append(Literal(field.Name)).AppendLine(")]");
+                    _members.Append("        private static extern ref ").Append(fieldType).Append(' ').Append(accessorName).Append("(ref ").Append(typeName).AppendLine(" __target);");
+                    _members.AppendLine();
+
+                    fieldRef = accessorName + "(ref __s)";
+                }
+
+                bool isNotSerialized = field.GetAttributes().Any(attribute => attribute.AttributeClass?.ToDisplayString() == "System.NonSerializedAttribute");
+                bool isPublic = field.DeclaredAccessibility == Accessibility.Public && !field.IsImplicitlyDeclared;
+
+                fieldEntries.Add("new global::Hyperion.HypFieldLayout(" + Literal(field.Name) + ", typeof(" + storageTypeName + "), "
+                    + "(int)" + UnsafeType + ".ByteOffset(ref " + UnsafeType + ".As<" + typeName + ", byte>(ref __s), ref " + UnsafeType + ".As<" + fieldType + ", byte>(ref " + fieldRef + ")), "
+                    + UnsafeType + ".SizeOf<" + storageTypeName + ">(), "
+                    + (isPublic ? "true" : "false") + ", "
+                    + (isNotSerialized ? "true" : "false") + ", "
+                    + "(object)default(" + storageTypeName + "))");
+            }
+
+            string readerName = "LR" + typeIndex;
+            string writerName = "LW" + typeIndex;
+            string defaultName = "LD" + typeIndex;
+            string fieldsName = "LF" + typeIndex;
+
+            _members.Append("        private static object ").Append(readerName).AppendLine("(global::System.IntPtr __ptr)");
+            _members.AppendLine("        {");
+            _members.Append("            return ").Append(UnsafeType).Append(".Read<").Append(typeName).AppendLine(">((void*)__ptr);");
+            _members.AppendLine("        }");
+            _members.AppendLine();
+            _members.Append("        private static void ").Append(writerName).AppendLine("(object __value, global::System.IntPtr __ptr)");
+            _members.AppendLine("        {");
+            _members.Append("            ").Append(UnsafeType).Append(".Write<").Append(typeName).Append(">((void*)__ptr, (").Append(typeName).AppendLine(")__value);");
+            _members.AppendLine("        }");
+            _members.AppendLine();
+            _members.Append("        private static object ").Append(defaultName).AppendLine("()");
+            _members.AppendLine("        {");
+            _members.Append("            return new ").Append(typeName).AppendLine("();");
+            _members.AppendLine("        }");
+            _members.AppendLine();
+            _members.Append("        private static global::Hyperion.HypFieldLayout[] ").Append(fieldsName).AppendLine("()");
+            _members.AppendLine("        {");
+            _members.Append("            ").Append(typeName).AppendLine(" __s = default;");
+            _members.AppendLine();
+            _members.AppendLine("            return new global::Hyperion.HypFieldLayout[]");
+            _members.AppendLine("            {");
+
+            foreach (string fieldEntry in fieldEntries)
+            {
+                _members.Append("                ").Append(fieldEntry).AppendLine(",");
+            }
+
+            _members.AppendLine("            };");
+            _members.AppendLine("        }");
+            _members.AppendLine();
+
+            _register.Append("            builder.AddStructLayout(typeof(").Append(typeName).Append("), ").Append(UnsafeType).Append(".SizeOf<").Append(typeName).Append(">(), &")
+                .Append(readerName).Append(", &").Append(writerName).Append(", &").Append(defaultName).Append(", &").Append(fieldsName).AppendLine(");");
+
+            return null;
+        }
+
+        public string Build()
+        {
+            string className = "HypTypeRegistry_" + Sanitize(_compilation.AssemblyName ?? "Assembly");
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("// <auto-generated/>");
+            sb.AppendLine("#nullable disable");
+            sb.AppendLine("#pragma warning disable");
+            sb.AppendLine();
+
+            foreach (string skipped in _skipped)
+            {
+                sb.Append("// skipped ").AppendLine(skipped.Replace("\r", " ").Replace("\n", " "));
+            }
+
+            sb.AppendLine();
+            sb.Append("[assembly: global::Hyperion.HypTypeRegistryAttribute<global::Hyperion.Generated.").Append(className).Append(">(").Append(HypTypeRegistryGenerator.RegistryVersion).AppendLine(")]");
+            sb.AppendLine();
+            sb.AppendLine("namespace Hyperion.Generated");
+            sb.AppendLine("{");
+            sb.Append("    internal sealed unsafe class ").Append(className).AppendLine(" : global::Hyperion.IHypTypeRegistry");
+            sb.AppendLine("    {");
+            sb.AppendLine("        public static void Register(global::Hyperion.HypTypeRegistryBuilder builder)");
+            sb.AppendLine("        {");
+            sb.Append(_register);
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.Append(_members);
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
+
+            return sb.ToString();
+        }
+
+        private string? EmitMethod(INamedTypeSymbol type, string typeName, IMethodSymbol method, int typeIndex, int memberIndex, List<string> entries)
+        {
+            if (method.IsGenericMethod)
+            {
+                return "generic method";
+            }
+
+            if (method.IsExtern)
+            {
+                return "extern";
+            }
+
+            if (method.ReturnsByRef || method.ReturnsByRefReadonly)
+            {
+                return "returns by reference";
+            }
+
+            if (IsUnusable(method) || HasAttribute(method, _conditionalAttributeType) || HasAttribute(method, _unmanagedCallersOnlyAttributeType))
+            {
+                return "not callable from generated code";
+            }
+
+            if (!method.ReturnsVoid && !IsNameable(method.ReturnType))
+            {
+                return "return type " + method.ReturnType.ToDisplayString();
+            }
+
+            foreach (IParameterSymbol parameter in method.Parameters)
+            {
+                if (parameter.RefKind != RefKind.None)
+                {
+                    return "by-reference parameter " + parameter.Name;
+                }
+
+                if (parameter.IsParams && (parameter.Type is not IArrayTypeSymbol paramsArrayType || !IsNameable(paramsArrayType.ElementType)))
+                {
+                    return "params parameter " + parameter.Name;
+                }
+
+                if (!IsNameable(parameter.Type))
+                {
+                    return "parameter type " + parameter.Type.ToDisplayString();
+                }
+            }
+
+            bool accessible = IsAccessible(method.DeclaredAccessibility);
+
+            if (!accessible && (type.TypeKind != TypeKind.Class || type.IsStatic))
+            {
+                return type.IsStatic ? "inaccessible member of a static class" : "inaccessible member of a struct";
+            }
+
+            string thunkName = "M" + typeIndex + "_" + memberIndex;
+            string accessorName = "A" + typeIndex + "_" + memberIndex;
+
+            string arguments = string.Join(", ", method.Parameters.Select((parameter, index) => parameter.IsParams
+                ? Helpers + ".ParamsArg<" + Format(((IArrayTypeSymbol)parameter.Type).ElementType) + ">(__args, " + index + ")"
+                : Helpers + ".Arg<" + Format(parameter.Type) + ">(__args, " + index + ")"));
+
+            string call;
+
+            if (accessible)
+            {
+                call = Receiver(type, typeName, method.IsStatic) + "." + EscapeIdentifier(method.Name) + "(" + arguments + ")";
+            }
+            else
+            {
+                List<string> accessorParameters = new List<string> { typeName + " __target" };
+                accessorParameters.AddRange(method.Parameters.Select((parameter, index) => Format(parameter.Type) + " __a" + index));
+
+                _members.Append("        [global::System.Runtime.CompilerServices.UnsafeAccessor(global::System.Runtime.CompilerServices.UnsafeAccessorKind.")
+                    .Append(method.IsStatic ? "StaticMethod" : "Method")
+                    .Append(", Name = ").Append(Literal(method.Name)).AppendLine(")]");
+                _members.Append("        private static extern ").Append(method.ReturnsVoid ? "void" : Format(method.ReturnType)).Append(' ').Append(accessorName)
+                    .Append('(').Append(string.Join(", ", accessorParameters)).AppendLine(");");
+                _members.AppendLine();
+
+                string target = method.IsStatic ? "null" : "(" + typeName + ")__self";
+                call = accessorName + "(" + (method.Parameters.Length == 0 ? target : target + ", " + arguments) + ")";
+            }
+
+            _members.Append("        private static void ").Append(thunkName).Append("(object __self, global::Hyperion.BoxedValueInternal** __args, ").Append(BoxedValuePtr).AppendLine(" __ret)");
+            _members.AppendLine("        {");
+
+            int requiredArgCount = method.Parameters.Count(parameter => !parameter.IsParams);
+
+            if (requiredArgCount != 0)
+            {
+                _members.Append("            ").Append(Helpers).Append(".CheckArgCount(__args, ").Append(requiredArgCount).AppendLine(");");
+            }
+
+            if (method.ReturnsVoid)
+            {
+                _members.Append("            ").Append(call).AppendLine(";");
+            }
+            else
+            {
+                _members.Append("            ").Append(Helpers).Append(".Return<").Append(Format(method.ReturnType)).Append(">(__ret, ").Append(call).AppendLine(");");
+            }
+
+            _members.AppendLine("        }");
+            _members.AppendLine();
+
+            entries.Add("new global::Hyperion.HypMethodThunk(" + Literal(method.Name) + ", &" + thunkName + ", " + Attributes(method) + ")");
+
+            return null;
+        }
+
+        private string? EmitProperty(INamedTypeSymbol type, string typeName, IPropertySymbol property, int typeIndex, int memberIndex, List<string> entries)
+        {
+            if (property.ReturnsByRef || property.ReturnsByRefReadonly)
+            {
+                return "returns by reference";
+            }
+
+            if (IsUnusable(property))
+            {
+                return "not usable from generated code";
+            }
+
+            if (!IsNameable(property.Type))
+            {
+                return "property type " + property.Type.ToDisplayString();
+            }
+
+            string propertyType = Format(property.Type);
+            string getter = "null";
+            string setter = "null";
+
+            if (property.GetMethod != null)
+            {
+                bool accessible = IsAccessible(property.GetMethod.DeclaredAccessibility);
+
+                if (accessible || (type.TypeKind == TypeKind.Class && !type.IsStatic))
+                {
+                    string thunkName = "G" + typeIndex + "_" + memberIndex;
+                    string value;
+
+                    if (accessible)
+                    {
+                        value = Receiver(type, typeName, property.IsStatic) + "." + EscapeIdentifier(property.Name);
+                    }
+                    else
+                    {
+                        string accessorName = "AG" + typeIndex + "_" + memberIndex;
+
+                        _members.Append("        [global::System.Runtime.CompilerServices.UnsafeAccessor(global::System.Runtime.CompilerServices.UnsafeAccessorKind.")
+                            .Append(property.IsStatic ? "StaticMethod" : "Method")
+                            .Append(", Name = ").Append(Literal(property.GetMethod.Name)).AppendLine(")]");
+                        _members.Append("        private static extern ").Append(propertyType).Append(' ').Append(accessorName).Append('(').Append(typeName).AppendLine(" __target);");
+                        _members.AppendLine();
+
+                        value = accessorName + "(" + (property.IsStatic ? "null" : "(" + typeName + ")__self") + ")";
+                    }
+
+                    _members.Append("        private static void ").Append(thunkName).Append("(object __self, global::Hyperion.BoxedValueInternal** __args, ").Append(BoxedValuePtr).AppendLine(" __ret)");
+                    _members.AppendLine("        {");
+                    _members.Append("            ").Append(Helpers).Append(".Return<").Append(propertyType).Append(">(__ret, ").Append(value).AppendLine(");");
+                    _members.AppendLine("        }");
+                    _members.AppendLine();
+
+                    getter = "&" + thunkName;
+                }
+            }
+
+            if (property.SetMethod != null)
+            {
+                bool accessible = IsAccessible(property.SetMethod.DeclaredAccessibility) && !property.SetMethod.IsInitOnly;
+
+                if (accessible || (type.TypeKind == TypeKind.Class && !type.IsStatic))
+                {
+                    string thunkName = "S" + typeIndex + "_" + memberIndex;
+                    string argument = Helpers + ".Arg<" + propertyType + ">(__args, 0)";
+                    string statement;
+
+                    if (accessible)
+                    {
+                        statement = Receiver(type, typeName, property.IsStatic) + "." + EscapeIdentifier(property.Name) + " = " + argument;
+                    }
+                    else
+                    {
+                        string accessorName = "AS" + typeIndex + "_" + memberIndex;
+
+                        _members.Append("        [global::System.Runtime.CompilerServices.UnsafeAccessor(global::System.Runtime.CompilerServices.UnsafeAccessorKind.")
+                            .Append(property.IsStatic ? "StaticMethod" : "Method")
+                            .Append(", Name = ").Append(Literal(property.SetMethod.Name)).AppendLine(")]");
+                        _members.Append("        private static extern void ").Append(accessorName).Append('(').Append(typeName).Append(" __target, ").Append(propertyType).AppendLine(" __value);");
+                        _members.AppendLine();
+
+                        statement = accessorName + "(" + (property.IsStatic ? "null" : "(" + typeName + ")__self") + ", " + argument + ")";
+                    }
+
+                    _members.Append("        private static void ").Append(thunkName).Append("(object __self, global::Hyperion.BoxedValueInternal** __args, ").Append(BoxedValuePtr).AppendLine(" __ret)");
+                    _members.AppendLine("        {");
+                    _members.Append("            ").Append(statement).AppendLine(";");
+                    _members.AppendLine("        }");
+                    _members.AppendLine();
+
+                    setter = "&" + thunkName;
+                }
+            }
+
+            if (getter == "null" && setter == "null")
+            {
+                return "no usable accessor";
+            }
+
+            entries.Add("new global::Hyperion.HypPropertyThunk(" + Literal(property.Name) + ", " + getter + ", " + setter + ", " + Attributes(property) + ")");
+
+            return null;
+        }
+
+        private string? EmitNewObject(INamedTypeSymbol type, string typeName, int typeIndex)
+        {
+            if (type.TypeKind != TypeKind.Class || type.IsAbstract || type.IsStatic)
+            {
+                return null;
+            }
+
+            IMethodSymbol? constructor = type.InstanceConstructors.FirstOrDefault(c => c.Parameters.Length == 0 && c.DeclaredAccessibility == Accessibility.Public);
+
+            if (constructor == null || IsUnusable(constructor))
+            {
+                return null;
+            }
+
+            bool isObjectBase = _objectBaseType != null && DerivesFrom(type, _objectBaseType);
+
+            string thunkName = "N" + typeIndex;
+            string ctorName = "C" + typeIndex;
+
+            _members.Append("        [global::System.Runtime.CompilerServices.UnsafeAccessor(global::System.Runtime.CompilerServices.UnsafeAccessorKind.Method, Name = \".ctor\")]");
+            _members.AppendLine();
+            _members.Append("        private static extern void ").Append(ctorName).Append('(').Append(typeName).AppendLine(" __target);");
+            _members.AppendLine();
+            _members.Append("        private static object ").Append(thunkName).AppendLine("(global::System.IntPtr __pClass, global::System.IntPtr __nativeAddress)");
+            _members.AppendLine("        {");
+            _members.Append("            ").Append(typeName).Append(" __obj = (").Append(typeName).Append(")global::System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(").Append(typeName).AppendLine("));");
+            _members.AppendLine();
+            _members.AppendLine("            if (__pClass != global::System.IntPtr.Zero)");
+            _members.AppendLine("            {");
+
+            if (isObjectBase)
+            {
+                _members.AppendLine("                if (__nativeAddress == global::System.IntPtr.Zero)");
+                _members.AppendLine("                    throw new global::System.ArgumentNullException(\"nativeAddress\");");
+                _members.AppendLine();
+                _members.AppendLine("                ((global::Hyperion.ObjectBase)__obj)._classPtr = __pClass;");
+                _members.AppendLine("                ((global::Hyperion.ObjectBase)__obj)._nativeAddress = __nativeAddress;");
+            }
+            else
+            {
+                _members.Append("                throw new global::System.InvalidOperationException(\"Could not find classPtr or nativeAddress field on class ").Append(type.Name).AppendLine("\");");
+            }
+
+            _members.AppendLine("            }");
+            _members.AppendLine();
+
+            if (isObjectBase)
+            {
+                _members.AppendLine("            try");
+                _members.AppendLine("            {");
+                _members.Append("                ").Append(ctorName).AppendLine("(__obj);");
+                _members.AppendLine("            }");
+                _members.AppendLine("            catch");
+                _members.AppendLine("            {");
+                _members.AppendLine("                ((global::Hyperion.ObjectBase)__obj)._classPtr = global::System.IntPtr.Zero;");
+                _members.AppendLine("                ((global::Hyperion.ObjectBase)__obj)._nativeAddress = global::System.IntPtr.Zero;");
+                _members.AppendLine("                throw;");
+                _members.AppendLine("            }");
+            }
+            else
+            {
+                _members.Append("            ").Append(ctorName).AppendLine("(__obj);");
+            }
+
+            _members.AppendLine();
+            _members.AppendLine("            return __obj;");
+            _members.AppendLine("        }");
+            _members.AppendLine();
+
+            return "&" + thunkName;
+        }
+
+        private string? EmitMarshalObject(INamedTypeSymbol type, string typeName, int typeIndex)
+        {
+            if (type.TypeKind != TypeKind.Struct)
+            {
+                return null;
+            }
+
+            string thunkName = "P" + typeIndex;
+
+            _members.Append("        private static object ").Append(thunkName).AppendLine("(global::System.IntPtr __ptr)");
+            _members.AppendLine("        {");
+            _members.Append("            return global::System.Runtime.InteropServices.Marshal.PtrToStructure<").Append(typeName).AppendLine(">(__ptr);");
+            _members.AppendLine("        }");
+            _members.AppendLine();
+
+            return "&" + thunkName;
+        }
+
+        private string? EmitNativeSize(INamedTypeSymbol type, string typeName, int typeIndex)
+        {
+            if (type.TypeKind != TypeKind.Struct)
+            {
+                return null;
+            }
+
+            string thunkName = "Z" + typeIndex;
+
+            _members.Append("        private static int ").Append(thunkName).AppendLine("()");
+            _members.AppendLine("        {");
+            _members.Append("            return global::System.Runtime.InteropServices.Marshal.SizeOf<").Append(typeName).AppendLine(">();");
+            _members.AppendLine("        }");
+            _members.AppendLine();
+
+            return "&" + thunkName;
+        }
+
+        private string? EmitMarshalOut(INamedTypeSymbol type, string typeName, int typeIndex)
+        {
+            if (type.TypeKind != TypeKind.Struct)
+            {
+                return null;
+            }
+
+            string thunkName = "O" + typeIndex;
+
+            _members.Append("        private static void ").Append(thunkName).AppendLine("(object __value, global::System.IntPtr __ptr)");
+            _members.AppendLine("        {");
+            _members.Append("            global::System.Runtime.InteropServices.Marshal.StructureToPtr<").Append(typeName).Append(">((").Append(typeName).AppendLine(")__value, __ptr, false);");
+            _members.AppendLine("        }");
+            _members.AppendLine();
+
+            return "&" + thunkName;
+        }
+
+        private static string Receiver(INamedTypeSymbol type, string typeName, bool isStatic)
+        {
+            if (isStatic)
+            {
+                return typeName;
+            }
+
+            if (type.TypeKind == TypeKind.Struct)
+            {
+                return "global::System.Runtime.CompilerServices.Unsafe.Unbox<" + typeName + ">(__self)";
+            }
+
+            return "((" + typeName + ")__self)";
+        }
+
+        private string Attributes(ISymbol symbol)
+        {
+            List<string> attributes = new List<string>();
+
+            foreach (AttributeData attribute in symbol.GetAttributes())
+            {
+                string? expression = FormatAttribute(attribute);
+
+                if (expression != null)
+                {
+                    attributes.Add(expression);
+                }
+            }
+
+            if (attributes.Count == 0)
+            {
+                return "null";
+            }
+
+            return "new global::System.Attribute[] { " + string.Join(", ", attributes) + " }";
+        }
+
+        private string? FormatAttribute(AttributeData attribute)
+        {
+            INamedTypeSymbol? attributeClass = attribute.AttributeClass;
+            IMethodSymbol? constructor = attribute.AttributeConstructor;
+
+            if (attributeClass == null || constructor == null || attributeClass.TypeKind == TypeKind.Error)
+            {
+                return null;
+            }
+
+            if (!IsNameable(attributeClass) || !IsAccessible(constructor.DeclaredAccessibility) || attributeClass.IsAbstract)
+            {
+                return null;
+            }
+
+            if (HasAttribute(attributeClass, _conditionalAttributeType) || IsUnusable(attributeClass))
+            {
+                return null;
+            }
+
+            List<string> arguments = new List<string>();
+
+            foreach (TypedConstant argument in attribute.ConstructorArguments)
+            {
+                string? value = FormatConstant(argument);
+
+                if (value == null)
+                {
+                    return null;
+                }
+
+                arguments.Add(value);
+            }
+
+            List<string> namedArguments = new List<string>();
+
+            foreach (KeyValuePair<string, TypedConstant> namedArgument in attribute.NamedArguments)
+            {
+                string? value = FormatConstant(namedArgument.Value);
+
+                if (value == null)
+                {
+                    return null;
+                }
+
+                namedArguments.Add(EscapeIdentifier(namedArgument.Key) + " = " + value);
+            }
+
+            string expression = "new " + Format(attributeClass) + "(" + string.Join(", ", arguments) + ")";
+
+            if (namedArguments.Count != 0)
+            {
+                expression += " { " + string.Join(", ", namedArguments) + " }";
+            }
+
+            return expression;
+        }
+
+        private string? FormatConstant(TypedConstant constant)
+        {
+            switch (constant.Kind)
+            {
+            case TypedConstantKind.Array:
+                if (constant.IsNull)
+                {
+                    return "null";
+                }
+
+                if (!(constant.Type is IArrayTypeSymbol arrayType) || !IsNameable(arrayType.ElementType))
+                {
+                    return null;
+                }
+
+                List<string> elements = new List<string>();
+
+                foreach (TypedConstant element in constant.Values)
+                {
+                    string? value = FormatConstant(element);
+
+                    if (value == null)
+                    {
+                        return null;
+                    }
+
+                    elements.Add(value);
+                }
+
+                return "new " + Format(arrayType.ElementType) + "[] { " + string.Join(", ", elements) + " }";
+            case TypedConstantKind.Type:
+                if (constant.IsNull)
+                {
+                    return "null";
+                }
+
+                return constant.Value is ITypeSymbol typeValue && IsNameable(typeValue) ? "typeof(" + Format(typeValue) + ")" : null;
+            case TypedConstantKind.Enum:
+                if (constant.Type == null || !IsNameable(constant.Type))
+                {
+                    return null;
+                }
+
+                return "(" + Format(constant.Type) + ")(" + FormatPrimitive(constant.Value) + ")";
+            case TypedConstantKind.Primitive:
+                if (constant.IsNull)
+                {
+                    return "null";
+                }
+
+                if (constant.Type == null)
+                {
+                    return null;
+                }
+
+                if (constant.Value is string || constant.Value is bool || constant.Value is char)
+                {
+                    return FormatPrimitive(constant.Value);
+                }
+
+                return "(" + Format(constant.Type) + ")(" + FormatPrimitive(constant.Value) + ")";
+            default:
+                return null;
+            }
+        }
+
+        private static string FormatPrimitive(object? value)
+        {
+            switch (value)
+            {
+            case null:
+                return "null";
+            case float f:
+                return float.IsNaN(f) ? "float.NaN" : float.IsPositiveInfinity(f) ? "float.PositiveInfinity" : float.IsNegativeInfinity(f) ? "float.NegativeInfinity" : f.ToString("R", CultureInfo.InvariantCulture) + "f";
+            case double d:
+                return double.IsNaN(d) ? "double.NaN" : double.IsPositiveInfinity(d) ? "double.PositiveInfinity" : double.IsNegativeInfinity(d) ? "double.NegativeInfinity" : d.ToString("R", CultureInfo.InvariantCulture) + "d";
+            default:
+                return SymbolDisplay.FormatPrimitive(value, quoteStrings: true, useHexadecimalNumbers: false);
+            }
+        }
+
+        private bool IsNameable(ITypeSymbol type)
+        {
+            switch (type)
+            {
+            case IArrayTypeSymbol arrayType:
+                return IsNameable(arrayType.ElementType);
+            case INamedTypeSymbol namedType:
+                if (namedType.TypeKind == TypeKind.Error || namedType.IsRefLikeType)
+                {
+                    return false;
+                }
+
+                for (INamedTypeSymbol? current = namedType; current != null; current = current.ContainingType)
+                {
+                    if (!IsTypeAccessible(current))
+                    {
+                        return false;
+                    }
+                }
+
+                foreach (ITypeSymbol typeArgument in namedType.TypeArguments)
+                {
+                    if (!IsNameable(typeArgument))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            case IDynamicTypeSymbol _:
+                return true;
+            default:
+                return false;
+            }
+        }
+
+        private bool IsTypeAccessible(INamedTypeSymbol type)
+        {
+            switch (type.DeclaredAccessibility)
+            {
+            case Accessibility.Public:
+                return true;
+            case Accessibility.Internal:
+            case Accessibility.ProtectedOrInternal:
+                return SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, _compilation.Assembly);
+            default:
+                return false;
+            }
+        }
+
+        private static bool IsAccessible(Accessibility accessibility)
+        {
+            return accessibility == Accessibility.Public || accessibility == Accessibility.Internal || accessibility == Accessibility.ProtectedOrInternal;
+        }
+
+        private static bool IsGenericContext(INamedTypeSymbol type)
+        {
+            for (INamedTypeSymbol? current = type; current != null; current = current.ContainingType)
+            {
+                if (current.IsGenericType)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsUnusable(ISymbol symbol)
+        {
+            foreach (AttributeData attribute in symbol.GetAttributes())
+            {
+                if (_experimentalAttributeType != null && SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _experimentalAttributeType))
+                {
+                    return true;
+                }
+
+                if (_obsoleteAttributeType != null && SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _obsoleteAttributeType)
+                    && attribute.ConstructorArguments.Length >= 2 && attribute.ConstructorArguments[1].Value is bool isError && isError)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasAttribute(ISymbol symbol, INamedTypeSymbol? attributeType)
+        {
+            if (attributeType == null)
+            {
+                return false;
+            }
+
+            return symbol.GetAttributes().Any(attribute => SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, attributeType));
+        }
+
+        private static bool DerivesFrom(INamedTypeSymbol type, INamedTypeSymbol baseType)
+        {
+            for (INamedTypeSymbol? current = type; current != null; current = current.BaseType)
+            {
+                if (SymbolEqualityComparer.Default.Equals(current, baseType))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void AppendArray(StringBuilder sb, string elementType, List<string> elements)
+        {
+            if (elements.Count == 0)
+            {
+                sb.Append("                global::System.Array.Empty<").Append(elementType).Append(">()");
+
+                return;
+            }
+
+            sb.Append("                new ").Append(elementType).AppendLine("[]");
+            sb.AppendLine("                {");
+
+            foreach (string element in elements)
+            {
+                sb.Append("                    ").Append(element).AppendLine(",");
+            }
+
+            sb.Append("                }");
+        }
+
+        private static string Format(ITypeSymbol type)
+        {
+            return type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        }
+
+        private static string Literal(string value)
+        {
+            return SymbolDisplay.FormatLiteral(value, quote: true);
+        }
+
+        private static string EscapeIdentifier(string name)
+        {
+            return SyntaxFacts.GetKeywordKind(name) != SyntaxKind.None ? "@" + name : name;
+        }
+
+        private static string Sanitize(string name)
+        {
+            StringBuilder sb = new StringBuilder(name.Length);
+
+            foreach (char c in name)
+            {
+                sb.Append(char.IsLetterOrDigit(c) ? c : '_');
+            }
+
+            return sb.ToString();
+        }
+    }
+}

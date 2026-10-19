@@ -311,13 +311,14 @@ namespace Hyperion
                 {
                     unsafe
                     {
-                        Span<byte> buffer = stackalloc byte[Marshal.SizeOf(value)];
+                        int size = HypMarshal.SizeOf(value.GetType());
+                        Span<byte> buffer = stackalloc byte[size];
 
                         fixed (byte* pBuffer = buffer)
                         {
-                            Marshal.StructureToPtr(value, (IntPtr)pBuffer, false);
+                            HypMarshal.StructureToPtr(value, (IntPtr)pBuffer);
 
-                            if (!BoxedValue_SetStruct(ref this, ((Class)cls).Address, (uint)Marshal.SizeOf(value), (IntPtr)pBuffer))
+                            if (!BoxedValue_SetStruct(ref this, ((Class)cls).Address, (uint)size, (IntPtr)pBuffer))
                             {
                                 throw new InvalidOperationException("Failed to set Struct");
                             }
@@ -391,7 +392,7 @@ namespace Hyperion
                     //        + ", equal types : " + (typeof(ObjectBase) == currentType));
                     //}
 
-                    classHierarchy.Add(currentType.Name + ", Assembly path: " + currentType.Assembly.Location);
+                    classHierarchy.Add(currentType.Name + ", Assembly: " + currentType.Assembly.FullName);
                     currentType = currentType.BaseType;
                 }
 
@@ -403,11 +404,11 @@ namespace Hyperion
 
             if (hierarchyStr != null)
             {
-                throw new NotImplementedException($"Unsupported type to set BoxedValue: {type.FullName}, Assembly path: {type.Assembly.Location}, hierarchy: {hierarchyStr}");
+                throw new NotImplementedException($"Unsupported type to set BoxedValue: {type.FullName}, Assembly: {type.Assembly.FullName}, hierarchy: {hierarchyStr}");
             }
 #endif
 
-            throw new NotImplementedException($"Unsupported type to set BoxedValue: {type.FullName}, Assembly path: {type.Assembly.Location}");
+            throw new NotImplementedException($"Unsupported type to set BoxedValue: {type.FullName}, Assembly: {type.Assembly.FullName}");
         }
 
         public unsafe object? GetValue()

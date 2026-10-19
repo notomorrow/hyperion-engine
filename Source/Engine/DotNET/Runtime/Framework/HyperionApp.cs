@@ -23,6 +23,8 @@ namespace Hyperion
         public bool Headless { get; set; } = false;
         public int MainThreadHz { get; set; } = 120;
 
+        public Assembly? GameAssembly { get; set; }
+
         public HyperionAppOptions()
         {
         }
@@ -31,7 +33,8 @@ namespace Hyperion
     /// C# bindings for the native Hyp_* C functions, for managing global engine state.
     public static class HyperionApp
     {
-        private static readonly List<string> s_coreAssemblyPaths = new();
+        private static readonly List<Assembly> s_coreAssemblies = new();
+        private static Assembly? s_gameAssembly;
 
         public static Game? CurrentGame { get; private set; }
 
@@ -44,23 +47,11 @@ namespace Hyperion
                 throw new InvalidOperationException("HyperionApp is already running");
             }
 
-            s_coreAssemblyPaths.Clear();
-            s_coreAssemblyPaths.Add(typeof(ObjectBase).Assembly.Location);
-            s_coreAssemblyPaths.Add(typeof(Game).Assembly.Location);
+            Assembly gameAssembly = options.GameAssembly ?? typeof(TGame).Assembly;
 
-            string gameAssemblyPath = typeof(TGame).Assembly.Location;
+            InitializeHosted(gameAssembly);
 
-            if (!s_coreAssemblyPaths.Contains(gameAssemblyPath))
-            {
-                s_coreAssemblyPaths.Add(gameAssemblyPath);
-            }
-
-            unsafe
-            {
-                Hyp_SetInitFromManagedCallback(&InitFromManagedCallback);
-            }
-
-            if (!Initialize(BuildEngineArgs(typeof(TGame).Assembly, args, options)))
+            if (!Initialize(BuildEngineArgs(gameAssembly, args, options)))
             {
                 Console.Error.WriteLine("Hyperion: failed to initialize the engine");
 
@@ -93,11 +84,39 @@ namespace Hyperion
             Hyp_RequestQuit();
         }
 
+        // For a native host that starts the engine itself (the web page): registers the managed side, to run on Hyp_Initialize
+        public static void InitializeHosted(Assembly gameAssembly)
+        {
+            s_gameAssembly = gameAssembly;
+
+            s_coreAssemblies.Clear();
+            s_coreAssemblies.Add(typeof(ObjectBase).Assembly);
+            s_coreAssemblies.Add(typeof(Game).Assembly);
+
+            if (!s_coreAssemblies.Contains(gameAssembly))
+            {
+                s_coreAssemblies.Add(gameAssembly);
+            }
+
+            unsafe
+            {
+                Hyp_SetInitFromManagedCallback(&InitFromManagedCallback);
+            }
+        }
+
+        // The native host then hands the returned Game to Hyp_SetGame; CurrentGame keeps it alive
+        public static IntPtr StartHostedGame(Game game)
+        {
+            CurrentGame = game;
+
+            return game.NativeAddress;
+        }
+
         private static List<string> BuildEngineArgs(Assembly gameAssembly, string[] args, HyperionAppOptions options)
         {
             List<string> engineArgs = new List<string>
             {
-                Environment.ProcessPath ?? gameAssembly.Location,
+                Environment.ProcessPath ?? AppContext.BaseDirectory,
                 "--detached"
             };
 
@@ -255,39 +274,26 @@ namespace Hyperion
             pManagedDelegates->initializeAssembly = (delegate* unmanaged<IntPtr, IntPtr, IntPtr, int, int>)&NativeInterop.InitializeAssembly;
             pManagedDelegates->unloadAssembly = (delegate* unmanaged<IntPtr, IntPtr, void>)&NativeInterop.UnloadAssembly;
 
-            IntPtr assemblyGuidPtr = Marshal.AllocHGlobal(Marshal.SizeOf<Guid>());
-
-            try
+            foreach (Assembly assembly in s_coreAssemblies)
             {
-                foreach (string assemblyPath in s_coreAssemblyPaths)
+                result = NativeInterop.InitializeLoadedAssembly(assembly, isCoreAssembly: true);
+
+                if (result != (int)LoadAssemblyResult.Ok)
                 {
-                    IntPtr assemblyPathPtr = Marshal.StringToCoTaskMemUTF8(assemblyPath);
-
-                    try
-                    {
-                        result = NativeInterop.InitializeAssemblyManaged(assemblyGuidPtr, IntPtr.Zero, assemblyPathPtr, /* isCoreAssembly */ 1);
-                    }
-                    finally
-                    {
-                        Marshal.FreeCoTaskMem(assemblyPathPtr);
-                    }
-
-                    if (result != (int)LoadAssemblyResult.Ok)
-                    {
-                        throw new Exception("Failed to initialize assembly at: " + assemblyPath + ". Error code: " + (LoadAssemblyResult)result);
-                    }
+                    throw new Exception("Failed to initialize assembly " + assembly.GetName().Name + ". Error code: " + (LoadAssemblyResult)result);
                 }
             }
-            finally
+
+            // the game's scripts are compiled into it
+            if (s_gameAssembly != null)
             {
-                Marshal.FreeHGlobal(assemblyGuidPtr);
+                NativeInterop.SetHostedScriptAssembly(s_gameAssembly);
             }
         }
 
         [StructLayout(LayoutKind.Sequential)]
         private unsafe struct ManagedDelegates
         {
-            public delegate* unmanaged<int> initializeRuntime;
             public delegate* unmanaged<IntPtr, IntPtr, IntPtr, int, int> initializeAssembly;
             public delegate* unmanaged<IntPtr, IntPtr, void> unloadAssembly;
         }

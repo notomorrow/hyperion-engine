@@ -34,7 +34,7 @@ namespace Hyperion
             callback = Marshal.GetDelegateForFunctionPointer<ScriptEventCallback>(callbackPtr);
             this.callbackSelfPtr = callbackSelfPtr;
 
-            sourceDirectories = sourceDirectoriesArray.Cast<string>().ToList();
+            sourceDirectories = sourceDirectoriesArray.Cast<string>().Select(System.IO.Path.GetFullPath).ToList();
             this.intermediateDirectory = intermediateDirectory;
             this.binaryOutputDirectory = binaryOutputDirectory;
 
@@ -77,7 +77,7 @@ namespace Hyperion
 
             watchers.Clear();
 
-            sourceDirectories = sourceDirectoriesArray.Cast<string>().ToList();
+            sourceDirectories = sourceDirectoriesArray.Cast<string>().Select(System.IO.Path.GetFullPath).ToList();
 
             CreateWatchers();
         }

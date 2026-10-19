@@ -67,26 +67,6 @@ public:
     SharedPtr<ManagedClass> FindClassByName(const char* typeName);
     SharedPtr<ManagedClass> FindClassByTypeHash(int64 typeHash);
 
-    HYP_FORCE_INLINE InvokeGetterFunction GetInvokeGetterFunction() const
-    {
-        return m_invokeGetterFptr;
-    }
-
-    HYP_FORCE_INLINE void SetInvokeGetterFunction(InvokeGetterFunction invokeGetterFptr)
-    {
-        m_invokeGetterFptr = invokeGetterFptr;
-    }
-
-    HYP_FORCE_INLINE InvokeSetterFunction GetInvokeSetterFunction() const
-    {
-        return m_invokeSetterFptr;
-    }
-
-    HYP_FORCE_INLINE void SetInvokeSetterFunction(InvokeSetterFunction invokeSetterFptr)
-    {
-        m_invokeSetterFptr = invokeSetterFptr;
-    }
-
     HYP_FORCE_INLINE bool IsLoaded() const
     {
         return m_guid.IsValid();
@@ -100,10 +80,6 @@ private:
     ManagedGuid m_guid;
 
     Map<int64, SharedPtr<ManagedClass>> m_classObjects;
-
-    // Function pointer to invoke a managed method
-    InvokeGetterFunction m_invokeGetterFptr;
-    InvokeSetterFunction m_invokeSetterFptr;
 };
 
 } // namespace dotnet

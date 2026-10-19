@@ -1,0 +1,62 @@
+<Project>
+  <!--
+    Imported by Hyperion.Game.props when HyperionWebBuild is true: publishes the game with NativeAOT-LLVM
+    (dotnet publish -r browser-wasm) into a static library that the web page links with the engine.
+
+    HyperionWebEmsdk   An emsdk whose LLVM matches NativeAOT-LLVM's (3.1.56). Only its clang turns the compiler's
+                       bitcode into wasm objects; the page itself links with the engine's own emsdk.
+  -->
+
+  <PropertyGroup>
+    <HyperionNativeAotLlvmVersion Condition="'$(HyperionNativeAotLlvmVersion)' == ''">10.0.0-rc.1.26357.1</HyperionNativeAotLlvmVersion>
+
+    <OutputType>Library</OutputType>
+    <NativeLib>Static</NativeLib>
+    <PublishAot>false</PublishAot>
+    <PublishTrimmed>true</PublishTrimmed>
+    <SelfContained>true</SelfContained>
+    <MSBuildEnableWorkloadResolver>false</MSBuildEnableWorkloadResolver>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <InvariantTimezone>true</InvariantTimezone>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <DebugType>none</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+
+    <!-- the engine is built without exceptions, so no wasm EH: managed exceptions are emulated -->
+    <WasmEnableExceptionHandling>false</WasmEnableExceptionHandling>
+    <IlcLlvmExceptionHandlingModel>emulated</IlcLlvmExceptionHandlingModel>
+
+    <EMSDK Condition="'$(HyperionWebEmsdk)' != ''">$(HyperionWebEmsdk)</EMSDK>
+
+    <HyperionIncludeScripts Condition="'$(HyperionIncludeScripts)' == ''">true</HyperionIncludeScripts>
+    <HyperionHostedEntry>true</HyperionHostedEntry>
+
+    <RestoreAdditionalProjectSources>$(RestoreAdditionalProjectSources);https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-experimental/nuget/v3/index.json</RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.ILCompiler.LLVM" Version="$(HyperionNativeAotLlvmVersion)" />
+    <PackageReference Include="runtime.$(NETCoreSdkPortableRuntimeIdentifier).Microsoft.DotNet.ILCompiler.LLVM" Version="$(HyperionNativeAotLlvmVersion)" />
+
+    <!-- the engine is linked into the same page, so its exports resolve at link time -->
+    <DirectPInvoke Include="hyperion" />
+    <DirectPInvoke Include="hyperion-core" />
+    <DirectPInvoke Include="hyperion-net" />
+  </ItemGroup>
+
+  <!-- what the page links besides the engine: the game's library and the runtime libraries the compiler picked -->
+  <Target Name="HyperionWriteWebLinkInputs" AfterTargets="LinkNativeLlvm" Condition="'$(HyperionWebLinkInputsFile)' != ''">
+    <ItemGroup>
+      <_HyperionWebLinkInput Include="$(NativeBinary)" />
+      <_HyperionWebLinkInput Include="@(NativeLibrary)" />
+      <_HyperionWebLinkInput Include="$(IlcSdkPath)libStackTraceIpCanary.o" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(HyperionWebLinkInputsFile)" Lines="@(_HyperionWebLinkInput->'%(FullPath)')" Overwrite="true" />
+  </Target>
+
+  <!-- a static library has no page of its own, which the compiler's publish step still copies -->
+  <Target Name="HyperionWebStubPageFiles" BeforeTargets="CopyNativeBinary">
+    <Touch Files="$(NativeOutputPath)$(TargetName).js;$(NativeOutputPath)$(TargetName).wasm" AlwaysCreate="true" />
+  </Target>
+</Project>

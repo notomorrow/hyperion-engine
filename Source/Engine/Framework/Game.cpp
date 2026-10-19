@@ -409,9 +409,15 @@ void Game::Launch()
 
     Assert(!IsSyncingOrPreparingContent());
 
+    if (!EngineGlobals::IsEditor())
+    {
+        StartSimulating();
+    }
+
     InvokeManagedHook(this, "OnLaunch");
 
     OnLaunch();
+
     m_isLaunched.Set(true, MemoryOrder::RELEASE);
         
     // Invoke callbacks

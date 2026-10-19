@@ -84,6 +84,6 @@ namespace Hyperion
         }
 
         [DllImport("hyperion", EntryPoint = "TypeId_ForManagedType")]
-        private static extern TypeId TypeId_ForManagedType([MarshalAs(UnmanagedType.LPStr)] string typeName, [Out] out TypeId result);
+        private static extern void TypeId_ForManagedType([MarshalAs(UnmanagedType.LPStr)] string typeName, [Out] out TypeId result);
     }
 }

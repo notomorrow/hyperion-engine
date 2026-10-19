@@ -10,11 +10,7 @@
 
 #include <DotNET/DotNETHost.hpp>
 
-#include <Core/IO/ByteWriter.hpp>
-
 #include <Core/CLI/CommandLine.hpp>
-
-#include <Core/DLL/DynamicLibrary.hpp>
 
 #include <Core/Memory/Pool/Pool.hpp>
 
@@ -22,45 +18,29 @@
 #include <Core/Logging/Logger.hpp>
 
 #include <Core/FileSystem/FsUtil.hpp>
-#include <Core/DataProcessing/JSON/JSON.hpp>
 
 #include <System/AppContext.hpp>
 
 #include <DotNET/ManagedClass.hpp>
 
-#ifdef HYP_DOTNET_HOST
-#include <dotnetcore/hostfxr.h>
-#include <dotnetcore/nethost.h>
-#include <dotnetcore/coreclr_delegates.h>
-#endif
-
 #include <HyperionEngine.hpp>
-
-#include <iostream>
 
 namespace Hyperion {
 
 using namespace dotnet;
 
-class DotNetImplBase
+class DotNetImpl
 {
 public:
-    virtual ~DotNetImplBase() = default;
-
-    virtual bool Initialize(const FilePath& basePath, bool initFromManaged = false, InitFromManagedCallback initFromManagedCb = nullptr)
+    void Initialize(const FilePath& basePath, InitFromManagedCallback initFromManagedCb)
     {
         m_basePath = basePath;
 
-        if (initFromManaged)
-        {
-            Assert(initFromManagedCb != nullptr);
-            initFromManagedCb(&m_managedDelegates);
+        Assert(initFromManagedCb != nullptr);
+        initFromManagedCb(&m_managedDelegates);
 
-            Assert(m_managedDelegates.initializeAssembly != nullptr);
-            Assert(m_managedDelegates.unloadAssembly != nullptr);
-        }
-
-        return false;
+        Assert(m_managedDelegates.initializeAssembly != nullptr);
+        Assert(m_managedDelegates.unloadAssembly != nullptr);
     }
 
     SharedPtr<Assembly> LoadAssembly(const char* path)
@@ -158,13 +138,6 @@ public:
         m_coreAssemblies.Clear();
     }
 
-    virtual void* GetDelegate(
-        const TChar* assemblyPath,
-        const TChar* typeName,
-        const TChar* methodName,
-        const TChar* delegateTypeName) const = 0;
-
-
     static Optional<FilePath> FindAssemblyFilePath(const FilePath& basePath, const char* path)
     {
         const FilePath filepath = FilePath(path).IsAbsolute() ? FilePath(path) : basePath / path;
@@ -177,397 +150,13 @@ public:
         return filepath;
     }
 
-protected:
+private:
     FilePath m_basePath;
     ManagedDelegates m_managedDelegates {};
-    
+
     Map<FilePath, SharedPtr<Assembly>> m_assembliesByPath;
     Map<String, ManagedGuid> m_coreAssemblies;
 };
-
-#ifdef HYP_DOTNET_HOST
-
-class DotNetImpl final : public DotNetImplBase
-{
-public:
-    DotNetImpl()
-        : m_cxt(nullptr),
-          m_initFptr(nullptr),
-          m_getDelegateFptr(nullptr),
-          m_closeFptr(nullptr),
-          m_shouldInitializeRuntime(true)
-    {
-    }
-
-    ~DotNetImpl() override
-    {
-        if (!ShutdownDotNetRuntime())
-        {
-            HYP_LOG(DotNET, Error, "Failed to shutdown .NET runtime");
-        }
-    }
-
-    FilePath GetDotNetPath() const
-    {
-        return EngineGlobals::GetCacheDirectory() / "DotNET";
-    }
-
-    FilePath GetLibraryPath() const
-    {
-        return GetDotNetPath() / "lib";
-    }
-
-    FilePath GetRuntimeConfigPath() const
-    {
-        return GetDotNetPath() / "runtimeconfig.json";
-    }
-
-    bool Initialize(const FilePath& basePath, bool initFromManaged = false, InitFromManagedCallback initFromManagedCb = nullptr) override
-    {
-        if (!DotNetImplBase::Initialize(basePath, initFromManaged, initFromManagedCb))
-        {
-            return false;
-        }
-
-        FileSystem::MkDir(GetDotNetPath().Data());
-        FileSystem::MkDir(GetLibraryPath().Data());
-
-        InitRuntimeConfig();
-
-        // Load the .NET Core runtime
-        if (!LoadHostFxr())
-        {
-            HYP_LOG(DotNET, Fatal, "Could not initialize .NET runtime: Failed to load hostfxr");
-        }
-
-        if (!InitDotNetRuntime())
-        {
-            HYP_LOG(DotNET, Fatal, "Could not initialize .NET runtime: Failed to initialize runtime");
-        }
-
-        const Optional<FilePath> interopAssemblyPath = FindAssemblyFilePath(m_basePath, "Hyperion.NET.Interop.dll");
-
-        if (!interopAssemblyPath.HasValue())
-        {
-            HYP_LOG(DotNET, Fatal, "Could not initialize .NET runtime: Could not locate Hyperion.NET.Interop.dll! Base path: {}", m_basePath);
-        }
-
-        PlatformString interopAssemblyPathPlatform;
-
-#ifdef HYP_WINDOWS
-        interopAssemblyPathPlatform = interopAssemblyPath->ToWide();
-#else
-        interopAssemblyPathPlatform = *interopAssemblyPath;
-#endif
-
-        m_managedDelegates.initializeRuntime = (InitializeRuntimeDelegate)GetDelegate(
-            interopAssemblyPathPlatform.Data(),
-            HYP_TEXT("Hyperion.NativeInterop, Hyperion.NET.Interop"),
-            HYP_TEXT("InitializeRuntime"),
-            UNMANAGEDCALLERSONLY_METHOD);
-
-        Assert(
-            m_managedDelegates.initializeRuntime != nullptr,
-            "InitializeRuntime could not be found in Hyperion.NET.Interop.dll! Ensure .NET libraries are properly compiled.");
-
-        m_managedDelegates.initializeAssembly = (InitializeAssemblyDelegate)GetDelegate(
-            interopAssemblyPathPlatform.Data(),
-            HYP_TEXT("Hyperion.NativeInterop, Hyperion.NET.Interop"),
-            HYP_TEXT("InitializeAssembly"),
-            UNMANAGEDCALLERSONLY_METHOD);
-
-        Assert(
-            m_managedDelegates.initializeAssembly != nullptr,
-            "InitializeAssembly could not be found in Hyperion.NET.Interop.dll! Ensure .NET libraries are properly compiled.");
-
-        m_managedDelegates.unloadAssembly = (UnloadAssemblyDelegate)GetDelegate(
-            interopAssemblyPathPlatform.Data(),
-            HYP_TEXT("Hyperion.NativeInterop, Hyperion.NET.Interop"),
-            HYP_TEXT("UnloadAssembly"),
-            UNMANAGEDCALLERSONLY_METHOD);
-
-        Assert(
-            m_managedDelegates.unloadAssembly != nullptr,
-            "UnloadAssembly could not be found in Hyperion.NET.Interop.dll! Ensure .NET libraries are properly compiled.");
-
-        static const Array<Pair<String, FilePath>> s_coreAssemblies = {
-            Pair<String, FilePath> { "interop", *interopAssemblyPath }
-            // Pair<String, FilePath> { "runtime", FindAssemblyFilePath(m_basePath, "Hyperion.NET.Runtime.dll").GetOr(FilePath()) }
-        };
-
-        int result = int(LoadAssemblyResult::OK);
-
-        Assert(m_managedDelegates.initializeRuntime != nullptr);
-        result = m_managedDelegates.initializeRuntime();
-
-        if (result != int(LoadAssemblyResult::OK))
-        {
-            HYP_FAIL("Failed to initialize Hyperion .NET interop: Got error code {}", result);
-        }
-
-        for (const Pair<String, FilePath>& entry : s_coreAssemblies)
-        {
-            SharedPtr<Assembly> assembly = MakeShared<Assembly>(
-                ManagedGuid { 0, 0 },
-                AssemblyFlags::CORE_ASSEMBLY);
-
-            HYP_LOG(DotNET, Verbose, "Loading core assembly: {}", entry.first);
-
-            // Initialize all core assemblies
-            result = m_managedDelegates.initializeAssembly(
-                &assembly->GetGuid(),
-                assembly.Get(),
-                entry.second.Data(),
-                /* isCoreAssembly */ 1);
-
-            if (result != int(LoadAssemblyResult::OK))
-            {
-                HYP_FAIL("Failed to load assembly `{}`: Got error code {}", entry.first.Data(), result);
-            }
-
-            m_coreAssemblies.Insert(entry.first, assembly->GetGuid());
-            m_assembliesByPath.Insert(entry.second, assembly);
-        }
-
-        LoadAssembly("Hyperion.NET.Runtime.dll");
-
-        return true;
-    }
-
-    void* GetDelegate(
-        const TChar* assemblyPath,
-        const TChar* typeName,
-        const TChar* methodName,
-        const TChar* delegateTypeName) const override
-    {
-        if (!m_cxt)
-        {
-            HYP_LOG(DotNET, Fatal, "Failed to get delegate: .NET runtime not initialized");
-        }
-
-        // Get the delegate for the managed function
-        void* loadAssemblyAndGetFunctionPointerFptr = nullptr;
-
-        if (m_getDelegateFptr(m_cxt, hdt_load_assembly_and_get_function_pointer, &loadAssemblyAndGetFunctionPointerFptr) != 0)
-        {
-            HYP_LOG(DotNET, Error, "Failed to get delegate: Failed to get function pointer");
-
-            return nullptr;
-        }
-
-        HYP_LOG(DotNET, Verbose, "Loading .NET assembly: {}\tType Name: {}\tMethod Name: {}", assemblyPath, typeName, methodName);
-
-        void* delegatePtr = nullptr;
-
-        auto loadAssemblyAndGetFunctionPointer = (load_assembly_and_get_function_pointer_fn)loadAssemblyAndGetFunctionPointerFptr;
-        bool result = loadAssemblyAndGetFunctionPointer(assemblyPath, typeName, methodName, delegateTypeName, nullptr, &delegatePtr) == 0;
-
-        if (!result)
-        {
-            HYP_LOG(DotNET, Error, "Failed to get delegate: Failed to load assembly and get function pointer");
-
-            return nullptr;
-        }
-
-        return delegatePtr;
-    }
-
-private:
-    void InitRuntimeConfig()
-    {
-        const FilePath filepath = GetRuntimeConfigPath();
-
-        const FilePath currentPath = FilePath::Current();
-
-        Array<JSON::Value> probingPaths;
-
-        probingPaths.PushBack(FilePath::Relative(GetLibraryPath(), currentPath));
-        probingPaths.PushBack(FilePath::Relative(m_basePath, currentPath));
-
-        // clang-format off
-        const JSON::Value runtimeConfigJson(JSON::Object {
-            {
-                "runtimeOptions", JSON::Object({
-                    { "tfm", "net9.0" },
-                    { "framework", JSON::Object({
-                        { "name", "Microsoft.NETCore.App" },
-                        { "version", "9.0.3" } })
-                    },
-                    { "additionalProbingPaths", JSON::JArray(probingPaths) }
-                })
-            }
-        });
-        // clang-format on
-
-        String str = runtimeConfigJson.ToString(true);
-
-        FileByteWriter writer(filepath.Data());
-        writer.WriteString(str);
-        writer.Close();
-    }
-
-    bool LoadHostFxr()
-    {
-        TChar wbuffer[2048];
-        size_t bufferSize = sizeof(wbuffer) / sizeof(TChar);
-
-        PlatformString wpath;
-
-        int rc = get_hostfxr_path(wbuffer, &bufferSize, nullptr);
-
-        if (rc == 0)
-        {
-            wpath = PlatformString(wbuffer, wbuffer + bufferSize - 1);
-        }
-        else if (rc == -1)
-        {
-            // try again with a larger buffer
-            Array<TChar> dyn_wbuffer;
-            dyn_wbuffer.Resize(bufferSize);
-
-            rc = get_hostfxr_path(dyn_wbuffer.Data(), &bufferSize, nullptr);
-
-            if (rc != 0)
-            {
-                HYP_LOG(DotNET, Error, "Failed to load hostfxr: get_hostfxr_path failed with error code {}", rc);
-
-                return false;
-            }
-
-            wpath = PlatformString(dyn_wbuffer.Data(), dyn_wbuffer.Data() + bufferSize - 1);
-        }
-        else
-        {
-            HYP_LOG(DotNET, Error, "Failed to load hostfxr: get_hostfxr_path failed with error code {}", rc);
-
-            return false;
-        }
-
-        HYP_LOG(DotNET, Verbose, "Loading hostfxr from: {}", wpath);
-
-        if (!FilePath(wpath).Exists())
-        {
-            HYP_LOG(DotNET, Error, "Failed to load hostfxr: hostfxr does not exist at path {}", wpath);
-            return false;
-        }
-
-        // Load hostfxr and get desired exports
-        m_dll = DynamicLibrary(wpath);
-
-        if (!m_dll.Open())
-        {
-            AssertDebug(false, "Failed to load hostfxr library at {}", wpath);
-            return false;
-        }
-
-        m_initFptr = (hostfxr_initialize_for_runtime_config_fn)m_dll.GetFunction("hostfxr_initialize_for_runtime_config");
-        m_getDelegateFptr = (hostfxr_get_runtime_delegate_fn)m_dll.GetFunction("hostfxr_get_runtime_delegate");
-        m_closeFptr = (hostfxr_close_fn)m_dll.GetFunction("hostfxr_close");
-
-        AssertDebug(m_initFptr && m_getDelegateFptr && m_closeFptr);
-
-        HYP_LOG(DotNET, Verbose, "Loaded hostfxr functions");
-
-        return m_initFptr && m_getDelegateFptr && m_closeFptr;
-    }
-
-    bool InitDotNetRuntime()
-    {
-        Assert(m_cxt == nullptr);
-
-        HYP_LOG(DotNET, Verbose, "Initializing .NET runtime");
-
-        PlatformString runtimeConfigPath;
-
-#ifdef HYP_WINDOWS
-        runtimeConfigPath = GetRuntimeConfigPath().ToWide();
-
-        std::wcout << L".NET Runtime path = " << runtimeConfigPath.Data() << L"\n";
-#else
-        runtimeConfigPath = GetRuntimeConfigPath();
-#endif
-
-        const TChar* runtimeConfigPathCStr = runtimeConfigPath.Data();
-
-        int res = m_initFptr(runtimeConfigPathCStr, nullptr, &m_cxt);
-
-        // https://github.com/dotnet/runtime/blob/main/docs/design/features/host-error-codes.md
-        switch (res)
-        {
-        case /* Success */ 0:
-            HYP_LOG(DotNET, Verbose, "Initialized .NET runtime");
-
-            m_shouldInitializeRuntime = true;
-
-            return true;
-        case /* Success_HostAlreadyInitialized */ 1: // fallthrough
-        case /* Success_DifferentRuntimeProperties */ 2:
-            HYP_LOG(DotNET, Verbose, "Initialized .NET runtime, hostfxr_initialize_for_runtime_config returned {}", res);
-
-            m_shouldInitializeRuntime = false;
-
-            return true;
-        default:
-            HYP_LOG(DotNET, Error, "Failed to initialize .NET runtime: hostfxr_initialize_for_runtime_config failed with error code {}", res);
-
-            return false;
-        }
-    }
-
-    bool ShutdownDotNetRuntime()
-    {
-        ReleaseAssemblies();
-
-        // can be nullptr if init from managed
-        if (m_cxt != nullptr)
-        {
-            HYP_LOG(DotNET, Verbose, "Shutting down .NET runtime");
-
-            Assert(m_closeFptr != nullptr);
-            m_closeFptr(m_cxt);
-
-            m_cxt = nullptr;
-
-            m_shouldInitializeRuntime = true;
-
-            HYP_LOG(DotNET, Verbose, "Shut down .NET runtime");
-        }
-
-        m_dll.Close();
-
-        return true;
-    }
-
-    DynamicLibrary m_dll;
-
-
-    hostfxr_handle m_cxt;
-    hostfxr_initialize_for_runtime_config_fn m_initFptr;
-    hostfxr_get_runtime_delegate_fn m_getDelegateFptr;
-    hostfxr_close_fn m_closeFptr;
-
-    bool m_shouldInitializeRuntime;
-};
-
-#else   // !HYP_DOTNET_HOST
-
-class DotNetImpl final : public DotNetImplBase
-{
-public:
-    DotNetImpl() = default;
-    ~DotNetImpl() = default;
-
-    void* GetDelegate(
-        const TChar* assemblyPath,
-        const TChar* typeName,
-        const TChar* methodName,
-        const TChar* delegateTypeName) const override
-    {
-        return nullptr;
-    }
-};
-
-#endif  // HYP_DOTNET_HOST
 
 DotNETHost& DotNETHost::GetInstance()
 {
@@ -610,7 +199,18 @@ SharedPtr<Assembly> DotNETHost::LoadAssembly(const char* path) const
         return nullptr;
     }
 
+    // a hosted game has its scripts compiled in, and may have no way to load another assembly at all (NativeAOT)
+    if (m_hostedScriptAssembly)
+    {
+        return m_hostedScriptAssembly;
+    }
+
     return m_impl->LoadAssembly(path);
+}
+
+void DotNETHost::SetHostedScriptAssembly(Assembly* assembly)
+{
+    m_hostedScriptAssembly = assembly ? assembly->SharedThis() : nullptr;
 }
 
 bool DotNETHost::UnloadAssembly(ManagedGuid guid) const
@@ -638,7 +238,7 @@ bool DotNETHost::IsInitialized() const
     return m_isInitialized;
 }
 
-void DotNETHost::Initialize(const FilePath& basePath, bool initFromManaged, InitFromManagedCallback initFromManagedCb)
+void DotNETHost::Initialize(const FilePath& basePath, InitFromManagedCallback initFromManagedCb)
 {
     if (IsInitialized())
     {
@@ -648,7 +248,7 @@ void DotNETHost::Initialize(const FilePath& basePath, bool initFromManaged, Init
     Assert(m_impl == nullptr);
 
     m_impl = new DotNetImpl();
-    m_impl->Initialize(basePath, initFromManaged, initFromManagedCb);
+    m_impl->Initialize(basePath, initFromManagedCb);
 
     m_isInitialized = true;
 }
@@ -668,6 +268,8 @@ void DotNETHost::Shutdown()
     }
 
     m_globalFunctions = {};
+
+    m_hostedScriptAssembly.Reset();
 
     m_impl->ReleaseAssemblies();
 

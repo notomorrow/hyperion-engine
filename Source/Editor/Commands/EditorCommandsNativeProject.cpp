@@ -345,16 +345,35 @@ Result CopyFilesWithExtensions(const FilePath& sourceDir, const FilePath& target
     return {};
 }
 
-// Game executable, engine libraries and config from the project's build output, set up to run from its own cooked content
-Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir, const String& name, Name startupWorldName)
+bool HasProjectScripts(const FilePath& projectFilepath)
 {
-    static const char* const s_binaryExtensions[] = { ".exe", ".dll", ".so", ".dylib", ".json", "" };
+    const FilePath scriptsDir = projectFilepath.BasePath() / "Scripts";
 
-    if (Result result = CopyFilesWithExtensions(binariesDir, outputDir, Span<const char* const>(s_binaryExtensions)); result.HasError())
+    if (!scriptsDir.Exists())
     {
-        return result;
+        return false;
     }
 
+    std::error_code errorCode;
+
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(scriptsDir.Data(), errorCode))
+    {
+        if (entry.is_regular_file() && entry.path().extension() == ".cs")
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool HasNativeGameCode(const FilePath& projectFilepath)
+{
+    return (projectFilepath.BasePath() / "Source" / "Game").Exists();
+}
+
+Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir, const String& name, Name startupWorldName)
+{
     // a redistributed editor carries the C++ runtime next to it; a dev build relies on the installed one
     static const char* const s_runtimeLibraries[] = {
         "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "msvcp140_atomic_wait.dll", "msvcp140_codecvt_ids.dll",
@@ -379,9 +398,12 @@ Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir,
         return HYP_MAKE_ERROR(Error, "Failed to create directory {}", configDir);
     }
 
-    if ((binariesDir / "Config").Exists())
+    // a project with only scripts has no build output of its own, so it takes the editor's engine config
+    const FilePath sourceConfigDir = (binariesDir / "Config").Exists() ? binariesDir / "Config" : CoreApi::GetExecutablePath() / "Config";
+
+    if (sourceConfigDir.Exists())
     {
-        if (Result result = CopyFilesWithExtensions(binariesDir / "Config", configDir, {}); result.HasError())
+        if (Result result = CopyFilesWithExtensions(sourceConfigDir, configDir, {}); result.HasError())
         {
             return result;
         }
@@ -429,13 +451,11 @@ public:
             return;
         }
 
-        const FilePath modulePath = IsManagedProject(currentProject->GetFilePath())
-            ? GetManagedModulePath(currentProject->GetFilePath())
-            : GetNativeModulePath(currentProject->GetFilePath());
+        const FilePath& projectFilepath = currentProject->GetFilePath();
 
-        if (!modulePath.Exists())
+        if (!IsManagedProject(projectFilepath) && !HasNativeGameCode(projectFilepath) && !HasProjectScripts(projectFilepath))
         {
-            ShowPackageGameMessage(MessageBoxType::INFO, "Build the game first", "Packaging uses the game built by Build Game.");
+            ShowPackageGameMessage(MessageBoxType::INFO, "Nothing to package", "The project has no C# game, C++ game or scripts.");
 
             return;
         }
@@ -485,6 +505,7 @@ private:
             [editorTaskScope,
                 name,
                 outputDir,
+                projectFilepath = project->GetFilePath(),
                 projectDir = project->GetFilePath().BasePath(),
                 binariesDir = GetNativeModulePath(project->GetFilePath()).BasePath(),
                 startupWorldName = project->GetEditWorldName()]()
@@ -495,8 +516,20 @@ private:
                 args.Set("out-content", outputDir / "Content");
                 // where a game looks for engine content relative to its base directory
                 args.Set("out-engine-content", outputDir / "Content" / "Engine");
+                args.Set("shader-target", String("host"));
+                args.Set("target-config", CoreApi::GetExecutablePath() / "Config" / "EngineConfig.json");
 
                 Result result = g_appContext->RunCommandlet("BlobStorageCookCommandlet", args);
+
+                if (!result.HasError())
+                {
+                    editorTaskScope->GetEditorTask()->SetDescription("Building the game");
+
+                    if (!g_editorState->OnBuildPackageRequested(String(projectFilepath), String(binariesDir), String(outputDir)))
+                    {
+                        result = HYP_MAKE_ERROR(Error, "Building the game failed, see the GameBuild log");
+                    }
+                }
 
                 if (!result.HasError())
                 {

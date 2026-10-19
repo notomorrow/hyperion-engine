@@ -41,7 +41,21 @@ namespace Hyperion.Editor.Services
             public List<string> Missing { get; } = new List<string>();
         }
 
-        public async Task<bool> BuildAsync(string? projectFilePath)
+        public Task<bool> BuildAsync(string? projectFilePath)
+        {
+            return BuildAsync(projectFilePath, "Windows", "");
+        }
+
+        public bool BuildPackage(string projectFilePath, string outputDirectory, string? scriptsLinkInputsFile)
+        {
+            string cmakeArguments = " -DHYPERION_PACKAGE=ON"
+                + $" -DGAME_OUTPUT_DIR=\"{ToCMakePath(outputDirectory)}\""
+                + $" -DHYPERION_SCRIPTS_LINK_INPUTS=\"{(scriptsLinkInputsFile != null ? ToCMakePath(scriptsLinkInputsFile) : "")}\"";
+
+            return BuildAsync(projectFilePath, "WindowsPackage", cmakeArguments).GetAwaiter().GetResult();
+        }
+
+        private async Task<bool> BuildAsync(string? projectFilePath, string buildName, string cmakeArguments)
         {
             if (!OperatingSystem.IsWindows())
             {
@@ -91,7 +105,7 @@ namespace Hyperion.Editor.Services
 
             try
             {
-                string buildDirectory = Path.Combine(projectDirectory, "Build", "Windows");
+                string buildDirectory = Path.Combine(projectDirectory, "Build", buildName);
                 Directory.CreateDirectory(buildDirectory);
 
                 string scriptPath = Path.Combine(buildDirectory, "Build.bat");
@@ -105,7 +119,8 @@ namespace Hyperion.Editor.Services
                         + $" -DCMAKE_MAKE_PROGRAM=\"{ToCMakePath(toolchain.NinjaPath!)}\""
                         + " -DCMAKE_BUILD_TYPE=Release"
                         + $" -DCMAKE_CXX_COMPILER=\"{ToCMakePath(toolchain.CompilerPath!)}\""
-                        + $" -DHYPERION_SDK_DIR=\"{ToCMakePath(sdkDirectory)}\"",
+                        + $" -DHYPERION_SDK_DIR=\"{ToCMakePath(sdkDirectory)}\""
+                        + cmakeArguments,
                     "if errorlevel 1 exit /b 1",
                     $"\"{toolchain.CMakePath}\" --build \"{buildDirectory}\""
                 ]);
@@ -131,7 +146,7 @@ namespace Hyperion.Editor.Services
                     return false;
                 }
 
-                Logger.Log(BuildLogChannel, LogLevel.Info, "Game build succeeded: {0}", Path.Combine(projectDirectory, "Binaries", "Windows"));
+                Logger.Log(BuildLogChannel, LogLevel.Info, "Game build succeeded in {0}", buildDirectory);
 
                 return true;
             }

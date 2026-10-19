@@ -52,6 +52,25 @@ struct PropertyAccessorBinding
     bool setterSynthesized = false;
 };
 
+struct MethodThunk
+{
+    const MemberDef* member = nullptr;
+    const ASTFunctionType* functionType = nullptr;
+    String symbol;
+    bool isStatic = false;
+    bool propertySetterIdiom = false;
+    bool returnsViaOutParam = false;
+    bool strataCompatible = true;
+    StrataTypeMapping returnMapping;
+    Array<StrataTypeMapping> paramMappings;
+};
+
+TResult<StrataTypeMapping> MapToThunkType(const Analyzer& analyzer, const ASTType* type, bool& outStrataCompatible);
+
+bool IsBlittableStruct(const Analyzer& analyzer, const String& typeName, int depth = 0);
+
+Array<MethodThunk> CollectMethodThunks(const Analyzer& analyzer, const ClassDefinition& cls, const Set<String>& allHandleNames);
+
 bool IsStrataScriptable(const Analyzer& analyzer, const ClassDefinition& cls);
 bool MemberIsStrataScriptable(const MemberDef& member);
 

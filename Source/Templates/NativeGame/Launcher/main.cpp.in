@@ -6,8 +6,16 @@ using namespace Hyperion;
 
 extern "C" HYP_IMPORT const char* HypGameModule_GetGameClassName();
 
+#ifdef HYP_GAME_SCRIPTS
+extern "C" void HypManaged_Initialize();
+#endif
+
 int main(int argc, char** argv)
 {
+#ifdef HYP_GAME_SCRIPTS
+    HypManaged_Initialize();
+#endif
+
     if (!Hyp_Initialize(argc, argv))
     {
         return 1;

@@ -54,17 +54,50 @@
       <HintPath>$(HyperionManagedDir)Hyperion.NET.Runtime.dll</HintPath>
     </Reference>
 
+    <Analyzer Include="$(HyperionManagedDir)Hyperion.NET.Generators.dll" Condition="Exists('$(HyperionManagedDir)Hyperion.NET.Generators.dll')" />
+    <Analyzer Include="$(HyperionBinDir)Hyperion.NET.Generators.dll" Condition="!Exists('$(HyperionManagedDir)Hyperion.NET.Generators.dll') And Exists('$(HyperionBinDir)Hyperion.NET.Generators.dll')" />
+
     <!-- read by HyperionApp and passed to the engine as its base directory -->
     <AssemblyMetadata Include="HyperionBaseDir" Value="$(HyperionBaseDir)" />
   </ItemGroup>
 
-  <Target Name="HyperionCheckBinDir" BeforeTargets="ResolveAssemblyReferences">
+  <Import Project="$(MSBuildThisFileDirectory)Hyperion.Web.targets" Condition="'$(HyperionWebBuild)' == 'true'" />
+
+  <!-- a standalone build compiles the project's scripts into the game; the editor compiles and reloads them on its own -->
+  <PropertyGroup>
+    <HyperionProjectDir Condition="'$(HyperionProjectDir)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../'))</HyperionProjectDir>
+    <HyperionProjectDir>$([MSBuild]::EnsureTrailingSlash('$(HyperionProjectDir)'))</HyperionProjectDir>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(HyperionIncludeScripts)' == 'true'">
+    <Compile Include="$(HyperionProjectDir)Scripts/**/*.cs" Link="Scripts/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(HyperionHostedEntry)' == 'true'">
+    <Compile Include="$(MSBuildThisFileDirectory)HyperionHostedEntry.cs" Link="Hyperion/HyperionHostedEntry.cs" />
+
+    <AssemblyAttribute Include="Hyperion.Hosting.HyperionHostedGameAttribute" Condition="'$(HyperionHostedGameClass)' != ''">
+      <_Parameter1>typeof($(HyperionHostedGameClass))</_Parameter1>
+      <_Parameter1_IsLiteral>true</_Parameter1_IsLiteral>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <Target Name="HyperionWriteStaticLinkInputs" AfterTargets="LinkNative" Condition="'$(HyperionStaticLinkInputsFile)' != '' And '$(NativeLib)' == 'Static' And '$(HyperionWebBuild)' != 'true'">
+    <ItemGroup>
+      <_HyperionStaticLinkInput Include="$(NativeBinary)" />
+      <_HyperionStaticLinkInput Include="@(NativeLibrary)" Condition="'%(Filename)' != 'dllmain'" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(HyperionStaticLinkInputsFile)" Lines="@(_HyperionStaticLinkInput->'%(FullPath)');@(SdkNativeLibrary)" Overwrite="true" />
+  </Target>
+
+  <Target Name="HyperionCheckBinDir" BeforeTargets="ResolveAssemblyReferences" Condition="'$(HyperionWebBuild)' != 'true'">
     <Error Condition="'$(HyperionBinDir)' == '/' Or (!Exists('$(HyperionBinDir)hyperion.dll') And !Exists('$(HyperionBinDir)libhyperion.so') And !Exists('$(HyperionBinDir)libhyperion.dylib'))"
            Text="HyperionBinDir must point at a Hyperion engine build (containing the native hyperion library); got '$(HyperionBinDir)'" />
   </Target>
 
   <!-- Copy the native engine next to the game. DLLs are hardlinked; Config is copied since the game may write to it. -->
-  <Target Name="HyperionCopyEngineRuntime" AfterTargets="Build" Condition="'$(HyperionOutputToBinDir)' != 'true'">
+  <Target Name="HyperionCopyEngineRuntime" AfterTargets="Build" Condition="'$(HyperionOutputToBinDir)' != 'true' And '$(HyperionWebBuild)' != 'true'">
     <ItemGroup>
       <_HyperionNativeLibraries Include="$(HyperionBinDir)*.dll;$(HyperionBinDir)*.so;$(HyperionBinDir)*.dylib" Exclude="$(HyperionBinDir)Hyperion.NET.*.dll" />
       <_HyperionConfigFiles Include="$(HyperionBinDir)Config/**/*" />

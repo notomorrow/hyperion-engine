@@ -265,10 +265,10 @@ function(RunCodeGen version_major version_minor)
   endif()
 endfunction()
 
-# Run CodeGen with version 0.13
+# Run CodeGen with version 0.16
 # HYP_CODEGEN_VERSION_MAJOR 0
-# HYP_CODEGEN_VERSION_MINOR 13
-RunCodeGen(0 13)
+# HYP_CODEGEN_VERSION_MINOR 16
+RunCodeGen(0 16)
 
 # set HYP_DEBUG_MODE to 1 for debug builds, 0 for release builds
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -560,6 +560,8 @@ set(HYP_GENERATED_DIR "${CMAKE_SOURCE_DIR}/Generated")
 if(HYP_RUNTIME_ONLY)
   # kept apart so configuring a runtime build doesn't overwrite the editor build's generated projects
   set(CSHARP_PROJECTS_DIR "${CMAKE_SOURCE_DIR}/../Build/CSharpProjects-Runtime")
+elseif(HYP_WEB)
+  set(CSHARP_PROJECTS_DIR "${CMAKE_SOURCE_DIR}/../Build/CSharpProjects-Web")
 elseif(HYP_OUTPUT_DIRECTORY_SUFFIX STREQUAL "Distribution")
   set(CSHARP_PROJECTS_DIR "${CMAKE_SOURCE_DIR}/../Build/CSharpProjects-Distribution")
 else()
@@ -614,49 +616,14 @@ if(HYP_MONOLITHIC AND NOT HYP_BUILD_STATIC)
   add_definitions(-DHYP_MONOLITHIC=1)
 endif()
 
-# Set to true if C# is not planned on being used for scripting
-# .NET is necessary for the editor, but for a leaner build this is recommended to disable if not using C# for scripts.
-# set(HYP_DOTNET_ONLY_FOR_EDITOR true)
-
-# the web has no .NET runtime, and its 32-bit pointers don't fit the interop structs
-if(NOT HYP_DOTNET_ONLY_FOR_EDITOR AND NOT DEFINED HYP_DOTNET_HOST AND NOT HYP_WEB)
-  set(HYP_DOTNET_HOST 1)
+# managed code always starts the engine and registers through InitFromManaged: Hyperion.Editor.exe, a C# game via
+# HyperionApp, or a game's NativeAOT code (an executable, a library linked into a C++ launcher, or the web page)
+if(HYP_EDITOR OR HYP_RUNTIME_ONLY OR HYP_WEB OR (NOT DEFINED HYP_DOTNET AND NOT HYP_ANDROID AND NOT HYP_IOS))
+  set(HYP_DOTNET 1)
 endif()
 
-if(HYP_DOTNET_HOST)
-  # if dotnet headers exist, set HYP_DOTNET to 1
-  # TODO: Get working on Android, iOS, Steam Deck...
-  if(EXISTS "${THIRD_PARTY_INCLUDE_DIR}/dotnetcore/hostfxr.h")
-    message(STATUS ".NET headers found")
-    set(HYP_DOTNET 1)
-
-    if(HYP_DOTNET)
-      if(EXISTS "${CMAKE_THIRD_PARTY_LIBRARY_DIRECTORY}/libnethost.a")
-        message(STATUS ".NET core found, setting HYP_DOTNET to 1")
-
-        set(COMMON_LIBRARIES ${COMMON_LIBRARIES} "${CMAKE_THIRD_PARTY_LIBRARY_DIRECTORY}/libnethost.a")
-
-        set(HYP_DOTNET 1)
-
-        add_definitions(-DHYP_DOTNET=1)
-      elseif(EXISTS "${CMAKE_THIRD_PARTY_LIBRARY_DIRECTORY}/nethost.lib")
-        message(STATUS ".NET core found, setting HYP_DOTNET to 1")
-
-        set(COMMON_LIBRARIES ${COMMON_LIBRARIES} "${CMAKE_THIRD_PARTY_LIBRARY_DIRECTORY}/nethost.lib")
-
-        # copy the dll to the build directory
-        file(COPY "${CMAKE_THIRD_PARTY_LIBRARY_DIRECTORY}/nethost.dll" DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-
-        set(HYP_DOTNET 1)
-
-        add_definitions(-DHYP_DOTNET=1)
-      else()
-        message(STATUS ".NET core not found, expected to find libnethost.a or nethost.lib in ${CMAKE_THIRD_PARTY_LIBRARY_DIRECTORY}")
-      endif()
-    endif()
-  else()
-    message(WARNING ".NET headers not found, skipping .NET core runtime")
-  endif()
+if(HYP_DOTNET)
+  add_definitions(-DHYP_DOTNET=1)
 endif()
 
 # # Strata lang integration
@@ -725,19 +692,6 @@ if (HYP_STRATA)
 endif()
 
 # /Strata lang integration
-
-if(HYP_EDITOR OR HYP_RUNTIME_ONLY)
-  # for editor and runtime builds, we don't actually need .NET host as the managed application
-  # (Hyperion.Editor.exe, or a C# game via HyperionApp) will call into the engine via InitFromManaged.
-  if(HYP_DOTNET_HOST)
-    add_definitions(-DHYP_DOTNET_HOST=1)
-  else()
-    add_definitions(-DHYP_DOTNET_ONLY_FOR_EDITOR=1)
-  endif()
-
-  set(HYP_DOTNET 1)
-  add_definitions(-DHYP_DOTNET=1)
-endif()
 
 set(RENDERING_BACKEND "Vulkan")
 
@@ -1333,6 +1287,11 @@ set(SUB_LIBRARIES ${SUB_LIBRARIES} ${THIRD_PARTY_LIBRARIES})
 target_link_libraries(${BUILD_NAME} PUBLIC ${COMMON_LIBRARIES})
 target_link_libraries(${BUILD_NAME} PUBLIC ${RENDERER_LIBRARIES})
 
+if(HYP_DXC AND WIN32 AND NOT HYP_BUILD_STATIC)
+  target_link_options(${BUILD_NAME} PRIVATE /DELAYLOAD:dxcompiler.dll)
+  target_link_libraries(${BUILD_NAME} PRIVATE delayimp)
+endif()
+
 target_link_libraries(${BUILD_NAME} PRIVATE Jolt::Jolt)
 
 if(HYP_MONOLITHIC AND NOT HYP_BUILD_STATIC)
@@ -1530,15 +1489,6 @@ if(NOT HYP_BUILD_STATIC AND NOT HYP_ANDROID AND NOT HYP_IOS)
     list(APPEND HYP_SDK_DEV_LIBRARIES "$<TARGET_LINKER_FILE:hyperion-core>")
   endif()
 
-  set(HYP_SDK_RUNTIME_LIBRARIES "")
-  if(HYP_MONOLITHIC AND WIN32)
-    set(HYP_SDK_RUNTIME_LIBRARIES "hyperion.dll")
-
-    if(HYP_DXC)
-      list(APPEND HYP_SDK_RUNTIME_LIBRARIES "dxcompiler.dll")
-    endif()
-  endif()
-
   if(HYP_MSVC)
     set(HYP_SDK_COMPILER "cl")
   elseif(HYP_CLANG_WINDOWS)
@@ -1548,6 +1498,11 @@ if(NOT HYP_BUILD_STATIC AND NOT HYP_ANDROID AND NOT HYP_IOS)
   endif()
 
   get_filename_component(HYP_SDK_DEV_BASE_DIR "${CMAKE_SOURCE_DIR}/.." ABSOLUTE)
+
+  set(HYP_SDK_SHADER_COMPILER_LIBRARIES "")
+  if(HYP_DXC AND WIN32 AND NOT HYP_BUILD_STATIC)
+    set(HYP_SDK_SHADER_COMPILER_LIBRARIES "dxcompiler.dll")
+  endif()
 
   set(HYP_SDK_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Sdk/CMake")
 
@@ -1571,6 +1526,30 @@ set(HYPERION_SDK_RUNTIME_DIR \"$<TARGET_FILE_DIR:${BUILD_NAME}>\")
 set(HYPERION_SDK_BASE_DIR \"${HYP_SDK_DEV_BASE_DIR}\")
 set(HYPERION_SDK_PCH \"${CMAKE_SOURCE_DIR}/Engine/HyperionPch.hpp\")
 " CONDITION "${HYP_SDK_DEV_PATHS_CONDITION}")
+
+  # the libraries a game ships beside it, read by the SDK and by Package Game
+  if(WIN32)
+    get_filename_component(HYP_LINKER_DIR "${CMAKE_LINKER}" DIRECTORY)
+
+    if(EXISTS "${HYP_LINKER_DIR}/dumpbin.exe")
+      set(HYP_DEPENDENCY_TOOL "dumpbin")
+      set(HYP_DEPENDENCY_TOOL_COMMAND "${HYP_LINKER_DIR}/dumpbin.exe")
+    elseif(CMAKE_OBJDUMP)
+      set(HYP_DEPENDENCY_TOOL "objdump")
+      set(HYP_DEPENDENCY_TOOL_COMMAND "${CMAKE_OBJDUMP}")
+    endif()
+
+    if(HYP_DEPENDENCY_TOOL)
+      add_custom_command(TARGET ${BUILD_NAME} POST_BUILD
+          COMMAND ${CMAKE_COMMAND}
+              "-DLIBRARY=$<TARGET_FILE:${BUILD_NAME}>"
+              "-DOUTPUT=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Sdk/RuntimeLibraries.txt"
+              "-DTOOL=${HYP_DEPENDENCY_TOOL}"
+              "-DTOOL_COMMAND=${HYP_DEPENDENCY_TOOL_COMMAND}"
+              "-DEXCLUDE=${HYP_SDK_SHADER_COMPILER_LIBRARIES}"
+              -P "${CMAKE_SOURCE_DIR}/GatherRuntimeLibraries.cmake")
+    endif()
+  endif()
 endif()
 
 if(HYP_WEB)

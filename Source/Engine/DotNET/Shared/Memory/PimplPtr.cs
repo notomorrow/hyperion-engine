@@ -4,10 +4,9 @@ using System.Runtime.InteropServices;
 namespace Hyperion
 {
     /// Wrapper struct corresponding to /core/memory/Pimpl.hpp in the C++ code
-    [StructLayout(LayoutKind.Explicit, Size = 8)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct PimplPtr
     {
-        [FieldOffset(0)]
         internal IntPtr ptr;
 
         public PimplPtr()

@@ -23,17 +23,21 @@ extern "C"
         return IsOnThread(g_simThread);
     }
 
-    HYP_EXPORT void SimThread_PostTask(void (*pTaskFunc)())
+    HYP_EXPORT void SimThread_PostTask(void (*pTaskFunc)(void*), void* context)
     {
         Assert(pTaskFunc != nullptr);
 
         if (IsOnThread(g_simThread))
         {
             // Execute immediately if already on the sim thread
-            pTaskFunc();
+            pTaskFunc(context);
             return;
         }
 
-        g_simThreadInstance->GetScheduler().Enqueue(pTaskFunc, TaskEnqueueFlags::FIRE_AND_FORGET);
+        g_simThreadInstance->GetScheduler().Enqueue([pTaskFunc, context]()
+            {
+                pTaskFunc(context);
+            },
+            TaskEnqueueFlags::FIRE_AND_FORGET);
     }
 } // extern "C"

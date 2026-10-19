@@ -3,11 +3,17 @@ using System.Runtime.InteropServices;
 namespace Hyperion
 {
     [ClassBinding(Name = "AssetReference")]
-    [StructLayout(LayoutKind.Explicit, Size = 24, Pack = 8)]
+    [StructLayout(LayoutKind.Explicit, Size = NativeSize, Pack = 8)]
     public unsafe ref struct AssetReference
     {
         [FieldOffset(0)]
-        private fixed byte _raw[24];
+        private fixed byte _raw[NativeSize];
+
+#if HYP_WEB
+        private const int NativeSize = 16;
+#else
+        private const int NativeSize = 24;
+#endif
 
         public AssetReference()
         {

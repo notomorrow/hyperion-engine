@@ -8,13 +8,6 @@ using System.Diagnostics;
 
 namespace Hyperion
 {
-    [return: MarshalAs(UnmanagedType.I1)]
-    public delegate bool InvokeMethodDelegate(IntPtr thisObjectReferencePtr, IntPtr argsBoxedPtr, IntPtr outBoxed);
-    [return: MarshalAs(UnmanagedType.I1)]
-    public delegate bool InvokeGetterDelegate(Guid propertyGuid, IntPtr thisObjectReferencePtr, IntPtr argsBoxedPtr, IntPtr outBoxed);
-    [return: MarshalAs(UnmanagedType.I1)]
-    public delegate bool InvokeSetterDelegate(Guid propertyGuid, IntPtr thisObjectReferencePtr, IntPtr argsBoxedPtr, IntPtr outBoxed);
-    public delegate void InitializeObjectCallbackDelegate(IntPtr contextPtr, IntPtr objectPtr, uint objectSize);
     public delegate void AddObjectToCacheDelegate(IntPtr objectWrapperPtr, IntPtr outClassObjectPtr, IntPtr outObjectReferencePtr, [MarshalAs(UnmanagedType.I1)] bool weak);
     public delegate bool SetKeepAliveDelegate(IntPtr objectReferencePtr, bool keepAlive);
     public delegate void TriggerGCDelegate();
@@ -30,15 +23,7 @@ namespace Hyperion
 
     public class NativeInterop
     {
-        private const string ClassPtrFieldName = "_classPtr";
-        private const string NativeAddressFieldName = "_nativeAddress";
-
         private static readonly ConcurrentDictionary<IntPtr, int> s_liveObjectCounts = new ConcurrentDictionary<IntPtr, int>();
-
-        // native keeps these function pointers around, so the delegates must stay rooted
-        private static readonly AddObjectToCacheDelegate s_addObjectToCacheDelegate = AddObjectToCache;
-        private static readonly InvokeGetterDelegate s_invokeGetterDelegate = InvokeGetter;
-        private static readonly InvokeSetterDelegate s_invokeSetterDelegate = InvokeSetter;
 
         private static bool VerifyEngineVersion(string versionString, bool major, bool minor, bool patch)
         {
@@ -58,13 +43,7 @@ namespace Hyperion
         {
             string assemblyName = assembly.GetName().Name ?? string.Empty;
 
-            if (assemblyName.StartsWith("Hyperion."))
-            {
-                return true;
-            }
-
-            // script modules are named after their project (e.g Projects.MyGame.Scripts) but still build against the engine
-            return Array.Exists(assembly.GetReferencedAssemblies(), referencedAssemblyName => referencedAssemblyName.Name == "Hyperion.NET.Runtime");
+            return assemblyName.StartsWith("Hyperion.") || HypTypeRegistry.HasRegistry(assembly);
         }
 
         private static void InitializeHyperionAssembly(Assembly assembly, bool isCoreAssembly)
@@ -76,7 +55,16 @@ namespace Hyperion
                 throw new InvalidOperationException("Assembly is not a Hyperion.* assembly: " + assembly.FullName);
             }
 
-            Type[] types = assembly.GetExportedTypes();
+            if (!HypTypeRegistry.HasRegistry(assembly))
+            {
+                Logger.Log(LogLevel.Error, "{0} has no type registry: build it with Hyperion.NET.Generators as an analyzer", assembly.GetName().Name);
+            }
+
+            IEnumerable<Type> types = HypTypeRegistry.GetTypes(assembly);
+
+            s_registrationStats = default;
+
+            Stopwatch registrationTimer = Stopwatch.StartNew();
 
             foreach (Type type in types)
             {
@@ -98,41 +86,55 @@ namespace Hyperion
                     RegisterComponentType(type);
                 }
             }
+
+            Logger.Log(LogLevel.Info, "Registered {0} managed class(es) from {1} in {5} ms: {2} methods, {3} properties, {4} constructors",
+                s_registrationStats.Classes,
+                assembly.GetName().Name,
+                s_registrationStats.Methods,
+                s_registrationStats.Properties,
+                s_registrationStats.Constructors,
+                registrationTimer.ElapsedMilliseconds);
         }
 
         private static void RegisterComponentType(Type type)
         {
-            Assembly? sharedAssembly = type.GetInterface("Hyperion.IComponent")?.Assembly
-                ?? TryGetAttributeByName(type, "Component")?.GetType().Assembly;
-
-            if (sharedAssembly == null)
-            {
-                return;
-            }
-
-            MethodInfo? registerMethod = sharedAssembly.GetType("Hyperion.ComponentRegistry")?.GetMethod("RegisterDeclaredComponent", BindingFlags.Public | BindingFlags.Static);
-
-            if (registerMethod == null)
-            {
-                Logger.Log(LogLevel.Error, "Cannot register component type {0}: ComponentRegistry not found in {1}", type.FullName, sharedAssembly.FullName);
-
-                return;
-            }
-
             try
             {
-                registerMethod.Invoke(null, new object[] { type });
+                ComponentRegistry.RegisterDeclaredComponent(type);
             }
-            catch (TargetInvocationException ex)
+            catch (Exception ex)
             {
-                Logger.Log(LogLevel.Error, "Failed to register component type {0}: {1}", type.FullName, ex.InnerException ?? ex);
+                Logger.Log(LogLevel.Error, "Failed to register component type {0}: {1}", type.FullName, ex);
             }
         }
 
-        [UnmanagedCallersOnly]
-        public static unsafe int InitializeRuntime()
+        public static int InitializeLoadedAssembly(Assembly assembly, bool isCoreAssembly)
         {
-            return InitializeRuntimeManaged();
+            try
+            {
+                AssemblyCache.Instance.GetOrAdd(assembly, isCoreAssembly);
+
+                if (IsHyperionAssembly(assembly))
+                {
+                    InitializeHyperionAssembly(assembly, isCoreAssembly);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "Error initializing assembly {0}: {1}", assembly.GetName().Name, ex);
+
+                return (int)LoadAssemblyResult.UnknownError;
+            }
+
+            return (int)LoadAssemblyResult.Ok;
+        }
+
+        // Script components resolve their classes in this (already loaded) assembly instead of loading a script assembly
+        public static void SetHostedScriptAssembly(Assembly assembly)
+        {
+            AssemblyInstance? assemblyInstance = AssemblyCache.Instance.GetByReference(assembly);
+
+            NativeInterop_SetHostedScriptAssembly(assemblyInstance != null ? assemblyInstance.AssemblyPtr : IntPtr.Zero);
         }
 
         public static unsafe int InitializeRuntimeManaged()
@@ -143,7 +145,7 @@ namespace Hyperion
 
                 currentDomain.UnhandledException += new UnhandledExceptionEventHandler(HandleUnhandledException);
 
-                NativeInterop_SetAddObjectToCacheFunction(Marshal.GetFunctionPointerForDelegate<AddObjectToCacheDelegate>(s_addObjectToCacheDelegate));
+                NativeInterop_SetAddObjectToCacheFunction((IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, byte, void>)&AddObjectToCacheUnmanaged);
                 NativeInterop_SetSetKeepAliveFunction((delegate* unmanaged<IntPtr, int*, void>)&SetKeepAlive);
                 NativeInterop_SetTriggerGCFunction((delegate* unmanaged<void>)&TriggerGC);
                 NativeInterop_SetCollectGarbageAndWaitFunction((delegate* unmanaged<void>)&CollectGarbageAndWait);
@@ -153,6 +155,7 @@ namespace Hyperion
                 NativeInterop_SetFreeObjectReferenceFunction((delegate* unmanaged<IntPtr, void>)&FreeObjectReference);
                 NativeInterop_SetQueryManagedObjectCountsFunction((delegate* unmanaged<IntPtr*, int, int>)&QueryManagedObjectCounts);
                 NativeInterop_SetGetTotalMemoryFunction((delegate* unmanaged<long>)&GetTotalMemory);
+                NativeInterop_SetSimTickFunction((delegate* unmanaged<float, void>)&SimTick);
             }
             catch (Exception ex)
             {
@@ -222,7 +225,7 @@ namespace Hyperion
                 }
 
                 // check if it has a dependency on the engine - if so, we need to verify the version is compatible
-                AssemblyName? hyperionSharedDependency = Array.Find(assembly.GetReferencedAssemblies(), (assemblyName) => assemblyName.Name == "Hyperion.NET.Shared");
+                AssemblyName? hyperionSharedDependency = RuntimeFeature.IsDynamicCodeSupported ? Array.Find(assembly.GetReferencedAssemblies(), (assemblyName) => assemblyName.Name == "Hyperion.NET.Shared") : null;
                 if (hyperionSharedDependency != null)
                 {
                     // Verify the engine version (major, minor)
@@ -232,12 +235,6 @@ namespace Hyperion
 
                         return (int)LoadAssemblyResult.VersionMismatch;
                     }
-                }
-
-                if (assemblyPtr != IntPtr.Zero)
-                {
-                    NativeInterop_SetInvokeGetterFunction(ref assemblyGuid, assemblyPtr, Marshal.GetFunctionPointerForDelegate<InvokeGetterDelegate>(s_invokeGetterDelegate));
-                    NativeInterop_SetInvokeSetterFunction(ref assemblyGuid, assemblyPtr, Marshal.GetFunctionPointerForDelegate<InvokeSetterDelegate>(s_invokeSetterDelegate));
                 }
 
                 if (IsHyperionAssembly(assembly))
@@ -332,89 +329,57 @@ namespace Hyperion
             return managedAttributeHolder;
         }
 
-        private static Dictionary<string, MethodInfo> CollectMethods(Type type)
+        private static uint GetPrimitiveSize(Type type)
         {
-            Dictionary<string, MethodInfo> methods = new Dictionary<string, MethodInfo>();
-
-            CollectMethods(type, methods);
-
-            return methods;
-        }
-
-        private static void CollectMethods(Type type, Dictionary<string, MethodInfo> methods)
-        {
-            MethodInfo[] methodInfos = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-
-            foreach (MethodInfo methodInfo in methodInfos)
+            switch (Type.GetTypeCode(type))
             {
-                // Skip duplicates in hierarchy
-                if (methods.ContainsKey(methodInfo.Name))
-                {
-                    continue;
-                }
-
-                // Skip constructors
-                if (methodInfo.IsConstructor)
-                {
-                    continue;
-                }
-
-                methods.Add(methodInfo.Name, methodInfo);
-            }
-
-            if (type.BaseType != null)
-            {
-                CollectMethods(type.BaseType, methods);
+            case TypeCode.Boolean:
+            case TypeCode.Byte:
+            case TypeCode.SByte:
+                return 1;
+            case TypeCode.Char:
+            case TypeCode.Int16:
+            case TypeCode.UInt16:
+                return 2;
+            case TypeCode.Int32:
+            case TypeCode.UInt32:
+            case TypeCode.Single:
+                return 4;
+            case TypeCode.Int64:
+            case TypeCode.UInt64:
+            case TypeCode.Double:
+                return 8;
+            default:
+                return (uint)HypMarshal.SizeOf(type);
             }
         }
 
-        private static Dictionary<string, PropertyInfo> CollectProperties(Type type)
+        private static bool IsOperatingSystemConditionMet(string condition)
         {
-            Dictionary<string, PropertyInfo> properties = new();
-
-            CollectProperties(type, properties);
-
-            return properties;
-        }
-
-        private static void CollectProperties(Type type, Dictionary<string, PropertyInfo> properties)
-        {
-            PropertyInfo[] propertyInfos = type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-
-            foreach (PropertyInfo propertyInfo in propertyInfos)
+            switch (condition)
             {
-                // Skip duplicates in hierarchy
-                if (properties.ContainsKey(propertyInfo.Name))
-                {
-                    continue;
-                }
-
-                properties.Add(propertyInfo.Name, propertyInfo);
+            case "IsWindows":
+                return OperatingSystem.IsWindows();
+            case "IsLinux":
+                return OperatingSystem.IsLinux();
+            case "IsMacOS":
+                return OperatingSystem.IsMacOS();
+            case "IsAndroid":
+                return OperatingSystem.IsAndroid();
+            case "IsIOS":
+                return OperatingSystem.IsIOS();
+            case "IsBrowser":
+                return OperatingSystem.IsBrowser();
+            default:
+                Logger.Log(LogLevel.Error, "Unknown ClassBinding condition: {0}", condition);
+                return false;
             }
-
-            if (type.BaseType != null)
-            {
-                CollectProperties(type.BaseType, properties);
-            }
-        }
-
-        private static object? TryGetAttributeByName(Type type, string name)
-        {
-            foreach (var attr in type.GetCustomAttributes(false))
-            {
-                if (attr.GetType().Name == name)
-                {
-                    return attr;
-                }
-            }
-
-            return null;
         }
 
         private static unsafe IntPtr InitManagedClass(Type type, bool isCoreAssembly)
         {
             // Skip classes with the NoNativeClass attribute
-            if (TryGetAttributeByName(type, "NoNativeClass") != null)
+            if (type.IsDefined(typeof(NoNativeClass), inherit: false))
             {
                 Logger.Log(LogLevel.Verbose, "Skipping managed class for type: {0} due to NoNativeClass attribute", type.Name);
 
@@ -422,12 +387,12 @@ namespace Hyperion
             }
 
             AssemblyInstance? assemblyInstance = AssemblyCache.Instance.GetByReference(type.Assembly)
-                ?? AssemblyCache.Instance.Get(type.Assembly.GetName());
+                ?? AssemblyCache.Instance.Get(type.Assembly.GetName())
+                ?? (type.Assembly.IsCollectible ? null : AssemblyCache.Instance.GetOrAdd(type.Assembly, isCoreAssembly: true));
 
             if (assemblyInstance == null)
             {
                 throw new Exception("InitManagerClass: Failed to get assembly instance for type: " + type.Name + " from assembly: " + type.Assembly.FullName
-                    + " located at: " + type.Assembly.Location
                     + ", has the assembly been registered?");
             }
 
@@ -436,7 +401,7 @@ namespace Hyperion
 
             if (assemblyPtr == IntPtr.Zero)
             {
-                throw new Exception("Assembly pointer is null for assembly: " + type.Assembly.FullName + " located at: " + type.Assembly.Location);
+                throw new Exception("Assembly pointer is null for assembly: " + type.Assembly.FullName);
             }
 
             IntPtr foundClassObjectPtr = IntPtr.Zero;
@@ -472,20 +437,14 @@ namespace Hyperion
 
             TypeId typeId = TypeId.ForType(type);
 
-            // Use dynamic since we don't know the actual type - it is loaded from another assembly
-            dynamic? classBindingAttribute = TryGetAttributeByName(type, "ClassBinding");
+            ClassBinding? classBindingAttribute = type.GetCustomAttribute<ClassBinding>(inherit: false);
 
             if (classBindingAttribute != null)
             {
                 string? condition = classBindingAttribute.Condition;
-                if (condition != null)
+                if (condition != null && !IsOperatingSystemConditionMet(condition))
                 {
-                    // Check OperatingSystem.(condition) if Condition is provided.
-                    // This is icky but it's the only way to conditionally load a class using the Attributes as what
-                    // we provide to it must be a constant expression.
-                    MethodInfo? conditionMethod = typeof(OperatingSystem).GetMethod(condition);
-                    if (conditionMethod == null || !conditionMethod.Invoke(null, null)!.Equals(true))
-                        return IntPtr.Zero;
+                    return IntPtr.Zero;
                 }
 
                 className = classBindingAttribute.Name;
@@ -507,13 +466,11 @@ namespace Hyperion
 
                         while (parentType != null)
                         {
-                            dynamic? parentClassBindingAttribute = TryGetAttributeByName(parentType, "ClassBinding");
+                            ClassBinding? parentClassBindingAttribute = parentType.GetCustomAttribute<ClassBinding>(inherit: false);
 
                             if (parentClassBindingAttribute != null)
                             {
-                                // Call the GetClass method
-                                dynamic? parentClass = parentClassBindingAttribute.GetClass(parentType);
-                                parentClassPtr = parentClass?.Address ?? IntPtr.Zero;
+                                parentClassPtr = parentClassBindingAttribute.GetClass(parentType).Address;
 
                                 if (parentClassPtr != IntPtr.Zero)
                                     break;
@@ -541,6 +498,8 @@ namespace Hyperion
                 }
             }
 
+            HypTypeEntry? typeEntry = HypTypeRegistry.Get(type);
+
             uint typeSize = 0;
 
             ManagedClassFlags managedClassFlags = ManagedClassFlags.None;
@@ -553,15 +512,17 @@ namespace Hyperion
             {
                 managedClassFlags |= ManagedClassFlags.StructType;
 
-                if (!type.IsGenericType)
+                if (typeEntry != null && typeEntry.NativeSize != IntPtr.Zero)
                 {
-                    typeSize = (uint)Marshal.SizeOf(type);
+                    typeSize = (uint)((delegate*<int>)typeEntry.NativeSize)();
                 }
             }
             else if (type.IsEnum)
             {
                 managedClassFlags |= ManagedClassFlags.EnumType;
-                typeSize = (uint)Marshal.SizeOf(Enum.GetUnderlyingType(type));
+                typeSize = typeEntry != null && typeEntry.NativeSize != IntPtr.Zero
+                    ? (uint)((delegate*<int>)typeEntry.NativeSize)()
+                    : GetPrimitiveSize(Enum.GetUnderlyingType(type));
             }
 
             if (type.IsAbstract)
@@ -573,360 +534,108 @@ namespace Hyperion
 
             Marshal.FreeCoTaskMem(typeNamePtr);
 
+            s_registrationStats.Classes++;
+
             ManagedAttributeHolder managedAttributeHolder = AllocAttributeHolder(assemblyGuid, assemblyPtr, type.GetCustomAttributes().ToArray());
             managedClassDesc.SetAttributes(ref managedAttributeHolder);
             managedAttributeHolder.Dispose();
 
-            foreach (var item in CollectMethods(type))
+            RegisterMethods(type, typeEntry, assemblyGuid, assemblyPtr, ref managedClassDesc);
+            RegisterProperties(type, typeEntry, assemblyGuid, assemblyPtr, ref managedClassDesc);
+
+            if (typeEntry != null && typeEntry.NewObject != IntPtr.Zero)
             {
-                MethodInfo methodInfo = item.Value;
-
-                managedAttributeHolder = AllocAttributeHolder(assemblyGuid, assemblyPtr, methodInfo.GetCustomAttributes(false));
-
-                // Add the objects being pointed to to the delegate cache so they don't get GC'd
-                Guid methodGuid = Guid.NewGuid();
-
-                InvokeMethodDelegate invokeMethodDelegate = (IntPtr thisObjectReferencePtr, IntPtr argsPtr, IntPtr retPtr) =>
-                {
-                    try
-                    {
-#if DEBUG
-                        Debug.Assert(methodInfo != null, "MethodInfo is null for method: " + item.Key + " in type: " + type.Name);
-#endif
-
-                        object?[] parameters;
-                        HandleParameters(argsPtr, methodInfo, out parameters);
-
-                        object? thisObject = null;
-
-                        if (!methodInfo.IsStatic)
-                        {
-#if DEBUG
-                            Debug.Assert(thisObjectReferencePtr != IntPtr.Zero, "This object reference pointer is null for method: " + methodInfo.Name + " in type: " + type.Name);
-#endif
-
-                            ref ObjectReference objectReferenceRef = ref Unsafe.AsRef<ObjectReference>((void*)thisObjectReferencePtr);
-
-                            thisObject = objectReferenceRef.LoadObject();
-
-                            if (thisObject == null)
-                                throw new InvalidOperationException("Failed to get object reference for method: " + methodInfo.Name + " from " + methodInfo.DeclaringType?.Name);
-                        }
-
-                        object? returnValue = methodInfo.Invoke(thisObject, BindingFlags.DoNotWrapExceptions, null, parameters, null);
-
-                        if (methodInfo.ReturnType != typeof(void) && retPtr != IntPtr.Zero)
-                        {
-                            ((BoxedValueInternal*)retPtr)->SetValue(returnValue);
-                        }
-
-                        return true;
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Log(LogLevel.Error, "Exception thrown invoking method {0} on type {1}: {2}", methodInfo.Name, methodInfo.DeclaringType?.Name, ex);
-
-                        return false;
-                    }
-                };
-
-                IntPtr functionPointer = Marshal.GetFunctionPointerForDelegate(invokeMethodDelegate);
-                ManagedMethodCache.Instance.Add(assemblyGuid, methodGuid, methodInfo, invokeMethodDelegate);
-
-                managedClassDesc.AddMethod(item.Key, methodGuid, functionPointer, ref managedAttributeHolder);
-
-                managedAttributeHolder.Dispose();
+                managedClassDesc.SetNewObjectFunction(ManagedInvokers.NewObjectGeneratedFptr, typeEntry.NewObject);
+                s_registrationStats.Constructors++;
             }
 
-            foreach (var item in CollectProperties(type))
+            if (typeEntry != null && typeEntry.MarshalObject != IntPtr.Zero)
             {
-                PropertyInfo propertyInfo = item.Value;
-
-                managedAttributeHolder = AllocAttributeHolder(assemblyGuid, assemblyPtr, propertyInfo.GetCustomAttributes(false));
-
-                Guid propertyGuid = Guid.NewGuid();
-                managedClassDesc.AddProperty(item.Key, propertyGuid, ref managedAttributeHolder);
-
-                BasicCache<PropertyInfo>.Instance.Add(assemblyGuid, propertyGuid, propertyInfo);
-
-                managedAttributeHolder.Dispose();
+                managedClassDesc.SetMarshalObjectFunction(ManagedInvokers.MarshalObjectGeneratedFptr, typeEntry.MarshalObject);
             }
-
-            // Add new object, free object delegates
-            managedClassDesc.SetNewObjectFunction(assemblyGuid, new NewObjectDelegate((bool keepAlive, IntPtr pClass, IntPtr nativeAddress, IntPtr pCtx, IntPtr pCallback) =>
-            {
-                object? obj = null;
-
-                FieldInfo? classPtrField = null;
-                FieldInfo? nativeAddressField = null;
-
-                GCHandle? gcHandleWeak = null;
-                GCHandle? gcHandleStrong = null;
-
-                try
-                {
-                    // Allocate the object
-                    obj = RuntimeHelpers.GetUninitializedObject(type);
-                    Debug.Assert(obj != null);
-
-                    // Call the constructor
-                    ConstructorInfo? constructorInfo;
-                    object[]? parameters = null;
-
-                    if (pClass != IntPtr.Zero)
-                    {
-                        if (nativeAddress == IntPtr.Zero)
-                            throw new ArgumentNullException(nameof(nativeAddress));
-
-                        Type? objType = obj.GetType();
-
-                        if (objType == null)
-                            throw new InvalidOperationException("Failed to get object type for object of type: " + type.Name);
-
-                        classPtrField = objType.GetField(ClassPtrFieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
-                        nativeAddressField = objType.GetField(NativeAddressFieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.FlattenHierarchy);
-
-                        if (classPtrField == null || nativeAddressField == null)
-                            throw new InvalidOperationException("Could not find classPtr or nativeAddress field on class " + type.Name);
-
-                        classPtrField.SetValue(obj, pClass);
-                        nativeAddressField.SetValue(obj, nativeAddress);
-                    }
-
-                    constructorInfo = type.GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null);
-
-                    if (constructorInfo == null)
-                        throw new InvalidOperationException("Failed to find empty constructor for type: " + type.Name);
-
-                    constructorInfo.Invoke(obj, BindingFlags.DoNotWrapExceptions, null, parameters, null);
-
-                    gcHandleWeak = GCHandle.Alloc(obj, GCHandleType.Weak);
-
-                    if (pCallback != IntPtr.Zero)
-                    {
-                        if (!type.IsValueType)
-                            throw new InvalidOperationException("InitializeObjectCallback can only be used with value types");
-
-                        gcHandleStrong = GCHandle.Alloc(obj, GCHandleType.Pinned);
-
-                        InitializeObjectCallbackDelegate callbackDelegate = Marshal.GetDelegateForFunctionPointer<InitializeObjectCallbackDelegate>(pCallback);
-                        callbackDelegate(pCtx, ((GCHandle)gcHandleStrong).AddrOfPinnedObject(), (uint)Marshal.SizeOf(type));
-
-                        if (!keepAlive)
-                        {
-                            ((GCHandle)gcHandleStrong).Free();
-                            gcHandleStrong = null;
-                        }
-                    }
-                    else if (keepAlive)
-                    {
-                        gcHandleStrong = GCHandle.Alloc(obj, GCHandleType.Normal);
-                    }
-
-                    return new ObjectReference
-                    {
-                        WeakHandle = GCHandle.ToIntPtr((GCHandle)gcHandleWeak),
-                        StrongHandle = gcHandleStrong.HasValue ? GCHandle.ToIntPtr((GCHandle)gcHandleStrong) : IntPtr.Zero
-                    };
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(LogLevel.Error, "Exception thrown constructing object of type {0}: {1}", type.Name, ex);
-
-                    if (gcHandleStrong.HasValue)
-                        ((GCHandle)gcHandleStrong).Free();
-
-                    if (gcHandleWeak.HasValue)
-                        ((GCHandle)gcHandleWeak).Free();
-
-                    // Derived field initializers run before ObjectBase takes its native ref, so the finalizer must not release one
-                    if (obj != null && classPtrField != null && nativeAddressField != null)
-                    {
-                        classPtrField.SetValue(obj, IntPtr.Zero);
-                        nativeAddressField.SetValue(obj, IntPtr.Zero);
-                    }
-
-                    return default;
-                }
-            }));
-
-            managedClassDesc.SetMarshalObjectFunction(assemblyGuid, new MarshalObjectDelegate((IntPtr ptr, uint size) =>
-            {
-                try
-                {
-#if DEBUG
-                    if (ptr == IntPtr.Zero)
-                        throw new ArgumentNullException(nameof(ptr));
-
-                    if (size != Marshal.SizeOf(type))
-                        throw new ArgumentException("Size does not match type size", nameof(size));
-#endif
-                    // Cannot create boxed byref-like values
-                    if (type.IsByRefLike)
-                    {
-                        throw new InvalidOperationException($"Cannot marshal byref-like type {type.Name} from pointer.");
-                    }
-
-                    // Marshal object from pointer
-                    object? obj = Marshal.PtrToStructure(ptr, type);
-                    Debug.Assert(obj != null, "Failed to marshal object from pointer");
-
-                    // Freshly boxed value has no other referrer, so it must be held by a strong
-                    // handle until the caller reads it back
-                    return new ObjectReference
-                    {
-                        WeakHandle = GCHandle.ToIntPtr(GCHandle.Alloc(obj, GCHandleType.Normal)),
-                        StrongHandle = IntPtr.Zero
-                    };
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(LogLevel.Error, "Exception thrown marshalling object of type {0}: {1}", type.Name, ex);
-
-                    return default;
-                }
-            }));
 
             return managedClassDesc.ClassObjectPtr;
         }
 
-        private static unsafe void HandleParameters(IntPtr argsBoxedPtr, MethodInfo methodInfo, out object?[] parameters)
+        private struct RegistrationStats
         {
-            int numParams = methodInfo.GetParameters().Length;
+            public int Classes;
+            public int Methods;
+            public int Properties;
+            public int Constructors;
+        }
 
-            if (numParams == 0)
+        private static RegistrationStats s_registrationStats;
+
+        private static unsafe void RegisterMethods(Type type, HypTypeEntry? typeEntry, Guid assemblyGuid, IntPtr assemblyPtr, ref ManagedClassDesc managedClassDesc)
+        {
+            HashSet<string> methodNames = new HashSet<string>();
+
+            for (Type? currentType = type; currentType != null; currentType = currentType.BaseType)
             {
-                parameters = Array.Empty<object?>();
+                HypTypeEntry? entry = currentType == type ? typeEntry : HypTypeRegistry.Get(currentType);
 
-                return;
-            }
-
-            parameters = new object?[numParams];
-
-            BoxedValueInternal* paramPtr = *(BoxedValueInternal**)argsBoxedPtr;
-            int paramsOffset = 0;
-
-            for (int paramIndex = 0; paramIndex < numParams; paramIndex++)
-            {
-                // Get the ParameterInfo for the current parameter
-                ParameterInfo parameterInfo = methodInfo.GetParameters()[paramIndex];
-
-                Type parameterType = parameterInfo.ParameterType;
-
-                // Check if it has ParamArrayAttribute (params)
-                if (parameterInfo.GetCustomAttribute(typeof(ParamArrayAttribute)) != null)
+                if (entry == null)
                 {
-                    // Calculate array size by iterating until we hit a null pointer.
-                    int paramArraySize = 0;
-
-                    for (IntPtr currentParamPtr = argsBoxedPtr + paramsOffset; (IntPtr)(*((BoxedValueInternal**)currentParamPtr)) != IntPtr.Zero; currentParamPtr += sizeof(IntPtr))
-                    {
-                        paramArraySize++;
-                    }
-
-                    // Empty array
-                    if (paramArraySize == 0)
-                    {
-                        parameters[paramIndex] = Array.CreateInstance(parameterType.GetElementType()!, 0);
-
-                        break;
-                    }
-
-                    // We need to read the params array from the argsBoxedPtr
-
-                    Array paramArray = Array.CreateInstance(parameterType.GetElementType()!, paramArraySize);
-
-                    // Copy the values from the list to the array
-                    int paramElementIndex = 0;
-
-                    while ((IntPtr)paramPtr != IntPtr.Zero)
-                    {
-                        object? paramValue;
-
-                        try
-                        {
-                            paramValue = paramPtr->GetValue();
-                        }
-                        catch (Exception ex)
-                        {
-                            throw new Exception("Failed to get params element value at index: " + paramElementIndex + " for method: " + methodInfo.Name + " from " + methodInfo.DeclaringType?.Name, ex);
-                        }
-
-                        paramArray.SetValue(paramValue, paramElementIndex);
-
-                        paramsOffset += sizeof(IntPtr);
-                        paramPtr = *(BoxedValueInternal**)(argsBoxedPtr + paramsOffset);
-
-                        paramElementIndex++;
-                    }
-
-                    parameters[paramIndex] = paramArray;
-
-                    break;
+                    continue;
                 }
 
-                try
+                foreach (HypMethodThunk thunk in entry.Methods)
                 {
-                    parameters[paramIndex] = paramPtr->GetValue();
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception("Failed to get parameter value at index: " + paramIndex + " for method: " + methodInfo.Name + " from " + methodInfo.DeclaringType?.Name, ex);
-                }
+                    if (!methodNames.Add(thunk.Name))
+                    {
+                        continue;
+                    }
 
-                paramsOffset += sizeof(IntPtr);
-                paramPtr = *(BoxedValueInternal**)(argsBoxedPtr + paramsOffset);
+                    ManagedAttributeHolder managedAttributeHolder = AllocAttributeHolder(assemblyGuid, assemblyPtr, thunk.Attributes ?? Array.Empty<Attribute>());
+                    managedClassDesc.AddMethod(thunk.Name, Guid.NewGuid(), ManagedInvokers.InvokeGeneratedFptr, thunk.Invoke, ref managedAttributeHolder);
+                    managedAttributeHolder.Dispose();
+
+                    s_registrationStats.Methods++;
+                }
             }
         }
 
-        public static unsafe bool InvokeGetter(Guid managedPropertyGuid, IntPtr thisObjectReferencePtr, IntPtr argsBoxedPtr, IntPtr outBoxed)
+        private static unsafe void RegisterProperties(Type type, HypTypeEntry? typeEntry, Guid assemblyGuid, IntPtr assemblyPtr, ref ManagedClassDesc managedClassDesc)
         {
-            PropertyInfo? propertyInfo = null;
+            HashSet<string> propertyNames = new HashSet<string>();
 
-            try
+            for (Type? currentType = type; currentType != null; currentType = currentType.BaseType)
             {
-                propertyInfo = BasicCache<PropertyInfo>.Instance.Get(managedPropertyGuid);
+                HypTypeEntry? entry = currentType == type ? typeEntry : HypTypeRegistry.Get(currentType);
 
-                ref ObjectReference objectReferenceRef = ref Unsafe.AsRef<ObjectReference>((void*)thisObjectReferencePtr);
+                if (entry == null)
+                {
+                    continue;
+                }
 
-                object? thisObject = objectReferenceRef.LoadObject();
-                object? returnValue = propertyInfo.GetValue((object?)thisObject, BindingFlags.DoNotWrapExceptions, null, null, null);
+                foreach (HypPropertyThunk thunk in entry.Properties)
+                {
+                    if (!propertyNames.Add(thunk.Name))
+                    {
+                        continue;
+                    }
 
-                ((BoxedValueInternal*)outBoxed)->SetValue(returnValue);
+                    ManagedAttributeHolder managedAttributeHolder = AllocAttributeHolder(assemblyGuid, assemblyPtr, thunk.Attributes ?? Array.Empty<Attribute>());
+                    managedClassDesc.AddProperty(
+                        thunk.Name,
+                        Guid.NewGuid(),
+                        thunk.Getter != IntPtr.Zero ? ManagedInvokers.InvokeGeneratedFptr : IntPtr.Zero,
+                        thunk.Getter,
+                        thunk.Setter != IntPtr.Zero ? ManagedInvokers.InvokeGeneratedFptr : IntPtr.Zero,
+                        thunk.Setter,
+                        ref managedAttributeHolder);
+                    managedAttributeHolder.Dispose();
 
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "Exception thrown getting property {0} on type {1}: {2}", propertyInfo?.Name, propertyInfo?.DeclaringType?.Name, ex);
-
-                return false;
+                    s_registrationStats.Properties++;
+                }
             }
         }
 
-        public static unsafe bool InvokeSetter(Guid managedPropertyGuid, IntPtr thisObjectReferencePtr, IntPtr argsBoxedPtr, IntPtr outBoxed)
+        [UnmanagedCallersOnly]
+        private static void AddObjectToCacheUnmanaged(IntPtr objectWrapperPtr, IntPtr outClassObjectPtr, IntPtr outObjectReferencePtr, byte weak)
         {
-            PropertyInfo? propertyInfo = null;
-
-            try
-            {
-                propertyInfo = BasicCache<PropertyInfo>.Instance.Get(managedPropertyGuid);
-
-                ref ObjectReference objectReferenceRef = ref Unsafe.AsRef<ObjectReference>((void*)thisObjectReferencePtr);
-
-                object? thisObject = objectReferenceRef.LoadObject();
-                object? value = (*(BoxedValueInternal**)argsBoxedPtr)->GetValue();
-
-                propertyInfo.SetValue((object?)thisObject, value, BindingFlags.DoNotWrapExceptions, null, null, null);
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, "Exception thrown setting property {0} on type {1}: {2}", propertyInfo?.Name, propertyInfo?.DeclaringType?.Name, ex);
-
-                return false;
-            }
+            AddObjectToCache(objectWrapperPtr, outClassObjectPtr, outObjectReferencePtr, weak != 0);
         }
 
         public static unsafe void AddObjectToCache(IntPtr objectWrapperPtr, IntPtr outClassObjectPtr, IntPtr outObjectReferencePtr, bool weak)
@@ -1127,6 +836,19 @@ namespace Hyperion
         }
 
         [UnmanagedCallersOnly]
+        public static void SimTick(float deltaTime)
+        {
+            try
+            {
+                SimThreadSynchronizationContext.Instance.Tick(deltaTime);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, "Exception thrown on sim thread tick! {0}", ex);
+            }
+        }
+
+        [UnmanagedCallersOnly]
         public static unsafe int QueryManagedObjectCounts(IntPtr* outPairs, int maxPairs)
         {
             int written = 0;
@@ -1186,11 +908,8 @@ namespace Hyperion
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool NativeInterop_VerifyEngineVersion(uint assemblyEngineVersion, bool major, bool minor, bool patch);
 
-        [DllImport("hyperion", EntryPoint = "NativeInterop_SetInvokeGetterFunction")]
-        private static extern void NativeInterop_SetInvokeGetterFunction([In] ref Guid assemblyGuid, IntPtr assemblyPtr, IntPtr invokeGetterPtr);
-
-        [DllImport("hyperion", EntryPoint = "NativeInterop_SetInvokeSetterFunction")]
-        private static extern void NativeInterop_SetInvokeSetterFunction([In] ref Guid assemblyGuid, IntPtr assemblyPtr, IntPtr invokeSetterPtr);
+        [DllImport("hyperion", EntryPoint = "NativeInterop_SetHostedScriptAssembly")]
+        private static extern void NativeInterop_SetHostedScriptAssembly(IntPtr assemblyPtr);
 
         [DllImport("hyperion", EntryPoint = "NativeInterop_SetAddObjectToCacheFunction")]
         private static extern void NativeInterop_SetAddObjectToCacheFunction(IntPtr addObjectToCacheFunction);
@@ -1221,6 +940,9 @@ namespace Hyperion
 
         [DllImport("hyperion", EntryPoint = "NativeInterop_SetGetTotalMemoryFunction")]
         private static extern unsafe void NativeInterop_SetGetTotalMemoryFunction(void* getTotalMemoryFunction);
+
+        [DllImport("hyperion", EntryPoint = "NativeInterop_SetSimTickFunction")]
+        private static extern unsafe void NativeInterop_SetSimTickFunction(void* simTickFunction);
 
         [DllImport("hyperion")]
         private static extern int NativeInterop_NewAssembly(Guid guid, out IntPtr outAssemblyPtr);

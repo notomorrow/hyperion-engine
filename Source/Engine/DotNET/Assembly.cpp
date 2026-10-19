@@ -27,9 +27,7 @@ Assembly::Assembly(const ManagedGuid& guid)
 
 Assembly::Assembly(const ManagedGuid& guid, EnumFlags<AssemblyFlags> flags)
     : m_flags(flags),
-      m_guid(guid),
-      m_invokeGetterFptr(nullptr),
-      m_invokeSetterFptr(nullptr)
+      m_guid(guid)
 {
 }
 

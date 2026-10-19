@@ -20,6 +20,11 @@ extern "C"
         *outName = typeInfo->name;
     }
 
+    HYP_EXPORT void TypeInfo_GetId(const TypeInfo* typeInfo, TypeId* outTypeId)
+    {
+        *outTypeId = Hyperion::utilities::TypeInfo_GetId(*typeInfo);
+    }
+
     HYP_EXPORT uint32 TypeInfo_GetSize(const TypeInfo* typeInfo)
     {
         return typeInfo->size;

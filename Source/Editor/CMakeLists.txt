@@ -52,6 +52,8 @@ endif()
 find_program(DOTNET_EXECUTABLE dotnet)
 
 if(DOTNET_EXECUTABLE)
+  include(${CMAKE_SOURCE_DIR}/Engine/DotNET/Generators/Generators.cmake)
+
   # Generate Hyperion.Editor.csproj
   set(EDITOR_PROJECT_DIR "${CSHARP_PROJECTS_DIR}/Hyperion.Editor")
   file(MAKE_DIRECTORY ${EDITOR_PROJECT_DIR})
@@ -126,6 +128,7 @@ if(DOTNET_EXECUTABLE)
   endif()
 
   file(APPEND ${EDITOR_CSPROJ_PATH} "    <PackageReference Include=\"Avalonia\" Version=\"12.1.*\" />\n")
+  hyp_append_type_registry_generator(${EDITOR_CSPROJ_PATH})
   file(APPEND ${EDITOR_CSPROJ_PATH} "    <PackageReference Include=\"Avalonia.Desktop\" Version=\"12.1.*\" />\n")
   file(APPEND ${EDITOR_CSPROJ_PATH} "    <PackageReference Include=\"Avalonia.Themes.Simple\" Version=\"12.1.*\" />\n")
   file(APPEND ${EDITOR_CSPROJ_PATH} "    <PackageReference Include=\"Avalonia.Fonts.Inter\" Version=\"12.1.*\" />\n")
@@ -234,6 +237,10 @@ if(DOTNET_EXECUTABLE)
                   DEPENDS hyperion Hyperion.NET.Shared Hyperion.NET.Runtime Hyperion.NET.Interop
                   WORKING_DIRECTORY ${EDITOR_PROJECT_DIR}
               )
+    endif()
+
+    if(TARGET Hyperion.NET.Generators)
+      add_dependencies(Hyperion.Editor Hyperion.NET.Generators)
     endif()
 
     # for Xcode, we want to allow running the editor from within Xcode

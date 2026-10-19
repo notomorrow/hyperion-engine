@@ -24,7 +24,7 @@ namespace Hyperion
         internal static extern uint WeakPtr_Lock(IntPtr address);
     }
 
-    [StructLayout(LayoutKind.Sequential, Size = 8, Pack = 8)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct SharedPtr
     {
         public static readonly SharedPtr Null = new SharedPtr();
@@ -77,7 +77,7 @@ namespace Hyperion
         }
     }
 
-    [StructLayout(LayoutKind.Sequential, Size = 8, Pack = 8)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct SharedPtr<T>
     {
         public static readonly SharedPtr<T> Null = new SharedPtr<T>();
@@ -149,7 +149,7 @@ namespace Hyperion
         }
     }
 
-    [StructLayout(LayoutKind.Sequential, Size = 8, Pack = 8)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct WeakPtr
     {
         private IntPtr ptr = IntPtr.Zero;
@@ -217,7 +217,7 @@ namespace Hyperion
         }
     }
 
-    [StructLayout(LayoutKind.Sequential, Size = 8, Pack = 8)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct WeakPtr<T>
     {
         private IntPtr ptr = IntPtr.Zero;

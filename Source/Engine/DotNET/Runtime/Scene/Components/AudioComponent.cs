@@ -29,19 +29,28 @@ namespace Hyperion
     }
 
     [ClassBinding(Name="AudioComponent")]
-    [StructLayout(LayoutKind.Explicit, Size = 64, Pack = 16)]
+    [StructLayout(LayoutKind.Explicit, Size = Layout.Size, Pack = 16)]
     public ref struct AudioComponent : IComponent
     {
+        private static class Layout
+        {
+#if HYP_WEB
+            public const int PlaybackState = 4, LastPosition = 16, Timer = 32, Size = 48;
+#else
+            public const int PlaybackState = 8, LastPosition = 32, Timer = 48, Size = 64;
+#endif
+        }
+
         [FieldOffset(0)]
         public Handle<AudioSource> AudioSource;
 
-        [FieldOffset(8)]
+        [FieldOffset(Layout.PlaybackState)]
         public AudioPlaybackState PlaybackState;
 
-        [FieldOffset(32)]
+        [FieldOffset(Layout.LastPosition)]
         public Vec3f LastPosition;
 
-        [FieldOffset(48)]
+        [FieldOffset(Layout.Timer)]
         public float Timer;
 
         public void Dispose()

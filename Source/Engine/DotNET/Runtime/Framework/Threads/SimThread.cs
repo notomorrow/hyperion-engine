@@ -7,33 +7,31 @@ namespace Hyperion
     {
         public static bool IsOnIt => (SimThread_IsOnIt() != 0);
 
+        public static Task NextFrame()
+        {
+            return SimThreadSynchronizationContext.Instance.NextFrame();
+        }
+
+        public static Task Delay(float seconds)
+        {
+            return SimThreadSynchronizationContext.Instance.Delay(seconds);
+        }
+
         public static async Task<T> PostTask<T>(Func<T> func)
         {
             TaskCompletionSource<T> tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            GCHandle gcHandle = default;
-
-            Action? inner = () =>
+            Post(() =>
             {
                 try
                 {
-                    T result = func.Invoke();
-                    tcs.SetResult(result);
+                    tcs.SetResult(func.Invoke());
                 }
                 catch (Exception ex)
                 {
                     tcs.SetException(ex);
                 }
-                finally
-                {
-                    gcHandle.Free();
-                }
-            };
-
-            gcHandle = GCHandle.Alloc(inner);
-
-            IntPtr pAction = Marshal.GetFunctionPointerForDelegate(inner);
-            SimThread_PostTask(pAction);
+            });
 
             /// From: https://learn.microsoft.com/en-us/dotnet/api/system.threading.tasks.task.configureawait
             /// When an asynchronous method awaits a Task directly,
@@ -49,15 +47,8 @@ namespace Hyperion
         {
             TaskCompletionSource tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            GCHandle gcHandle = default;
-
-            Action? inner = () =>
+            Post(() =>
             {
-                if (gcHandle == null)
-                {
-                    throw new Exception("GCHandle is null in callback");
-                }
-
                 try
                 {
                     action.Invoke();
@@ -67,24 +58,20 @@ namespace Hyperion
                 {
                     tcs.SetException(ex);
                 }
-                finally
-                {
-                    gcHandle.Free();
-                }
-            };
-
-            gcHandle = GCHandle.Alloc(inner);
-
-            IntPtr pAction = Marshal.GetFunctionPointerForDelegate(inner);
-            SimThread_PostTask(pAction);
+            });
 
             await tcs.Task.ConfigureAwait(false);
+        }
+
+        private static unsafe void Post(Action action)
+        {
+            SimThread_PostTask(ManagedCallback.Invoke, ManagedCallback.Create(action));
         }
 
         [DllImport("hyperion", EntryPoint = "SimThread_IsOnIt")]
         private static extern int SimThread_IsOnIt();
 
         [DllImport("hyperion", EntryPoint = "SimThread_PostTask")]
-        private static extern void SimThread_PostTask(IntPtr pAction);
+        private static extern unsafe void SimThread_PostTask(delegate* unmanaged<IntPtr, void> taskFunc, IntPtr context);
     }
 }

@@ -13,6 +13,7 @@
 
 #include <DotNET/Helpers.hpp>
 #include <DotNET/ManagedAttribute.hpp>
+#include <DotNET/Types.hpp>
 
 #include <DotNET/Interop/ManagedGuid.hpp>
 
@@ -27,13 +28,17 @@ class ManagedProperty
 public:
     ManagedProperty() = default;
 
-    ManagedProperty(ManagedGuid guid)
-        : m_guid(guid)
+    ManagedProperty(ManagedGuid guid, ManagedInvoker getter, ManagedInvoker setter)
+        : m_guid(guid),
+          m_getter(getter),
+          m_setter(setter)
     {
     }
 
-    ManagedProperty(ManagedGuid guid, ManagedAttributeSet&& attributes)
+    ManagedProperty(ManagedGuid guid, ManagedInvoker getter, ManagedInvoker setter, ManagedAttributeSet&& attributes)
         : m_guid(guid),
+          m_getter(getter),
+          m_setter(setter),
           m_attributes(std::move(attributes))
     {
     }
@@ -83,6 +88,8 @@ private:
     bool InvokeSetter_Internal(const ManagedObject* pManagedObject, const BoxedValue** boxedValue);
 
     ManagedGuid m_guid;
+    ManagedInvoker m_getter;
+    ManagedInvoker m_setter;
     ManagedAttributeSet m_attributes;
 };
 

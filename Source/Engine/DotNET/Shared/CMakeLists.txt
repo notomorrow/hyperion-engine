@@ -39,6 +39,8 @@ endif()
 hyp_link_core_library(${BUILD_NAME})
 
 if(HYP_DOTNET)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/../Generators/Generators.cmake)
+
   file(GLOB_RECURSE CSHARP_SHARED_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/**.cs")
 
   if(CSHARP_SHARED_SOURCES)
@@ -66,6 +68,7 @@ if(HYP_DOTNET)
 
     file(APPEND ${CSPROJ_PATH} "  <ItemGroup>\n")
     file(APPEND ${CSPROJ_PATH} "    <PackageReference Include=\"Microsoft.NETCore.DotNetAppHost\" Version=\"8.0.1\" />\n")
+    hyp_append_type_registry_generator(${CSPROJ_PATH})
     foreach(CSHARP_SHARED_SOURCE ${CSHARP_SHARED_SOURCES})
       file(APPEND ${CSPROJ_PATH} "    <Compile Include=\"${CSHARP_SHARED_SOURCE}\" />\n")
     endforeach()
@@ -130,6 +133,10 @@ if(HYP_DOTNET)
                 ${CSPROJ_PATH}
                 TYPE FAE04EC0-301F-11D3-BF4B-00C04F79EFBC
             )
+    endif()
+
+    if(TARGET Hyperion.NET.Generators)
+      add_dependencies(Hyperion.NET.Shared Hyperion.NET.Generators)
     endif()
 
     add_dependencies(${BUILD_NAME} Hyperion.NET.Shared)

@@ -53,9 +53,6 @@ struct ManagedClassDesc
     int64 typeHash;
     ManagedClass* pClass;
     ManagedGuid assemblyGuid;
-    ManagedGuid newObjectGuid;
-    ManagedGuid freeObjectGuid;
-    ManagedGuid marshalObjectGuid;
     uint32 flags;
 };
 
@@ -72,8 +69,8 @@ public:
      *  Both cls and nativeObjectPtr can be nullptr. */
     using InitializeObjectCallbackFunction = void (*)(void* ctx, void* dst, uint32 dstSize);
 
-    using NewObjectFunction = ObjectReference (*)(bool keepAlive, const Class* cls, void* nativeObjectPtr, void* contextPtr, InitializeObjectCallbackFunction callback);
-    using MarshalObjectFunction = ObjectReference (*)(const void* intptr, uint32 size);
+    using NewObjectFunction = ObjectReference (*)(void* context, bool keepAlive, const Class* cls, void* nativeObjectPtr, void* contextPtr, InitializeObjectCallbackFunction callback);
+    using MarshalObjectFunction = ObjectReference (*)(void* context, const void* intptr, uint32 size);
 
     ManagedClass(const WeakPtr<Assembly>& assembly, const ANSIString& name, uint32 size, TypeId typeId, const Class* cls, ManagedClass* parentClass, EnumFlags<ManagedClassFlags> flags)
         : m_assembly(assembly),
@@ -84,7 +81,9 @@ public:
           m_parentClass(parentClass),
           m_flags(flags),
           m_newObjectFptr(nullptr),
-          m_marshalObjectFptr(nullptr)
+          m_newObjectContext(nullptr),
+          m_marshalObjectFptr(nullptr),
+          m_marshalObjectContext(nullptr)
     {
     }
 
@@ -126,24 +125,31 @@ public:
         return m_flags;
     }
 
-    HYP_FORCE_INLINE NewObjectFunction GetNewObjectFunction() const
+    HYP_FORCE_INLINE bool HasNewObjectFunction() const
     {
-        return m_newObjectFptr;
+        return m_newObjectFptr != nullptr;
     }
 
-    HYP_FORCE_INLINE void SetNewObjectFunction(NewObjectFunction newObjectFptr)
+    HYP_FORCE_INLINE void SetNewObjectFunction(NewObjectFunction newObjectFptr, void* context)
     {
         m_newObjectFptr = newObjectFptr;
+        m_newObjectContext = context;
     }
 
-    HYP_FORCE_INLINE void SetMarshalObjectFunction(MarshalObjectFunction marshalObjectFptr)
+    HYP_FORCE_INLINE bool HasMarshalObjectFunction() const
+    {
+        return m_marshalObjectFptr != nullptr;
+    }
+
+    HYP_FORCE_INLINE void SetMarshalObjectFunction(MarshalObjectFunction marshalObjectFptr, void* context)
     {
         m_marshalObjectFptr = marshalObjectFptr;
+        m_marshalObjectContext = context;
     }
 
-    HYP_FORCE_INLINE MarshalObjectFunction GetMarshalObjectFunction() const
+    HYP_FORCE_INLINE ObjectReference MarshalObject(const void* ptr, uint32 size) const
     {
-        return m_marshalObjectFptr;
+        return m_marshalObjectFptr(m_marshalObjectContext, ptr, size);
     }
 
     HYP_FORCE_INLINE const ManagedAttributeSet& GetAttributes() const
@@ -438,7 +444,9 @@ private:
     WeakPtr<Assembly> m_assembly;
 
     NewObjectFunction m_newObjectFptr;
+    void* m_newObjectContext;
     MarshalObjectFunction m_marshalObjectFptr;
+    void* m_marshalObjectContext;
 
     ManagedAttributeSet m_attributes;
 };
