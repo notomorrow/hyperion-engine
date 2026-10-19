@@ -397,12 +397,30 @@ float GetShadowContactHardened(in ShadowMap shadowMap, float3 pos, float2 texcoo
     return shadowness;
 }
 
+#define HYP_POINT_SHADOW_RECEIVER_BIAS_TEXELS 1.0
+#define HYP_POINT_SHADOW_RECEIVER_SLOPE_BIAS_TEXELS 0.5
+#define HYP_POINT_SHADOW_RECEIVER_MAX_SLOPE 4.0
+
+float GetPointShadowReceiverDepth(in ShadowMap shadowMap, float3 worldToLight, float NdotL)
+{
+    const float dist = length(worldToLight);
+
+    const float texelSizeWS = 2.0 * dist / max(shadowMap.dimensionsScale.x, 1.0);
+
+    const float cosTheta = saturate(NdotL);
+    const float tanTheta = min(sqrt(1.0 - cosTheta * cosTheta) / max(cosTheta, HYP_FMATH_EPSILON), HYP_POINT_SHADOW_RECEIVER_MAX_SLOPE);
+
+    const float bias = texelSizeWS * (HYP_POINT_SHADOW_RECEIVER_BIAS_TEXELS + HYP_POINT_SHADOW_RECEIVER_SLOPE_BIAS_TEXELS * tanTheta);
+
+    return (dist - bias) / max(shadowMap.farClip, HYP_FMATH_EPSILON);
+}
+
 float GetPointShadowVariance(in ShadowMap shadowMap, float3 worldToLight, float NdotL)
 {
     const uint layerIndex = shadowMap.layerIndex;
 
     const float2 moments = SAMPLE_TEXTURE_CUBE_ARRAY_LOD(HYP_SAMPLER_LINEAR, point_shadow_maps, float4(worldToLight, float(layerIndex)), 0).rg;
-    const float current_depth = length(worldToLight);
+    const float current_depth = length(worldToLight) / max(shadowMap.farClip, HYP_FMATH_EPSILON);
 
     float shadow_dist = current_depth - moments.x;
     float p = step(current_depth, moments.x);
@@ -417,25 +435,13 @@ float GetPointShadowStandard(in ShadowMap shadowMap, float3 worldToLight, float 
     const uint layerIndex = shadowMap.layerIndex;
 
     const float shadowDepth = SAMPLE_TEXTURE_CUBE_ARRAY_LOD(HYP_SAMPLER_LINEAR, point_shadow_maps, float4(normalize(worldToLight), float(layerIndex)), 0).r;
-    const float4 shadowPosVS = ReconstructViewSpacePositionFromDepth(shadowMap.invProjMat, float2(0.5, 0.5), shadowDepth);
 
-    const float dist = max(max(abs(worldToLight.x), abs(worldToLight.y)), abs(worldToLight.z));
-
-    float bias = HYP_SHADOW_BIAS;
-
-#ifdef HYP_SHADOW_VARIABLE_BIAS
-    bias *= tan(acos(NdotL));
-    bias = clamp(bias, 0.0, 0.005);
-#endif
-
-    return max(step(dist - bias, shadowPosVS.z), 0.0);
+    return step(GetPointShadowReceiverDepth(shadowMap, worldToLight, NdotL), shadowDepth);
 }
 
 float GetPointShadowPCF(in ShadowMap shadowMap, float3 worldToLight, float NdotL)
 {
     const uint layerIndex = shadowMap.layerIndex;
-
-    const float dist = max(max(abs(worldToLight.x), abs(worldToLight.y)), abs(worldToLight.z));
 
     const float shadow_filter_size = 0.0005;
 
@@ -454,21 +460,7 @@ float GetPointShadowPCF(in ShadowMap shadowMap, float3 worldToLight, float NdotL
 #define HYP_POINT_SHADOW_SAMPLE_COUNT 4
 #endif
 
-    float bias = HYP_SHADOW_BIAS;
-
-#ifdef HYP_SHADOW_VARIABLE_BIAS
-    bias *= tan(acos(NdotL));
-    bias = clamp(bias, 0.0, 0.005);
-#endif
-
-    // Bias is applied in view space (along the cube face's major axis). Convert the
-    // resulting receiver depth back to NDC depth so it can be shared as the hardware
-    // SampleCmp reference value and for the manual (gather) comparison. This is the
-    // inverse of ReconstructViewSpacePositionFromDepth() at the face center, where the
-    // view-space z depends only on the stored depth value.
-    const float receiver_view_z = dist - bias;
-    const float compare_value = (receiver_view_z * shadowMap.invProjMat[3][3] - shadowMap.invProjMat[2][3])
-                              / (shadowMap.invProjMat[2][2] - receiver_view_z * shadowMap.invProjMat[3][2]);
+    const float compare_value = GetPointShadowReceiverDepth(shadowMap, worldToLight, NdotL);
 
     float shadowness = 0.0;
 

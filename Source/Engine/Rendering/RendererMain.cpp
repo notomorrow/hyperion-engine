@@ -900,49 +900,14 @@ static void SetForwardShadingConstants(
                 shadowMapViewDynamic,
                 shadowMapViewStatic);
 
-            if (shadowMap != nullptr)
+            if (shadowMap != nullptr && (shadowMapViewDynamic != nullptr || shadowMapViewStatic != nullptr))
             {
-                ShadowMapAtlasElement* atlasElement = shadowMap->GetAtlasElement();
-                AssertDebug(atlasElement != nullptr);
-
-                if (!atlasElement)
-                {
-                    continue;
-                }
-
-                AssertDebug(shadowMapViewDynamic != nullptr && shadowMapViewDynamic->GetCamera() != nullptr);
-
-                RenderProxyList& rpl = GetConsumerProxyList(shadowMapViewDynamic);
-                rpl.BeginRead();
-                HYP_DEFER({ rpl.EndRead(); });
-
-                const Mat4f& viewProjMat = rpl.cachedMatrices.viewProj;
-                const Mat4f& invProjMat = rpl.cachedMatrices.invProj;
-
-                BoundingBox shadowBoundsNDC;
-                shadowBoundsNDC.min = Vec3f(-1.0f);
-                shadowBoundsNDC.max = Vec3f(1.0f);
-
-                BoundingBox shadowBoundsWS = viewProjMat.Inverse() * shadowBoundsNDC;
-
-                currShadowMapData.layerIndex = atlasElement->layerIndex;
-
-                currShadowMapData.viewProjMat = viewProjMat;
-                currShadowMapData.invProjMat = invProjMat;
-
-                currShadowMapData.aabbMin.x = shadowBoundsWS.min.x;
-                currShadowMapData.aabbMin.y = shadowBoundsWS.min.y;
-                currShadowMapData.aabbMin.z = shadowBoundsWS.min.z;
-                currShadowMapData.aabbMin.w = atlasElement->offsetUV.x;
-
-                currShadowMapData.aabbMax.x = shadowBoundsWS.max.x;
-                currShadowMapData.aabbMax.y = shadowBoundsWS.max.y;
-                currShadowMapData.aabbMax.z = shadowBoundsWS.max.z;
-                currShadowMapData.aabbMax.w = atlasElement->offsetUV.y;
-
-                currShadowMapData.dimensionsScale = Vec4f(Vec2f(atlasElement->dimensions), atlasElement->scale);
-
-                currShadowMapData.splitDistance = 0.0f; // @TODO
+                DeferredRendererHelpers::FillShadowMapData(
+                    currShadowMapData,
+                    *shadowMap,
+                    cascadeIndex,
+                    shadowMapViewDynamic,
+                    shadowMapViewStatic);
             }
         }
 

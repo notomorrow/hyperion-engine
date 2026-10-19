@@ -3,6 +3,7 @@
 #include <Rendering/Shadows/ShadowCameraHelper.hpp>
 
 #include <Scene/Camera/Camera.hpp>
+#include <Scene/Light/Light.hpp>
 
 namespace Hyperion {
 namespace ShadowCameraHelpers {
@@ -19,6 +20,13 @@ static constexpr float MaxReusedCascadeOversize = 1.05f;
 // logarithmic splits off a tiny near clip would squeeze the first cascade down to a sliver in front of the camera
 // so we make sure it has a sane min value
 static constexpr float MinLogarithmicSplitNear = 0.5f;
+
+static constexpr float MinOmniShadowFarClip = 1.0f;
+
+float GetOmniShadowFarClip(const Light& light)
+{
+    return MathUtil::Max(light.GetRadius(), MinOmniShadowFarClip);
+}
 
 Mat4f CalculateShadowViewMatrix(
     const BoundingSphere& sceneWorldBounds,

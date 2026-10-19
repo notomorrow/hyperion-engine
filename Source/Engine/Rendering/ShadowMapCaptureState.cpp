@@ -7,13 +7,15 @@
 #include <RenderingPch.hpp>
 
 #include <Rendering/ShadowMapCaptureState.hpp>
-
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/Texture.hpp>
 #include <Rendering/GpuBuffer.hpp>
 #include <Rendering/Framebuffer.hpp>
+
 #include <Rendering/Util/DeletionQueue.hpp>
 #include <Rendering/Util/ShaderPropertyDictionary.hpp>
+
+#include <Rendering/Shadows/ShadowCameraHelper.hpp>
 
 #include <Core/IO/ByteWriter.hpp>
 
@@ -89,7 +91,7 @@ void ShadowMapCaptureState::Begin()
     }
 
     const float farClip = isOmni
-        ? MathUtil::Max(m_light->GetRadius(), 1.0f)
+        ? ShadowCameraHelpers::GetOmniShadowFarClip(*m_light)
         : 1000.0f;
 
     m_camera = MakeHandle<Camera>(int(dimensions.x), int(dimensions.y));

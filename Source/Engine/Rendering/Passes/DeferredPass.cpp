@@ -236,6 +236,15 @@ void FillShadowMapData(
     outShadowMapData.dimensionsScale = Vec4f(Vec2f(atlasElement->dimensions), atlasElement->scale);
 
     outShadowMapData.splitDistance = 0.0f; // @TODO
+
+    if (Camera* shadowCamera = viewToUse->GetCamera())
+    {
+        const RenderProxyCamera* shadowCameraProxy = static_cast<const RenderProxyCamera*>(GetRenderProxy(shadowCamera));
+
+        outShadowMapData.farClip = shadowCameraProxy != nullptr
+            ? shadowCameraProxy->bufferData.cameraFar
+            : shadowCamera->GetFarClip();
+    }
 }
 
 void FillShadowMapDataCSM(

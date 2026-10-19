@@ -179,6 +179,8 @@ struct PSInput
 struct PSOutput
 {
 #ifdef MODE_SHADOWS
+    float output_depth : SV_Depth;
+
     #ifdef WRITE_MOMENTS // For variant shadow map
         float2 output_moments : SV_Target0;
     #endif // WRITE_MOMENTS
@@ -227,6 +229,12 @@ DECLARE_SAMPLER(Default, SamplerNearest) SamplerState sampler_nearest;
 #include "include/BRDF.hlsli"
 
 #define HYP_CUBEMAP_AMBIENT 0.005
+
+#ifdef MODE_SHADOWS
+#define HYP_OMNI_SHADOW_DEPTH_BIAS_CONSTANT (2.0 / 65535.0)
+#define HYP_OMNI_SHADOW_DEPTH_BIAS_SLOPE 2.0
+#define HYP_OMNI_SHADOW_DEPTH_BIAS_SLOPE_MAX (256.0 / 65535.0)
+#endif // MODE_SHADOWS
 
 #ifdef INSTANCING
 DECLARE_SRV(Default, EntitiesBuffer) StructuredBuffer<Entity> entities;
@@ -513,6 +521,17 @@ PSOutput PSMain(PSInput input)
 #endif // WRITE_NORMALS
 
 #endif // !MODE_SHADOWS
+
+#ifdef MODE_SHADOWS
+    {
+        const float linearDepth = distance(input.position, camera.position.xyz) / max(camera.far, HYP_FMATH_EPSILON);
+        const float depthSlope = max(abs(ddx(linearDepth)), abs(ddy(linearDepth)));
+
+        output.output_depth = saturate(linearDepth
+            + HYP_OMNI_SHADOW_DEPTH_BIAS_CONSTANT
+            + min(depthSlope * HYP_OMNI_SHADOW_DEPTH_BIAS_SLOPE, HYP_OMNI_SHADOW_DEPTH_BIAS_SLOPE_MAX));
+    }
+#endif // MODE_SHADOWS
 
 #ifdef WRITE_MOMENTS
     output.output_moments = moments;

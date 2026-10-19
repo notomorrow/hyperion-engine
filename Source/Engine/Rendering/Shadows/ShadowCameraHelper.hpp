@@ -16,7 +16,11 @@ namespace Hyperion {
 struct Frustum;
 struct BoundingSphere;
 
+class Light;
+
 namespace ShadowCameraHelpers {
+
+float GetOmniShadowFarClip(const Light& light);
 
 Mat4f CalculateShadowViewMatrix(
     const BoundingSphere& sceneWorldBounds,

@@ -238,7 +238,7 @@ struct ShadowMapData
 
     uint32 layerIndex;
     float splitDistance;
-    float _pad0;
+    float farClip;
     float _pad1;
 };
 

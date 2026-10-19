@@ -763,6 +763,11 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                 if (shadowViewIndex == 0)
                 {
                     shadowCamera->SetWorldTranslation(light->GetWorldTranslation());
+
+                    if (isOmni)
+                    {
+                        shadowCamera->SetFarClip(ShadowCameraHelpers::GetOmniShadowFarClip(*light));
+                    }
                 }
 
                 if (isOmni)
