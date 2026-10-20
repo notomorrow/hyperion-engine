@@ -1048,8 +1048,6 @@ public:
             environmentJson = JSON::Object();
             ObjectToJSON(environmentClass, target, environmentJson);
         }
-
-        HYP_LOG(Editor, Info, "SetEnvironment: {}", JSON::Value(environmentJson).ToString());
     }
 };
 

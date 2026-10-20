@@ -157,17 +157,21 @@ Vec3f GetGlimmerWindowCenter(const Vec3f& viewerPosition, const Vec3f& lookAhead
     return viewerPosition + Vec3f(clampedHorizontal.x, clampedVertical, clampedHorizontal.y);
 }
 
+Vec3f GetGlimmerProbeWindowCenter(const Vec3f& viewerPosition, const Vec3f& lookAhead, uint32 levelIndex)
+{
+    const float blockSize = GetGlimmerProbeLevelSpacing(levelIndex) * float(GlimmerProbeBlock);
+
+    return GetGlimmerWindowCenter(viewerPosition, lookAhead, Vec3f(blockSize * float(GlimmerProbeWindow)));
+}
+
 Vec3i GetGlimmerProbeWindowOrigin(const Vec3f& viewerPosition, const Vec3f& lookAhead, uint32 levelIndex)
 {
     const int32 halfWindow = int32(GlimmerProbeWindow / 2);
 
     const float blockSize = GetGlimmerProbeLevelSpacing(levelIndex) * float(GlimmerProbeBlock);
-    const Vec3f center = GetGlimmerWindowCenter(viewerPosition, lookAhead, Vec3f(blockSize * float(GlimmerProbeWindow)));
+    const Vec3f center = GetGlimmerProbeWindowCenter(viewerPosition, lookAhead, levelIndex);
 
-    return Vec3i(
-        int32(MathUtil::Floor(center.x / blockSize)) - halfWindow,
-        int32(MathUtil::Floor(center.y / blockSize)) - halfWindow,
-        int32(MathUtil::Floor(center.z / blockSize)) - halfWindow);
+    return Vec3i(MathUtil::Floor(center / blockSize + Vec3f(0.5f))) - halfWindow;
 }
 
 Vec4f MakeGlimmerRandomRotation(uint32 seed)

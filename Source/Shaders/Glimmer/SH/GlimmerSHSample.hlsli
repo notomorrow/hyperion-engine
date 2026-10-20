@@ -70,8 +70,6 @@ float GlimmerSHGatherTaps(GlimmerSHVolume volume, uint cascadeIndex, float3 P, f
         return 0.0;
     }
 
-    // the window's origin is within 2 voxels of its unsnapped center minus half the grid, so this much around the center is
-    // always in it: fading there moves with the viewer, where the snapped window's edges jump 4 voxels at a time
     const float3 fromCenter = P * cascade.params.y - cascade.center.xyz;
     const float3 halfGrid = float3(gridSize) * 0.5;
 

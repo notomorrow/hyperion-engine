@@ -132,6 +132,7 @@ float GetGlimmerSHOccupancySpacing(uint32 cascadeIndex);
 float GetGlimmerProbeLevelSpacing(uint32 levelIndex);
 
 Vec3f GetGlimmerWindowCenter(const Vec3f& viewerPosition, const Vec3f& lookAhead, const Vec3f& windowExtent);
+Vec3f GetGlimmerProbeWindowCenter(const Vec3f& viewerPosition, const Vec3f& lookAhead, uint32 levelIndex);
 Vec3i GetGlimmerProbeWindowOrigin(const Vec3f& viewerPosition, const Vec3f& lookAhead, uint32 levelIndex);
 
 Vec4f MakeGlimmerRandomRotation(uint32 seed);

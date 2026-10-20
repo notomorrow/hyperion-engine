@@ -79,8 +79,9 @@ float GlimmerGatherProbeTaps(GlimmerProbeVolume volume, uint levelIndex, float3 
     const int3 probeCoord0 = int3(floor(gridCoord));
     const float3 fraction = gridCoord - float3(probeCoord0);
 
-    const float3 windowCoord = gridCoord + 0.5 - float3(level.windowOrigin.xyz * GLIMMER_PROBE_BLOCK);
-    const float3 edgeDistance = min(windowCoord, float(GLIMMER_PROBE_WINDOW * GLIMMER_PROBE_BLOCK) - windowCoord);
+    const float3 fromCenter = P * level.params.y - level.center.xyz;
+    const float reach = float(GLIMMER_PROBE_WINDOW * GLIMMER_PROBE_BLOCK) * 0.5 - float(GLIMMER_PROBE_BLOCK) * 0.5;
+    const float3 edgeDistance = min(reach + fromCenter, reach - fromCenter);
     const float windowFade = saturate((min(edgeDistance.x, min(edgeDistance.y, edgeDistance.z)) - 1.0) / float(GLIMMER_PROBE_BLOCK));
 
     if (windowFade <= 0.0)
