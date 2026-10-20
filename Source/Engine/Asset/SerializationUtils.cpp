@@ -15,6 +15,8 @@
 
 #include <Core/DataProcessing/HMF/HMF.hpp>
 
+#include <Core/IO/ByteReader.hpp>
+
 #include <Core/DataProcessing/JSON/JSON.hpp>
 
 #include <Core/Config/Config.hpp>
@@ -3410,6 +3412,51 @@ Result ObjectToHMF(
     outText += "}\n";
 
     return {};
+}
+
+TResult<BoxedValue> ObjectFieldsFromHMF(const FilePath& filepath, Span<const StringHash> fieldNames)
+{
+    FileByteReader reader { filepath };
+
+    if (reader.Eof())
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to open {}", filepath);
+    }
+
+    HMF::ParseOptions parseOptions;
+    parseOptions.topLevelFields = fieldNames;
+
+    return HMF::Parse(filepath, reader, parseOptions);
+}
+
+TResult<BoxedValue> FieldFromHMF(const FilePath& filepath, StringHash fieldName)
+{
+    TResult<BoxedValue> objectResult = ObjectFieldsFromHMF(filepath, Span<const StringHash>(&fieldName, size_t(1)));
+
+    if (objectResult.HasError())
+    {
+        return objectResult.GetError();
+    }
+
+    const BoxedValue& object = objectResult.GetValue();
+    const Class* cls = object.GetTypeInfo() ? object.GetTypeInfo()->GetClass() : nullptr;
+
+    if (!cls)
+    {
+        return HYP_MAKE_ERROR(Error, "{} does not hold an object", filepath);
+    }
+
+    if (Property* property = cls->GetProperty(fieldName))
+    {
+        return property->Get(object);
+    }
+
+    if (const Field* field = static_cast<const Field*>(cls->GetMember(fieldName, MemberType::Field)))
+    {
+        return field->Get(object);
+    }
+
+    return HYP_MAKE_ERROR(Error, "{} has no field {}", cls->GetName(), fieldName.hashCode);
 }
 
 bool ResolveAssetPath(const String& path, const TypeInfo& targetType, BoxedValue& out)

@@ -5,6 +5,8 @@
 
 #include <Editor/EditorNativeModule.hpp>
 
+#include <Framework/ProjectLayout.hpp>
+
 #include <Core/Threading/Threads.hpp>
 
 #include <Core/Utilities/Span.hpp>
@@ -347,7 +349,14 @@ Result CopyFilesWithExtensions(const FilePath& sourceDir, const FilePath& target
 
 bool HasProjectScripts(const FilePath& projectFilepath)
 {
-    const FilePath scriptsDir = projectFilepath.BasePath() / "Scripts";
+    const TResult<FilePath> contentDirResult = ResolveProjectContentDirectory(projectFilepath);
+
+    if (contentDirResult.HasError())
+    {
+        return false;
+    }
+
+    const FilePath scriptsDir = contentDirResult.GetValue() / "Scripts";
 
     if (!scriptsDir.Exists())
     {

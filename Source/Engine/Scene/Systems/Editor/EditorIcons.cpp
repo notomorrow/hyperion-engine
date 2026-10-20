@@ -844,6 +844,17 @@ static SdfCanvas BuildAssetWeapon()
     return canvas;
 }
 
+static SdfCanvas BuildAssetFolder()
+{
+    static const Vec2f s_tab[] = { Vec2f(-0.78f, 0.36f), Vec2f(-0.78f, 0.6f), Vec2f(-0.3f, 0.6f), Vec2f(-0.14f, 0.36f) };
+
+    SdfCanvas canvas;
+    canvas.RoundedBox(Vec2f(0.0f, -0.12f), Vec2f(0.86f, 0.58f), 0.1f)
+        .ConvexPolygon(s_tab, -0.06f);
+
+    return canvas;
+}
+
 // an arrow rising out of an open tray
 static SdfCanvas BuildImport()
 {
@@ -895,6 +906,7 @@ static const Map<Icon, SdfCanvas (*)(void)> s_builders = {
     { Icon::AssetSound, &BuildAssetSound },
     { Icon::AssetTerrain, &BuildAssetTerrain },
     { Icon::AssetWeapon, &BuildAssetWeapon },
+    { Icon::AssetFolder, &BuildAssetFolder },
     { Icon::MeshEditMode, &BuildMeshEditMode },
     { Icon::Import, &BuildImport }
 };
@@ -992,6 +1004,8 @@ const char* GetFileStem(Icon icon)
         return "asset-terrain";
     case Icon::AssetWeapon:
         return "asset-weapon";
+    case Icon::AssetFolder:
+        return "asset-folder";
     case Icon::MeshEditMode:
         return "mesh-edit";
     case Icon::Import:

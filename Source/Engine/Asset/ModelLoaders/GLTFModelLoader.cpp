@@ -530,14 +530,7 @@ Handle<Texture> AcquireTexture(LoaderState& state, GltfLoadContext& ctx, const c
 
                 textureResult.HasValue())
             {
-                const Handle<Texture>& texture = textureResult->Result();
-
-                if (ShouldRegisterAssets(ctx.state))
-                {
-                    GetCurrentAssetRegistry()->PutAssetUnique(texture);
-                }
-
-                return texture;
+                return textureResult->Result();
             }
 
             return {};
@@ -580,11 +573,6 @@ Handle<Texture> AcquireTexture(LoaderState& state, GltfLoadContext& ctx, const c
     if (image->name && *image->name)
     {
         textureHandle->SetName(CreateNameFromDynamicString(image->name));
-    }
-
-    if (ShouldRegisterAssets(ctx.state))
-    {
-        GetCurrentAssetRegistry()->PutAssetUnique(textureHandle);
     }
 
     ctx.textureCache.Set(textureView.texture, textureHandle);
@@ -1385,16 +1373,6 @@ SplitMetalnessRoughnessResult SplitMetalnessRoughnessTexture(
         metalnessTexture->SetName(NAME_FMT("{}_Metalness", baseName));
     }
 
-    if (ShouldRegisterAssets(ctx.state))
-    {
-        GetCurrentAssetRegistry()->PutAssetUnique(roughnessTexture);
-
-        if (metalnessTexture)
-        {
-            GetCurrentAssetRegistry()->PutAssetUnique(metalnessTexture);
-        }
-    }
-
     return { metalnessTexture, roughnessTexture };
 }
 
@@ -2145,11 +2123,6 @@ bool BuildPrimitive(GltfLoadContext& ctx,
         mesh->CalculateNormals();
     }
 
-    if (ShouldRegisterAssets(ctx.state))
-    {
-        GetCurrentAssetRegistry()->PutAssetUnique(mesh);
-    }
-
     // mesh->SetOriginalFilepath(FilePath::Relative(ctx.state.filepath, ctx.state.assetManager->GetBasePath()));
     InitObject(mesh);
 
@@ -2650,7 +2623,14 @@ LoadedAsset BuildModel(LoaderState& state, cgltf_data& data)
         root->AddChild(child);
     }
 
-    return LoadedAsset { MakeHandle<Prefab>(root->GetName(), root) };
+    Handle<Prefab> prefab = MakeHandle<Prefab>(root->GetName(), root);
+
+    if (ShouldRegisterAssets(state))
+    {
+        GetCurrentAssetRegistry()->PutAssetsDeep(prefab);
+    }
+
+    return LoadedAsset { std::move(prefab) };
 }
 
 } // namespace

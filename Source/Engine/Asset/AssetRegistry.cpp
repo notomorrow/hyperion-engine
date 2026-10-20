@@ -378,7 +378,29 @@ public:
         const ProcRef<bool(const AssetDesc&)>& comparator = nullptr);
 
     bool GetAssetDesc(StringHash nameHash, AssetDesc& outAssetDesc) const;
+
+    const AssetDesc* FindAssetDescIgnoringCase(const ANSIString& name) const;
 };
+
+const AssetDesc* AssetBucketData::FindAssetDescIgnoringCase(const ANSIString& name) const
+{
+    if (auto it = assetDescs.Find(StringHash(name)); it != assetDescs.End())
+    {
+        return &*it;
+    }
+
+    const ANSIString lowerName = name.ToLower();
+
+    for (const AssetDesc& assetDesc : assetDescs)
+    {
+        if (ANSIString(*assetDesc.name).ToLower() == lowerName)
+        {
+            return &assetDesc;
+        }
+    }
+
+    return nullptr;
+}
 
 void AssetBucketData::MarkDirty(uint32 index)
 {
@@ -476,57 +498,34 @@ void AssetBucketData::AllocateUniqueAssetName(
 
     TUniqueLock lock(mtx);
 
-    StringHash nameHash(inAssetName);
-
-    if (!assetDescs.Contains(nameHash))
-    {
-        outAssetDesc.name = CreateNameFromDynamicString(inAssetName);
-        outAssetDesc.index = usedIndices.FirstZeroBitIndex();
-
-        usedIndices.Set(outAssetDesc.index, true);
-
-        return;
-    }
-
-    // Before generating a suffix, check if the existing entry with the original name is the same asset
-    {
-        auto existingIt = assetDescs.Find(nameHash);
-        if (comparator.IsValid() && comparator(*existingIt))
-        {
-            outAssetDesc = *existingIt;
-
-            AssertDebug(usedIndices.Test(outAssetDesc.index) == true);
-
-            return;
-        }
-    }
-
+    ANSIString candidateName = inAssetName;
     uint32 suffix = 1;
 
     while (true)
     {
-        ANSIString uniqueName = HYP_FORMAT("{}_{}", inAssetName, suffix++);
-        StringHash uniqueNameHash(uniqueName);
+        const AssetDesc* existingDesc = FindAssetDescIgnoringCase(candidateName);
 
-        auto existingIt = assetDescs.Find(uniqueNameHash);
-
-        if (existingIt == assetDescs.End())
+        if (!existingDesc)
         {
-            outAssetDesc.name = CreateNameFromDynamicString(uniqueName);
+            outAssetDesc.name = CreateNameFromDynamicString(candidateName);
             outAssetDesc.index = usedIndices.FirstZeroBitIndex();
 
             usedIndices.Set(outAssetDesc.index, true);
 
             return;
         }
-        else if (comparator.IsValid() && comparator(*existingIt))
+
+        // the existing entry may be this same asset, in which case it keeps its name
+        if (comparator.IsValid() && comparator(*existingDesc))
         {
-            outAssetDesc = *existingIt;
+            outAssetDesc = *existingDesc;
 
             AssertDebug(usedIndices.Test(outAssetDesc.index) == true);
 
             return;
         }
+
+        candidateName = HYP_FORMAT("{}_{}", inAssetName, suffix++);
     }
 }
 
@@ -1030,6 +1029,16 @@ void AssetRegistry::PutAsset(const AssetBucket& bucket, const Handle<AssetObject
             *assetObject->InstanceClass()->GetName(),
             assetDesc,
             UniquePredicate);
+    }
+    else
+    {
+        TSharedLock lock(data.mtx);
+
+        if (const AssetDesc* clashingDesc = data.FindAssetDescIgnoringCase(ANSIString(*assetDesc.name)); clashingDesc && clashingDesc->name != assetDesc.name)
+        {
+            HYP_LOG(Assets, Warning, "Asset '{}' differs from '{}' in bucket '{}' only by file name casing!",
+                assetDesc.name, clashingDesc->name, bucket.GetName());
+        }
     }
 
     data.SetAsset(assetDesc, assetObject);
@@ -1545,6 +1554,10 @@ void AssetRegistry::SyncAssetName(const AssetBucket& bucket, Name oldName, Name 
     }
 
     HYP_LOG(Assets, Info, "Synced asset name '{}' -> '{}' in bucket '{}'", oldName, newName, bucket.GetName());
+
+    lock.Reset();
+
+    OnAssetRenamed(bucket.GetIndex(), oldName, newName);
 }
 
 bool AssetRegistry::LoadAssetDescs()
@@ -1823,6 +1836,8 @@ void AssetRegistry::SaveDirtyAssets()
                     const Name oldFsName = assetObject->m_assetPath.assetName;
                     const Name contentName = assetName;
 
+                    bool renamed = false;
+
                     if (oldFsName.IsValid() && oldFsName != contentName)
                     {
                         TUniqueLock syncLock(data.mtx);
@@ -1836,7 +1851,9 @@ void AssetRegistry::SaveDirtyAssets()
 
                             data.assetDescs.Erase(oldDescIt);
 
-                            if (oldPath != manifestPath && oldPath.Exists())
+                            const bool isSameFile = oldPath.ToLower() == manifestPath.ToLower();
+
+                            if (!isSameFile && oldPath.Exists())
                             {
                                 if (!oldPath.Remove())
                                 {
@@ -1852,7 +1869,14 @@ void AssetRegistry::SaveDirtyAssets()
                             assetObject->m_assetPath = AssetPath(m_registryId, *AssetBuckets::AllBuckets[bucketIndex], contentName);
 
                             HYP_LOG(Assets, Info, "Synced asset name from '{}' to '{}'", oldFsName, contentName);
+
+                            renamed = true;
                         }
+                    }
+
+                    if (renamed)
+                    {
+                        OnAssetRenamed(bucketIndex, oldFsName, contentName);
                     }
                 }
             }

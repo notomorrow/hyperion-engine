@@ -23,6 +23,35 @@ namespace Hyperion.Editor.ViewModels
         Type,
     }
 
+    public class AssetTypeFilterViewModel : ViewModelBase
+    {
+        private readonly Action _onChanged;
+
+        public uint BucketIndex { get; }
+
+        public string Name { get; }
+
+        private bool _isChecked;
+        public bool IsChecked
+        {
+            get => _isChecked;
+            set
+            {
+                if (SetProperty(ref _isChecked, value))
+                {
+                    _onChanged();
+                }
+            }
+        }
+
+        public AssetTypeFilterViewModel(AssetBucket bucket, Action onChanged)
+        {
+            BucketIndex = bucket.Index;
+            Name = bucket.Name;
+            _onChanged = onChanged;
+        }
+    }
+
     public class ContentBrowserViewModel : ViewModelBase, IDisposable
     {
         public static ContentBrowserViewModel? Instance { get; private set; }
@@ -33,58 +62,58 @@ namespace Hyperion.Editor.ViewModels
         private readonly EditorSubsystem _editorSubsystem;
         private readonly ThumbnailService _thumbnailService;
 
-        public ObservableCollection<AssetBucketViewModel> Buckets { get; } = new ObservableCollection<AssetBucketViewModel>();
+        private readonly Dictionary<uint, AssetBucketViewModel> _buckets = new Dictionary<uint, AssetBucketViewModel>();
 
-        /// <summary>The assets shown in the browser: the current bucket's contents after the search filter and sort are applied.</summary>
-        public ObservableCollection<AssetObjectViewModel> Assets { get; } = new ObservableCollection<AssetObjectViewModel>();
+        private readonly Dictionary<string, AssetFolderViewModel> _folderIndex = new Dictionary<string, AssetFolderViewModel>(StringComparer.Ordinal);
 
-        /// <summary>Everything in the current bucket (or every bucket, when searching from the root), unfiltered - <see cref="Assets"/> is rebuilt from this.</summary>
-        private readonly List<AssetObjectViewModel> _bucketAssets = new List<AssetObjectViewModel>();
+        private readonly List<AssetObjectViewModel> _allAssets = new List<AssetObjectViewModel>();
 
-        /// <summary>Set once <see cref="_bucketAssets"/> holds every bucket's assets, so a root search only loads them on its first keystroke.</summary>
-        private bool _allBucketsLoaded;
+        private readonly Stack<string> _backHistory = new Stack<string>();
+        private readonly Stack<string> _forwardHistory = new Stack<string>();
 
-        private AssetObjectViewModel? _selectedAsset;
-        public AssetObjectViewModel? SelectedAsset
+        public AssetFolderViewModel RootFolder { get; private set; } = new AssetFolderViewModel(string.Empty, null);
+
+        /// <summary>The tree's top level: just <see cref="RootFolder"/>.</summary>
+        public ObservableCollection<AssetFolderViewModel> RootFolders { get; } = new ObservableCollection<AssetFolderViewModel>();
+
+        /// <summary>What the grid shows: the current folder's subfolders, then its assets (or the search results).</summary>
+        public ObservableCollection<object> Items { get; } = new ObservableCollection<object>();
+
+        /// <summary>Root to current folder, for the path bar.</summary>
+        public ObservableCollection<AssetFolderViewModel> PathSegments { get; } = new ObservableCollection<AssetFolderViewModel>();
+
+        public ObservableCollection<AssetTypeFilterViewModel> TypeFilters { get; } = new ObservableCollection<AssetTypeFilterViewModel>();
+
+        private AssetFolderViewModel _currentFolder;
+        public AssetFolderViewModel CurrentFolder => _currentFolder;
+
+        /// <summary>The tree shows the open folder as its selection.</summary>
+        public AssetFolderViewModel SelectedTreeFolder => _currentFolder;
+
+        private object? _selectedItem;
+        public object? SelectedItem
         {
-            get => _selectedAsset;
-            set => SetProperty(ref _selectedAsset, value);
-        }
-
-        private AssetBucketViewModel? _currentBucket;
-
-        /// <summary>The bucket being browsed, or null when showing the root page of buckets.</summary>
-        public AssetBucketViewModel? CurrentBucket
-        {
-            get => _currentBucket;
+            get => _selectedItem;
             set
             {
-                _editorSubsystem.SetSelectedBucket(value?.BucketIndex ?? 0);
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    OnPropertyChanged(nameof(SelectedAsset));
+                }
             }
         }
 
-        private AssetBucketViewModel? _selectedBucket;
-
-        /// <summary>The highlighted tile on the root page. Opening it is a separate step, like a folder.</summary>
-        public AssetBucketViewModel? SelectedBucket
+        public AssetObjectViewModel? SelectedAsset
         {
-            get => _selectedBucket;
-            set => SetProperty(ref _selectedBucket, value);
+            get => _selectedItem as AssetObjectViewModel;
+            set => SelectedItem = value;
         }
 
-        public bool IsAtRoot => _currentBucket == null;
-
-        public bool IsShowingBuckets => IsAtRoot && !HasSearchText;
-
-        public bool IsShowingAssets => !IsShowingBuckets;
-
-        public string SearchWatermark => _currentBucket != null
-            ? $"Search {_currentBucket.Name}..."
-            : "Search all assets...";
+        public string SearchWatermark => _currentFolder.IsRoot ? "Search all assets..." : $"Search {_currentFolder.Name}...";
 
         private string _searchText = string.Empty;
 
-        /// <summary>Substring the listed asset names are filtered by. Filters the current bucket, or every bucket from the root page.</summary>
+        /// <summary>Substring the listed names are filtered by. Searches the current folder and everything below it.</summary>
         public string SearchText
         {
             get => _searchText;
@@ -93,36 +122,18 @@ namespace Hyperion.Editor.ViewModels
                 if (SetProperty(ref _searchText, value ?? string.Empty))
                 {
                     OnPropertyChanged(nameof(HasSearchText));
-                    OnPropertyChanged(nameof(IsShowingBuckets));
-                    OnPropertyChanged(nameof(IsShowingAssets));
-
-                    if (IsAtRoot)
-                    {
-                        if (!HasSearchText)
-                        {
-                            _thumbnailService.CancelPending();
-                            _thumbnailService.ClearSubscribers();
-
-                            _bucketAssets.Clear();
-                            _allBucketsLoaded = false;
-                        }
-                        else if (!_allBucketsLoaded)
-                        {
-                            LoadAllBucketAssets();
-                        }
-                    }
-
-                    ApplyFilterAndSort();
+                    RebuildItems();
                 }
             }
         }
 
         public bool HasSearchText => _searchText.Length != 0;
 
-        /// <summary>True when a search is active and nothing matches it, so the empty list can be explained.</summary>
-        public bool HasNoMatches => HasSearchText && Assets.Count == 0;
+        public bool HasTypeFilter => TypeFilters.Any(filter => filter.IsChecked);
 
-        public bool IsBucketEmpty => !IsAtRoot && !HasSearchText && Assets.Count == 0;
+        public bool HasNoMatches => (HasSearchText || HasTypeFilter) && Items.Count == 0;
+
+        public bool IsFolderEmpty => !HasSearchText && !HasTypeFilter && Items.Count == 0;
 
         public IReadOnlyList<string> SortModeLabels { get; } = new[] { "Name", "Date Modified", "Type" };
 
@@ -137,26 +148,33 @@ namespace Hyperion.Editor.ViewModels
                 if (SetProperty(ref _sortModeIndex, value))
                 {
                     _sortMode = (AssetSortMode)value;
-                    ApplyFilterAndSort();
+                    RebuildItems();
                 }
             }
         }
 
+        private EditorAssetFolders? _assetFolders;
 
-        private DelegateHandler? _onSelectedBucketChangedHandler;
         private DelegateHandler? _onAssetsChangedHandler;
+        private DelegateHandler? _onFoldersChangedHandler;
         private DelegateHandler? _onProjectOpenedHandler;
         private DelegateHandler? _onProjectClosingHandler;
+
+        private bool _isReloadQueued;
+
         private uint _pendingFocusBucket;
-        private string? _pendingFocusNameHint;
+        private string? _pendingFocusName;
         private bool _pendingOpenEditor;
 
         public ICommand ImportCommand { get; }
 
         public ICommand ClearSearchCommand { get; }
+        public ICommand ClearTypeFilterCommand { get; }
 
         public ICommand GoBackCommand { get; }
-        public ICommand OpenBucketCommand { get; }
+        public ICommand GoForwardCommand { get; }
+        public ICommand GoUpCommand { get; }
+        public ICommand OpenFolderCommand { get; }
 
         public ICommand NewScriptCommand { get; }
         public ICommand NewMaterialCommand { get; }
@@ -171,24 +189,22 @@ namespace Hyperion.Editor.ViewModels
         public ICommand DeleteAssetCommand { get; }
         public ICommand EditAssetCommand { get; }
 
+        public ICommand NewFolderCommand { get; }
+        public ICommand DeleteFolderCommand { get; }
+        public ICommand DeleteSelectionCommand { get; }
+        public ICommand ShowInExplorerCommand { get; }
+
+        /// <summary>Raised when a folder's name should become editable, so the view can focus its text box.</summary>
+        public static event Action<AssetFolderViewModel>? FolderRenameRequested;
+
+        private string? _pendingRenamePath;
+
+        /// <summary>The grid's current selection, kept by the view; <see cref="SelectedItem"/> is only its anchor.</summary>
+        public IReadOnlyList<object> SelectedItems { get; set; } = Array.Empty<object>();
+
         public ICommand AddToSceneCommand { get; }
 
         public ICommand PlaceAsInstanceCommand { get; }
-
-        /// <summary>Asset type name and create command for each bucket the browser can create into, keyed by bucket index.</summary>
-        private readonly Dictionary<uint, (string TypeName, ICommand Command)> _newAssetActions;
-
-        private (string TypeName, ICommand Command)? CurrentBucketNewAction =>
-            _currentBucket != null && _newAssetActions.TryGetValue(_currentBucket.BucketIndex, out var newAction)
-                ? newAction
-                : null;
-
-        /// <summary>Creates an asset of the open bucket's type. Null at the root, or for buckets whose assets are only made by importing.</summary>
-        public ICommand? NewInBucketCommand => CurrentBucketNewAction?.Command;
-
-        public string NewInBucketLabel => CurrentBucketNewAction is { } newAction ? $"New {newAction.TypeName}" : string.Empty;
-
-        public bool HasNewInBucket => CurrentBucketNewAction != null;
 
         /// Simulation runs against a throwaway snapshot of the project, so anything authored while it
         /// runs would be thrown away with the snapshot.
@@ -221,23 +237,43 @@ namespace Hyperion.Editor.ViewModels
             (NewPhysicsShapeCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (NewPrefabCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (NewWorldCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (NewFolderCommand as RelayCommand<AssetFolderViewModel>)?.RaiseCanExecuteChanged();
         }
 
         public ContentBrowserViewModel(EditorSubsystem editorSubsystem)
         {
             _editorSubsystem = editorSubsystem ?? throw new ArgumentNullException(nameof(editorSubsystem));
 
+            _currentFolder = RootFolder;
+            RootFolders.Add(RootFolder);
+
+            foreach (AssetBucket bucket in AssetBucket.AllBuckets)
+            {
+                _buckets[bucket.Index] = new AssetBucketViewModel(bucket);
+                TypeFilters.Add(new AssetTypeFilterViewModel(bucket, OnTypeFilterChanged));
+            }
+
             ImportCommand = new EditorCommand("ImportContent");
 
             ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
 
-            GoBackCommand = new RelayCommand(GoBack, () => !IsAtRoot);
-
-            OpenBucketCommand = new RelayCommand<AssetBucketViewModel>(bucketVm =>
+            ClearTypeFilterCommand = new RelayCommand(() =>
             {
-                if (bucketVm != null)
+                foreach (AssetTypeFilterViewModel filter in TypeFilters)
                 {
-                    CurrentBucket = bucketVm;
+                    filter.IsChecked = false;
+                }
+            });
+
+            GoBackCommand = new RelayCommand(GoBack, () => _backHistory.Count > 0);
+            GoForwardCommand = new RelayCommand(GoForward, () => _forwardHistory.Count > 0);
+            GoUpCommand = new RelayCommand(GoUp, () => !_currentFolder.IsRoot);
+
+            OpenFolderCommand = new RelayCommand<AssetFolderViewModel>(folder =>
+            {
+                if (folder != null)
+                {
+                    NavigateTo(folder);
                 }
             });
 
@@ -256,6 +292,40 @@ namespace Hyperion.Editor.ViewModels
                 OpenAssetEditor(asset);
             });
 
+            NewFolderCommand = new RelayCommand<AssetFolderViewModel>(parent =>
+            {
+                CreateFolder(parent ?? _currentFolder);
+            }, _ => CanCreateAssets);
+
+            DeleteFolderCommand = new RelayCommand<AssetFolderViewModel>(folder =>
+            {
+                if (folder != null && !folder.IsRoot)
+                {
+                    DeleteItems(new object[] { folder });
+                }
+            });
+
+            DeleteSelectionCommand = new RelayCommand<object>(clicked =>
+            {
+                List<object> items = SelectedItems.Count > 0 && (clicked == null || SelectedItems.Contains(clicked))
+                    ? SelectedItems.ToList()
+                    : (clicked != null ? new List<object> { clicked } : new List<object>());
+
+                DeleteItems(items);
+            });
+
+            ShowInExplorerCommand = new RelayCommand<AssetObjectViewModel>(asset =>
+            {
+                if (asset?.Bucket == null)
+                {
+                    return;
+                }
+
+                string manifestPath = Path.Combine(AssetManager.Instance.AssetRegistry.GetRootPath(), asset.Bucket.Name, asset.DisplayName + ".hmf");
+
+                ShellService.RevealInFileManager(File.Exists(manifestPath) ? manifestPath : Path.GetDirectoryName(manifestPath)!);
+            });
+
             NewScriptCommand = new RelayCommand(() =>
             {
                 var panel = new NewScriptPanelViewModel((name, languageArg) =>
@@ -266,16 +336,9 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    _ = EngineManager.PostToSimThread(() =>
+                    CreateInCurrentFolder("script", AssetBucket.Scripts.Value, openEditor: false, () =>
                     {
-                        if (!CanCreateAssetsOnSimThread("script"))
-                        {
-                            return;
-                        }
-
                         _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewScript"), $"{languageArg} {name}");
-
-                        Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.Scripts.Value, name));
                     });
                 });
 
@@ -292,17 +355,10 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    _ = EngineManager.PostToSimThread(() =>
+                    CreateInCurrentFolder("weapon", AssetBucket.Weapons.Value, openEditor: true, () =>
                     {
-                        if (!CanCreateAssetsOnSimThread("weapon"))
-                        {
-                            return;
-                        }
-
                         // EditorCommandNewWeapon takes the WeaponType as an integer
                         _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewWeapon"), Convert.ToString((int)weaponType.Value, CultureInfo.InvariantCulture));
-
-                        Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.Weapons.Value, "NewWeapon", openEditor: true));
                     });
                 });
 
@@ -311,68 +367,17 @@ namespace Hyperion.Editor.ViewModels
 
             NewDecalCommand = new RelayCommand(() =>
             {
-                _ = EngineManager.PostToSimThread(() =>
+                CreateInCurrentFolder("decal", AssetBucket.Decals.Value, openEditor: true, () =>
                 {
-                    if (!CanCreateAssetsOnSimThread("decal"))
-                    {
-                        return;
-                    }
-
-                    AssetRegistry registry = AssetManager.Instance.AssetRegistry;
-                    uint bucketIndex = AssetBucket.Decals.Value;
-
-                    // the command picks a unique name, diff the bucket to find it
-                    var namesBefore = new HashSet<string>(
-                        registry.GetBucketAssetDescs(bucketIndex).Select(assetDesc => assetDesc.Name.ToString()),
-                        StringComparer.Ordinal);
-
                     _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewDecal"));
-
-                    string? createdName = registry.GetBucketAssetDescs(bucketIndex)
-                        .Select(assetDesc => assetDesc.Name.ToString())
-                        .FirstOrDefault(name => !namesBefore.Contains(name));
-
-                    if (createdName == null)
-                    {
-                        Logger.Log(LogLevel.Error, "New decal creation failed; no new asset appeared in the decals bucket.");
-                        return;
-                    }
-
-                    Dispatcher.UIThread.Post(() => FocusAsset(bucketIndex, createdName, openEditor: true));
                 });
             }, () => CanCreateAssets);
 
             NewMaterialCommand = new RelayCommand(() =>
             {
-                _ = EngineManager.PostToSimThread(() =>
+                CreateInCurrentFolder("material", AssetBucket.Materials.Value, openEditor: true, () =>
                 {
-                    if (!CanCreateAssetsOnSimThread("material"))
-                    {
-                        return;
-                    }
-
-                    AssetRegistry registry = AssetManager.Instance.AssetRegistry;
-                    uint bucketIndex = AssetBucket.Materials.Value;
-
-                    // EditorCommandNewMaterial picks a unique name for the material itself and gives us
-                    // no way to ask for it, so diff the bucket to find out what it ended up being.
-                    var namesBefore = new HashSet<string>(
-                        registry.GetBucketAssetDescs(bucketIndex).Select(assetDesc => assetDesc.Name.ToString()),
-                        StringComparer.Ordinal);
-
                     _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewMaterial"));
-
-                    string? createdName = registry.GetBucketAssetDescs(bucketIndex)
-                        .Select(assetDesc => assetDesc.Name.ToString())
-                        .FirstOrDefault(name => !namesBefore.Contains(name));
-
-                    if (createdName == null)
-                    {
-                        Logger.Log(LogLevel.Error, "New material creation failed; no new asset appeared in the materials bucket.");
-                        return;
-                    }
-
-                    Dispatcher.UIThread.Post(() => FocusAsset(bucketIndex, createdName, openEditor: true));
                 });
             }, () => CanCreateAssets);
 
@@ -386,19 +391,12 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    _ = EngineManager.PostToSimThread(() =>
+                    CreateInCurrentFolder("physics shape", AssetBucket.PhysicsShapes.Value, openEditor: false, () =>
                     {
-                        if (!CanCreateAssetsOnSimThread("physics shape"))
-                        {
-                            return;
-                        }
-
                         AssetRegistry? registry = EngineManager.EditorGame?.AssetRegistry;
                         Debug.Assert(registry != null);
 
                         registry.PutAssetUnique(shape);
-
-                        Dispatcher.UIThread.Post(() => FocusAsset(AssetBucket.PhysicsShapes.Value, shape.GetName().ToString()));
                     });
                 });
 
@@ -407,58 +405,17 @@ namespace Hyperion.Editor.ViewModels
 
             NewPrefabCommand = new RelayCommand(() =>
             {
-                _ = EngineManager.PostToSimThread(() =>
+                CreateInCurrentFolder("prefab", AssetBucket.Prefabs.Value, openEditor: false, () =>
                 {
-                    if (!CanCreateAssetsOnSimThread("prefab"))
-                    {
-                        return;
-                    }
-
-                    AssetRegistry registry = AssetManager.Instance.AssetRegistry;
-                    uint bucketIndex = AssetBucket.Prefabs.Value;
-
-                    /// @TODO: Use same technique for naming the other types.
-                    var existingNames = new HashSet<string>(
-                        registry.GetBucketAssetDescs(bucketIndex).Select(assetDesc => assetDesc.Name.ToString()),
-                        StringComparer.Ordinal);
-
-                    string name = "NewPrefab";
-                    for (int suffix = 1; existingNames.Contains(name); suffix++)
-                    {
-                        name = $"NewPrefab_{suffix}";
-                    }
-
-                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewPrefab"), name);
-
-                    Dispatcher.UIThread.Post(() => FocusAsset(bucketIndex, name));
+                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewPrefab"), MakeUniqueAssetName(AssetBucket.Prefabs.Value, "NewPrefab"));
                 });
             }, () => CanCreateAssets);
 
             NewWorldCommand = new RelayCommand(() =>
             {
-                _ = EngineManager.PostToSimThread(() =>
+                CreateInCurrentFolder("world", AssetBucket.Worlds.Value, openEditor: false, () =>
                 {
-                    if (!CanCreateAssetsOnSimThread("world"))
-                    {
-                        return;
-                    }
-
-                    AssetRegistry registry = AssetManager.Instance.AssetRegistry;
-                    uint bucketIndex = AssetBucket.Worlds.Value;
-
-                    var existingNames = new HashSet<string>(
-                        registry.GetBucketAssetDescs(bucketIndex).Select(assetDesc => assetDesc.Name.ToString()),
-                        StringComparer.Ordinal);
-
-                    string name = "NewWorld";
-                    for (int suffix = 1; existingNames.Contains(name); suffix++)
-                    {
-                        name = $"NewWorld_{suffix}";
-                    }
-
-                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewWorld"), name);
-
-                    Dispatcher.UIThread.Post(() => FocusAsset(bucketIndex, name));
+                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewWorld"), MakeUniqueAssetName(AssetBucket.Worlds.Value, "NewWorld"));
                 });
             }, () => CanCreateAssets);
 
@@ -471,17 +428,6 @@ namespace Hyperion.Editor.ViewModels
 
                 _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandOpenWorld"), asset.AssetDesc.Name.ToString());
             });
-
-            _newAssetActions = new Dictionary<uint, (string TypeName, ICommand Command)>
-            {
-                [AssetBucket.PhysicsShapes.Value] = ("Physics Shape", NewPhysicsShapeCommand),
-                [AssetBucket.Materials.Value] = ("Material", NewMaterialCommand),
-                [AssetBucket.Weapons.Value] = ("Weapon", NewWeaponCommand),
-                [AssetBucket.Decals.Value] = ("Decal", NewDecalCommand),
-                [AssetBucket.Scripts.Value] = ("Script", NewScriptCommand),
-                [AssetBucket.Prefabs.Value] = ("Prefab", NewPrefabCommand),
-                [AssetBucket.Worlds.Value] = ("World", NewWorldCommand),
-            };
 
             AddToSceneCommand = new RelayCommand<AssetObjectViewModel>(asset =>
             {
@@ -509,238 +455,741 @@ namespace Hyperion.Editor.ViewModels
             Instance = this;
         }
 
-        public void LoadBuckets()
+        public void Initialize()
         {
             Dispatcher.UIThread.VerifyAccess();
 
-            Logger.Log(LogLevel.Verbose, "Loading content browser buckets...");
-
-            Buckets.Clear();
-            _bucketAssets.Clear();
-            Assets.Clear();
-
-            foreach (AssetBucket bucket in AssetBucket.AllBuckets)
-            {
-                Buckets.Add(new AssetBucketViewModel(bucket));
-            }
-
-            OnPropertyChanged(nameof(Buckets));
-
-            RefreshBucketCounts();
-
-            _onSelectedBucketChangedHandler = _editorSubsystem.GetOnSelectedBucketChangedDelegate().Bind((uint bucketIndex) =>
-            {
-                Logger.Log(LogLevel.Verbose, "Selected bucket changed: {0}", AssetBucket.GetAssetBucketName(bucketIndex));
-
-                Dispatcher.UIThread.Post(() => ReloadBucketAssets(bucketIndex));
-            });
-
             _onAssetsChangedHandler = _editorSubsystem.GetOnAssetsChangedDelegate().Bind((uint bucketIndex) =>
             {
-                Dispatcher.UIThread.Post(() =>
+                // on the sim thread, so a command that just created an asset has filed it before unfiled ones get their default folder
+                _ = EngineManager.PostToSimThread(() =>
                 {
-                    RefreshBucketCount(bucketIndex);
+                    _assetFolders?.SyncWithRegistry();
 
-                    // a root search lists every bucket, so any change may touch it
-                    if (_currentBucket?.BucketIndex == bucketIndex || (IsAtRoot && HasSearchText))
+                    Dispatcher.UIThread.Post(() =>
                     {
-                        // An asset in this bucket was added, removed or edited - the decoded images we
-                        // are holding may no longer match what is on disk.
+                        // An asset was added, removed or edited - the decoded images we are holding may no longer match what is on disk.
                         _thumbnailService.Clear();
 
-                        RefreshAssets();
-                    }
+                        QueueReload();
+                    });
                 });
             });
 
             _onProjectOpenedHandler = _editorSubsystem.GetOnProjectOpenedDelegate().Bind((EditorProject project) =>
             {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    RefreshBucketCounts();
-                    RefreshAssets();
-                });
+                Dispatcher.UIThread.Post(() => BindProject(project));
             });
 
             _onProjectClosingHandler = _editorSubsystem.GetOnProjectClosingDelegate().Bind((EditorProject project) =>
             {
-                Dispatcher.UIThread.Post(() =>
-                {
-                    _thumbnailService.Clear();
-
-                    _bucketAssets.Clear();
-                    _allBucketsLoaded = false;
-                    Assets.Clear();
-                    SelectedAsset = null;
-
-                    foreach (AssetBucketViewModel bucketVm in Buckets)
-                    {
-                        bucketVm.AssetCount = 0;
-                    }
-
-                    OnPropertyChanged(nameof(Assets));
-                    OnPropertyChanged(nameof(HasNoMatches));
-                    OnPropertyChanged(nameof(IsBucketEmpty));
-                });
+                Dispatcher.UIThread.Post(() => BindProject(null));
             });
+
+            BindProject(EngineManager.CurrentProject);
         }
 
-        private void RefreshBucketCounts()
+        private sealed class BrowserState
         {
-            foreach (AssetBucketViewModel bucketVm in Buckets)
-            {
-                RefreshBucketCount(bucketVm.BucketIndex);
-            }
+            public string CurrentFolder { get; set; } = string.Empty;
+
+            public List<string> ExpandedFolders { get; set; } = new List<string>();
         }
 
-        private void RefreshBucketCount(uint bucketIndex)
-        {
-            AssetBucketViewModel? bucketVm = Buckets.FirstOrDefault(bvm => bvm.BucketIndex == bucketIndex);
+        private string? _boundProjectFilePath;
 
-            if (bucketVm != null)
-            {
-                bucketVm.AssetCount = (int)AssetManager.Instance.AssetRegistry.GetBucketAssetCount(bucketIndex);
-            }
+        private static string? GetBrowserStatePath(string? projectFilePath)
+        {
+            return string.IsNullOrEmpty(projectFilePath)
+                ? null
+                : Path.Combine(Path.GetDirectoryName(projectFilePath)!, "Saved", "ContentBrowser.json");
         }
 
-        /// <summary>Returns to the root page of buckets, keeping the search so it widens to every bucket.</summary>
-        private void GoBack()
+        /// <summary>Remembers the open folder and the expanded ones in the project's Saved folder, for the next time it is opened.</summary>
+        private void SaveBrowserState()
         {
-            if (IsAtRoot)
+            if (GetBrowserStatePath(_boundProjectFilePath) is not { } statePath || _assetFolders == null)
             {
                 return;
             }
 
-            // lets the bucket just left stay highlighted on the root page
-            SelectedBucket = _currentBucket;
+            BrowserState state = new BrowserState
+            {
+                CurrentFolder = _currentFolder.Path,
+                ExpandedFolders = _folderIndex.Values.Where(folder => folder.IsExpanded).Select(folder => folder.Path).OrderBy(path => path, StringComparer.Ordinal).ToList()
+            };
 
-            CurrentBucket = null;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(statePath)!);
+                File.WriteAllText(statePath, System.Text.Json.JsonSerializer.Serialize(state));
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, $"Could not save content browser state to {statePath}: {ex.Message}");
+            }
         }
 
-        /// <summary>Reloads the asset list for the given bucket and resolves any pending focus/edit request. Must run on the UI thread.</summary>
-        private void ReloadBucketAssets(uint bucketIndex)
+        private static BrowserState? LoadBrowserState(string? projectFilePath)
         {
-            // Whatever was still queued, and whatever is subscribed, belongs to the asset set we are
-            // about to replace.
+            if (GetBrowserStatePath(projectFilePath) is not { } statePath || !File.Exists(statePath))
+            {
+                return null;
+            }
+
+            try
+            {
+                return System.Text.Json.JsonSerializer.Deserialize<BrowserState>(File.ReadAllText(statePath));
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        private void BindProject(EditorProject? project)
+        {
+            Dispatcher.UIThread.VerifyAccess();
+
+            SaveBrowserState();
+
+            _onFoldersChangedHandler?.Remove();
+            _onFoldersChangedHandler?.Dispose();
+            _onFoldersChangedHandler = null;
+
+            _thumbnailService.Clear();
+
+            _assetFolders = project?.AssetFolders;
+            _boundProjectFilePath = project != null && project.IsSaved ? project.FilePath : null;
+
+            _backHistory.Clear();
+            _forwardHistory.Clear();
+
+            if (_assetFolders != null)
+            {
+                _onFoldersChangedHandler = _assetFolders.GetOnFoldersChangedDelegate().Bind(() =>
+                {
+                    Dispatcher.UIThread.Post(QueueReload);
+                });
+            }
+
+            BrowserState? state = LoadBrowserState(_boundProjectFilePath);
+
+            _folderIndex.Clear();
+
+            ReloadAll(state?.CurrentFolder ?? string.Empty, state?.ExpandedFolders);
+        }
+
+        /// <summary>Reloads once, however many changes arrive before the UI thread gets to it.</summary>
+        private void QueueReload()
+        {
+            Dispatcher.UIThread.VerifyAccess();
+
+            if (_isReloadQueued)
+            {
+                return;
+            }
+
+            _isReloadQueued = true;
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                _isReloadQueued = false;
+
+                ReloadAll(_currentFolder.Path);
+            }, DispatcherPriority.Background);
+        }
+
+        /// <summary>Rebuilds the folder tree and the asset index from the project, then reopens <paramref name="folderPath"/> (or its nearest surviving parent). Must run on the UI thread.</summary>
+        private void ReloadAll(string folderPath, IEnumerable<string>? restoredExpandedPaths = null)
+        {
+            Dispatcher.UIThread.VerifyAccess();
+
+            HashSet<string> expandedPaths = restoredExpandedPaths != null
+                ? new HashSet<string>(restoredExpandedPaths, StringComparer.Ordinal)
+                : new HashSet<string>(_folderIndex.Values.Where(folder => folder.IsExpanded).Select(folder => folder.Path), StringComparer.Ordinal);
+
+            if (_folderIndex.Count == 0)
+            {
+                expandedPaths.Add(string.Empty);
+            }
+
+            object? previousSelection = _selectedItem;
+
+            RebuildFolderTree(expandedPaths);
+            RebuildAssetIndex();
+
+            string targetPath = folderPath;
+
+            while (!_folderIndex.ContainsKey(targetPath) && targetPath.Length != 0)
+            {
+                targetPath = AssetFolderViewModel.GetParentPath(targetPath);
+            }
+
+            SetCurrentFolder(_folderIndex[targetPath]);
+
+            SelectedItem = previousSelection switch
+            {
+                AssetObjectViewModel asset => Items.OfType<AssetObjectViewModel>().FirstOrDefault(item => item.Bucket?.BucketIndex == asset.Bucket?.BucketIndex && item.AssetDesc.Name == asset.AssetDesc.Name),
+                AssetFolderViewModel folder => Items.OfType<AssetFolderViewModel>().FirstOrDefault(item => item.Path == folder.Path),
+                _ => null
+            };
+
+            ResolvePendingFocus();
+            ResolvePendingRename();
+        }
+
+        private void RebuildFolderTree(HashSet<string> expandedPaths)
+        {
+            _folderIndex.Clear();
+
+            RootFolder = new AssetFolderViewModel(string.Empty, null) { IsExpanded = expandedPaths.Contains(string.Empty) };
+            _folderIndex[string.Empty] = RootFolder;
+
+            RootFolders.Clear();
+            RootFolders.Add(RootFolder);
+
+            if (_assetFolders == null)
+            {
+                return;
+            }
+
+            List<string> folderPaths = _assetFolders.GetFolderPaths().Cast<Name>()
+                .Select(name => name.ToString())
+                .Where(path => path.Length != 0)
+                .OrderBy(path => path.Count(ch => ch == '/'))
+                .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (string path in folderPaths)
+            {
+                if (_folderIndex.ContainsKey(path))
+                {
+                    continue;
+                }
+
+                AssetFolderViewModel parent = GetOrCreateFolder(AssetFolderViewModel.GetParentPath(path), expandedPaths);
+                AssetFolderViewModel folder = new AssetFolderViewModel(path, parent) { IsExpanded = expandedPaths.Contains(path) };
+
+                parent.Children.Add(folder);
+                _folderIndex[path] = folder;
+            }
+        }
+
+        private AssetFolderViewModel GetOrCreateFolder(string path, HashSet<string> expandedPaths)
+        {
+            if (_folderIndex.TryGetValue(path, out AssetFolderViewModel? existing))
+            {
+                return existing;
+            }
+
+            AssetFolderViewModel parent = GetOrCreateFolder(AssetFolderViewModel.GetParentPath(path), expandedPaths);
+            AssetFolderViewModel folder = new AssetFolderViewModel(path, parent) { IsExpanded = expandedPaths.Contains(path) };
+
+            parent.Children.Add(folder);
+            _folderIndex[path] = folder;
+
+            return folder;
+        }
+
+        private void RebuildAssetIndex()
+        {
             _thumbnailService.CancelPending();
             _thumbnailService.ClearSubscribers();
 
-            _bucketAssets.Clear();
-            _allBucketsLoaded = false;
-            Assets.Clear();
-            SelectedAsset = null;
+            _allAssets.Clear();
 
-            _currentBucket = bucketIndex != 0
-                ? Buckets.FirstOrDefault(bvm => bvm.BucketIndex == bucketIndex)
-                : null;
-
-            if (_currentBucket != null)
+            if (_assetFolders == null)
             {
-                LoadBucketAssets(_currentBucket);
-            }
-            else if (HasSearchText)
-            {
-                LoadAllBucketAssets();
+                return;
             }
 
-            ApplyFilterAndSort();
+            AssetRegistry registry = AssetManager.Instance.AssetRegistry;
 
-            // Handle pending focus after asset creation
-            if (bucketIndex != 0 && _pendingFocusBucket == bucketIndex)
+            foreach (AssetBucketViewModel bucketVm in _buckets.Values)
             {
-                _pendingFocusBucket = 0;
-
-                if (_pendingFocusNameHint != null)
+                foreach (AssetDesc assetDesc in registry.GetBucketAssetDescs(bucketVm.BucketIndex))
                 {
-                    // Prefer an exact match: unique asset names are generated by appending a suffix,
-                    // so a prefix match on "NewMaterial" would also hit "NewMaterial_1".
-                    SelectedAsset = Assets.FirstOrDefault(a =>
-                        string.Equals(a.DisplayName, _pendingFocusNameHint, StringComparison.OrdinalIgnoreCase))
-                        ?? Assets.FirstOrDefault(a =>
-                            a.DisplayName.StartsWith(_pendingFocusNameHint, StringComparison.OrdinalIgnoreCase));
-                    _pendingFocusNameHint = null;
-                }
+                    string folderPath = _assetFolders.GetAssetFolderOf(bucketVm.BucketIndex, assetDesc.Name);
 
-                SelectedAsset ??= Assets.FirstOrDefault();
+                    AssetObjectViewModel assetVm = new AssetObjectViewModel(assetDesc, bucketVm) { FolderPath = folderPath };
+                    _allAssets.Add(assetVm);
 
-                if (_pendingOpenEditor)
-                {
-                    _pendingOpenEditor = false;
-                    OpenAssetEditor(SelectedAsset);
+                    if (_folderIndex.TryGetValue(folderPath, out AssetFolderViewModel? folder))
+                    {
+                        folder.AssetCount++;
+                    }
                 }
             }
+        }
 
-            OnPropertyChanged(nameof(CurrentBucket));
-            OnPropertyChanged(nameof(IsAtRoot));
-            OnPropertyChanged(nameof(IsShowingBuckets));
-            OnPropertyChanged(nameof(IsShowingAssets));
-            OnPropertyChanged(nameof(IsBucketEmpty));
+        private void SetCurrentFolder(AssetFolderViewModel folder)
+        {
+            _currentFolder = folder;
+
+            string folderPath = folder.Path;
+            _ = EngineManager.PostToSimThread(() => _editorSubsystem.SetCurrentAssetFolder(folderPath));
+
+            for (AssetFolderViewModel? ancestor = folder.Parent; ancestor != null; ancestor = ancestor.Parent)
+            {
+                ancestor.IsExpanded = true;
+            }
+
+            PathSegments.Clear();
+
+            for (AssetFolderViewModel? segment = folder; segment != null; segment = segment.Parent)
+            {
+                PathSegments.Insert(0, segment);
+            }
+
+            OnPropertyChanged(nameof(CurrentFolder));
+            OnPropertyChanged(nameof(SelectedTreeFolder));
             OnPropertyChanged(nameof(SearchWatermark));
-            OnPropertyChanged(nameof(NewInBucketCommand));
-            OnPropertyChanged(nameof(NewInBucketLabel));
-            OnPropertyChanged(nameof(HasNewInBucket));
 
             (GoBackCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (GoForwardCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (GoUpCommand as RelayCommand)?.RaiseCanExecuteChanged();
+
+            RebuildItems();
         }
 
-        /// <summary>Appends the given bucket's assets to <see cref="_bucketAssets"/>. Must run on the UI thread.</summary>
-        private void LoadBucketAssets(AssetBucketViewModel bucketVm)
+        public void NavigateTo(AssetFolderViewModel folder)
+        {
+            Dispatcher.UIThread.VerifyAccess();
+
+            if (ReferenceEquals(folder, _currentFolder))
+            {
+                return;
+            }
+
+            _backHistory.Push(_currentFolder.Path);
+            _forwardHistory.Clear();
+
+            SelectedItem = null;
+            SetCurrentFolder(folder);
+        }
+
+        public void NavigateToPath(string folderPath)
+        {
+            if (_folderIndex.TryGetValue(folderPath, out AssetFolderViewModel? folder))
+            {
+                NavigateTo(folder);
+            }
+        }
+
+        private void GoBack()
+        {
+            NavigateHistory(_backHistory, _forwardHistory);
+        }
+
+        private void GoForward()
+        {
+            NavigateHistory(_forwardHistory, _backHistory);
+        }
+
+        private void NavigateHistory(Stack<string> from, Stack<string> to)
+        {
+            while (from.Count > 0)
+            {
+                string path = from.Pop();
+
+                if (_folderIndex.TryGetValue(path, out AssetFolderViewModel? folder))
+                {
+                    to.Push(_currentFolder.Path);
+
+                    // the folder just left stays selected, so stepping back out of a folder keeps your place
+                    AssetFolderViewModel previousFolder = _currentFolder;
+
+                    SetCurrentFolder(folder);
+
+                    SelectedItem = Items.OfType<AssetFolderViewModel>().FirstOrDefault(item => ReferenceEquals(item, previousFolder));
+
+                    return;
+                }
+            }
+
+            (GoBackCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (GoForwardCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        }
+
+        private void GoUp()
+        {
+            if (_currentFolder.Parent is not { } parent)
+            {
+                return;
+            }
+
+            AssetFolderViewModel previousFolder = _currentFolder;
+
+            NavigateTo(parent);
+
+            SelectedItem = previousFolder;
+        }
+
+        private void OnTypeFilterChanged()
+        {
+            OnPropertyChanged(nameof(HasTypeFilter));
+            RebuildItems();
+        }
+
+        /// <summary>Rebuilds <see cref="Items"/> for the current folder, honouring the search text, type filter and sort mode. Must run on the UI thread.</summary>
+        private void RebuildItems()
+        {
+            Dispatcher.UIThread.VerifyAccess();
+
+            object? preserved = _selectedItem;
+
+            HashSet<uint>? typeFilter = HasTypeFilter
+                ? new HashSet<uint>(TypeFilters.Where(filter => filter.IsChecked).Select(filter => filter.BucketIndex))
+                : null;
+
+            IEnumerable<AssetFolderViewModel> folders;
+            IEnumerable<AssetObjectViewModel> assets;
+
+            if (HasSearchText)
+            {
+                folders = _folderIndex.Values.Where(folder =>
+                    !ReferenceEquals(folder, _currentFolder)
+                    && folder.IsSameOrDescendantOf(_currentFolder)
+                    && folder.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+
+                assets = _allAssets.Where(asset =>
+                    AssetFolderViewModel.IsSameOrDescendantPath(asset.FolderPath, _currentFolder.Path)
+                    && asset.DisplayName.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                folders = _currentFolder.Children;
+                assets = _allAssets.Where(asset => string.Equals(asset.FolderPath, _currentFolder.Path, StringComparison.Ordinal));
+            }
+
+            if (typeFilter != null)
+            {
+                folders = Enumerable.Empty<AssetFolderViewModel>();
+                assets = assets.Where(asset => asset.Bucket != null && typeFilter.Contains(asset.Bucket.BucketIndex));
+            }
+
+            List<AssetObjectViewModel> assetList = assets.ToList();
+
+            foreach (AssetObjectViewModel asset in assetList)
+            {
+                asset.EnsureFileInfo();
+            }
+
+            List<AssetObjectViewModel> sortedAssets = _sortMode switch
+            {
+                AssetSortMode.DateModified =>
+                    assetList.OrderByDescending(a => a.DateModified ?? DateTime.MinValue).ToList(),
+                AssetSortMode.Type =>
+                    assetList.OrderBy(a => a.TypeName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                            .ThenBy(a => a.DisplayName, StringComparer.OrdinalIgnoreCase)
+                            .ToList(),
+                _ /* Name */ =>
+                    assetList.OrderBy(a => a.DisplayName, StringComparer.OrdinalIgnoreCase).ToList(),
+            };
+
+            Items.Clear();
+
+            foreach (AssetFolderViewModel folder in folders.OrderBy(folder => folder.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                Items.Add(folder);
+            }
+
+            foreach (AssetObjectViewModel asset in sortedAssets)
+            {
+                Items.Add(asset);
+            }
+
+            // The filter may have just hidden whatever was selected.
+            SelectedItem = preserved != null && Items.Contains(preserved) ? preserved : null;
+
+            OnPropertyChanged(nameof(HasNoMatches));
+            OnPropertyChanged(nameof(IsFolderEmpty));
+
+            ResolveUnsavedAssetTypeNames(sortedAssets.Where(asset => !asset.HasManifest).ToList());
+
+            foreach (AssetObjectViewModel asset in sortedAssets)
+            {
+                asset.RequestThumbnail();
+            }
+        }
+
+        private static void PushFolderAction(string text, Action execute, Action revert)
+        {
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                EditorProject? project = EngineManager.CurrentProject;
+
+                if (project?.ActionStack == null)
+                {
+                    execute();
+                    return;
+                }
+
+                project.ActionStack.PushAction(new EditorAction(text, (_, _) => execute(), (_, _) => revert()));
+            });
+        }
+
+        /// <summary>Makes a "New Folder" under <paramref name="parent"/> and puts its name up for editing.</summary>
+        public void CreateFolder(AssetFolderViewModel parent)
+        {
+            EditorAssetFolders? assetFolders = _assetFolders;
+
+            if (assetFolders == null)
+            {
+                return;
+            }
+
+            string path = AssetFolderViewModel.JoinPath(parent.Path, assetFolders.MakeUniqueFolderName(parent.Path, "New Folder"));
+
+            _pendingRenamePath = path;
+
+            if (!ReferenceEquals(parent, _currentFolder))
+            {
+                parent.IsExpanded = true;
+            }
+
+            PushFolderAction("New Folder",
+                execute: () => assetFolders.CreateFolder(path),
+                revert: () => assetFolders.RemoveFolder(path));
+        }
+
+        public void RenameFolder(AssetFolderViewModel folder, string newName)
+        {
+            EditorAssetFolders? assetFolders = _assetFolders;
+
+            folder.CancelRename();
+
+            newName = newName.Trim();
+
+            if (assetFolders == null || folder.IsRoot || newName.Length == 0 || newName == folder.Name || newName.IndexOfAny(new[] { '/', '\\', '|', '\t', '\n', '\r' }) >= 0)
+            {
+                return;
+            }
+
+            string oldPath = folder.Path;
+            string oldName = folder.Name;
+            string newPath = oldPath;
+
+            PushFolderAction($"Rename {oldName}",
+                execute: () => newPath = assetFolders.RenameFolder(oldPath, newName) is { Length: > 0 } renamed ? renamed : oldPath,
+                revert: () => assetFolders.RenameFolder(newPath, oldName));
+        }
+
+        /// <summary>Files <paramref name="items"/> (folders and assets) under <paramref name="target"/>, as one undo step.</summary>
+        public void MoveItems(IReadOnlyList<object> items, AssetFolderViewModel target)
+        {
+            EditorAssetFolders? assetFolders = _assetFolders;
+
+            if (assetFolders == null)
+            {
+                return;
+            }
+
+            List<AssetFolderViewModel> folders = items.OfType<AssetFolderViewModel>()
+                .Where(folder => !folder.IsRoot && !target.IsSameOrDescendantOf(folder) && !ReferenceEquals(folder.Parent, target))
+                .ToList();
+
+            // a folder inside another moved folder travels with it
+            folders = folders.Where(folder => !folders.Any(other => !ReferenceEquals(other, folder) && folder.IsSameOrDescendantOf(other))).ToList();
+
+            List<AssetObjectViewModel> assets = items.OfType<AssetObjectViewModel>()
+                .Where(asset => asset.Bucket != null
+                    && asset.FolderPath != target.Path
+                    && !folders.Any(folder => AssetFolderViewModel.IsSameOrDescendantPath(asset.FolderPath, folder.Path)))
+                .ToList();
+
+            if (folders.Count == 0 && assets.Count == 0)
+            {
+                return;
+            }
+
+            var folderMoves = folders.Select(folder => (OldPath: folder.Path, OldParent: AssetFolderViewModel.GetParentPath(folder.Path), OldName: folder.Name)).ToList();
+            var assetMoves = assets.Select(asset => (BucketIndex: asset.Bucket!.BucketIndex, Name: asset.AssetDesc.Name, OldFolder: asset.FolderPath)).ToList();
+
+            string targetPath = target.Path;
+            string[] movedPaths = new string[folderMoves.Count];
+
+            int count = folderMoves.Count + assetMoves.Count;
+            string text = count == 1
+                ? $"Move {(folderMoves.Count == 1 ? folderMoves[0].OldName : assetMoves[0].Name.ToString())}"
+                : $"Move {count} items";
+
+            PushFolderAction(text,
+                execute: () =>
+                {
+                    for (int i = 0; i < folderMoves.Count; i++)
+                    {
+                        movedPaths[i] = assetFolders.MoveFolder(folderMoves[i].OldPath, targetPath);
+                    }
+
+                    foreach (var assetMove in assetMoves)
+                    {
+                        assetFolders.SetAssetFolderOf(assetMove.BucketIndex, assetMove.Name, targetPath);
+                    }
+                },
+                revert: () =>
+                {
+                    foreach (var assetMove in assetMoves)
+                    {
+                        assetFolders.SetAssetFolderOf(assetMove.BucketIndex, assetMove.Name, assetMove.OldFolder);
+                    }
+
+                    for (int i = folderMoves.Count - 1; i >= 0; i--)
+                    {
+                        if (string.IsNullOrEmpty(movedPaths[i]))
+                        {
+                            continue;
+                        }
+
+                        string restoredPath = assetFolders.MoveFolder(movedPaths[i], folderMoves[i].OldParent);
+
+                        if (restoredPath.Length != 0 && AssetFolderViewModel.GetFolderName(restoredPath) != folderMoves[i].OldName)
+                        {
+                            assetFolders.RenameFolder(restoredPath, folderMoves[i].OldName);
+                        }
+                    }
+                });
+        }
+
+        /// <summary>Deletes the given assets and folders (with their contents). Each delete asks first and is one undo step.</summary>
+        public void DeleteItems(IReadOnlyList<object> items)
+        {
+            List<AssetObjectViewModel> assets = items.OfType<AssetObjectViewModel>().Where(asset => asset.Bucket != null).ToList();
+            List<AssetFolderViewModel> folders = items.OfType<AssetFolderViewModel>().Where(folder => !folder.IsRoot).ToList();
+
+            // whatever is inside a deleted folder goes with it
+            assets = assets.Where(asset => !folders.Any(folder => AssetFolderViewModel.IsSameOrDescendantPath(asset.FolderPath, folder.Path))).ToList();
+            folders = folders.Where(folder => !folders.Any(other => !ReferenceEquals(other, folder) && folder.IsSameOrDescendantOf(other))).ToList();
+
+            List<string> folderPaths = folders.Select(folder => folder.Path).ToList();
+            string assetArgs = string.Join(" ", assets.Select(asset => $"{asset.Bucket!.BucketIndex} {asset.AssetDesc.Name}"));
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                foreach (string folderPath in folderPaths)
+                {
+                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandDeleteAssetFolder"), folderPath);
+                }
+
+                if (assetArgs.Length != 0)
+                {
+                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandDeleteAsset"), assetArgs);
+                }
+            });
+        }
+
+        /// <summary>Imports files from disk into <paramref name="folder"/>; a model gets its own folder there.</summary>
+        public void ImportFiles(IReadOnlyList<string> paths, AssetFolderViewModel folder)
+        {
+            if (paths.Count == 0)
+            {
+                return;
+            }
+
+            string args = folder.Path + "|" + string.Join("|", paths);
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                if (!CanCreateAssetsOnSimThread("import"))
+                {
+                    return;
+                }
+
+                _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandImportFiles"), args);
+            });
+        }
+
+        private void ResolvePendingRename()
+        {
+            if (_pendingRenamePath == null || !_folderIndex.TryGetValue(_pendingRenamePath, out AssetFolderViewModel? folder))
+            {
+                return;
+            }
+
+            _pendingRenamePath = null;
+
+            AssetFolderViewModel renameTarget = Items.OfType<AssetFolderViewModel>().FirstOrDefault(item => ReferenceEquals(item, folder)) ?? folder;
+
+            SelectedItem = Items.Contains(renameTarget) ? renameTarget : SelectedItem;
+
+            renameTarget.BeginRename();
+            FolderRenameRequested?.Invoke(renameTarget);
+        }
+
+        private string MakeUniqueAssetName(uint bucketIndex, string baseName)
         {
             AssetRegistry registry = AssetManager.Instance.AssetRegistry;
-            string rootPath = registry.GetRootPath();
 
-            List<AssetObjectViewModel> unsavedAssets = [];
-            int assetCount = 0;
+            var existingNames = new HashSet<string>(
+                registry.GetBucketAssetDescs(bucketIndex).Select(assetDesc => assetDesc.Name.ToString()),
+                StringComparer.Ordinal);
 
-            foreach (AssetDesc assetDesc in registry.GetBucketAssetDescs(bucketVm.BucketIndex))
+            string name = baseName;
+
+            for (int suffix = 1; existingNames.Contains(name); suffix++)
             {
-                string manifestPath = Path.Combine(rootPath, bucketVm.Name, assetDesc.Name.ToString() + ".hmf");
-
-                DateTime? dateModified = null;
-                string? typeName = null;
-
-                bool hasManifest = File.Exists(manifestPath);
-
-                if (hasManifest)
-                {
-                    dateModified = File.GetLastWriteTime(manifestPath);
-                    typeName = ReadAssetTypeName(manifestPath);
-                }
-
-                AssetObjectViewModel assetVm = new AssetObjectViewModel(assetDesc, bucketVm, typeName, dateModified);
-                _bucketAssets.Add(assetVm);
-                assetCount++;
-
-                if (!hasManifest)
-                {
-                    unsavedAssets.Add(assetVm);
-                }
+                name = $"{baseName}_{suffix}";
             }
 
-            bucketVm.AssetCount = assetCount;
-
-            if (unsavedAssets.Count > 0)
-            {
-                ResolveUnsavedAssetTypeNames(bucketVm.BucketIndex, unsavedAssets);
-            }
+            return name;
         }
 
-        private void LoadAllBucketAssets()
+        /// <summary>Runs <paramref name="create"/> on the sim thread, files whatever it added to the bucket into the current folder, and focuses it.</summary>
+        private void CreateInCurrentFolder(string assetDescription, uint bucketIndex, bool openEditor, Action create)
         {
-            foreach (AssetBucketViewModel bucketVm in Buckets)
-            {
-                LoadBucketAssets(bucketVm);
-            }
+            string folderPath = _currentFolder.Path;
 
-            _allBucketsLoaded = true;
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                if (!CanCreateAssetsOnSimThread(assetDescription))
+                {
+                    return;
+                }
+
+                AssetRegistry registry = AssetManager.Instance.AssetRegistry;
+
+                var namesBefore = new HashSet<string>(
+                    registry.GetBucketAssetDescs(bucketIndex).Select(assetDesc => assetDesc.Name.ToString()),
+                    StringComparer.Ordinal);
+
+                create();
+
+                List<Name> createdNames = registry.GetBucketAssetDescs(bucketIndex)
+                    .Select(assetDesc => assetDesc.Name)
+                    .Where(name => !namesBefore.Contains(name.ToString()))
+                    .ToList();
+
+                if (createdNames.Count == 0)
+                {
+                    Logger.Log(LogLevel.Error, $"New {assetDescription} creation failed; no new asset appeared in the {AssetBucket.GetAssetBucketName(bucketIndex)} bucket.");
+                    return;
+                }
+
+                EditorAssetFolders? assetFolders = EngineManager.CurrentProject?.AssetFolders;
+
+                foreach (Name createdName in createdNames)
+                {
+                    assetFolders?.SetAssetFolderOf(bucketIndex, createdName, folderPath);
+                }
+
+                string focusName = createdNames[0].ToString();
+
+                Dispatcher.UIThread.Post(() => FocusAsset(bucketIndex, focusName, openEditor));
+            });
         }
 
         /// <summary>
         /// Assets created this session but not yet saved have no manifest to read a type from, so the type
         /// comes from the live object in the registry instead.
         /// </summary>
-        private static void ResolveUnsavedAssetTypeNames(uint bucketIndex, List<AssetObjectViewModel> assetVms)
+        private static void ResolveUnsavedAssetTypeNames(List<AssetObjectViewModel> assetVms)
         {
+            if (assetVms.Count == 0)
+            {
+                return;
+            }
+
             _ = EngineManager.PostToSimThread(() =>
             {
                 AssetRegistry registry = AssetManager.Instance.AssetRegistry;
@@ -749,7 +1198,12 @@ namespace Hyperion.Editor.ViewModels
 
                 foreach (AssetObjectViewModel assetVm in assetVms)
                 {
-                    AssetObject? obj = registry.GetAsset(bucketIndex, assetVm.AssetDesc.Name);
+                    if (assetVm.Bucket == null)
+                    {
+                        continue;
+                    }
+
+                    AssetObject? obj = registry.GetAsset(assetVm.Bucket.BucketIndex, assetVm.AssetDesc.Name);
 
                     if (obj != null && obj.IsValid)
                     {
@@ -772,155 +1226,95 @@ namespace Hyperion.Editor.ViewModels
             });
         }
 
-        /// <summary>
-        /// Reads an asset's concrete class name out of its .hmf manifest without deserializing it.
-        /// HMF is a text format whose first token is the class name, e.g. <c>Material "CubeMaterial" {</c>,
-        /// so a short read off the front is enough. Returns null if the file can't be read.
-        /// </summary>
-        private static string? ReadAssetTypeName(string manifestPath)
-        {
-            Span<char> buffer = stackalloc char[128];
-            int count;
-
-            try
-            {
-                using var reader = new StreamReader(manifestPath);
-
-                count = reader.Read(buffer);
-            }
-            catch (Exception)
-            {
-                // An unreadable manifest just means no type icon; the asset still lists.
-                return null;
-            }
-
-            for (int i = 0; i < count; i++)
-            {
-                char c = buffer[i];
-
-                // The class name runs until the first separator - whitespace, the quoted asset name,
-                // or the opening brace when the asset is anonymous.
-                if (char.IsWhiteSpace(c) || c == '"' || c == '{')
-                {
-                    return i > 0 ? new string(buffer.Slice(0, i)) : null;
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>Requests preview images for the currently listed assets. Must run on the UI thread.</summary>
-        private void RequestThumbnails()
-        {
-            foreach (AssetObjectViewModel assetVm in Assets)
-            {
-                assetVm.RequestThumbnail();
-            }
-        }
-
-        /// <summary>Reloads the listed assets (the current bucket, or every bucket for a root search), preserving the selection where possible. Must run on the UI thread.</summary>
-        private void RefreshAssets()
-        {
-            Dispatcher.UIThread.VerifyAccess();
-
-            if (IsShowingBuckets)
-            {
-                return;
-            }
-
-            Name selectedName = SelectedAsset?.AssetDesc.Name ?? Name.Invalid;
-            uint selectedBucketIndex = SelectedAsset?.Bucket?.BucketIndex ?? 0;
-
-            ReloadBucketAssets(_currentBucket?.BucketIndex ?? 0);
-
-            if (selectedName.Valid)
-            {
-                SelectedAsset = Assets.FirstOrDefault(a => a.AssetDesc.Name == selectedName && a.Bucket?.BucketIndex == selectedBucketIndex);
-            }
-        }
-
-        /// <summary>Rebuilds <see cref="Assets"/> from the current bucket's contents, honouring the search text and sort mode. Must run on the UI thread.</summary>
-        private void ApplyFilterAndSort()
-        {
-            AssetObjectViewModel? preserved = SelectedAsset;
-
-            IEnumerable<AssetObjectViewModel> matching = IsShowingBuckets
-                ? Enumerable.Empty<AssetObjectViewModel>()
-                : _bucketAssets;
-
-            if (HasSearchText)
-            {
-                matching = matching.Where(a => a.DisplayName.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
-            }
-
-            List<AssetObjectViewModel> sorted = _sortMode switch
-            {
-                AssetSortMode.DateModified =>
-                    matching.OrderByDescending(a => a.DateModified ?? DateTime.MinValue).ToList(),
-                AssetSortMode.Type =>
-                    matching.OrderBy(a => a.TypeName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-                            .ThenBy(a => a.DisplayName, StringComparer.OrdinalIgnoreCase)
-                            .ToList(),
-                _ /* Name */ =>
-                    matching.OrderBy(a => a.DisplayName, StringComparer.OrdinalIgnoreCase).ToList(),
-            };
-
-            Assets.Clear();
-            foreach (AssetObjectViewModel assetVm in sorted)
-                Assets.Add(assetVm);
-
-            // The filter may have just hidden whatever was selected.
-            SelectedAsset = preserved != null && Assets.Contains(preserved) ? preserved : null;
-
-            OnPropertyChanged(nameof(Assets));
-            OnPropertyChanged(nameof(HasNoMatches));
-            OnPropertyChanged(nameof(IsBucketEmpty));
-
-            RequestThumbnails();
-        }
-
-
         public void Dispose()
         {
+            SaveBrowserState();
+
             _thumbnailService.Dispose();
 
-            _onSelectedBucketChangedHandler?.Remove();
-            _onSelectedBucketChangedHandler?.Dispose();
             _onAssetsChangedHandler?.Remove();
             _onAssetsChangedHandler?.Dispose();
+            _onFoldersChangedHandler?.Remove();
+            _onFoldersChangedHandler?.Dispose();
             _onProjectOpenedHandler?.Remove();
             _onProjectOpenedHandler?.Dispose();
             _onProjectClosingHandler?.Remove();
             _onProjectClosingHandler?.Dispose();
         }
 
-        /// <summary>Switches to the given bucket and focuses the named asset once loaded.</summary>
-        public void FocusAsset(uint bucketIndex, string? nameHint = null, bool openEditor = false)
+        /// <summary>Opens the folder holding the asset and selects it, once the asset has been listed.</summary>
+        public void FocusAsset(uint bucketIndex, string name, bool openEditor = false)
         {
             Dispatcher.UIThread.VerifyAccess();
 
             if (bucketIndex == 0)
-                return;
-
-            BringToFrontRequested?.Invoke();
-
-            // An active search would hide the asset we are about to select.
-            SearchText = string.Empty;
-
-            _pendingFocusBucket = bucketIndex;
-            _pendingFocusNameHint = nameHint;
-            _pendingOpenEditor = openEditor;
-
-            if (_currentBucket?.BucketIndex == bucketIndex)
             {
-                // Already viewing this bucket - SetSelectedBucket is a no-op in this case, so
-                // the "bucket changed" event that normally resolves the pending focus/edit
-                // request above never fires. Reload directly instead.
-                ReloadBucketAssets(bucketIndex);
                 return;
             }
 
-            _editorSubsystem.SetSelectedBucket(bucketIndex);
+            BringToFrontRequested?.Invoke();
+
+            // An active search or type filter would hide the asset we are about to select.
+            SearchText = string.Empty;
+            ClearTypeFilterCommand.Execute(null);
+
+            _pendingFocusBucket = bucketIndex;
+            _pendingFocusName = name;
+            _pendingOpenEditor = openEditor;
+
+            QueueReload();
+        }
+
+        private void ResolvePendingFocus()
+        {
+            if (_pendingFocusBucket == 0 || _pendingFocusName == null)
+            {
+                return;
+            }
+
+            AssetObjectViewModel? asset = _allAssets.FirstOrDefault(a =>
+                a.Bucket?.BucketIndex == _pendingFocusBucket
+                && string.Equals(a.DisplayName, _pendingFocusName, StringComparison.Ordinal));
+
+            if (asset == null)
+            {
+                return;
+            }
+
+            bool openEditor = _pendingOpenEditor;
+
+            _pendingFocusBucket = 0;
+            _pendingFocusName = null;
+            _pendingOpenEditor = false;
+
+            if (_folderIndex.TryGetValue(asset.FolderPath, out AssetFolderViewModel? folder) && !ReferenceEquals(folder, _currentFolder))
+            {
+                NavigateTo(folder);
+            }
+
+            SelectedItem = Items.OfType<AssetObjectViewModel>().FirstOrDefault(item => ReferenceEquals(item, asset));
+
+            if (openEditor)
+            {
+                OpenAssetEditor(asset);
+            }
+        }
+
+        /// <summary>Opens a folder, or edits an asset (switches to it, for a World).</summary>
+        public void OpenItem(object? item)
+        {
+            switch (item)
+            {
+                case AssetFolderViewModel folder:
+                    NavigateTo(folder);
+                    break;
+                case AssetObjectViewModel asset when asset.IsWorld:
+                    OpenWorldCommand.Execute(asset);
+                    break;
+                case AssetObjectViewModel asset:
+                    EditAssetCommand.Execute(asset);
+                    break;
+            }
         }
 
         /// <summary>Opens the asset in a pop-out property editor panel, the same one used by the "Edit" button on asset-object properties in the inspector. Works for any AssetObject-derived type. Prefabs open in prefab edit mode instead.</summary>

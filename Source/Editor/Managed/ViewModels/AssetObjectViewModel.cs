@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Threading;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -13,12 +15,17 @@ namespace Hyperion.Editor.ViewModels
         private readonly AssetDesc _assetDesc;
         private readonly AssetBucketViewModel? _bucket;
         private string? _typeName;
-        private readonly DateTime? _dateModified;
+        private DateTime? _dateModified;
+        private bool _hasFileInfo;
+        private bool _hasManifest;
 
         public AssetDesc AssetDesc => _assetDesc;
         public AssetBucketViewModel? Bucket => _bucket;
 
         public string DisplayName => _assetDesc.Name.ToString();
+
+        /// <summary>The virtual folder the asset is filed under; empty for the root.</summary>
+        public string FolderPath { get; init; } = string.Empty;
 
         public bool IsPrefab => _bucket?.BucketIndex == AssetBucket.Prefabs.Value;
 
@@ -36,10 +43,75 @@ namespace Hyperion.Editor.ViewModels
         /// <summary>Last-write time of the manifest file on disk, or null if unavailable.</summary>
         public DateTime? DateModified => _dateModified;
 
+        public bool HasManifest => _hasManifest;
+
         // @TODO also, dont just switch on typename -- switch on class -- we dont want to add a new entry for EVERY subclass !
         public string IconKind => _typeName != null
             ? AssetIconHelper.FromTypeName(_typeName)
-            : "File";
+            : (_bucket != null ? AssetIconHelper.FromBucket(_bucket.Bucket) : "File");
+
+        /// <summary>Reads the type and date from the asset's manifest the first time the asset is listed.</summary>
+        public void EnsureFileInfo()
+        {
+            if (_hasFileInfo || _bucket == null)
+            {
+                return;
+            }
+
+            _hasFileInfo = true;
+
+            string manifestPath = Path.Combine(AssetManager.Instance.AssetRegistry.GetRootPath(), _bucket.Name, DisplayName + ".hmf");
+
+            if (!File.Exists(manifestPath))
+            {
+                return;
+            }
+
+            _hasManifest = true;
+            _dateModified = File.GetLastWriteTime(manifestPath);
+            _typeName = ReadAssetTypeName(manifestPath);
+
+            OnPropertyChanged(nameof(TypeName));
+            OnPropertyChanged(nameof(DateModified));
+            OnPropertyChanged(nameof(IconKind));
+        }
+
+        /// <summary>
+        /// Reads an asset's concrete class name out of its .hmf manifest without deserializing it.
+        /// HMF is a text format whose first token is the class name, e.g. <c>Material "CubeMaterial" {</c>,
+        /// so a short read off the front is enough. Returns null if the file can't be read.
+        /// </summary>
+        private static string? ReadAssetTypeName(string manifestPath)
+        {
+            Span<char> buffer = stackalloc char[128];
+            int count;
+
+            try
+            {
+                using var reader = new StreamReader(manifestPath);
+
+                count = reader.Read(buffer);
+            }
+            catch (Exception)
+            {
+                // An unreadable manifest just means no type icon; the asset still lists.
+                return null;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                char c = buffer[i];
+
+                // The class name runs until the first separator - whitespace, the quoted asset name,
+                // or the opening brace when the asset is anonymous.
+                if (char.IsWhiteSpace(c) || c == '"' || c == '{')
+                {
+                    return i > 0 ? new string(buffer.Slice(0, i)) : null;
+                }
+            }
+
+            return null;
+        }
 
         /// <summary>Fills in the type for an asset that has no manifest on disk yet (created but not saved).</summary>
         public void SetTypeName(string typeName)
@@ -110,12 +182,10 @@ namespace Hyperion.Editor.ViewModels
 
         private int _isRefreshingActions;
 
-        public AssetObjectViewModel(AssetDesc assetDesc, AssetBucketViewModel? bucket = null, string? typeName = null, DateTime? dateModified = null)
+        public AssetObjectViewModel(AssetDesc assetDesc, AssetBucketViewModel? bucket = null)
         {
             _assetDesc = assetDesc;
             _bucket = bucket;
-            _typeName = typeName;
-            _dateModified = dateModified;
         }
 
         /// <summary>Resolves the live asset object on the sim thread and repopulates <see cref="Actions"/> from its EditorAction-attributed methods (e.g. "Regenerate Mipmaps" on Texture).</summary>

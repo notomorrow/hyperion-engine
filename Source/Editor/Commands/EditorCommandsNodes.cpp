@@ -591,7 +591,7 @@ public:
             EngineGlobals::GetDataDirectory(),
             { "obj", "fbx", "gltf", "glb", "mesh.xml", "skeleton.xml", "jpg", "jpeg", "png", "tga", "bmp", "wav" },
             /* allowMultiple */ true, /* allowDirectories */ false,
-            [this, weakSubsystem = MakeWeakRef(subsystem)](TResult<Array<FilePath>>&& result) mutable
+            [this, weakSubsystem = MakeWeakRef(subsystem), targetFolder = subsystem->GetCurrentAssetFolder()](TResult<Array<FilePath>>&& result) mutable
             {
                 if (result.HasError())
                 {
@@ -617,7 +617,7 @@ public:
 
                 if (Handle<EditorSubsystem> subsystem = weakSubsystem.Lock())
                 {
-                    ImportEditorContent(subsystem.Get(), result.GetValue());
+                    ImportEditorContent(subsystem.Get(), result.GetValue(), targetFolder);
                 }
             });
     }

@@ -1,5 +1,6 @@
 param(
     [Parameter(Mandatory = $true)][string]$Project,
+    [string]$ContentDir = "",
     [switch]$Run,
     [switch]$ServeOnly,
     [switch]$FastLink,
@@ -11,6 +12,7 @@ param(
 # Builds a project for the browser into <project>/Binaries/Web, a folder any static host can serve as it is.
 # Intermediates go to <project>/Build/Web. The texture limit comes from the project's packaging settings for web, the worlds from PlatformSettings.Web; the arguments override both.
 #
+#   -ContentDir the project's asset root when it isn't the project folder (eg <project>/Content); the editor passes it
 #   -Run        serve Binaries/Web on localhost afterwards and open it in the browser; keeps function names in the wasm for readable stacks
 #   -ServeOnly  skip the build: serve the last one and open it in the browser
 #   -FastLink   link at -O1: minutes faster, for testing locally; a build to host links at -Oz
@@ -82,8 +84,10 @@ if ($name -eq "")
 $managedProject = Join-Path $Project "Source\$name.csproj"
 $isManaged = Test-Path $managedProject
 
+$contentDir = if ($ContentDir -ne "") { (Resolve-Path $ContentDir).Path } else { $Project }
+
 # a project with C# scripts but no C# game of its own still needs them compiled in, around the engine's Game class
-$scriptsDir = Join-Path $Project "Scripts"
+$scriptsDir = Join-Path $contentDir "Scripts"
 $hasScripts = (Test-Path $scriptsDir) -and (Get-ChildItem $scriptsDir -Recurse -Filter *.cs -ErrorAction SilentlyContinue | Select-Object -First 1)
 $needsManaged = $isManaged -or $hasScripts
 
@@ -351,6 +355,7 @@ if ($needsManaged)
 
     Invoke-Cmd ("set `"MSBuildSdksPath=`" && dotnet publish `"$publishProject`" -c Release -r browser-wasm --disable-build-servers -nologo " + `
         "-p:HyperionWebBuild=true -p:HyperionBinDir=`"$engineWebDir`" -p:HyperionWebEmsdk=`"$managedEmsdk`" $gameClassProperty-p:HyperionWriteGlobalConfig=false " + `
+        "-p:HyperionProjectContentDir=`"$(($contentDir -replace '\\', '/') + '/')`" " + `
         "-p:OutputPath=`"$managedDir\bin\\`" -p:IntermediateOutputPath=`"$managedDir\obj\\`" -p:MSBuildProjectExtensionsPath=`"$managedDir\ext\\`" " + `
         "-p:HyperionWebLinkInputsFile=`"$managedLinkInputs`" > `"$managedDir\Publish.log`" 2>&1") `
         "Compiling the C# game failed, see $managedDir\Publish.log"

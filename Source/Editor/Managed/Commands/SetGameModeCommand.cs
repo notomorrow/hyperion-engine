@@ -71,7 +71,7 @@ namespace Hyperion.Editor.Commands
 
                                     if (shouldStartCacheServer)
                                     {
-                                        projectDirectory = editorSubsystem.GetPlayNetProjectDirectory();
+                                        projectDirectory = editorSubsystem.GetPlayNetContentDirectory();
                                         cachePort = editorSubsystem.GetPlayNetCachePort();
                                     }
                                 }

@@ -126,6 +126,9 @@ public:
      *  whichever thread made the change, so handlers must be threadsafe. */
     Delegate<void, uint32, Name> OnAssetMarkedDirty;
 
+    /*! \brief Fired once an asset's registered name follows a rename, i.e. on save. Arguments are the bucket index, the old name and the new name. */
+    Delegate<void, uint32, Name, Name> OnAssetRenamed;
+
     /*! \brief Load all registered assets that are not yet loaded, and page in blob data for all of them.
      *  Must be called while the root path still refers to the location the blob data currently resides in,
      *  so that it can be re-written to a new location (eg. when saving an unsaved project from its

@@ -11,6 +11,7 @@
 #include <Editor/EditorCamera.hpp>
 #include <Editor/EditorTask.hpp>
 #include <Editor/EditorProject.hpp>
+#include <Editor/EditorAssetFolders.hpp>
 #include <Editor/EditorActionStack.hpp>
 #include <Editor/EditorAction.hpp>
 #include <Editor/EditorState.hpp>
@@ -116,6 +117,7 @@
 
 #include <Framework/View.hpp>
 #include <Framework/EngineGlobals.hpp>
+#include <Framework/ProjectLayout.hpp>
 #include <Framework/CVarManager.hpp>
 
 #include <Framework/Server/GameServer.hpp>
@@ -4210,14 +4212,28 @@ void EditorSubsystem::SetPlayNetCachePort(uint32 port)
     SavePlayNetSettings();
 }
 
-String EditorSubsystem::GetPlayNetProjectDirectory() const
+String EditorSubsystem::GetPlayNetContentDirectory() const
 {
     if (!m_preSimulationProject.IsValid())
     {
         return String::empty;
     }
 
-    return m_preSimulationProject->GetFilePath().BasePath();
+    return m_preSimulationProject->GetContentDirectory();
+}
+
+String EditorSubsystem::GetProjectContentDirectory(const String& projectPath) const
+{
+    TResult<FilePath> contentDirResult = ResolveProjectContentDirectory(FilePath(projectPath));
+
+    if (contentDirResult.HasError())
+    {
+        HYP_LOG(Editor, Warning, "Failed to resolve the content directory of project {}: {}", projectPath, contentDirResult.GetError().GetMessage());
+
+        return String::empty;
+    }
+
+    return contentDirResult.GetValue();
 }
 
 void EditorSubsystem::ConnectPlayNetClient()
@@ -5028,16 +5044,11 @@ void EditorSubsystem::InitViewport()
         }));
 }
 
-void EditorSubsystem::SetSelectedBucket(uint32 bucketIndex)
+void EditorSubsystem::SetCurrentAssetFolder(const String& folderPath)
 {
-    if (m_selectedBucketIndex == bucketIndex)
-    {
-        return;
-    }
+    AssertOnThread(g_simThread);
 
-    m_selectedBucketIndex = bucketIndex;
-
-    OnSelectedBucketChanged(bucketIndex);
+    m_currentAssetFolder = EditorAssetFolders::NormalizeFolderPath(folderPath);
 }
 
 void EditorSubsystem::RequestAssetThumbnail(uint32 bucketIndex, Name assetName)
@@ -5667,7 +5678,7 @@ void EditorSubsystem::RequestAssetImport(uint32 requestId)
         EngineGlobals::GetDataDirectory(),
         ImportFileFilter,
         /* allowMultiple */ false, /* allowDirectories */ false,
-        [this, requestId](TResult<Array<FilePath>>&& result)
+        [this, requestId, targetFolder = m_currentAssetFolder](TResult<Array<FilePath>>&& result)
         {
             if (result.HasError() || result.GetValue().Empty())
             {
@@ -5686,6 +5697,7 @@ void EditorSubsystem::RequestAssetImport(uint32 requestId)
             ImportEditorContent(
                 this,
                 result.GetValue(),
+                targetFolder,
                 [requestId, filePath](EditorSubsystem& subsystem, const Array<Handle<AssetObject>>& assets)
                 {
                     for (const Handle<AssetObject>& asset : assets)

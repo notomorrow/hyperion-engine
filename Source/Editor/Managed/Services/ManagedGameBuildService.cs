@@ -114,7 +114,7 @@ namespace Hyperion.Editor.Services
 
         public static bool HasScripts(string projectFilePath)
         {
-            string scriptsDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(projectFilePath))!, "Scripts");
+            string scriptsDirectory = Path.Combine(ProjectLayout.GetContentDirectory(projectFilePath), "Scripts");
 
             return Directory.Exists(scriptsDirectory) && Directory.EnumerateFiles(scriptsDirectory, "*.cs", SearchOption.AllDirectories).Any();
         }
@@ -413,6 +413,7 @@ namespace Hyperion.Editor.Services
                     "-p:PublishAot=true",
                     "-p:HyperionOutputToBinDir=false",
                     "-p:HyperionIncludeScripts=true",
+                    "-p:HyperionProjectContentDir=" + ProjectLayout.GetContentDirectory(projectFilePath) + Path.DirectorySeparatorChar,
                     "-p:HyperionWriteGlobalConfig=false",
                     "-p:HyperionStaticLinkInputsFile=" + scriptsLinkInputsFile,
                     "-p:OutputPath=" + Path.Combine(intermediateDirectory, "bin") + Path.DirectorySeparatorChar,

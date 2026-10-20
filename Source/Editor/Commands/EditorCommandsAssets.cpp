@@ -2,6 +2,7 @@
 #include <Editor/EditorAssetDrop.hpp>
 #include <Editor/EditorTemplateLibrary.hpp>
 #include <Editor/EditorImport.hpp>
+#include <Editor/EditorAssetFolders.hpp>
 
 #include <Scene/Components/ScriptComponent.hpp>
 
@@ -709,6 +710,7 @@ public:
         ImportEditorContent(
             subsystem,
             files,
+            subsystem->GetCurrentAssetFolder(),
             [weakScene = WeakHandle<Scene>(activeScene), insertionPoint](EditorSubsystem& editorSubsystem, const Array<Handle<AssetObject>>& assets)
             {
                 Handle<Scene> scene = editorSubsystem.GetActiveScene();
@@ -733,6 +735,74 @@ public:
 DEFINE_EDITOR_COMMAND(ImportAndPlace);
 
 #pragma endregion ImportAndPlace
+
+#pragma region ImportFiles
+
+/// Arguments are "<folder>|<path>|<path>...": files from disk imported into an asset folder
+class EditorCommandImportFiles final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandImportFiles);
+
+public:
+    virtual ~EditorCommandImportFiles() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Import Files";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        if (!subsystem->CanCreateAssets())
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandImportFiles: assets can only be imported while a project is open and the simulation is stopped");
+            return;
+        }
+
+        String joinedArguments;
+
+        for (int i = 0; i < NumArguments(); i++)
+        {
+            if (i != 0)
+            {
+                joinedArguments += ' ';
+            }
+
+            joinedArguments += GetArgument(i);
+        }
+
+        Array<String> fields = joinedArguments.Split('|');
+
+        if (fields.Size() < 2)
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandImportFiles requires a folder and file paths");
+            return;
+        }
+
+        Array<FilePath> files;
+
+        for (size_t i = 1; i < fields.Size(); i++)
+        {
+            FilePath filePath(fields[i]);
+
+            if (!filePath.Exists())
+            {
+                HYP_LOG(Editor, Warning, "EditorCommandImportFiles: skipping '{}'", filePath);
+                continue;
+            }
+
+            files.PushBack(std::move(filePath));
+        }
+
+        ImportEditorContent(subsystem, files, fields[0]);
+    }
+};
+
+DEFINE_EDITOR_COMMAND(ImportFiles);
+
+#pragma endregion ImportFiles
 
 #pragma region PlaceAsInstance
 
@@ -2612,6 +2682,7 @@ public:
         return "Delete Asset";
     }
 
+    /// Arguments are pairs of "<bucketIndex> <assetName>"; one confirmation and one undo step covers them all
     virtual void Execute(EditorSubsystem* subsystem) override
     {
         AssertOnThread(g_simThread);
@@ -2622,16 +2693,6 @@ public:
             return;
         }
 
-        uint32 bucketIndex = 0;
-        if (!StringUtil::Parse(GetArgument(0), &bucketIndex) || bucketIndex == AssetBuckets::None.GetIndex())
-        {
-            HYP_LOG(Editor, Warning, "EditorCommandDeleteAsset: invalid bucket index '{}'", GetArgument(0));
-            return;
-        }
-
-        const ANSIString assetName = GetArgument(1);
-        const AssetBucket& bucket = *AssetBuckets::AllBuckets[bucketIndex];
-
         const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
         if (!currentProject.IsValid())
         {
@@ -2639,19 +2700,44 @@ public:
             return;
         }
 
-        Handle<AssetObject> asset = GetCurrentAssetRegistry()->GetAsset(bucket, Name(assetName));
-        if (!asset.IsValid())
+        Array<Handle<AssetObject>> assets;
+
+        for (int i = 0; i + 1 < NumArguments(); i += 2)
         {
-            HYP_LOG(Editor, Warning, "EditorCommandDeleteAsset: asset '{}' in bucket {} is not valid", assetName, GetAssetBucketName(bucketIndex));
+            uint32 bucketIndex = 0;
+            if (!StringUtil::Parse(GetArgument(i), &bucketIndex) || bucketIndex == AssetBuckets::None.GetIndex() || bucketIndex >= MaxAssetBuckets)
+            {
+                HYP_LOG(Editor, Warning, "EditorCommandDeleteAsset: invalid bucket index '{}'", GetArgument(i));
+                continue;
+            }
+
+            const ANSIString assetName = GetArgument(i + 1);
+
+            Handle<AssetObject> asset = GetCurrentAssetRegistry()->GetAsset(*AssetBuckets::AllBuckets[bucketIndex], Name(assetName));
+            if (!asset.IsValid())
+            {
+                HYP_LOG(Editor, Warning, "EditorCommandDeleteAsset: asset '{}' in bucket {} is not valid", assetName, GetAssetBucketName(bucketIndex));
+                continue;
+            }
+
+            assets.PushBack(std::move(asset));
+        }
+
+        if (assets.Empty())
+        {
             return;
         }
+
+        const String description = assets.Size() == 1
+            ? String("the asset ") + *assets[0]->GetName()
+            : HYP_FORMAT("{} assets", assets.Size());
 
         bool cancelled = false;
 
         // Show confirm box
         SystemMessageBox(MessageBoxType::INFO)
             .Title("Confirm Delete")
-            .Text("Are you sure you want to delete the asset " + assetName + "?")
+            .Text("Are you sure you want to delete " + description + "?")
             .Button("Delete", []()
                     {
                     })
@@ -2666,35 +2752,207 @@ public:
             return;
         }
 
-        const FilePath manifestPath = GetCurrentAssetRegistry()->GetManifestPath(asset->GetPath());
+        Handle<FunctionalEditorAction> action = MakeDeleteAssetsAction(
+            assets.Size() == 1 ? HYP_FORMAT("Delete {}", assets[0]->GetName()) : HYP_FORMAT("Delete {} assets", assets.Size()),
+            std::move(assets),
+            {},
+            {});
 
-        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
-            HYP_FORMAT("Delete {}", assetName),
+        InitObject(action);
+
+        currentProject->GetActionStack()->PushAction(action);
+    }
+
+    /// Removes the assets (and their manifests) and, if given, a folder subtree; reverting puts all of it back where it was
+    static Handle<FunctionalEditorAction> MakeDeleteAssetsAction(String text, Array<Handle<AssetObject>> assets, String folderPath, Array<String> folderSubtree)
+    {
+        Array<AssetPath> assetPaths;
+        Array<FilePath> manifestPaths;
+        Array<String> assetFolderPaths;
+
+        const Handle<EditorProject> project = g_editorState->GetCurrentProject();
+        EditorAssetFolders* assetFolders = project.IsValid() ? project->GetAssetFolders().Get() : nullptr;
+
+        for (const Handle<AssetObject>& asset : assets)
+        {
+            assetPaths.PushBack(asset->GetPath());
+            manifestPaths.PushBack(GetCurrentAssetRegistry()->GetManifestPath(asset->GetPath()));
+            assetFolderPaths.PushBack(assetFolders ? assetFolders->GetAssetFolder(asset->GetPath()) : String::empty);
+        }
+
+        return MakeHandle<FunctionalEditorAction>(
+            std::move(text),
             Proc<EditorActionFunctions()>(
-                [asset, &bucket, manifestPath]() -> EditorActionFunctions
+                [assets, assetPaths, manifestPaths, assetFolderPaths, folderPath, folderSubtree]() -> EditorActionFunctions
                 {
                     return EditorActionFunctions {
                         .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [asset, &bucket, manifestPath](EditorSubsystem* editorSubsystem, EditorProject*)
+                            [assetPaths, manifestPaths, folderPath](EditorSubsystem* editorSubsystem, EditorProject* project)
                             {
-                                GetCurrentAssetRegistry()->RemoveAsset(bucket, asset->GetName());
+                                Set<uint32, EditorAllocator> changedBuckets;
 
-                                if (manifestPath.Exists())
+                                for (size_t i = 0; i < assetPaths.Size(); i++)
                                 {
-                                    manifestPath.Remove();
+                                    const AssetBucket& bucket = assetPaths[i].GetBucket();
+
+                                    GetCurrentAssetRegistry()->RemoveAsset(bucket, assetPaths[i].assetName);
+
+                                    if (manifestPaths[i].Exists())
+                                    {
+                                        manifestPaths[i].Remove();
+                                    }
+
+                                    changedBuckets.Insert(bucket.GetIndex());
                                 }
 
-                                editorSubsystem->OnAssetsChanged(bucket.GetIndex());
+                                if (folderPath.Any() && project != nullptr)
+                                {
+                                    project->GetAssetFolders()->RemoveFolder(folderPath);
+                                }
+
+                                for (uint32 bucketIndex : changedBuckets)
+                                {
+                                    editorSubsystem->OnAssetsChanged(bucketIndex);
+                                }
                             }),
                         .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [asset, &bucket](EditorSubsystem* editorSubsystem, EditorProject*)
+                            [assets, assetPaths, assetFolderPaths, folderSubtree](EditorSubsystem* editorSubsystem, EditorProject* project)
                             {
-                                GetCurrentAssetRegistry()->PutAsset(bucket, asset);
+                                Set<uint32, EditorAllocator> changedBuckets;
 
-                                editorSubsystem->OnAssetsChanged(bucket.GetIndex());
+                                if (project != nullptr)
+                                {
+                                    for (const String& folder : folderSubtree)
+                                    {
+                                        project->GetAssetFolders()->CreateFolder(folder);
+                                    }
+                                }
+
+                                for (size_t i = 0; i < assets.Size(); i++)
+                                {
+                                    const AssetBucket& bucket = assetPaths[i].GetBucket();
+
+                                    GetCurrentAssetRegistry()->PutAsset(bucket, assets[i]);
+
+                                    if (project != nullptr)
+                                    {
+                                        project->GetAssetFolders()->SetAssetFolder(assetPaths[i], assetFolderPaths[i]);
+                                    }
+
+                                    changedBuckets.Insert(bucket.GetIndex());
+                                }
+
+                                for (uint32 bucketIndex : changedBuckets)
+                                {
+                                    editorSubsystem->OnAssetsChanged(bucketIndex);
+                                }
                             })
                     };
                 }));
+    }
+};
+
+DEFINE_EDITOR_COMMAND(DeleteAsset);
+
+#pragma endregion DeleteAsset
+
+#pragma region DeleteAssetFolder
+
+/// The only argument is the folder path (spaces and all); its assets and subfolders are deleted with it
+class EditorCommandDeleteAssetFolder final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandDeleteAssetFolder);
+
+public:
+    virtual ~EditorCommandDeleteAssetFolder() override = default;
+
+    virtual String GetText() const override
+    {
+        return "Delete Folder";
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandDeleteAssetFolder: no project loaded");
+            return;
+        }
+
+        String joinedArguments;
+
+        for (int i = 0; i < NumArguments(); i++)
+        {
+            if (i != 0)
+            {
+                joinedArguments += ' ';
+            }
+
+            joinedArguments += GetArgument(i);
+        }
+
+        EditorAssetFolders& assetFolders = *currentProject->GetAssetFolders();
+
+        const String folderPath = EditorAssetFolders::NormalizeFolderPath(joinedArguments);
+
+        if (folderPath.Empty() || !assetFolders.HasFolder(folderPath))
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandDeleteAssetFolder: no folder '{}'", joinedArguments);
+            return;
+        }
+
+        Array<Handle<AssetObject>> assets;
+
+        for (const AssetPath& assetPath : assetFolders.GetAssetsInFolder(folderPath, /* recursive */ true))
+        {
+            if (Handle<AssetObject> asset = GetCurrentAssetRegistry()->GetAsset(assetPath.GetBucket(), assetPath.assetName); asset.IsValid())
+            {
+                assets.PushBack(std::move(asset));
+            }
+        }
+
+        Array<String> folderSubtree;
+
+        for (const String& folder : assetFolders.GetAllFolders())
+        {
+            if (EditorAssetFolders::IsSameOrDescendantFolder(folder, folderPath))
+            {
+                folderSubtree.PushBack(folder);
+            }
+        }
+
+        const String folderName = EditorAssetFolders::GetFolderName(folderPath);
+
+        if (assets.Any())
+        {
+            bool cancelled = false;
+
+            SystemMessageBox(MessageBoxType::INFO)
+                .Title("Confirm Delete")
+                .Text(HYP_FORMAT("Are you sure you want to delete the folder {} and the {} asset(s) in it?", folderName, assets.Size()))
+                .Button("Delete", []()
+                        {
+                        })
+                .Button("Cancel", [&cancelled]()
+                        {
+                            cancelled = true;
+                        })
+                .Show();
+
+            if (cancelled)
+            {
+                return;
+            }
+        }
+
+        Handle<FunctionalEditorAction> action = EditorCommandDeleteAsset::MakeDeleteAssetsAction(
+            HYP_FORMAT("Delete {}", folderName),
+            std::move(assets),
+            folderPath,
+            std::move(folderSubtree));
 
         InitObject(action);
 
@@ -2702,9 +2960,9 @@ public:
     }
 };
 
-DEFINE_EDITOR_COMMAND(DeleteAsset);
+DEFINE_EDITOR_COMMAND(DeleteAssetFolder);
 
-#pragma endregion DeleteAsset
+#pragma endregion DeleteAssetFolder
 
 #pragma region NewPhysicsShape
 
