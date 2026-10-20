@@ -26,6 +26,7 @@
 
 #include <Core/Utilities/StringUtil.hpp>
 #include <Core/Utilities/Uuid.hpp>
+#include <Core/Utilities/DeferredScope.hpp>
 
 #include <cstdlib>
 #include <algorithm>
@@ -35,11 +36,14 @@ namespace Hyperion::DataProcessing::HMF {
 Parser::Parser(
     TokenStream* tokenStream,
     DataProcessing::ErrorList<CompilerError>* errorList,
-    BoxedValue* target)
+    BoxedValue* target,
+    const ParseOptions* options)
     : m_tokenStream(tokenStream),
       m_errorList(errorList),
       m_target(target),
-      m_ownsTarget(target == nullptr)
+      m_ownsTarget(target == nullptr),
+      m_options(options),
+      m_objectDepth(0)
 {
 }
 
@@ -168,6 +172,11 @@ bool Parser::ParseObjectBody(const Class* cls, BoxedValue& target, const UTF8Str
 
     Array<PendingFieldSet> pendingFieldSets;
 
+    ++m_objectDepth;
+    HYP_DEFER({ --m_objectDepth; });
+
+    const bool filtersFields = m_objectDepth == 1 && m_options != nullptr && m_options->topLevelFields.Size() != 0;
+
     while (Peek().GetTokenClass() != TK_CLOSE_BRACE && Peek().GetTokenClass() != TK_EMPTY)
     {
         if (Peek().GetTokenClass() == TK_COMMA)
@@ -192,6 +201,29 @@ bool Parser::ParseObjectBody(const Class* cls, BoxedValue& target, const UTF8Str
         if (!Expect(TK_EQUALS, "="))
         {
             return false;
+        }
+
+        if (filtersFields)
+        {
+            const StringHash fieldNameHash = StringHash(fieldName);
+
+            bool isWanted = false;
+
+            for (const StringHash& wantedField : m_options->topLevelFields)
+            {
+                if (wantedField == fieldNameHash)
+                {
+                    isWanted = true;
+                    break;
+                }
+            }
+
+            if (!isWanted)
+            {
+                SkipValue();
+
+                continue;
+            }
         }
 
         if (fieldName.Any() && fieldName[0] == '$')

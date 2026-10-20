@@ -17,6 +17,7 @@
 #include <Core/Utilities/Pair.hpp>
 
 #include <Core/Utilities/Result.hpp>
+#include <Core/Utilities/Span.hpp>
 
 #include <Core/Defines.hpp>
 
@@ -69,6 +70,14 @@ CORE_API ParseResult Parse(const FilePath& filePath, ByteReader& reader, ErrorLi
 CORE_API ParseResult Parse(const FilePath& filePath, const String& source, ErrorList* outErrors = nullptr, BoxedValue* target = nullptr);
 CORE_API ParseResult Parse(ByteReader& reader, ErrorList* outErrors = nullptr, BoxedValue* target = nullptr);
 CORE_API ParseResult Parse(const String& source, ErrorList* outErrors = nullptr, BoxedValue* target = nullptr);
+
+struct ParseOptions
+{
+    // When not empty, only these fields of the top-level object are read; the others are skipped without being constructed
+    Span<const StringHash> topLevelFields;
+};
+
+CORE_API ParseResult Parse(const FilePath& filePath, ByteReader& reader, const ParseOptions& options, ErrorList* outErrors = nullptr);
 
 } // namespace Hyperion::DataProcessing::HMF
 

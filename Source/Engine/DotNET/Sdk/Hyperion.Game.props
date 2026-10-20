@@ -42,10 +42,12 @@
   <PropertyGroup>
     <HyperionProjectDir Condition="'$(HyperionProjectDir)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../'))</HyperionProjectDir>
     <HyperionProjectDir>$([MSBuild]::EnsureTrailingSlash('$(HyperionProjectDir)'))</HyperionProjectDir>
+    <HyperionProjectContentDir Condition="'$(HyperionProjectContentDir)' == ''">$(HyperionProjectDir)</HyperionProjectContentDir>
+    <HyperionProjectContentDir>$([MSBuild]::EnsureTrailingSlash('$(HyperionProjectContentDir)'))</HyperionProjectContentDir>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(HyperionIncludeScripts)' == 'true'">
-    <Compile Include="$(HyperionProjectDir)Scripts/**/*.cs" Link="Scripts/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="$(HyperionProjectContentDir)Scripts/**/*.cs" Link="Scripts/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(HyperionHostedEntry)' == 'true'">

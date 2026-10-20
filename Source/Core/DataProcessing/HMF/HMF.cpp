@@ -29,7 +29,8 @@ ParseResult RunParse(
     const FilePath& filePath,
     ByteReader& reader,
     ErrorList* outErrors,
-    BoxedValue* target = nullptr)
+    BoxedValue* target = nullptr,
+    const ParseOptions* options = nullptr)
 {
     ErrorList errorList;
 
@@ -42,7 +43,7 @@ ParseResult RunParse(
     Lexer lexer(sourceStream, &tokenStream, &errorList);
     lexer.Analyze();
 
-    Parser parser(&tokenStream, &errorList, target);
+    Parser parser(&tokenStream, &errorList, target, options);
     
     BoxedValue resultValue;
 
@@ -128,6 +129,11 @@ ParseResult Parse(ByteReader& reader, ErrorList* outErrors, BoxedValue* target)
 ParseResult Parse(const String& source, ErrorList* outErrors, BoxedValue* target)
 {
     return Parse(s_inMemoryFilePath, source, outErrors, target);
+}
+
+ParseResult Parse(const FilePath& filePath, ByteReader& reader, const ParseOptions& options, ErrorList* outErrors)
+{
+    return RunParse(filePath, reader, outErrors, nullptr, &options);
 }
 
 } // namespace Hyperion::DataProcessing::HMF

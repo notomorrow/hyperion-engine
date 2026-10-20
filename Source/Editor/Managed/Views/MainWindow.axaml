@@ -2532,81 +2532,104 @@
                                                         Height="36"
                                                         Classes="panel-header"
                                                         DockPanel.Dock="Top">
-                                                        <Grid VerticalAlignment="Center" ColumnDefinitions="Auto, *, Auto, Auto, Auto, Auto">
+                                                        <Grid VerticalAlignment="Center" ColumnDefinitions="Auto, Auto, Auto, Auto, *, Auto, Auto, Auto, Auto, Auto">
                                                             <Button
                                                                 Grid.Column="0"
                                                                 Width="24"
                                                                 Height="24"
-                                                                Margin="0,0,4,0"
+                                                                Margin="0,0,2,0"
+                                                                Classes="gizmo"
+                                                                Click="OnToggleFolderTreeClick"
+                                                                ToolTip.Tip="Folders">
+                                                                <controls:Codicon Kind="ListTree" Size="14" />
+                                                            </Button>
+                                                            <Button
+                                                                Grid.Column="1"
+                                                                Width="24"
+                                                                Height="24"
                                                                 Classes="gizmo nav-back"
                                                                 Command="{Binding ContentBrowser.GoBackCommand}"
                                                                 ToolTip.Tip="Back">
                                                                 <controls:Codicon Kind="ChevronLeft" Size="14" />
                                                             </Button>
-                                                            <StackPanel
-                                                                Grid.Column="1"
+                                                            <Button
+                                                                Grid.Column="2"
+                                                                Width="24"
+                                                                Height="24"
+                                                                Classes="gizmo"
+                                                                Command="{Binding ContentBrowser.GoForwardCommand}"
+                                                                ToolTip.Tip="Forward">
+                                                                <controls:Codicon Kind="ChevronRight" Size="14" />
+                                                            </Button>
+                                                            <Button
+                                                                Grid.Column="3"
+                                                                Width="24"
+                                                                Height="24"
+                                                                Margin="0,0,4,0"
+                                                                Classes="gizmo"
+                                                                Command="{Binding ContentBrowser.GoUpCommand}"
+                                                                ToolTip.Tip="Up">
+                                                                <controls:Codicon Kind="ArrowUp" Size="14" />
+                                                            </Button>
+                                                            <ScrollViewer
+                                                                x:Name="ContentBrowserPathScroll"
+                                                                Grid.Column="4"
                                                                 Margin="0,0,8,0"
                                                                 VerticalAlignment="Center"
-                                                                Orientation="Horizontal">
-                                                                <Button
-                                                                    Classes="breadcrumb"
-                                                                    Command="{Binding ContentBrowser.GoBackCommand}"
-                                                                    IsVisible="{Binding !ContentBrowser.IsAtRoot}">
-                                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                                        <controls:Codicon
-                                                                            VerticalAlignment="Center"
-                                                                            Kind="FolderOpened"
-                                                                            Size="12" />
-                                                                        <TextBlock VerticalAlignment="Center" Text="Assets" />
-                                                                    </StackPanel>
-                                                                </Button>
-                                                                <StackPanel
-                                                                    Margin="6,0"
-                                                                    VerticalAlignment="Center"
-                                                                    IsVisible="{Binding ContentBrowser.IsAtRoot}"
-                                                                    Orientation="Horizontal"
-                                                                    Spacing="5">
-                                                                    <controls:Codicon
-                                                                        VerticalAlignment="Center"
-                                                                        Foreground="{DynamicResource Brush.Text}"
-                                                                        Kind="FolderOpened"
-                                                                        Size="12" />
-                                                                    <TextBlock
-                                                                        Classes="breadcrumb-current"
-                                                                        Text="Assets" />
-                                                                </StackPanel>
-                                                                <controls:Codicon
-                                                                    Margin="2,0"
-                                                                    VerticalAlignment="Center"
-                                                                    Foreground="{DynamicResource Brush.TextFaint}"
-                                                                    IsVisible="{Binding !ContentBrowser.IsAtRoot}"
-                                                                    Kind="ChevronRight"
-                                                                    Size="12" />
-                                                                <StackPanel
-                                                                    Margin="6,0"
-                                                                    VerticalAlignment="Center"
-                                                                    IsVisible="{Binding !ContentBrowser.IsAtRoot}"
-                                                                    Orientation="Horizontal"
-                                                                    Spacing="5">
-                                                                    <controls:Codicon
-                                                                        VerticalAlignment="Center"
-                                                                        Foreground="{DynamicResource Brush.AccentHover}"
-                                                                        Kind="{Binding ContentBrowser.CurrentBucket.IconKind, FallbackValue=File}"
-                                                                        Size="12" />
-                                                                    <TextBlock
-                                                                        Classes="breadcrumb-current"
-                                                                        Text="{Binding ContentBrowser.CurrentBucket.Name}" />
-                                                                </StackPanel>
-                                                            </StackPanel>
+                                                                HorizontalScrollBarVisibility="Hidden"
+                                                                VerticalScrollBarVisibility="Disabled">
+                                                            <ItemsControl
+                                                                x:Name="ContentBrowserPathBar"
+                                                                VerticalAlignment="Center"
+                                                                ItemsSource="{Binding ContentBrowser.PathSegments}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <StackPanel Orientation="Horizontal" />
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:AssetFolderViewModel">
+                                                                        <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                                                            <controls:Codicon
+                                                                                Margin="2,0"
+                                                                                VerticalAlignment="Center"
+                                                                                Foreground="{DynamicResource Brush.TextFaint}"
+                                                                                IsVisible="{Binding !IsRoot}"
+                                                                                Kind="ChevronRight"
+                                                                                Size="12" />
+                                                                            <Grid>
+                                                                                <Border
+                                                                                    Background="{DynamicResource Brush.Accent}"
+                                                                                    CornerRadius="3"
+                                                                                    IsVisible="{Binding IsDropTarget}"
+                                                                                    Opacity="0.35" />
+                                                                                <Button
+                                                                                    Classes="breadcrumb"
+                                                                                    Command="{Binding ContentBrowser.OpenFolderCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                    CommandParameter="{Binding}">
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                                        <controls:Codicon
+                                                                                            VerticalAlignment="Center"
+                                                                                            IsVisible="{Binding IsRoot}"
+                                                                                            Kind="AssetFolder"
+                                                                                            Size="12" />
+                                                                                        <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                                                                                    </StackPanel>
+                                                                                </Button>
+                                                                            </Grid>
+                                                                        </StackPanel>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                            </ScrollViewer>
                                                             <TextBox
-                                                                Grid.Column="2"
-                                                                Width="220"
-                                                                Margin="0,0,8,0"
+                                                                Grid.Column="5"
+                                                                Width="160"
+                                                                Margin="0,0,4,0"
                                                                 Padding="4,2"
                                                                 VerticalAlignment="Center"
                                                                 FontSize="11"
                                                                 Text="{Binding ContentBrowser.SearchText, Mode=TwoWay}"
-                                                                ToolTip.Tip="Filter assets by name. Searches the open bucket, or every bucket from the top level."
                                                                 Watermark="{Binding ContentBrowser.SearchWatermark}">
                                                                 <TextBox.InnerLeftContent>
                                                                     <controls:Codicon
@@ -2633,261 +2656,423 @@
                                                                     </Button>
                                                                 </TextBox.InnerRightContent>
                                                             </TextBox>
+                                                            <Button
+                                                                Grid.Column="6"
+                                                                Width="24"
+                                                                Height="24"
+                                                                Margin="0,0,4,0"
+                                                                Classes="gizmo"
+                                                                ToolTip.Tip="Filter by type">
+                                                                <Panel>
+                                                                    <controls:Codicon Kind="Filter" Size="14" />
+                                                                    <Ellipse
+                                                                        Width="5"
+                                                                        Height="5"
+                                                                        Margin="0,-2,-3,0"
+                                                                        HorizontalAlignment="Right"
+                                                                        VerticalAlignment="Top"
+                                                                        Fill="{DynamicResource Brush.Accent}"
+                                                                        IsVisible="{Binding ContentBrowser.HasTypeFilter}" />
+                                                                </Panel>
+                                                                <Button.Flyout>
+                                                                    <Flyout Placement="BottomEdgeAlignedRight">
+                                                                        <StackPanel MinWidth="140" Spacing="2">
+                                                                            <ItemsControl ItemsSource="{Binding ContentBrowser.TypeFilters}">
+                                                                                <ItemsControl.ItemTemplate>
+                                                                                    <DataTemplate x:DataType="vm:AssetTypeFilterViewModel">
+                                                                                        <CheckBox
+                                                                                            Padding="4,0"
+                                                                                            Content="{Binding Name}"
+                                                                                            FontSize="11"
+                                                                                            IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+                                                                                    </DataTemplate>
+                                                                                </ItemsControl.ItemTemplate>
+                                                                            </ItemsControl>
+                                                                            <Button
+                                                                                Margin="0,4,0,0"
+                                                                                HorizontalAlignment="Stretch"
+                                                                                Command="{Binding ContentBrowser.ClearTypeFilterCommand}"
+                                                                                Content="Clear"
+                                                                                IsEnabled="{Binding ContentBrowser.HasTypeFilter}" />
+                                                                        </StackPanel>
+                                                                    </Flyout>
+                                                                </Button.Flyout>
+                                                            </Button>
                                                             <ComboBox
-                                                                Grid.Column="3"
+                                                                Grid.Column="7"
                                                                 Margin="0,0,4,0"
                                                                 Padding="6,2"
                                                                 VerticalAlignment="Center"
                                                                 FontSize="11"
-                                                                IsVisible="{Binding ContentBrowser.IsShowingAssets}"
                                                                 ItemsSource="{Binding ContentBrowser.SortModeLabels}"
                                                                 SelectedIndex="{Binding ContentBrowser.SortModeIndex, Mode=TwoWay}"
                                                                 ToolTip.Tip="Sort order" />
                                                             <Button
-                                                                Grid.Column="4"
+                                                                Grid.Column="8"
                                                                 Margin="0,0,4,0"
                                                                 Padding="8,2"
                                                                 VerticalAlignment="Center"
                                                                 Command="{Binding ContentBrowser.ImportCommand}"
                                                                 Content="Import"
                                                                 IsEnabled="{Binding !IsSimulating}"
-                                                                ToolTip.Tip="Import external content into the asset registry." />
+                                                                ToolTip.Tip="Import into the open folder" />
                                                             <Button
-                                                                Grid.Column="5"
+                                                                Grid.Column="9"
                                                                 Padding="8,2"
                                                                 VerticalAlignment="Center"
                                                                 Content="New..."
-                                                                IsEnabled="{Binding !IsSimulating}"
-                                                                IsVisible="{Binding ContentBrowser.IsAtRoot}">
+                                                                IsEnabled="{Binding !IsSimulating}">
                                                                 <Button.Flyout>
                                                                     <MenuFlyout>
+                                                                        <MenuItem
+                                                                            Command="{Binding ContentBrowser.NewFolderCommand}"
+                                                                            CommandParameter="{Binding ContentBrowser.CurrentFolder}"
+                                                                            Header="Folder" />
+                                                                        <Separator />
                                                                         <MenuItem Command="{Binding ContentBrowser.NewPhysicsShapeCommand}" Header="Physics Shape" />
                                                                         <MenuItem Command="{Binding ContentBrowser.NewMaterialCommand}" Header="Material" />
-                                                                        <MenuItem Command="{Binding ContentBrowser.NewWeaponCommand}" Header="Weapon" />
                                                                         <MenuItem Command="{Binding ContentBrowser.NewDecalCommand}" Header="Decal" />
-                                                                        <MenuItem Command="{Binding ContentBrowser.NewScriptCommand}" Header="Script" />
                                                                         <MenuItem Command="{Binding ContentBrowser.NewPrefabCommand}" Header="Prefab" />
+                                                                        <Separator />
+                                                                        <MenuItem Command="{Binding ContentBrowser.NewScriptCommand}" Header="Script" />
+                                                                        <Separator/>
                                                                         <MenuItem Command="{Binding ContentBrowser.NewWorldCommand}" Header="World" />
                                                                     </MenuFlyout>
                                                                 </Button.Flyout>
                                                             </Button>
-                                                            <Button
-                                                                Grid.Column="5"
-                                                                Padding="8,2"
-                                                                VerticalAlignment="Center"
-                                                                Classes="Primary"
-                                                                Command="{Binding ContentBrowser.NewInBucketCommand}"
-                                                                Content="{Binding ContentBrowser.NewInBucketLabel}"
-                                                                IsEnabled="{Binding !IsSimulating}"
-                                                                IsVisible="{Binding ContentBrowser.HasNewInBucket}" />
                                                         </Grid>
                                                     </Border>
-                                                    <Grid>
-                                                        <ListBox
-                                                            x:Name="ContentBrowserBucketList"
-                                                            DoubleTapped="OnContentBrowserBucketDoubleTapped"
-                                                            IsVisible="{Binding ContentBrowser.IsShowingBuckets}"
-                                                            ItemsSource="{Binding ContentBrowser.Buckets}"
-                                                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                            SelectedItem="{Binding ContentBrowser.SelectedBucket, Mode=TwoWay}">
-                                                            <ListBox.Styles>
-                                                                <Style Selector="ListBoxItem">
-                                                                    <Setter Property="Padding" Value="2" />
-                                                                </Style>
-                                                            </ListBox.Styles>
-                                                            <ListBox.ItemsPanel>
-                                                                <ItemsPanelTemplate>
-                                                                    <WrapPanel />
-                                                                </ItemsPanelTemplate>
-                                                            </ListBox.ItemsPanel>
-                                                            <ListBox.ItemTemplate>
-                                                                <DataTemplate x:DataType="vm:AssetBucketViewModel">
-                                                                    <Border
-                                                                        Width="72"
-                                                                        Height="72"
-                                                                        Margin="1"
-                                                                        Padding="3"
-                                                                        Background="Transparent"
-                                                                        CornerRadius="{DynamicResource Radius.Small}"
-                                                                        ToolTip.Tip="{Binding Name}">
-                                                                        <Grid RowDefinitions="*,Auto,Auto">
+                                                    <Grid x:Name="ContentBrowserBody" ColumnDefinitions="200, 4, *">
+                                                        <TreeView
+                                                            x:Name="ContentBrowserFolderTree"
+                                                            Grid.Column="0"
+                                                            ItemsSource="{Binding ContentBrowser.RootFolders}"
+                                                            SelectedItem="{Binding ContentBrowser.SelectedTreeFolder, Mode=OneWay}"
+                                                            SelectionChanged="OnContentBrowserFolderTreeSelectionChanged">
+                                                            <TreeView.ItemContainerTheme>
+                                                                <ControlTheme
+                                                                    x:DataType="vm:AssetFolderViewModel"
+                                                                    BasedOn="{StaticResource {x:Type TreeViewItem}}"
+                                                                    TargetType="TreeViewItem">
+                                                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                                                </ControlTheme>
+                                                            </TreeView.ItemContainerTheme>
+                                                            <TreeView.ItemTemplate>
+                                                                <TreeDataTemplate x:DataType="vm:AssetFolderViewModel" ItemsSource="{Binding Children}">
+                                                                    <Grid HorizontalAlignment="Stretch" Background="Transparent">
+                                                                        <Border
+                                                                            Background="{DynamicResource Brush.Accent}"
+                                                                            CornerRadius="3"
+                                                                            IsVisible="{Binding IsDropTarget}"
+                                                                            Opacity="0.35" />
+                                                                        <StackPanel
+                                                                            Margin="2,2"
+                                                                            VerticalAlignment="Center"
+                                                                            Orientation="Horizontal"
+                                                                            Spacing="6">
                                                                             <controls:Codicon
-                                                                                Grid.Row="0"
-                                                                                HorizontalAlignment="Center"
                                                                                 VerticalAlignment="Center"
-                                                                                Foreground="{DynamicResource Brush.AccentHover}"
                                                                                 Kind="{Binding IconKind}"
-                                                                                Opacity="0.85"
-                                                                                Size="26" />
+                                                                                Opacity="0.7"
+                                                                                Size="14" />
                                                                             <TextBlock
-                                                                                Grid.Row="1"
-                                                                                MaxWidth="66"
-                                                                                HorizontalAlignment="Center"
-                                                                                FontSize="10"
-                                                                                Text="{Binding Name}"
-                                                                                TextAlignment="Center"
-                                                                                TextTrimming="CharacterEllipsis"
-                                                                                TextWrapping="NoWrap" />
-                                                                            <TextBlock
-                                                                                Grid.Row="2"
-                                                                                HorizontalAlignment="Center"
-                                                                                FontSize="10"
-                                                                                Foreground="{DynamicResource Brush.TextMuted}"
-                                                                                Text="{Binding AssetCountText}" />
-                                                                        </Grid>
-                                                                    </Border>
-                                                                </DataTemplate>
-                                                            </ListBox.ItemTemplate>
-                                                        </ListBox>
-                                                        <ListBox
-                                                            x:Name="ContentBrowserAssetList"
-                                                            DoubleTapped="OnContentBrowserAssetDoubleTapped"
-                                                            IsVisible="{Binding ContentBrowser.IsShowingAssets}"
-                                                            ItemsSource="{Binding ContentBrowser.Assets}"
-                                                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                                            SelectedItem="{Binding ContentBrowser.SelectedAsset, Mode=TwoWay}"
-                                                            SelectionChanged="OnContentBrowserSelectionChanged">
-                                                            <ListBox.Styles>
-                                                                <Style Selector="ListBoxItem">
-                                                                    <Setter Property="Padding" Value="2" />
-                                                                </Style>
-                                                            </ListBox.Styles>
-                                                            <ListBox.ItemsPanel>
-                                                                <ItemsPanelTemplate>
-                                                                    <WrapPanel />
-                                                                </ItemsPanelTemplate>
-                                                            </ListBox.ItemsPanel>
-                                                            <ListBox.ItemTemplate>
-                                                                <DataTemplate x:DataType="vm:AssetObjectViewModel">
-                                                                    <Border
-                                                                        Width="84"
-                                                                        Height="84"
-                                                                        Margin="1"
-                                                                        Padding="4"
-                                                                        Background="Transparent"
-                                                                        CornerRadius="{DynamicResource Radius.Small}"
-                                                                        ToolTip.Tip="{Binding ToolTipText}">
-                                                                        <!--  Fixed rows rather than a centred stack, so every tile puts its icon at the same height however long the name is.  -->
-                                                                        <Grid RowDefinitions="*,Auto">
-                                                                            <Panel Grid.Row="0">
+                                                                                VerticalAlignment="Center"
+                                                                                IsVisible="{Binding !IsEditingName}"
+                                                                                Text="{Binding Name}" />
+                                                                            <TextBox
+                                                                                Name="FolderRenameTextBox"
+                                                                                MinWidth="80"
+                                                                                Padding="2,0"
+                                                                                VerticalAlignment="Center"
+                                                                                IsVisible="{Binding IsEditingName}"
+                                                                                KeyDown="OnFolderRenameTextBoxKeyDown"
+                                                                                LostFocus="OnFolderRenameTextBoxLostFocus"
+                                                                                Text="{Binding EditingName, Mode=TwoWay}" />
+                                                                        </StackPanel>
+                                                                        <Grid.ContextMenu>
+                                                                            <ContextMenu>
+                                                                                <MenuItem
+                                                                                    Command="{Binding ContentBrowser.NewFolderCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                    CommandParameter="{Binding}"
+                                                                                    Header="New Folder"
+                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                                <MenuItem
+                                                                                    Click="OnRenameFolderMenuItemClick"
+                                                                                    Header="Rename"
+                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                    IsVisible="{Binding !IsRoot}" />
+                                                                                <Separator IsVisible="{Binding !IsRoot}" />
+                                                                                <MenuItem
+                                                                                    Command="{Binding ContentBrowser.DeleteFolderCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                    CommandParameter="{Binding}"
+                                                                                    Header="_Delete"
+                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                    IsVisible="{Binding !IsRoot}" />
+                                                                            </ContextMenu>
+                                                                        </Grid.ContextMenu>
+                                                                    </Grid>
+                                                                </TreeDataTemplate>
+                                                            </TreeView.ItemTemplate>
+                                                        </TreeView>
+                                                        <GridSplitter
+                                                            x:Name="ContentBrowserTreeSplitter"
+                                                            Grid.Column="1"
+                                                            Background="Transparent"
+                                                            ResizeDirection="Columns" />
+                                                        <Grid Grid.Column="2">
+                                                            <ListBox
+                                                                x:Name="ContentBrowserAssetList"
+                                                                DoubleTapped="OnContentBrowserAssetDoubleTapped"
+                                                                ItemsSource="{Binding ContentBrowser.Items}"
+                                                                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                                SelectedItem="{Binding ContentBrowser.SelectedItem, Mode=TwoWay}"
+                                                                SelectionChanged="OnContentBrowserSelectionChanged"
+                                                                SelectionMode="Multiple">
+                                                                <ListBox.Styles>
+                                                                    <Style Selector="ListBoxItem">
+                                                                        <Setter Property="Padding" Value="2" />
+                                                                    </Style>
+                                                                </ListBox.Styles>
+                                                                <ListBox.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <WrapPanel />
+                                                                    </ItemsPanelTemplate>
+                                                                </ListBox.ItemsPanel>
+                                                                <ListBox.ContextMenu>
+                                                                    <ContextMenu>
+                                                                        <MenuItem
+                                                                            Command="{Binding ContentBrowser.NewFolderCommand}"
+                                                                            CommandParameter="{Binding ContentBrowser.CurrentFolder}"
+                                                                            Header="New Folder"
+                                                                            IsEnabled="{Binding !IsSimulating}" />
+                                                                        <MenuItem Header="New" IsEnabled="{Binding !IsSimulating}">
+                                                                          <MenuItem Command="{Binding ContentBrowser.NewPhysicsShapeCommand}" Header="Physics Shape" />
+                                                                          <MenuItem Command="{Binding ContentBrowser.NewMaterialCommand}" Header="Material" />
+                                                                          <MenuItem Command="{Binding ContentBrowser.NewDecalCommand}" Header="Decal" />
+                                                                          <MenuItem Command="{Binding ContentBrowser.NewPrefabCommand}" Header="Prefab" />
+                                                                          <Separator />
+                                                                          <MenuItem Command="{Binding ContentBrowser.NewScriptCommand}" Header="Script" />
+                                                                          <Separator/>
+                                                                          <MenuItem Command="{Binding ContentBrowser.NewWorldCommand}" Header="World" />
+                                                                        </MenuItem>
+                                                                        <Separator />
+                                                                        <MenuItem
+                                                                            Command="{Binding ContentBrowser.ImportCommand}"
+                                                                            Header="Import..."
+                                                                            IsEnabled="{Binding !IsSimulating}" />
+                                                                    </ContextMenu>
+                                                                </ListBox.ContextMenu>
+                                                                <ListBox.DataTemplates>
+                                                                    <DataTemplate x:DataType="vm:AssetFolderViewModel">
+                                                                        <Border
+                                                                            Width="84"
+                                                                            Height="84"
+                                                                            Margin="1"
+                                                                            Padding="4"
+                                                                            Background="Transparent"
+                                                                            CornerRadius="{DynamicResource Radius.Small}"
+                                                                            ToolTip.Tip="{Binding Path}">
+                                                                            <Grid RowDefinitions="*,Auto">
+                                                                                <Border
+                                                                                    Grid.RowSpan="2"
+                                                                                    Margin="-4"
+                                                                                    Background="{DynamicResource Brush.Accent}"
+                                                                                    CornerRadius="{DynamicResource Radius.Small}"
+                                                                                    IsVisible="{Binding IsDropTarget}"
+                                                                                    Opacity="0.35" />
                                                                                 <controls:Codicon
+                                                                                    Grid.Row="0"
                                                                                     HorizontalAlignment="Center"
                                                                                     VerticalAlignment="Center"
                                                                                     Foreground="{DynamicResource Brush.AccentHover}"
-                                                                                    IsVisible="{Binding !HasThumbnail}"
-                                                                                    Kind="{Binding IconKind}"
+                                                                                    Kind="AssetFolder"
                                                                                     Opacity="0.85"
                                                                                     Size="34" />
-                                                                                <Image
-                                                                                    Width="56"
-                                                                                    Height="56"
+                                                                                <TextBlock
+                                                                                    Grid.Row="1"
+                                                                                    MaxWidth="76"
                                                                                     HorizontalAlignment="Center"
-                                                                                    VerticalAlignment="Center"
-                                                                                    IsVisible="{Binding HasThumbnail}"
-                                                                                    Source="{Binding Thumbnail}"
-                                                                                    Stretch="Uniform" />
-                                                                            </Panel>
-                                                                            <TextBlock
-                                                                                Grid.Row="1"
-                                                                                MaxWidth="76"
-                                                                                HorizontalAlignment="Center"
-                                                                                FontSize="10"
-                                                                                Text="{Binding DisplayName}"
-                                                                                TextAlignment="Center"
-                                                                                TextTrimming="CharacterEllipsis"
-                                                                                TextWrapping="NoWrap" />
-                                                                        </Grid>
-                                                                        <Border.ContextMenu>
-                                                                            <ContextMenu Opened="OnAssetContextMenuOpened">
-                                                                                <MenuItem
-                                                                                    Command="{Binding ContentBrowser.AddToSceneCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    Header="Add to Current Scene">
-                                                                                    <MenuItem.IsVisible>
-                                                                                        <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
-                                                                                            <Binding Path="IsPrefab" />
-                                                                                            <Binding Path="CanAddToScene" Source="{x:Static vm:MainWindowViewModel.Instance}" />
-                                                                                        </MultiBinding>
-                                                                                    </MenuItem.IsVisible>
-                                                                                </MenuItem>
-                                                                                <MenuItem
-                                                                                    Command="{Binding ContentBrowser.PlaceAsInstanceCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    Header="Place as Instance"
-                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    IsVisible="{Binding IsPrefab}"
-                                                                                    ToolTip.Tip="Add an instance of this prefab to the scene" />
-                                                                                <MenuItem
-                                                                                    Command="{Binding ContentBrowser.OpenWorldCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    Header="Switch to This World"
-                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    IsVisible="{Binding IsWorld}"
-                                                                                    ToolTip.Tip="Edit this World instead of the current one. The project is saved first." />
-                                                                                <Separator IsVisible="{Binding HasSceneActions}" />
-                                                                                <MenuItem
-                                                                                    Command="{Binding ContentBrowser.EditAssetCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    Header="_Edit"
-                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    IsVisible="{Binding !IsWorld}" />
-                                                                                <MenuItem
-                                                                                    Click="OnWorldSettingsClick"
-                                                                                    Header="World Settings"
-                                                                                    IsVisible="{Binding IsWorld}" />
-                                                                                <MenuItem
-                                                                                    Command="{Binding SavePrefabAsTemplate, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    Header="Save as Template..."
-                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    IsVisible="{Binding IsPrefab}"
-                                                                                    ToolTip.Tip="Save to template library" />
-                                                                                <Separator IsVisible="{Binding HasActions}" />
-                                                                                <MenuItem
-                                                                                    Header="Actions"
-                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    IsVisible="{Binding HasActions}"
-                                                                                    ItemsSource="{Binding Actions}">
-                                                                                    <!--  The generated containers are the menu items themselves; a MenuItem in an ItemTemplate would be nested inside the container's header and render disabled.  -->
-                                                                                    <MenuItem.ItemContainerTheme>
-                                                                                        <ControlTheme
-                                                                                            x:DataType="vm:InspectorActionViewModel"
-                                                                                            BasedOn="{StaticResource {x:Type MenuItem}}"
-                                                                                            TargetType="MenuItem">
-                                                                                            <Setter Property="Header" Value="{Binding Label}" />
-                                                                                            <Setter Property="Command" Value="{Binding ExecuteActionCommand}" />
-                                                                                            <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
-                                                                                        </ControlTheme>
-                                                                                    </MenuItem.ItemContainerTheme>
-                                                                                </MenuItem>
-                                                                                <Separator />
-                                                                                <MenuItem
-                                                                                    Command="{Binding ContentBrowser.DeleteAssetCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
-                                                                                    CommandParameter="{Binding}"
-                                                                                    Header="_Delete"
-                                                                                    IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
-                                                                            </ContextMenu>
-                                                                        </Border.ContextMenu>
-                                                                    </Border>
-                                                                </DataTemplate>
-                                                            </ListBox.ItemTemplate>
-                                                        </ListBox>
-                                                        <TextBlock
-                                                            Margin="12"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Center"
-                                                            Classes="muted"
-                                                            IsHitTestVisible="False"
-                                                            IsVisible="{Binding ContentBrowser.HasNoMatches}"
-                                                            Text="No assets match the search." />
-                                                        <TextBlock
-                                                            Margin="12"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Center"
-                                                            Classes="muted"
-                                                            IsHitTestVisible="False"
-                                                            IsVisible="{Binding ContentBrowser.IsBucketEmpty}"
-                                                            Text="This bucket is empty." />
+                                                                                    FontSize="10"
+                                                                                    IsVisible="{Binding !IsEditingName}"
+                                                                                    Text="{Binding Name}"
+                                                                                    TextAlignment="Center"
+                                                                                    TextTrimming="CharacterEllipsis"
+                                                                                    TextWrapping="NoWrap" />
+                                                                                <TextBox
+                                                                                    Name="FolderRenameTextBox"
+                                                                                    Grid.Row="1"
+                                                                                    MaxWidth="76"
+                                                                                    Padding="2,0"
+                                                                                    FontSize="10"
+                                                                                    IsVisible="{Binding IsEditingName}"
+                                                                                    KeyDown="OnFolderRenameTextBoxKeyDown"
+                                                                                    LostFocus="OnFolderRenameTextBoxLostFocus"
+                                                                                    Text="{Binding EditingName, Mode=TwoWay}" />
+                                                                            </Grid>
+                                                                            <Border.ContextMenu>
+                                                                                <ContextMenu>
+                                                                                    <MenuItem
+                                                                                        Command="{Binding ContentBrowser.OpenFolderCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="Open" />
+                                                                                    <MenuItem
+                                                                                        Command="{Binding ContentBrowser.NewFolderCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="New Folder"
+                                                                                        IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                                    <MenuItem
+                                                                                        Click="OnRenameFolderMenuItemClick"
+                                                                                        Header="Rename"
+                                                                                        IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                                    <Separator />
+                                                                                    <MenuItem
+                                                                                        Command="{Binding ContentBrowser.DeleteFolderCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="_Delete"
+                                                                                        IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                                </ContextMenu>
+                                                                            </Border.ContextMenu>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                    <DataTemplate x:DataType="vm:AssetObjectViewModel">
+                                                                        <Border
+                                                                            Width="84"
+                                                                            Height="84"
+                                                                            Margin="1"
+                                                                            Padding="4"
+                                                                            Background="Transparent"
+                                                                            CornerRadius="{DynamicResource Radius.Small}"
+                                                                            ToolTip.Tip="{Binding ToolTipText}">
+                                                                            <!--  Fixed rows rather than a centred stack, so every tile puts its icon at the same height however long the name is.  -->
+                                                                            <Grid RowDefinitions="*,Auto">
+                                                                                <Panel Grid.Row="0">
+                                                                                    <controls:Codicon
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Foreground="{DynamicResource Brush.AccentHover}"
+                                                                                        IsVisible="{Binding !HasThumbnail}"
+                                                                                        Kind="{Binding IconKind}"
+                                                                                        Opacity="0.85"
+                                                                                        Size="34" />
+                                                                                    <Image
+                                                                                        Width="56"
+                                                                                        Height="56"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        IsVisible="{Binding HasThumbnail}"
+                                                                                        Source="{Binding Thumbnail}"
+                                                                                        Stretch="Uniform" />
+                                                                                </Panel>
+                                                                                <TextBlock
+                                                                                    Grid.Row="1"
+                                                                                    MaxWidth="76"
+                                                                                    HorizontalAlignment="Center"
+                                                                                    FontSize="10"
+                                                                                    Text="{Binding DisplayName}"
+                                                                                    TextAlignment="Center"
+                                                                                    TextTrimming="CharacterEllipsis"
+                                                                                    TextWrapping="NoWrap" />
+                                                                            </Grid>
+                                                                            <Border.ContextMenu>
+                                                                                <ContextMenu Opened="OnAssetContextMenuOpened">
+                                                                                    <MenuItem
+                                                                                        Command="{Binding ContentBrowser.AddToSceneCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="Add to Current Scene">
+                                                                                        <MenuItem.IsVisible>
+                                                                                            <MultiBinding Converter="{x:Static conv:BoolConverters.And}">
+                                                                                                <Binding Path="IsPrefab" />
+                                                                                                <Binding Path="CanAddToScene" Source="{x:Static vm:MainWindowViewModel.Instance}" />
+                                                                                            </MultiBinding>
+                                                                                        </MenuItem.IsVisible>
+                                                                                    </MenuItem>
+                                                                                    <MenuItem
+                                                                                        Command="{Binding ContentBrowser.PlaceAsInstanceCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="Place as Instance"
+                                                                                        IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        IsVisible="{Binding IsPrefab}"
+                                                                                        ToolTip.Tip="Add an instance of this prefab to the scene" />
+                                                                                    <MenuItem
+                                                                                        Command="{Binding ContentBrowser.OpenWorldCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="Switch to This World"
+                                                                                        IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        IsVisible="{Binding IsWorld}"
+                                                                                        ToolTip.Tip="Edit this World instead of the current one. The project is saved first." />
+                                                                                    <Separator IsVisible="{Binding HasSceneActions}" />
+                                                                                    <MenuItem
+                                                                                        Command="{Binding ContentBrowser.EditAssetCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="_Edit"
+                                                                                        IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        IsVisible="{Binding !IsWorld}" />
+                                                                                    <MenuItem
+                                                                                        Click="OnWorldSettingsClick"
+                                                                                        Header="World Settings"
+                                                                                        IsVisible="{Binding IsWorld}" />
+                                                                                    <MenuItem
+                                                                                        Command="{Binding SavePrefabAsTemplate, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="Save as Template..."
+                                                                                        IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        IsVisible="{Binding IsPrefab}"
+                                                                                        ToolTip.Tip="Save to template library" />
+                                                                                    <Separator IsVisible="{Binding HasActions}" />
+                                                                                    <MenuItem
+                                                                                        Header="Actions"
+                                                                                        IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        IsVisible="{Binding HasActions}"
+                                                                                        ItemsSource="{Binding Actions}">
+                                                                                        <!--  The generated containers are the menu items themselves; a MenuItem in an ItemTemplate would be nested inside the container's header and render disabled.  -->
+                                                                                        <MenuItem.ItemContainerTheme>
+                                                                                            <ControlTheme
+                                                                                                x:DataType="vm:InspectorActionViewModel"
+                                                                                                BasedOn="{StaticResource {x:Type MenuItem}}"
+                                                                                                TargetType="MenuItem">
+                                                                                                <Setter Property="Header" Value="{Binding Label}" />
+                                                                                                <Setter Property="Command" Value="{Binding ExecuteActionCommand}" />
+                                                                                                <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+                                                                                            </ControlTheme>
+                                                                                        </MenuItem.ItemContainerTheme>
+                                                                                    </MenuItem>
+                                                                                    <Separator />
+                                                                                    <MenuItem
+                                                                                        Command="{Binding ContentBrowser.ShowInExplorerCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="Show in Explorer" />
+                                                                                    <MenuItem
+                                                                                        Click="OnCopyAssetPathClick"
+                                                                                        Header="Copy Path" />
+                                                                                    <Separator />
+                                                                                    <MenuItem
+                                                                                        Command="{Binding ContentBrowser.DeleteSelectionCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                                        CommandParameter="{Binding}"
+                                                                                        Header="_Delete"
+                                                                                        IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
+                                                                                </ContextMenu>
+                                                                            </Border.ContextMenu>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ListBox.DataTemplates>
+                                                            </ListBox>
+                                                            <TextBlock
+                                                                Margin="12"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Center"
+                                                                Classes="muted"
+                                                                IsHitTestVisible="False"
+                                                                IsVisible="{Binding ContentBrowser.HasNoMatches}"
+                                                                Text="Nothing matches." />
+                                                            <TextBlock
+                                                                Margin="12"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Center"
+                                                                Classes="muted"
+                                                                IsHitTestVisible="False"
+                                                                IsVisible="{Binding ContentBrowser.IsFolderEmpty}"
+                                                                Text="Empty folder" />
+                                                        </Grid>
                                                     </Grid>
                                                 </DockPanel>
                                             </ContentControl>

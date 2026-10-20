@@ -7,11 +7,14 @@
 #include <Editor/EditorImport.hpp>
 #include <Editor/EditorSubsystem.hpp>
 #include <Editor/EditorTask.hpp>
+#include <Editor/EditorProject.hpp>
+#include <Editor/EditorAssetFolders.hpp>
 #include <Editor/Tasks/EditorTasks.hpp>
 
 #include <Asset/Assets.hpp>
 #include <Asset/AssetBatch.hpp>
 #include <Asset/AssetRegistry.hpp>
+#include <Asset/AssetObject.hpp>
 
 #include <Core/Math/MathUtil.hpp>
 #include <Core/Logging/Logger.hpp>
@@ -20,7 +23,38 @@ namespace Hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Editor);
 
-void ImportEditorContent(EditorSubsystem* subsystem, const Array<FilePath>& files, EditorImportCallback&& onImported)
+static void FileImportedModel(EditorAssetFolders& assetFolders, AssetRegistry& registry, const Handle<AssetObject>& modelAsset, const String& targetFolder, Set<uint32, EditorAllocator>& changedBuckets)
+{
+    // register what would otherwise only be registered on save (eg. MTL textures), so it is filed with the rest
+    registry.PutAssetsDeep(modelAsset);
+
+    const String modelFolder = EditorAssetFolders::JoinFolderPath(targetFolder, assetFolders.MakeUniqueFolderName(targetFolder, String(*modelAsset->GetName())));
+
+    assetFolders.SetAssetFolder(modelAsset->GetPath(), modelFolder);
+
+    auto onSubAssetFound = [&](const Handle<AssetObject>& subAsset)
+    {
+        if (!subAsset.IsValid() || subAsset == modelAsset || !subAsset->IsRegistered())
+        {
+            return;
+        }
+
+        const AssetPath& subAssetPath = subAsset->GetPath();
+
+        if (subAssetPath.registryId != AssetRegistryId::Game || assetFolders.HasAssetFolder(subAssetPath))
+        {
+            return;
+        }
+
+        assetFolders.SetAssetFolder(subAssetPath, EditorAssetFolders::JoinFolderPath(modelFolder, subAssetPath.GetBucket().GetName()));
+
+        changedBuckets.Insert(subAssetPath.GetBucket().GetIndex());
+    };
+
+    AssetRegistry::WalkAssetDeep(BoxedValue(modelAsset), onSubAssetFound);
+}
+
+void ImportEditorContent(EditorSubsystem* subsystem, const Array<FilePath>& files, const String& targetFolder, EditorImportCallback&& onImported)
 {
     if (files.Empty())
     {
@@ -89,8 +123,10 @@ void ImportEditorContent(EditorSubsystem* subsystem, const Array<FilePath>& file
               })
         .Detach();
 
+    const String normalizedTargetFolder = EditorAssetFolders::NormalizeFolderPath(targetFolder);
+
     batch->OnComplete
-        .Bind([context, editorTaskScope, weakSubsystem = MakeWeakRef(subsystem)](AssetMap& results) mutable
+        .Bind([context, editorTaskScope, weakSubsystem = MakeWeakRef(subsystem), normalizedTargetFolder](AssetMap& results) mutable
               {
                   HYP_LOG(Editor, Verbose, "{} assets loaded.", results.Size());
 
@@ -99,6 +135,13 @@ void ImportEditorContent(EditorSubsystem* subsystem, const Array<FilePath>& file
                   uint32 numProcessed = 0;
 
                   Handle<EditorSubsystem> subsystem = weakSubsystem.Lock();
+
+                  Handle<EditorAssetFolders> assetFolders;
+
+                  if (subsystem.IsValid() && subsystem->GetCurrentProject().IsValid())
+                  {
+                      assetFolders = subsystem->GetCurrentProject()->GetAssetFolders();
+                  }
 
                   Array<Handle<AssetObject>> importedAssets;
                   Set<uint32, EditorAllocator> changedBuckets;
@@ -133,15 +176,34 @@ void ImportEditorContent(EditorSubsystem* subsystem, const Array<FilePath>& file
 
                       const AssetPath& assetPath = assetObject->GetPath();
 
-                      if (assetPath.IsValid() && subsystem.IsValid())
+                      if (!assetPath.IsValid())
                       {
-                          changedBuckets.Insert(assetPath.GetBucket().GetIndex());
+                          continue;
+                      }
+
+                      changedBuckets.Insert(assetPath.GetBucket().GetIndex());
+
+                      if (!assetFolders.IsValid())
+                      {
+                          continue;
+                      }
+
+                      if (IsEditorImportModelFile(FilePath(key)))
+                      {
+                          FileImportedModel(*assetFolders, *GetCurrentAssetRegistry(), assetObject, normalizedTargetFolder, changedBuckets);
+                      }
+                      else
+                      {
+                          assetFolders->SetAssetFolder(assetPath, normalizedTargetFolder);
                       }
                   }
 
-                  for (uint32 bucketIndex : changedBuckets)
+                  if (subsystem.IsValid())
                   {
-                      subsystem->OnAssetsChanged(bucketIndex);
+                      for (uint32 bucketIndex : changedBuckets)
+                      {
+                          subsystem->OnAssetsChanged(bucketIndex);
+                      }
                   }
 
                   delete editorTaskScope;

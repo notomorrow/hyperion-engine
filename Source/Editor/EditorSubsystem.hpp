@@ -257,7 +257,10 @@ public:
     }
 
     HYP_METHOD()
-    String GetPlayNetProjectDirectory() const;
+    String GetPlayNetContentDirectory() const;
+
+    HYP_METHOD()
+    String GetProjectContentDirectory(const String& projectPath) const;
 
     ////////////////////
 
@@ -640,8 +643,15 @@ public:
 
     ///
 
+    /// The folder open in the content browser; imports go there
     HYP_METHOD()
-    void SetSelectedBucket(uint32 bucketIndex);
+    void SetCurrentAssetFolder(const String& folderPath);
+
+    HYP_METHOD()
+    const String& GetCurrentAssetFolder() const
+    {
+        return m_currentAssetFolder;
+    }
 
     ///Thumbnails
 
@@ -760,9 +770,6 @@ public:
 
     HYP_FIELD()
     ScriptableDelegate<void, EditorGizmoBase*, EditorGizmoBase*> OnSelectedGizmoChanged;
-
-    HYP_FIELD()
-    ScriptableDelegate<void, uint32> OnSelectedBucketChanged;
 
     /*! \brief Fired when assets are added to or removed from a bucket in the current asset registry
      *  (e.g. by deleting an asset or importing content). The argument is the index of the affected bucket. */
@@ -1039,7 +1046,7 @@ private:
 
     Array<EnvProbePlacement, EditorAllocator> m_committedEnvProbePlacements;
 
-    uint32 m_selectedBucketIndex;
+    String m_currentAssetFolder;
 
     Array<Handle<EditorViewport>, EditorAllocator> m_editorViewports;
 

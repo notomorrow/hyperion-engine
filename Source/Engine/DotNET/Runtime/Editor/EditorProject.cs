@@ -45,6 +45,8 @@ namespace Hyperion
 
         public EditorActionStack? ActionStack => this.GetActionStack();
 
+        public EditorAssetFolders? AssetFolders => this.GetAssetFolders();
+
         public Name GetNextDefaultProjectName(string defaultProjectName)
         {
             string projectsDirectory = this.GetProjectsDirectory();

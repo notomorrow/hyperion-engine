@@ -38,6 +38,7 @@ class World;
 class Game;
 class EditorActionStack;
 class EditorSubsystem;
+class EditorAssetFolders;
 
 using Baking::BakeLayer;
 
@@ -195,6 +196,18 @@ public:
     }
 
     HYP_METHOD()
+    FilePath GetProjectDirectory() const;
+
+    HYP_METHOD()
+    FilePath GetContentDirectory() const;
+
+    HYP_METHOD()
+    HYP_FORCE_INLINE const String& GetContentSubfolder() const
+    {
+        return m_contentSubfolder;
+    }
+
+    HYP_METHOD()
     HYP_FORCE_INLINE const Vec3f& GetEditorCameraPosition() const
     {
         return m_editorCameraPosition;
@@ -231,6 +244,12 @@ public:
     const Handle<EditorActionStack>& GetActionStack() const
     {
         return m_actionStack;
+    }
+
+    HYP_METHOD()
+    const Handle<EditorAssetFolders>& GetAssetFolders() const
+    {
+        return m_assetFolders;
     }
 
     BakeLayer& GetActiveBakeLayer();
@@ -275,6 +294,9 @@ private:
     HYP_FIELD(Property = "TempDirectory", Transient)
     FilePath m_tempDirectory;
 
+    HYP_FIELD(Property = "ContentSubfolder", Serialize)
+    String m_contentSubfolder;
+
     HYP_FIELD(Property = "GameInstance", Serialize)
     Handle<Game> m_gameInstance;
 
@@ -297,6 +319,9 @@ private:
 
     HYP_FIELD(Transient)
     Handle<EditorActionStack> m_actionStack;
+
+    HYP_FIELD(Transient)
+    Handle<EditorAssetFolders> m_assetFolders;
 
     // Transient world set while in editor mode
     Handle<World> m_editWorld;

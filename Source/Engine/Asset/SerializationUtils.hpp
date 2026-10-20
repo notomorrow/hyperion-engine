@@ -10,6 +10,11 @@
 #include <Core/Containers/Map.hpp>
 
 #include <Core/Utilities/Result.hpp>
+#include <Core/Utilities/Span.hpp>
+
+#include <Core/FileSystem/FilePath.hpp>
+
+#include <Core/Name/Name.hpp>
 
 #include <Core/Defines.hpp>
 
@@ -156,6 +161,13 @@ ENGINE_API Result ObjectToHMF(
     const BoxedValue& target,
     String& outText,
     ToHMFOptions* pOptions = nullptr);
+
+/*! \brief Reads the object in an HMF file with only the given top-level fields set. The other fields are skipped without being
+ *  constructed, so nothing they reference (eg. assets) has to be resolvable yet. */
+ENGINE_API TResult<BoxedValue> ObjectFieldsFromHMF(const FilePath& filepath, Span<const StringHash> fieldNames);
+
+/*! \brief Reads one top-level field of the object in an HMF file. Gives the class default when the file doesn't set the field. */
+ENGINE_API TResult<BoxedValue> FieldFromHMF(const FilePath& filepath, StringHash fieldName);
 
 #pragma endregion Hyperion Manifest
 

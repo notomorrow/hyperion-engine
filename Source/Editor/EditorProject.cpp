@@ -8,12 +8,14 @@
 
 #include <Editor/EditorProject.hpp>
 #include <Editor/EditorActionStack.hpp>
+#include <Editor/EditorAssetFolders.hpp>
 #include <Editor/EditorTask.hpp>
 #include <Editor/EditorState.hpp>
 #include <Editor/EditorNativeModule.hpp>
 
 #include <Framework/Game.hpp>
 #include <Framework/EngineGlobals.hpp>
+#include <Framework/ProjectLayout.hpp>
 
 #include <Asset/Assets.hpp>
 #include <Asset/AssetRegistry.hpp>
@@ -165,6 +167,7 @@ EditorProject::EditorProject(Name name, const Handle<Game>& gameInstance)
       m_gameInstance(gameInstance)
 {
     m_actionStack = MakeHandle<EditorActionStack>(WeakHandleFromThis());
+    m_assetFolders = MakeHandle<EditorAssetFolders>();
 
     // replaced by the project file's own settings when it has them
     m_packagingSettings = PackagingSettings::CreateDefault();
@@ -268,6 +271,28 @@ FilePath EditorProject::GetProjectsDirectory() const
     return EngineGlobals::GetProjectsDirectory();
 }
 
+FilePath EditorProject::GetProjectDirectory() const
+{
+    if (m_filepath.Any())
+    {
+        return m_filepath.BasePath();
+    }
+
+    return m_tempDirectory;
+}
+
+FilePath EditorProject::GetContentDirectory() const
+{
+    const FilePath projectDirectory = GetProjectDirectory();
+
+    if (projectDirectory.Empty() || m_contentSubfolder.Empty())
+    {
+        return projectDirectory;
+    }
+
+    return projectDirectory / m_contentSubfolder;
+}
+
 bool EditorProject::IsSaved() const
 {
     return uint64(m_lastSavedTime) != ~0ull;
@@ -362,19 +387,29 @@ Result EditorProject::SaveAs(FilePath filepath)
         return HYP_MAKE_ERROR(Error, "Path '{}' is not a directory", dir);
     }
 
+    const FilePath contentDir = m_contentSubfolder.Any() ? dir / m_contentSubfolder : dir;
+
+    if (!contentDir.MkDir())
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to create project content directory '{}'", contentDir);
+    }
+
+    const FilePath oldProjectDir = GetProjectDirectory();
+    const bool projectDirChanged = oldProjectDir != dir;
+
     AssetRegistry& registry = *m_gameInstance->GetAssetRegistry();
 
     GlobalContextScope assetRegistryContextScope { AssetRegistryContext { MakeStrongRef(&registry) } };
 
     const FilePath oldRootPath = registry.GetRootPath();
-    const bool rootPathChanged = oldRootPath != dir;
+    const bool rootPathChanged = oldRootPath != contentDir;
 
     if (rootPathChanged)
     {
         // load all into memory before we re-assign paths
         registry.MakeAllAssetsResident();
 
-        registry.SetRootPath(dir);
+        registry.SetRootPath(contentDir);
         registry.MarkAllDirty();
     }
 
@@ -411,7 +446,7 @@ Result EditorProject::SaveAs(FilePath filepath)
     wri.Close();
 
     // renamed in place, don't leave two project files in the same directory
-    if (!rootPathChanged && m_filepath.Any() && String(m_filepath.Basename()) != String(filepath.Basename()) && m_filepath.Exists())
+    if (!projectDirChanged && m_filepath.Any() && String(m_filepath.Basename()) != String(filepath.Basename()) && m_filepath.Exists())
     {
         if (!m_filepath.Remove())
         {
@@ -437,6 +472,14 @@ Result EditorProject::SaveAs(FilePath filepath)
     // failed assets stay dirty; their data may still only live in the temp dir
     const bool allAssetsSaved = !registry.HasDirtyAssets();
 
+    m_assetFolders->SyncWithRegistry();
+    m_assetFolders->PruneMissingAssets(registry);
+
+    if (Result saveFoldersResult = m_assetFolders->Save(dir / EditorAssetFolders::s_fileName); saveFoldersResult.HasError())
+    {
+        HYP_LOG(Editor, Warning, "Failed to save asset folders: {}", saveFoldersResult.GetError().GetMessage());
+    }
+
     // Re-apply the active swatch's overrides now that all assets have been saved
     if (m_editWorld.IsValid())
     {
@@ -450,10 +493,13 @@ Result EditorProject::SaveAs(FilePath filepath)
     // (eg. the temporary directory of an unsaved project) to the new one.
     bool looseFilesCopied = true;
 
+    if (projectDirChanged && oldProjectDir.Any())
+    {
+        looseFilesCopied = CopyLooseProjectFiles(oldProjectDir, dir);
+    }
+
     if (rootPathChanged)
     {
-        looseFilesCopied = CopyLooseProjectFiles(oldRootPath, dir);
-
         // Re-point script file watchers at the new project directory
         if (m_editWorld.IsValid())
         {
@@ -466,7 +512,7 @@ Result EditorProject::SaveAs(FilePath filepath)
 
     if (!looseFilesCopied)
     {
-        return HYP_MAKE_ERROR(Error, "Failed to copy some project files from '{}' to '{}'; the old directory was kept", oldRootPath, dir);
+        return HYP_MAKE_ERROR(Error, "Failed to copy some project files from '{}' to '{}'; the old directory was kept", oldProjectDir, dir);
     }
 
     if (!allAssetsSaved && !m_tempDirectory.Empty())
@@ -515,7 +561,7 @@ bool EditorProject::IsDirty() const
         return false;
     }
 
-    return !IsSaved() || m_hasUnsavedSettings || registry->HasDirtyAssets();
+    return !IsSaved() || m_hasUnsavedSettings || m_assetFolders->IsDirty() || registry->HasDirtyAssets();
 }
 
 BakeLayer& EditorProject::GetActiveBakeLayer()
@@ -563,16 +609,7 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
     if (filepath.IsDirectory())
     {
         dir = filepath;
-
-        for (const FilePath& file : filepath.GetAllFilesInDirectory())
-        {
-            if (file.EndsWith(".hypproject"))
-            {
-                projectFilepath = file;
-
-                break;
-            }
-        }
+        projectFilepath = FindProjectFile(filepath);
     }
     else
     {
@@ -590,7 +627,20 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
         return HYP_MAKE_ERROR(Error, "Project file does not exist: {}", projectFilepath);
     }
 
-    const FilePath registryDir = dir;
+    TResult<String> contentSubfolderResult = ReadProjectContentSubfolder(projectFilepath);
+
+    if (contentSubfolderResult.HasError())
+    {
+        return contentSubfolderResult.GetError();
+    }
+
+    const String contentSubfolder = contentSubfolderResult.GetValue();
+    const FilePath registryDir = contentSubfolder.Any() ? dir / contentSubfolder : dir;
+
+    if (contentSubfolder.Any() && !registryDir.IsDirectory())
+    {
+        return HYP_MAKE_ERROR(Error, "Content folder '{}' of project {} does not exist", registryDir, projectFilepath);
+    }
 
     HYP_LOG(Editor, Info, "Loading registry assets from {}", registryDir);
 
@@ -637,6 +687,13 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
         }
     }
 
+    if (project->m_contentSubfolder != contentSubfolder)
+    {
+        HYP_LOG(Editor, Warning, "Project {} has ContentSubfolder '{}' but its content was loaded from '{}'", projectFilepath, project->m_contentSubfolder, contentSubfolder);
+
+        project->m_contentSubfolder = contentSubfolder;
+    }
+
     // a project with a built C++ game module plays with the module's Game class
     TResult<Handle<Game>> moduleGameResult = CreateGameFromNativeModule(projectFilepath);
 
@@ -676,6 +733,14 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
 
     project->m_gameInstance->SetAssetRegistry(registry);
 
+    if (Result loadFoldersResult = project->m_assetFolders->Load(dir / EditorAssetFolders::s_fileName); loadFoldersResult.HasError())
+    {
+        HYP_LOG(Editor, Warning, "Failed to load asset folders: {}", loadFoldersResult.GetError().GetMessage());
+    }
+
+    project->m_assetFolders->BindRegistry(registry);
+    project->m_assetFolders->SyncWithRegistry();
+
     // files saved before overrides recorded their fields have none listed
     if (project->m_packagingSettings.IsValid())
     {
@@ -704,24 +769,31 @@ Handle<EditorProject> EditorProject::CreateNew()
     // directory, so that no project directory is created under Projects/ before the project is explicitly saved.
     const Optional<FilePath> tempDirOpt = EngineGlobals::CreateTempDirectory("UnsavedProject");
 
-    FilePath projectDir;
+    FilePath contentDir;
 
     if (tempDirOpt.HasValue())
     {
-        projectDir = *tempDirOpt;
+        contentDir = *tempDirOpt / g_defaultProjectContentSubfolder;
+
+        if (!contentDir.MkDir())
+        {
+            HYP_LOG(Editor, Warning, "Failed to create content directory '{}' for project '{}'!", contentDir, *projectName);
+        }
     }
     else
     {
         HYP_LOG(Editor, Warning, "Failed to create temp directory for project '{}'!", *projectName);
     }
 
-    Handle<AssetRegistry> registry = MakeHandle<AssetRegistry>(AssetRegistryId::Game, projectDir);
+    Handle<AssetRegistry> registry = MakeHandle<AssetRegistry>(AssetRegistryId::Game, contentDir);
     registry->Initialize();
 
     gameInstance->SetAssetRegistry(registry);
 
     Handle<EditorProject> project = MakeHandle<EditorProject>(projectName, gameInstance);
     project->m_tempDirectory = tempDirOpt.GetOr(FilePath());
+    project->m_contentSubfolder = g_defaultProjectContentSubfolder;
+    project->m_assetFolders->BindRegistry(registry);
     project->SetEditWorld(world);
 
     return project;

@@ -58,6 +58,7 @@ enum class Icon : uint32
     AssetSound,
     AssetTerrain,
     AssetWeapon,
+    AssetFolder,
 
     MeshEditMode,
     Import,

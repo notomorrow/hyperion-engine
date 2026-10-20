@@ -204,27 +204,7 @@ namespace Hyperion.Editor.ViewModels
                 return;
             }
 
-            try
-            {
-                if (OperatingSystem.IsWindows())
-                {
-                    ProcessStartInfo startInfo = new ProcessStartInfo("explorer.exe") { UseShellExecute = false };
-                    startInfo.ArgumentList.Add(item.Exists ? $"/select,{item.FilePath}" : item.Directory);
-
-                    Process.Start(startInfo)?.Dispose();
-                }
-                else if (System.IO.Directory.Exists(item.Directory))
-                {
-                    ProcessStartInfo startInfo = new ProcessStartInfo(OperatingSystem.IsMacOS() ? "open" : "xdg-open") { UseShellExecute = false };
-                    startInfo.ArgumentList.Add(item.Directory);
-
-                    Process.Start(startInfo)?.Dispose();
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogLevel.Error, $"Could not show {item.FilePath}: {ex.Message}");
-            }
+            ShellService.RevealInFileManager(item.Exists ? item.FilePath : item.Directory);
         }
 
         private void OnCurrentProjectChanged(bool isSaved)

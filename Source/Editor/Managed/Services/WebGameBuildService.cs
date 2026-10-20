@@ -54,9 +54,15 @@ namespace Hyperion.Editor.Services
                 string? firstError = null;
                 bool isCancelled = false;
 
-                string[] arguments = run ? new[] { "-Run", "-FastLink" } : Array.Empty<string>();
+                List<string> arguments = new List<string> { "-ContentDir", ProjectLayout.GetContentDirectory(projectFilePath!) };
 
-                int exitCode = await RunScriptAsync(scriptPath, projectDirectory, arguments, line =>
+                if (run)
+                {
+                    arguments.Add("-Run");
+                    arguments.Add("-FastLink");
+                }
+
+                int exitCode = await RunScriptAsync(scriptPath, projectDirectory, arguments.ToArray(), line =>
                 {
                     Match stepMatch = StepLineRegex.Match(line);
 

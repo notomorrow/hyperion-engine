@@ -12,6 +12,7 @@
 
 #include <Framework/Game.hpp>
 #include <Framework/EngineGlobals.hpp>
+#include <Framework/ProjectLayout.hpp>
 #include <Framework/CVarManager.hpp>
 
 #include <Scene/World.hpp>
@@ -992,7 +993,14 @@ bool RenderGameProjectTemplate(const FilePath& templatePath, const FilePath& pro
 
     const String name = GetNativeProjectName(projectFilepath);
 
-    outText = templateText.ReplaceAll("@NAME@", name).ReplaceAll("@CLASS@", name + "Game");
+    String contentDir = "../../";
+
+    if (TResult<String> contentSubfolderResult = ReadProjectContentSubfolder(projectFilepath); contentSubfolderResult.HasValue() && contentSubfolderResult.GetValue().Any())
+    {
+        contentDir += contentSubfolderResult.GetValue() + "/";
+    }
+
+    outText = templateText.ReplaceAll("@NAME@", name).ReplaceAll("@CLASS@", name + "Game").ReplaceAll("@CONTENT_DIR@", contentDir);
 
     return true;
 }

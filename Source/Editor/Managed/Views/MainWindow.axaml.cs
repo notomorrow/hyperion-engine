@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Platform;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform;
@@ -55,10 +56,15 @@ namespace Hyperion.Editor
 
         // Content browser drag tracking
         private ListBox? _contentBrowserAssetList;
-        private AssetObjectViewModel? _assetDragCandidate;
-        private PointerPressedEventArgs? _assetDragPressedArgs;
-        private Point _assetDragStartPoint;
-        private bool _isDraggingAsset;
+        private TreeView? _contentBrowserFolderTree;
+        private ItemsControl? _contentBrowserPathBar;
+        private object? _browserDragCandidate;
+        private object? _pendingBrowserSingleSelect;
+        private PointerPressedEventArgs? _browserDragPressedArgs;
+        private Point _browserDragStartPoint;
+        private bool _isDraggingBrowserItems;
+        private AssetFolderViewModel? _browserDropTarget;
+        private DateTime _browserDropHoverStart;
 
         // Viewport drop tracking
         private Border? _viewportDropTarget;
@@ -125,6 +131,7 @@ namespace Hyperion.Editor
 
             PanelService.Instance.ActivePanelChanged += OnPanelServiceActivePanelChanged;
             ContentBrowserViewModel.BringToFrontRequested += OnContentBrowserBringToFrontRequested;
+            ContentBrowserViewModel.FolderRenameRequested += OnContentBrowserFolderRenameRequested;
 
             EngineManager.ViewportLayoutRequested += layout => Dispatcher.UIThread.Post(() => ApplyViewportLayout((ViewportLayout)layout));
 
@@ -848,6 +855,8 @@ namespace Hyperion.Editor
             // drop the cached ones and locate them again once the dock has laid out.
             ReleaseSceneHierarchyTree();
             _contentBrowserAssetList = null;
+            _contentBrowserFolderTree = null;
+            _contentBrowserPathBar = null;
             _viewportDropTarget = null;
             _editorViewport = null;
 
@@ -1186,7 +1195,17 @@ namespace Hyperion.Editor
         /// </summary>
         private void OnContentBrowserSelectionChanged(object? sender, SelectionChangedEventArgs e)
         {
-            if (sender is not ListBox listBox || listBox.SelectedItem is not AssetObjectViewModel selected)
+            if (sender is not ListBox listBox)
+            {
+                return;
+            }
+
+            if (MainWindowViewModel.Instance?.ContentBrowser is { } contentBrowser)
+            {
+                contentBrowser.SelectedItems = listBox.SelectedItems?.Cast<object>().ToList() ?? new List<object>();
+            }
+
+            if (listBox.SelectedItem is not { } selected)
             {
                 return;
             }
@@ -1204,21 +1223,11 @@ namespace Hyperion.Editor
                 DispatcherPriority.Loaded);
         }
 
-        private void OnContentBrowserBucketDoubleTapped(object? sender, TappedEventArgs e)
-        {
-            if ((e.Source as StyledElement)?.DataContext is not AssetBucketViewModel bucketVm)
-            {
-                return;
-            }
-
-            MainWindowViewModel.Instance?.ContentBrowser.OpenBucketCommand.Execute(bucketVm);
-
-            e.Handled = true;
-        }
-
         private void OnContentBrowserAssetDoubleTapped(object? sender, TappedEventArgs e)
         {
-            if ((e.Source as StyledElement)?.DataContext is not AssetObjectViewModel assetVm)
+            object? item = (e.Source as StyledElement)?.DataContext;
+
+            if (item is not AssetFolderViewModel and not AssetObjectViewModel)
             {
                 return;
             }
@@ -1226,16 +1235,12 @@ namespace Hyperion.Editor
             MainWindowViewModel? viewModel = MainWindowViewModel.Instance;
 
             // Same gate as the context menu's Edit / Switch to This World items
-            if (viewModel == null || viewModel.IsSimulating)
+            if (viewModel == null || (item is AssetObjectViewModel && viewModel.IsSimulating))
             {
                 return;
             }
 
-            ICommand command = assetVm.IsWorld
-                ? viewModel.ContentBrowser.OpenWorldCommand
-                : viewModel.ContentBrowser.EditAssetCommand;
-
-            command.Execute(assetVm);
+            viewModel.ContentBrowser.OpenItem(item);
 
             e.Handled = true;
         }
@@ -1249,32 +1254,149 @@ namespace Hyperion.Editor
                 return;
             }
 
-            if (e.Key == Key.Enter && contentBrowser.IsShowingBuckets && contentBrowser.SelectedBucket != null)
+            bool isSimulating = MainWindowViewModel.Instance?.IsSimulating ?? false;
+
+            switch (e.Key)
             {
-                contentBrowser.OpenBucketCommand.Execute(contentBrowser.SelectedBucket);
-                e.Handled = true;
+                case Key.Enter when contentBrowser.SelectedItem != null:
+                    if (contentBrowser.SelectedItem is AssetFolderViewModel || !isSimulating)
+                    {
+                        contentBrowser.OpenItem(contentBrowser.SelectedItem);
+                    }
+
+                    e.Handled = true;
+                    break;
+                case Key.Back when contentBrowser.GoUpCommand.CanExecute(null):
+                    contentBrowser.GoUpCommand.Execute(null);
+                    e.Handled = true;
+                    break;
+                case Key.Delete when !isSimulating:
+                    contentBrowser.DeleteSelectionCommand.Execute(null);
+                    e.Handled = true;
+                    break;
+                case Key.F2 when !isSimulating && GetFolderForRename(e.Source, contentBrowser) is { } folder:
+                    BeginFolderRename(folder);
+                    e.Handled = true;
+                    break;
             }
-            else if (e.Key == Key.Back && contentBrowser.GoBackCommand.CanExecute(null))
+        }
+
+        private static AssetFolderViewModel? GetFolderForRename(object? source, ContentBrowserViewModel contentBrowser)
+        {
+            if (source is TreeViewItem { DataContext: AssetFolderViewModel { IsRoot: false } treeFolder })
             {
-                contentBrowser.GoBackCommand.Execute(null);
-                e.Handled = true;
+                return treeFolder;
             }
+
+            return contentBrowser.SelectedItem is AssetFolderViewModel { IsRoot: false } selectedFolder ? selectedFolder : null;
         }
 
         private void OnContentBrowserPointerReleased(object? sender, PointerReleasedEventArgs e)
         {
-            if (e.InitialPressMouseButton != MouseButton.XButton1)
+            ICommand? command = e.InitialPressMouseButton switch
+            {
+                MouseButton.XButton1 => MainWindowViewModel.Instance?.ContentBrowser.GoBackCommand,
+                MouseButton.XButton2 => MainWindowViewModel.Instance?.ContentBrowser.GoForwardCommand,
+                _ => null
+            };
+
+            if (command?.CanExecute(null) == true)
+            {
+                command.Execute(null);
+                e.Handled = true;
+            }
+        }
+
+        private GridLength _folderTreeWidth = new GridLength(200);
+
+        private void OnToggleFolderTreeClick(object? sender, RoutedEventArgs e)
+        {
+            if (FindVisualChildByName<Grid>("ContentBrowserBody") is not { } body || body.ColumnDefinitions.Count < 2)
             {
                 return;
             }
 
-            ICommand? goBackCommand = MainWindowViewModel.Instance?.ContentBrowser.GoBackCommand;
+            ColumnDefinition treeColumn = body.ColumnDefinitions[0];
+            bool isVisible = treeColumn.Width.Value > 0;
 
-            if (goBackCommand?.CanExecute(null) == true)
+            if (isVisible)
             {
-                goBackCommand.Execute(null);
+                _folderTreeWidth = treeColumn.Width;
+            }
+
+            treeColumn.Width = isVisible ? new GridLength(0) : _folderTreeWidth;
+            body.ColumnDefinitions[1].Width = isVisible ? new GridLength(0) : new GridLength(4);
+        }
+
+        private void OnRenameFolderMenuItemClick(object? sender, RoutedEventArgs e)
+        {
+            if ((sender as MenuItem)?.DataContext is AssetFolderViewModel { IsRoot: false } folder)
+            {
+                BeginFolderRename(folder);
+            }
+        }
+
+        private void BeginFolderRename(AssetFolderViewModel folder)
+        {
+            folder.BeginRename();
+
+            Dispatcher.UIThread.Post(() => FocusFolderRenameTextBox(folder), DispatcherPriority.Loaded);
+        }
+
+        private void OnContentBrowserFolderRenameRequested(AssetFolderViewModel folder)
+        {
+            Dispatcher.UIThread.Post(() => FocusFolderRenameTextBox(folder), DispatcherPriority.Loaded);
+        }
+
+        private void FocusFolderRenameTextBox(AssetFolderViewModel folder)
+        {
+            foreach (TextBox textBox in this.GetVisualDescendants().OfType<TextBox>())
+            {
+                if (textBox.Name == "FolderRenameTextBox" && ReferenceEquals(textBox.DataContext, folder) && textBox.IsEffectivelyVisible)
+                {
+                    textBox.Focus();
+                    textBox.SelectAll();
+
+                    return;
+                }
+            }
+        }
+
+        private void OnFolderRenameTextBoxKeyDown(object? sender, KeyEventArgs e)
+        {
+            if ((sender as TextBox)?.DataContext is not AssetFolderViewModel folder || !folder.IsEditingName)
+            {
+                return;
+            }
+
+            if (e.Key == Key.Enter)
+            {
+                MainWindowViewModel.Instance?.ContentBrowser.RenameFolder(folder, folder.EditingName);
                 e.Handled = true;
             }
+            else if (e.Key == Key.Escape)
+            {
+                folder.CancelRename();
+                e.Handled = true;
+            }
+        }
+
+        private void OnFolderRenameTextBoxLostFocus(object? sender, RoutedEventArgs e)
+        {
+            if ((sender as TextBox)?.DataContext is AssetFolderViewModel { IsEditingName: true } folder)
+            {
+                MainWindowViewModel.Instance?.ContentBrowser.RenameFolder(folder, folder.EditingName);
+            }
+        }
+
+        private async void OnCopyAssetPathClick(object? sender, RoutedEventArgs e)
+        {
+            if ((sender as MenuItem)?.DataContext is not AssetObjectViewModel { Bucket: { } bucket } asset || Clipboard == null)
+            {
+                return;
+            }
+
+            await Clipboard.SetTextAsync($"Game://{bucket.Name}/{asset.DisplayName}");
         }
 
         private void OnRenameNodeMenuItemClick(object? sender, RoutedEventArgs e)
@@ -1828,98 +1950,392 @@ namespace Hyperion.Editor
             return null;
         }
 
+        private sealed class ContentBrowserDragPayload
+        {
+            public List<object> Items { get; init; } = new List<object>();
+        }
+
+        private static readonly DataFormat<ContentBrowserDragPayload> ContentBrowserDragFormat =
+            DataFormat.CreateInProcessFormat<ContentBrowserDragPayload>("hyperion-content-browser-items");
+
+        private static readonly string[] ImportableFileExtensions =
+        {
+            ".obj", ".fbx", ".gltf", ".glb", ".mesh.xml", ".skeleton.xml", ".jpg", ".jpeg", ".png", ".tga", ".bmp", ".wav"
+        };
+
         private bool SetupContentBrowserDragDrop()
         {
-            if (_contentBrowserAssetList != null)
+            if (_contentBrowserAssetList != null && _contentBrowserFolderTree != null && _contentBrowserPathBar != null)
                 return true;
 
-            _contentBrowserAssetList = FindVisualChildByName<ListBox>("ContentBrowserAssetList");
-            if (_contentBrowserAssetList == null)
+            _contentBrowserAssetList ??= FindVisualChildByName<ListBox>("ContentBrowserAssetList");
+            _contentBrowserFolderTree ??= FindVisualChildByName<TreeView>("ContentBrowserFolderTree");
+            _contentBrowserPathBar ??= FindVisualChildByName<ItemsControl>("ContentBrowserPathBar");
+
+            if (_contentBrowserAssetList == null || _contentBrowserFolderTree == null || _contentBrowserPathBar == null)
                 return false;
 
-            DragDrop.SetAllowDrop(_contentBrowserAssetList, true);
+            foreach (Control dragSource in new Control[] { _contentBrowserAssetList, _contentBrowserFolderTree })
+            {
+                dragSource.AddHandler(InputElement.PointerPressedEvent, OnContentBrowserPointerPressed, RoutingStrategies.Tunnel);
+                dragSource.AddHandler(InputElement.PointerMovedEvent, OnContentBrowserPointerMoved, RoutingStrategies.Tunnel);
+                dragSource.AddHandler(InputElement.PointerReleasedEvent, OnContentBrowserDragSourcePointerReleased, RoutingStrategies.Tunnel);
+            }
 
-            _contentBrowserAssetList.AddHandler(InputElement.PointerPressedEvent, OnContentBrowserPointerPressed, RoutingStrategies.Tunnel);
-            _contentBrowserAssetList.AddHandler(InputElement.PointerMovedEvent, OnContentBrowserPointerMoved, RoutingStrategies.Tunnel);
+            _contentBrowserFolderTree.AddHandler(InputElement.KeyDownEvent, OnContentBrowserFolderTreeKeyDown, RoutingStrategies.Tunnel);
+
+            // a long path keeps the open folder in view
+            if (FindVisualChildByName<ScrollViewer>("ContentBrowserPathScroll") is { } pathScroll)
+            {
+                pathScroll.PropertyChanged += (_, e) =>
+                {
+                    if (e.Property == ScrollViewer.ExtentProperty || e.Property == ScrollViewer.ViewportProperty)
+                    {
+                        pathScroll.Offset = pathScroll.Offset.WithX(Math.Max(0, pathScroll.Extent.Width - pathScroll.Viewport.Width));
+                    }
+                };
+            }
+
+            foreach (Control dropTarget in new Control[] { _contentBrowserAssetList, _contentBrowserFolderTree, _contentBrowserPathBar })
+            {
+                DragDrop.SetAllowDrop(dropTarget, true);
+                dropTarget.AddHandler(DragDrop.DragOverEvent, OnContentBrowserDragOver);
+                dropTarget.AddHandler(DragDrop.DragLeaveEvent, OnContentBrowserDragLeave);
+                dropTarget.AddHandler(DragDrop.DropEvent, OnContentBrowserDrop);
+            }
+
             return true;
+        }
+
+        private static object? FindBrowserItemInEventSource(object? source)
+        {
+            for (var control = source as Control; control != null; control = control.Parent as Control)
+            {
+                if (control.DataContext is AssetObjectViewModel or AssetFolderViewModel)
+                    return control.DataContext;
+
+                if (control is ListBox or TreeView)
+                    return null;
+            }
+
+            return null;
+        }
+
+        private bool _isFolderTreeUserSelecting;
+
+        /// Only a click or key press in the tree opens the folder it selects; the tree also changes its selection by itself when it is rebuilt
+        private void MarkFolderTreeUserSelecting()
+        {
+            _isFolderTreeUserSelecting = true;
+
+            Dispatcher.UIThread.Post(() => _isFolderTreeUserSelecting = false, DispatcherPriority.Background);
+        }
+
+        private void OnContentBrowserFolderTreeKeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.Source is not TextBox)
+            {
+                MarkFolderTreeUserSelecting();
+            }
+        }
+
+        private void OnContentBrowserFolderTreeSelectionChanged(object? sender, SelectionChangedEventArgs e)
+        {
+            if (!_isFolderTreeUserSelecting || (sender as TreeView)?.SelectedItem is not AssetFolderViewModel folder)
+            {
+                return;
+            }
+
+            MainWindowViewModel.Instance?.ContentBrowser.NavigateTo(folder);
         }
 
         private void OnContentBrowserPointerPressed(object? sender, PointerPressedEventArgs e)
         {
+            if (sender is TreeView)
+            {
+                MarkFolderTreeUserSelecting();
+            }
+
             var point = e.GetCurrentPoint(sender as Visual);
 
-            if (point.Properties.IsLeftButtonPressed)
+            if (!point.Properties.IsLeftButtonPressed)
             {
-                _assetDragCandidate = FindAssetViewModelInEventSource(e.Source);
-                _assetDragPressedArgs = e;
-                _assetDragStartPoint = e.GetPosition(sender as Visual);
-                _isDraggingAsset = false;
+                return;
             }
+
+            object? item = FindBrowserItemInEventSource(e.Source);
+
+            _browserDragCandidate = item is AssetFolderViewModel { IsRoot: true } ? null : item;
+            _browserDragPressedArgs = e;
+            _browserDragStartPoint = e.GetPosition(sender as Visual);
+            _isDraggingBrowserItems = false;
+            _pendingBrowserSingleSelect = null;
+
+            // Pressing an item of a multi-selection keeps the selection, so all of it can be dragged; a plain click still selects just that item on release
+            if (sender is ListBox listBox
+                && item != null
+                && e.KeyModifiers == KeyModifiers.None
+                && listBox.SelectedItems is { Count: > 1 } selectedItems
+                && selectedItems.Contains(item))
+            {
+                _pendingBrowserSingleSelect = item;
+                e.Handled = true;
+            }
+        }
+
+        private void OnContentBrowserDragSourcePointerReleased(object? sender, PointerReleasedEventArgs e)
+        {
+            if (_pendingBrowserSingleSelect != null && !_isDraggingBrowserItems && sender is ListBox listBox)
+            {
+                listBox.SelectedItems?.Clear();
+                listBox.SelectedItem = _pendingBrowserSingleSelect;
+            }
+
+            _pendingBrowserSingleSelect = null;
         }
 
         private async void OnContentBrowserPointerMoved(object? sender, PointerEventArgs e)
         {
-            if (_assetDragCandidate == null || _isDraggingAsset)
+            if (_browserDragCandidate == null || _isDraggingBrowserItems)
                 return;
 
             if (!e.GetCurrentPoint(sender as Visual).Properties.IsLeftButtonPressed)
             {
-                _assetDragCandidate = null;
-                _assetDragPressedArgs = null;
+                _browserDragCandidate = null;
+                _browserDragPressedArgs = null;
                 return;
             }
 
             var pos = e.GetPosition(sender as Visual);
-            var delta = pos - _assetDragStartPoint;
+            var delta = pos - _browserDragStartPoint;
 
             if (Math.Abs(delta.X) < 5 && Math.Abs(delta.Y) < 5)
                 return;
 
-            if (_assetDragPressedArgs == null)
+            if (_browserDragPressedArgs == null)
             {
-                _assetDragCandidate = null;
+                _browserDragCandidate = null;
                 return;
             }
 
-            _isDraggingAsset = true;
-            var candidate = _assetDragCandidate;
+            _isDraggingBrowserItems = true;
+            _pendingBrowserSingleSelect = null;
+
+            object candidate = _browserDragCandidate;
+
+            List<object> items = sender is ListBox listBox && listBox.SelectedItems is { } selectedItems && selectedItems.Contains(candidate)
+                ? selectedItems.Cast<object>().ToList()
+                : new List<object> { candidate };
 
             var data = new DataTransfer();
-            data.Add(DataTransferItem.Create(AssetDragFormat, $"{candidate.Bucket?.BucketIndex ?? 0}|{candidate.AssetDesc.Name}"));
+            data.Add(DataTransferItem.Create(ContentBrowserDragFormat, new ContentBrowserDragPayload { Items = items }));
 
-            if (candidate.TypeName != null && EntityAssetTypeNames.Contains(candidate.TypeName))
+            // viewport and hierarchy drops take one asset, the one the drag started on
+            if ((candidate as AssetObjectViewModel ?? items.OfType<AssetObjectViewModel>().FirstOrDefault()) is { } asset)
             {
-                data.Add(DataTransferItem.Create(EntityAssetDragFormat, candidate.AssetDesc.Name.ToString()));
+                data.Add(DataTransferItem.Create(AssetDragFormat, $"{asset.Bucket?.BucketIndex ?? 0}|{asset.AssetDesc.Name}"));
+
+                if (asset.TypeName != null && EntityAssetTypeNames.Contains(asset.TypeName))
+                {
+                    data.Add(DataTransferItem.Create(EntityAssetDragFormat, asset.AssetDesc.Name.ToString()));
+                }
             }
 
             try
             {
-                await DragDrop.DoDragDropAsync(_assetDragPressedArgs, data, DragDropEffects.Copy);
+                await DragDrop.DoDragDropAsync(_browserDragPressedArgs, data, DragDropEffects.Copy | DragDropEffects.Move);
             }
             catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException)
             {
             }
             finally
             {
-                _isDraggingAsset = false;
-                _assetDragCandidate = null;
-                _assetDragPressedArgs = null;
+                _isDraggingBrowserItems = false;
+                _browserDragCandidate = null;
+                _browserDragPressedArgs = null;
 
                 // DragLeave isn't guaranteed when the drag is cancelled, so don't leave a target highlighted
                 (DataContext as MainWindowViewModel)?.ClearAssetDropTarget();
+                SetBrowserDropTarget(null);
             }
         }
 
-        private static AssetObjectViewModel? FindAssetViewModelInEventSource(object? source)
+        /// <summary>The folder a drop at the pointer would go into: the folder tile, tree node or path segment under it. Empty grid space means the open folder, for files only.</summary>
+        private AssetFolderViewModel? GetBrowserDropFolder(object? sender, DragEventArgs e, bool isFileDrop)
         {
-            var control = source as Control;
-            while (control != null)
+            for (var control = e.Source as Control; control != null; control = control.Parent as Control)
             {
-                if (control.DataContext is AssetObjectViewModel avm)
-                    return avm;
-                control = control.Parent as Control;
+                if (control.DataContext is AssetFolderViewModel folder)
+                    return folder;
+
+                if (control.DataContext is AssetObjectViewModel || ReferenceEquals(control, sender))
+                    break;
             }
+
+            if (isFileDrop && ReferenceEquals(sender, _contentBrowserAssetList))
+            {
+                return MainWindowViewModel.Instance?.ContentBrowser.CurrentFolder;
+            }
+
             return null;
+        }
+
+        private static bool CanMoveInto(IReadOnlyList<object> items, AssetFolderViewModel target)
+        {
+            foreach (object item in items)
+            {
+                switch (item)
+                {
+                    case AssetFolderViewModel folder when !folder.IsRoot && !target.IsSameOrDescendantOf(folder) && !ReferenceEquals(folder.Parent, target):
+                        return true;
+                    case AssetObjectViewModel asset when asset.FolderPath != target.Path:
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static List<string> GetDroppedImportableFiles(DragEventArgs e)
+        {
+            var paths = new List<string>();
+
+            var items = e.DataTransfer.TryGetFiles();
+            if (items == null)
+                return paths;
+
+            foreach (var item in items)
+            {
+                string? path = item.TryGetLocalPath();
+                if (string.IsNullOrEmpty(path) || path.Contains('|'))
+                    continue;
+
+                if (ImportableFileExtensions.Any(ext => path.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+                {
+                    paths.Add(path);
+                }
+            }
+
+            return paths;
+        }
+
+        private void SetBrowserDropTarget(AssetFolderViewModel? folder)
+        {
+            if (ReferenceEquals(_browserDropTarget, folder))
+                return;
+
+            if (_browserDropTarget != null)
+                _browserDropTarget.IsDropTarget = false;
+
+            _browserDropTarget = folder;
+            _browserDropHoverStart = DateTime.UtcNow;
+
+            if (folder != null)
+                folder.IsDropTarget = true;
+        }
+
+        private void OnContentBrowserDragOver(object? sender, DragEventArgs e)
+        {
+            bool isSimulating = MainWindowViewModel.Instance?.IsSimulating ?? false;
+
+            e.DragEffects = DragDropEffects.None;
+            e.Handled = true;
+
+            AssetFolderViewModel? target = null;
+
+            if (!isSimulating && e.DataTransfer.TryGetValue(ContentBrowserDragFormat) is { } payload)
+            {
+                target = GetBrowserDropFolder(sender, e, isFileDrop: false);
+
+                if (target != null && CanMoveInto(payload.Items, target))
+                {
+                    e.DragEffects = DragDropEffects.Move;
+                }
+                else
+                {
+                    target = null;
+                }
+            }
+            else if (!isSimulating && e.DataTransfer.Contains(DataFormat.File) && GetDroppedImportableFiles(e).Count > 0)
+            {
+                target = GetBrowserDropFolder(sender, e, isFileDrop: true);
+
+                if (target != null)
+                {
+                    e.DragEffects = DragDropEffects.Copy;
+                }
+            }
+
+            SetBrowserDropTarget(target);
+
+            if (ReferenceEquals(sender, _contentBrowserFolderTree))
+            {
+                AutoExpandAndScrollFolderTree(e, target);
+            }
+        }
+
+        private void AutoExpandAndScrollFolderTree(DragEventArgs e, AssetFolderViewModel? target)
+        {
+            if (target is { IsExpanded: false, Children.Count: > 0 } && (DateTime.UtcNow - _browserDropHoverStart).TotalMilliseconds > 600)
+            {
+                target.IsExpanded = true;
+            }
+
+            if (_contentBrowserFolderTree?.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault() is not { } scrollViewer)
+            {
+                return;
+            }
+
+            const double edgeSize = 20.0;
+            const double scrollStep = 8.0;
+
+            double y = e.GetPosition(_contentBrowserFolderTree).Y;
+            double height = _contentBrowserFolderTree.Bounds.Height;
+
+            if (y < edgeSize)
+            {
+                scrollViewer.Offset = scrollViewer.Offset.WithY(Math.Max(0, scrollViewer.Offset.Y - scrollStep));
+            }
+            else if (y > height - edgeSize)
+            {
+                scrollViewer.Offset = scrollViewer.Offset.WithY(scrollViewer.Offset.Y + scrollStep);
+            }
+        }
+
+        private void OnContentBrowserDragLeave(object? sender, DragEventArgs e)
+        {
+            SetBrowserDropTarget(null);
+        }
+
+        private void OnContentBrowserDrop(object? sender, DragEventArgs e)
+        {
+            ContentBrowserViewModel? contentBrowser = MainWindowViewModel.Instance?.ContentBrowser;
+
+            SetBrowserDropTarget(null);
+
+            if (contentBrowser == null || (MainWindowViewModel.Instance?.IsSimulating ?? false))
+            {
+                return;
+            }
+
+            if (e.DataTransfer.TryGetValue(ContentBrowserDragFormat) is { } payload)
+            {
+                if (GetBrowserDropFolder(sender, e, isFileDrop: false) is { } target && CanMoveInto(payload.Items, target))
+                {
+                    contentBrowser.MoveItems(payload.Items, target);
+                    e.Handled = true;
+                }
+
+                return;
+            }
+
+            List<string> files = GetDroppedImportableFiles(e);
+
+            if (files.Count > 0 && GetBrowserDropFolder(sender, e, isFileDrop: true) is { } importFolder)
+            {
+                contentBrowser.ImportFiles(files, importFolder);
+                e.Handled = true;
+            }
         }
 
         private bool SetupViewportDropTarget()

@@ -8,6 +8,7 @@
 
 #include <Framework/Commandlet/Commandlet.hpp>
 #include <Framework/EngineGlobals.hpp>
+#include <Framework/ProjectLayout.hpp>
 #include <Framework/EngineDefaults.hpp>
 #include <Framework/CVarManager.hpp>
 
@@ -333,7 +334,14 @@ protected:
                 return HYP_MAKE_ERROR(Error, "Package path is non existant or is not a directory: {}", projectArg);
             }
 
-            gameRegistry = MakeHandle<AssetRegistry>(AssetRegistryId::Game, projectDir);
+            TResult<FilePath> contentDirResult = ResolveProjectContentDirectory(projectDir);
+
+            if (contentDirResult.HasError())
+            {
+                return contentDirResult.GetError();
+            }
+
+            gameRegistry = MakeHandle<AssetRegistry>(AssetRegistryId::Game, contentDirResult.GetValue());
             gameRegistry->Initialize(nullptr);
         }
 

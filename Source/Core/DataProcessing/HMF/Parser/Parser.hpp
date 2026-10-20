@@ -27,13 +27,16 @@ class CompilerError;
 
 namespace Hyperion::DataProcessing::HMF {
 
+struct ParseOptions;
+
 class Parser
 {
 public:
     Parser(
         TokenStream* tokenStream,
         DataProcessing::ErrorList<CompilerError>* errorList,
-        BoxedValue* target = nullptr);
+        BoxedValue* target = nullptr,
+        const ParseOptions* options = nullptr);
 
     Parser(const Parser& other) = delete;
     Parser& operator=(const Parser& other) = delete;
@@ -101,6 +104,8 @@ private:
     DataProcessing::ErrorList<CompilerError>* m_errorList;
     BoxedValue* m_target;
     bool m_ownsTarget;
+    const ParseOptions* m_options;
+    uint32 m_objectDepth;
 };
 
 } // namespace Hyperion::DataProcessing::HMF
