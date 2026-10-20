@@ -423,26 +423,11 @@ else()
   # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 
   if(HYP_GCC)
-    # GNU ld resolves static archives in a single left-to-right pass (unlike MSVC's linker),
-    # so a sub-library whose symbols are needed by one listed earlier in the link line (e.g.
-    # hyperion-net needed by hyperion-scene, or hyperion-vulkan -- pulled in transitively via
-    # hyperion-rendering's own target_link_libraries -- needed by things linked before it)
-    # fails with "undefined reference". --start-group makes ld re-scan archives until
-    # everything resolves; deliberately left unclosed (no --end-group) so it covers every
-    # library CMake appends afterwards, including ones added via transitive dependencies from
-    # other CMakeLists.txt files that aren't visible at this target_link_libraries call site.
-    # GNU ld tolerates an unmatched --start-group by implicitly closing it at end of input.
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--start-group")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--start-group")
     set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,--start-group")
 
     if(HYP_WINDOWS)
-      # CMake's GCC/MinGW toolchain defaults DLL output names to the Unix "lib<name>.dll"
-      # convention, but the C# interop layer's [DllImport("hyperion")] attributes (and Windows
-      # convention in general) expect "hyperion.dll" with no prefix -- the same name MSVC
-      # produces by default. Without this, the C# editor and any C# scripting can't find the
-      # native library at all, even though the plain C++ executables link fine (they reference
-      # it by its actual import library, not by this DllImport-style name lookup).
       set(CMAKE_SHARED_LIBRARY_PREFIX "")
     endif()
   endif()
@@ -456,7 +441,7 @@ endif()
 
 set(HYP_VERSION_MAJOR 0)
 set(HYP_VERSION_MINOR 5)
-set(HYP_VERSION_PATCH 5)
+set(HYP_VERSION_PATCH 6)
 
 link_directories(${THIRD_PARTY_LIBRARY_DIR})
 
