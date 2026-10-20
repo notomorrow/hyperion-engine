@@ -232,6 +232,26 @@ static Handle<Node> ResolvePickedNode(const RayHit& hit, EditorSubsystem& editor
     return editorSubsystem.GetOrCreateInstanceHandle(group, instanceId);
 }
 
+static Handle<Node> ResolvePickTarget(const Handle<Node>& picked, const Set<Handle<Node>, EditorAllocator>& selectedNodes)
+{
+    for (const Handle<Node>& selected : selectedNodes)
+    {
+        if (picked->IsOrHasParent(selected.Get()))
+        {
+            return picked;
+        }
+    }
+
+    Node* top = picked.Get();
+
+    while (top->GetParent() != nullptr && !top->GetParent()->IsRoot())
+    {
+        top = top->GetParent();
+    }
+
+    return top == picked.Get() ? picked : MakeStrongRef(top);
+}
+
 static Vec3f ComputeMeshEditDragPlaneNormal(const Handle<Camera>& camera, const Vec3f& axisDirection)
 {
     if (axisDirection.LengthSquared() < MathUtil::epsilonF)
@@ -4374,6 +4394,8 @@ void EditorSubsystem::InitViewport()
                         {
                             continue;
                         }
+
+                        nodeStrong = ResolvePickTarget(nodeStrong, m_selectedNodes);
 
                         bool shouldMutateSelection = false;
 

@@ -132,6 +132,21 @@ extern "C"
         }
     }
 
+    HYP_EXPORT void Object_DetachManagedObject(const Class* cls, void* nativeAddress)
+    {
+        Assert(cls != nullptr);
+        Assert(nativeAddress != nullptr);
+
+#ifdef HYP_DOTNET
+        ObjectBase* obj = static_cast<ObjectBase*>(nativeAddress);
+
+        if (ScriptObjectResource* scriptObjectResource = obj->GetScriptObjectResource())
+        {
+            scriptObjectResource->DetachManagedObject();
+        }
+#endif
+    }
+
 #pragma endregion Object
 
 } // extern "C"

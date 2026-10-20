@@ -22,7 +22,7 @@ void TerrainHeightsCache::SampleCache::Invalidate()
     cell.Reset();
 }
 
-SharedPtr<const Array<float>> TerrainHeightsCache::Find(const Vec2i& coord) const
+SharedPtr<const Array<float>> TerrainHeightsCache::FindByCoord(const Vec2i& coord) const
 {
     HYP_SCOPE;
 
@@ -38,6 +38,7 @@ SharedPtr<const Array<float>> TerrainHeightsCache::Find(const Vec2i& coord) cons
     return nullptr;
 }
 
+/// @TODO Make it take a function to generate on missing, rather than making the caller create heights regardless
 SharedPtr<const Array<float>> TerrainHeightsCache::Insert(
     const Vec2i& coord,
     const SharedPtr<Array<float>>& heights,

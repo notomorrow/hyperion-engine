@@ -387,6 +387,11 @@ void World::Shutdown()
         return;
     }
 
+    if (m_worldGrid)
+    {
+        m_worldGrid->Shutdown();
+    }
+
     m_isInitialized = false;
 
     m_processingScenes.Clear();
@@ -472,11 +477,6 @@ void World::Shutdown()
     {
         m_physicsWorld->Teardown();
         m_physicsWorld.Reset();
-    }
-
-    if (m_worldGrid)
-    {
-        m_worldGrid->Shutdown();
     }
 }
 

@@ -287,9 +287,6 @@ namespace Hyperion.Editor
             World? world = game.World;
             Debug.Assert(world != null);
 
-            _onCurrentProjectChanged?.Remove();
-            _onCurrentProjectChanged = null;
-
             BindWorldSceneDelegates(world);
 
             EngineDriver.Instance.GameInstance = game;

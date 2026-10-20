@@ -15,6 +15,8 @@
 #include <Core/Resource/Resource.hpp>
 #include <Core/Memory/SharedPtr.hpp>
 
+#include <Core/Threading/AtomicVar.hpp>
+
 #include <Core/Utilities/EnumFlags.hpp>
 #include <Core/Utilities/Variant.hpp>
 #include <Core/Utilities/Optional.hpp>
@@ -101,6 +103,10 @@ public:
     dotnet::ManagedObject* GetManagedObject() const;
     const SharedPtr<dotnet::ManagedClass> GetManagedClass() const;
 
+#ifdef HYP_DOTNET
+    void DetachManagedObject();
+#endif // HYP_DOTNET
+
     ScriptObjectData_Native* GetScriptObjectData_Native()
     {
         return nativeData.TryGet();
@@ -155,12 +161,17 @@ protected:
     virtual void Initialize() override final;
     virtual void Destroy() override final;
 
+#ifdef HYP_DOTNET
+    void RecreateDetachedManagedObject();
+#endif // HYP_DOTNET
+
     ObjectBase* m_ptr;
 
     Optional<ScriptObjectData_Native> nativeData;
 
 #ifdef HYP_DOTNET
     Optional<ScriptObjectData_DotNet> dotNetData;
+    mutable AtomicVar<bool> m_isManagedObjectDetached { false };
 #endif // HYP_DOTNET
 
     

@@ -6,6 +6,7 @@
 
 #include <Core/Reflection/ClassRegistry.hpp>
 #include <Core/Reflection/Object.hpp>
+#include <Core/Reflection/ObjectPool.hpp>
 
 #include <Core/Debug/Debug.hpp>
 
@@ -201,12 +202,62 @@ dotnet::ManagedObject* ScriptObjectResource::GetManagedObject() const
     // only valid to call on .NET script objects
     if (dotNetData.HasValue())
     {
+        if (m_isManagedObjectDetached.Get(MemoryOrder::ACQUIRE) && m_isManagedObjectDetached.Exchange(false, MemoryOrder::ACQUIRE_RELEASE))
+        {
+            const_cast<ScriptObjectResource*>(this)->RecreateDetachedManagedObject();
+        }
+
         return dotNetData->objectPtr;
     }
 #endif // HYP_DOTNET
 
     return nullptr;
 }
+
+#ifdef HYP_DOTNET
+void ScriptObjectResource::DetachManagedObject()
+{
+    if (!dotNetData.HasValue() || !dotNetData->objectPtr)
+    {
+        return;
+    }
+
+    delete dotNetData->objectPtr;
+    dotNetData->objectPtr = nullptr;
+
+    m_isManagedObjectDetached.Set(true, MemoryOrder::RELEASE);
+}
+
+void ScriptObjectResource::RecreateDetachedManagedObject()
+{
+    if (!m_ptr || !dotNetData->managedClass || dotNetData->objectPtr)
+    {
+        return;
+    }
+
+    const DotNETHost& dnh = DotNETHost::GetInstance();
+
+    if (!dnh.IsInitialized() || dnh.IsShuttingDown())
+    {
+        return;
+    }
+
+    // the new managed object takes a strong ref, which must not resurrect an object being destroyed
+    if (m_ptr->GetObjectHeader_Internal()->GetRefCountStrong() == 0)
+    {
+        return;
+    }
+
+    const Class* cls = m_ptr->InstanceClass();
+
+    dotNetData->objectPtr = dotNetData->managedClass->NewObject(cls, m_ptr);
+
+    if (!dotNetData->objectPtr)
+    {
+        HYP_LOG(Object, Error, "Failed to recreate disposed managed object for Class {}, it will have no .NET counterpart!", cls->GetName());
+    }
+}
+#endif // HYP_DOTNET
 
 const SharedPtr<dotnet::ManagedClass> ScriptObjectResource::GetManagedClass() const
 {
