@@ -69,6 +69,7 @@ extern CVar<int> g_cvCSMMaxUpdatesPerFrame;
 extern CVar<int> g_cvCSMMaxStaleFrames;
 extern CVar<float> g_cvCSMStaleFramesBackoff;
 extern CVar<int> g_cvCSMPriorityCascades;
+extern CVar<int> g_cvCSMAnimatedCascades;
 
 static bool HasRenderGroups(const RenderCollector& renderCollector, uint32 bucketBits)
 {
@@ -450,6 +451,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
             bool isListDirty = false;
             bool isRplDirty = false;
             bool isStaticRplDirty = false;
+            bool isAnimated = false;
 
             {
                 RenderProxyList& cascadeRpl = GetConsumerProxyList(cascadeView);
@@ -465,6 +467,10 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                 isListDirty = (entryListHash != cachedData->lastRenderedEntryListHashes[cascadeIndex]);
                 // RPL proxies dirty: The data changed for the mesh entities / skeletons in the cascade's view.
                 isRplDirty = (cascadeRpl.GetMeshEntities().GetDiff().NeedsUpdate() || cascadeRpl.GetSkeletons().GetDiff().NeedsUpdate());
+
+                isAnimated = cascadeRpl.hasAnimatedMeshEntities && cascadeIndex < uint32(MathUtil::Max(g_cvCSMAnimatedCascades.Get(), 0));
+
+                dirty |= isAnimated;
 
                 cascadeRpl.EndRead();
             }
@@ -531,7 +537,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
             if (s_cvDebugCSMUpdates.Get())
             {
                 HYP_LOG(Rendering, Info,
-                    "[CSM] frame={} light={} cascade={} dynView={} stale={}({}f) viewProjChanged={} listDirty={} rplDirty={} staticRplDirty={} pending={} budget={}/{} hash={}/{} -> draw={}",
+                    "[CSM] frame={} light={} cascade={} dynView={} stale={}({}f) viewProjChanged={} listDirty={} rplDirty={} staticRplDirty={} animated={} pending={} budget={}/{} hash={}/{} -> draw={}",
                     GetFrameCounter(),
                     light->GetName(),
                     cascadeIndex,
@@ -542,6 +548,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
                     isListDirty,
                     isRplDirty,
                     isStaticRplDirty,
+                    isAnimated,
                     cachedData->pendingListRedraw.Test(cascadeIndex),
                     numDirtyListDraws,
                     maxDirtyListDraws,

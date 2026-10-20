@@ -41,7 +41,7 @@ struct EditorViewportInputState
 };
 
 HYP_CLASS()
-class EditorViewport : public ObjectBase
+class EDITOR_API EditorViewport : public ObjectBase
 {
     HYP_OBJECT_BODY(EditorViewport);
 

@@ -138,6 +138,10 @@ struct ViewDesc
     float resolutionScale = 1.0f;
 
     Optional<RenderableAttributeSet> overrideAttributes;
+
+    /// wind-animated static meshes are left out of a COLLECT_STATIC_ENTITIES view and collected by a
+    /// COLLECT_DYNAMIC_ENTITIES view instead
+    bool splitStaticAnimatedMeshes = false;
 };
 
 class ViewOutputTarget

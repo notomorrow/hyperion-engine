@@ -497,6 +497,7 @@ static inline void CopyDependencies(
     dst.cachedEntryHashes = src.cachedEntryHashes;
     dst.cullingFrustum = src.cullingFrustum;
     dst.hasCullingFrustum = src.hasCullingFrustum;
+    dst.hasAnimatedMeshEntities = src.hasAnimatedMeshEntities;
 
     if (src.useOrdering)
     {
