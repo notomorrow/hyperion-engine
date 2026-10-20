@@ -844,6 +844,23 @@ static SdfCanvas BuildAssetWeapon()
     return canvas;
 }
 
+// an arrow rising out of an open tray
+static SdfCanvas BuildImport()
+{
+    static const Vec2f s_arrowHead[] = { Vec2f(0.0f, 0.86f), Vec2f(0.4f, 0.4f), Vec2f(-0.4f, 0.4f) };
+
+    static constexpr float s_strokeRadius = 0.08f;
+
+    SdfCanvas canvas;
+    canvas.ConvexPolygon(s_arrowHead)
+        .Segment(Vec2f(0.0f, 0.46f), Vec2f(0.0f, -0.4f), s_strokeRadius)
+        .Segment(Vec2f(-0.76f, -0.18f), Vec2f(-0.76f, -0.78f), s_strokeRadius)
+        .Segment(Vec2f(-0.76f, -0.78f), Vec2f(0.76f, -0.78f), s_strokeRadius)
+        .Segment(Vec2f(0.76f, -0.78f), Vec2f(0.76f, -0.18f), s_strokeRadius);
+
+    return canvas;
+}
+
 static const Map<Icon, SdfCanvas (*)(void)> s_builders = {
     { Icon::PointLight, &BuildPointLight },
     { Icon::SpotLight, &BuildSpotLight },
@@ -878,7 +895,8 @@ static const Map<Icon, SdfCanvas (*)(void)> s_builders = {
     { Icon::AssetSound, &BuildAssetSound },
     { Icon::AssetTerrain, &BuildAssetTerrain },
     { Icon::AssetWeapon, &BuildAssetWeapon },
-    { Icon::MeshEditMode, &BuildMeshEditMode }
+    { Icon::MeshEditMode, &BuildMeshEditMode },
+    { Icon::Import, &BuildImport }
 };
 
 SdfCanvas BuildCanvas(Icon icon)
@@ -976,6 +994,8 @@ const char* GetFileStem(Icon icon)
         return "asset-weapon";
     case Icon::MeshEditMode:
         return "mesh-edit";
+    case Icon::Import:
+        return "import";
     default:
         return "";
     }

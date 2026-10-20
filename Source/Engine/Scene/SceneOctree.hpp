@@ -254,6 +254,7 @@ private:
 
     void ResetEntriesHash();
     void RebuildEntriesHash(uint32 level = 0);
+    void HashOwnEntries();
 
     void UpdateVisibilityState(const View* view, uint16 validityMarker);
 

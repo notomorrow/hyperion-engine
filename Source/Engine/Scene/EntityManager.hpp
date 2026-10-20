@@ -799,15 +799,14 @@ private:
     template <uint64 InMask>
     HYP_FORCE_INLINE void GetTagsHelper(const Entity* entity, uint64& outMask) const
     {
-        GetTagsHelper(entity, std::make_integer_sequence<uint64, 64> {}, outMask);
-        outMask &= InMask;
+        GetTagsHelper<InMask>(entity, std::make_integer_sequence<uint64, 64> {}, outMask);
     }
 
-    template <uint64... Indices>
+    template <uint64 InMask, uint64... Indices>
     HYP_FORCE_INLINE void GetTagsHelper(const Entity* entity, std::integer_sequence<uint64, Indices...>, uint64& outMask) const
     {
         outMask = 0;
-        ((HasTag<EntityTag(Indices + 1)>(entity) ? (void)(outMask |= (1ull << Indices)) : void()), ...);
+        ((((InMask >> Indices) & 1ull) && HasTag<EntityTag(Indices + 1)>(entity) ? (void)(outMask |= (1ull << Indices)) : void()), ...);
     }
 
     template <uint64... Indices>

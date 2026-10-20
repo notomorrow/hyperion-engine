@@ -60,6 +60,7 @@ enum class Icon : uint32
     AssetWeapon,
 
     MeshEditMode,
+    Import,
 
     Max
 };

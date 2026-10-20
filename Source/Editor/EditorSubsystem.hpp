@@ -288,6 +288,10 @@ public:
     HYP_METHOD()
     void ShowImportContentDialog();
 
+    /*! \brief Show a file dialog for a single file */
+    HYP_METHOD()
+    void RequestAssetImport(uint32 requestId);
+
     HYP_METHOD()
     void SetFocusedNode(const Handle<Node>& focusedNode, bool shouldSelectInOutline = true);
 
@@ -770,6 +774,12 @@ public:
     HYP_FIELD()
     ScriptableDelegate<void, uint32, Name> OnThumbnailReady;
 
+    /*! \brief Fired when a RequestAssetImport() call finishes. Arguments are the request id, the imported
+     *  asset's bucket index and name, and an error message. On success the error is empty and the asset
+     *  name is valid; on cancellation both are empty; on failure the error describes what went wrong. */
+    HYP_FIELD()
+    ScriptableDelegate<void, uint32, uint32, Name, String> OnAssetImportCompleted;
+
     /*! \brief Fired when the live material preview has a newly rendered frame waiting to be copied. */
     HYP_FIELD()
     ScriptableDelegate<void> OnMaterialPreviewUpdated;
@@ -801,6 +811,10 @@ public:
 
 private:
     void InitViewport();
+
+    /*! \brief Moves the editor camera to where the current project was saved with. Viewports can be added after the
+     *  project opens (eg. from the start screen), so this stays pending until there is a perspective camera to move. */
+    void RestoreProjectEditorCamera();
 
     /*! \brief Makes the viewport the input event came from active and returns it. */
     EditorViewport* AcquireInputViewport();
@@ -1051,6 +1065,7 @@ private:
 
     bool m_editorCameraEnabled;
     bool m_shouldCancelNextClick;
+    bool m_pendingEditorCameraRestore;
 };
 
 } // namespace Hyperion

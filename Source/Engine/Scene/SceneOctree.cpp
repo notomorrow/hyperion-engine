@@ -343,6 +343,8 @@ void SceneOctree::PerformUpdates()
 
     Assert(m_state != nullptr);
 
+    bool rebuildFailed = false;
+
     if (m_state->NeedsRebuild())
     {
         SceneOctree* octant = GetChildOctant(m_state->dirtyState.octantId);
@@ -351,14 +353,45 @@ void SceneOctree::PerformUpdates()
         const Result rebuildResult = octant->Rebuild();
         AssertDebug(!rebuildResult.HasError(), "Failed to rebuild Octree: {}", rebuildResult.GetError().GetMessage());
 
-        if (!rebuildResult.HasError())
+        if (rebuildResult.HasError())
         {
-            // set rebuild state back to invalid if rebuild was successful
-            m_state->dirtyState = {};
+            rebuildFailed = true;
+        }
+        else
+        {
+            m_state->dirtyState.needsRebuild = false;
         }
     }
 
-    RebuildEntriesHash();
+    const OctantId dirtyOctantId = m_state->dirtyState.octantId;
+    SceneOctree* dirtyOctant = this;
+
+    for (uint8 depth = m_octantId.GetDepth() + 1; depth <= dirtyOctantId.GetDepth() && dirtyOctant->IsDivided(); depth++)
+    {
+        dirtyOctant = dirtyOctant->m_octants[dirtyOctantId.GetIndex(depth)].octree;
+    }
+
+    dirtyOctant->RebuildEntriesHash();
+
+    for (SceneOctree* ancestor = dirtyOctant->m_parent; ancestor != nullptr; ancestor = ancestor->m_parent)
+    {
+        ancestor->HashOwnEntries();
+
+        for (const Octant& octant : ancestor->m_octants)
+        {
+            Assert(octant.octree != nullptr);
+
+            for (uint32 i = 0; i < uint32(ancestor->m_entryHashes.Size()); i++)
+            {
+                ancestor->m_entryHashes[i].Add(octant.octree->m_entryHashes[i]);
+            }
+        }
+    }
+
+    if (!rebuildFailed)
+    {
+        m_state->dirtyState = {};
+    }
 }
 
 SceneOctree::Result SceneOctree::Insert(Entity* entity, const BoundingBox& aabb, bool allowRebuild)
@@ -975,6 +1008,29 @@ void SceneOctree::RebuildEntriesHash(uint32 level)
 {
     HYP_SCOPE;
 
+    HashOwnEntries();
+
+    if (m_isDivided)
+    {
+        for (const Octant& octant : m_octants)
+        {
+            Assert(octant.octree != nullptr);
+
+            octant.octree->RebuildEntriesHash(level + 1);
+        }
+    }
+
+    if (m_parent)
+    {
+        for (uint32 i = 0; i < uint32(m_entryHashes.Size()); i++)
+        {
+            m_parent->m_entryHashes[i].Add(m_entryHashes[i]);
+        }
+    }
+}
+
+void SceneOctree::HashOwnEntries()
+{
     ResetEntriesHash();
 
     for (SceneOctreePayload::Entry& entry : m_payload.entries)
@@ -999,25 +1055,6 @@ void SceneOctree::RebuildEntriesHash(uint32 level)
             {
                 m_entryHashes[tagIndex].Add(entryHashCode);
             }
-        }
-    }
-
-    if (m_isDivided)
-    {
-        for (const Octant& octant : m_octants)
-        {
-            Assert(octant.octree != nullptr);
-
-            octant.octree->RebuildEntriesHash(level + 1);
-        }
-    }
-
-    // Update parent's hash to include this octant's hash
-    if (m_parent)
-    {
-        for (uint32 i = 0; i < uint32(m_entryHashes.Size()); i++)
-        {
-            m_parent->m_entryHashes[i].Add(m_entryHashes[i]);
         }
     }
 }

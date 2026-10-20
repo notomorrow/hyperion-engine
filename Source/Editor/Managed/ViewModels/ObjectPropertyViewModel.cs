@@ -172,6 +172,9 @@ namespace Hyperion.Editor.ViewModels
         public ICommand ClearCommand { get; }
         public ICommand NewCommand { get; }
         public ICommand CloneCommand { get; }
+        public ICommand ImportCommand { get; }
+
+        public bool CanImport => _isAssetObjectType && !_isReadOnly;
 
         private bool _canClone;
         public bool CanClone
@@ -235,6 +238,7 @@ namespace Hyperion.Editor.ViewModels
             ClearCommand = new RelayCommand(OnClear);
             NewCommand = new RelayCommand(OnNew);
             CloneCommand = new RelayCommand(OnClone);
+            ImportCommand = new RelayCommand(OnImport);
 
             HookContentBrowser();
             PopulateSubclasses();
@@ -254,6 +258,7 @@ namespace Hyperion.Editor.ViewModels
             ClearCommand = new RelayCommand(OnClear);
             NewCommand = new RelayCommand(OnNew);
             CloneCommand = new RelayCommand(OnClone);
+            ImportCommand = new RelayCommand(OnImport);
 
             HookContentBrowser();
             PopulateSubclasses();
@@ -273,6 +278,7 @@ namespace Hyperion.Editor.ViewModels
             ClearCommand = new RelayCommand(OnClear);
             NewCommand = new RelayCommand(OnNew);
             CloneCommand = new RelayCommand(OnClone);
+            ImportCommand = new RelayCommand(OnImport);
 
             HookContentBrowser();
             PopulateSubclasses();
@@ -716,6 +722,84 @@ namespace Hyperion.Editor.ViewModels
                     Dispatcher.UIThread.Post(RefreshValue);
                 }
             });
+        }
+
+        /// <summary>
+        /// Imports a file picked from disk into the asset registry and assigns the result to this property.
+        /// Shows an error message box if the import fails or the imported asset doesn't fit the property type.
+        /// </summary>
+        private void OnImport()
+        {
+            if (!CanImport)
+            {
+                return;
+            }
+
+            Class? expectedClass = _propertyTypeClass;
+
+            if (expectedClass == null)
+            {
+                return;
+            }
+
+            Class capturedExpectedClass = expectedClass.Value;
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                AssetImportService.ImportWithDialog(result =>
+                {
+                    if (result.Cancelled)
+                    {
+                        return;
+                    }
+
+                    if (!result.Succeeded)
+                    {
+                        ShowImportError(result.Error);
+                        return;
+                    }
+
+                    _ = EngineManager.PostToSimThread(() => AssignImportedAsset(result, capturedExpectedClass));
+                });
+            });
+        }
+
+        private void AssignImportedAsset(AssetImportResult result, Class expectedClass)
+        {
+            try
+            {
+                AssetObject? obj = AssetManager.Instance.AssetRegistry.GetAsset(result.BucketIndex, result.AssetName);
+
+                if (obj == null || !obj.IsValid)
+                {
+                    ShowImportError($"Imported asset '{result.AssetName}' could not be found in the asset registry.");
+                    return;
+                }
+
+                Class objClass = obj.Class;
+
+                if (objClass != expectedClass && !objClass.IsSubclassOf(expectedClass))
+                {
+                    ShowImportError($"Imported asset '{result.AssetName}' is a {objClass.Name}, which can't be assigned to '{Label}' (expects {expectedClass.Name}).");
+                    return;
+                }
+
+                using BoxedValue boxed = new BoxedValue(obj);
+                CommitPropertyChange($"Import {Label}", boxed);
+            }
+            catch (Exception ex)
+            {
+                ShowImportError($"Failed to assign imported asset to '{Label}': {ex.Message}");
+
+                Dispatcher.UIThread.Post(RefreshValue);
+            }
+        }
+
+        private static void ShowImportError(string message)
+        {
+            Logger.Log(LogLevel.Warning, $"Import: {message}");
+
+            Dispatcher.UIThread.Post(() => MessageBox.Critical("Import Failed", message).Show());
         }
 
         public string? GetCopyText()
