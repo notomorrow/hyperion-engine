@@ -23,9 +23,13 @@ namespace Hyperion {
 
 HYP_DECLARE_LOG_CHANNEL(Editor);
 
-static void FileImportedModel(EditorAssetFolders& assetFolders, AssetRegistry& registry, const Handle<AssetObject>& modelAsset, const String& targetFolder, Set<uint32, EditorAllocator>& changedBuckets)
+static void HandleModelImport(
+    EditorAssetFolders& assetFolders,
+    AssetRegistry& registry,
+    const Handle<AssetObject>& modelAsset,
+    const String& targetFolder,
+    Set<uint32, EditorAllocator>& changedBuckets)
 {
-    // register what would otherwise only be registered on save (eg. MTL textures), so it is filed with the rest
     registry.PutAssetsDeep(modelAsset);
 
     const String modelFolder = EditorAssetFolders::JoinFolderPath(targetFolder, assetFolders.MakeUniqueFolderName(targetFolder, String(*modelAsset->GetName())));
@@ -190,7 +194,7 @@ void ImportEditorContent(EditorSubsystem* subsystem, const Array<FilePath>& file
 
                       if (IsEditorImportModelFile(FilePath(key)))
                       {
-                          FileImportedModel(*assetFolders, *GetCurrentAssetRegistry(), assetObject, normalizedTargetFolder, changedBuckets);
+                          HandleModelImport(*assetFolders, *GetCurrentAssetRegistry(), assetObject, normalizedTargetFolder, changedBuckets);
                       }
                       else
                       {

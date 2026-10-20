@@ -515,7 +515,6 @@ void AssetBucketData::AllocateUniqueAssetName(
             return;
         }
 
-        // the existing entry may be this same asset, in which case it keeps its name
         if (comparator.IsValid() && comparator(*existingDesc))
         {
             outAssetDesc = *existingDesc;
@@ -525,6 +524,7 @@ void AssetBucketData::AllocateUniqueAssetName(
             return;
         }
 
+        //  ... {}_{}  <( what are you lookin' at? )
         candidateName = HYP_FORMAT("{}_{}", inAssetName, suffix++);
     }
 }

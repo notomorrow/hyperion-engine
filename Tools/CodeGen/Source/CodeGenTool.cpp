@@ -139,7 +139,7 @@ static String StripStrataComments(const String& contents)
     return result;
 }
 
-static bool IsIdentChar(char ch)
+static bool IsStrataIdentChar(char ch)
 {
     return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_';
 }
@@ -153,7 +153,7 @@ static String ReadStrataToken(const String& text, size_t& pos)
     {
         char ch = text[pos];
 
-        if (IsIdentChar(ch))
+        if (IsStrataIdentChar(ch))
         {
             token.Append(ch);
             pos++;
@@ -199,7 +199,7 @@ static Result ParseStrataStructBodies(const String& cleanText, Array<StrataStruc
 
     while (pos < size)
     {
-        while (pos < size && !IsIdentChar(cleanText[pos]))
+        while (pos < size && !IsStrataIdentChar(cleanText[pos]))
         {
             pos++;
         }
@@ -218,7 +218,7 @@ static Result ParseStrataStructBodies(const String& cleanText, Array<StrataStruc
 
         if (token == "extern")
         {
-            while (pos < size && !IsIdentChar(cleanText[pos]))
+            while (pos < size && !IsStrataIdentChar(cleanText[pos]))
             {
                 pos++;
             }
@@ -231,7 +231,7 @@ static Result ParseStrataStructBodies(const String& cleanText, Array<StrataStruc
             }
         }
 
-        while (pos < size && !IsIdentChar(cleanText[pos]))
+        while (pos < size && !IsStrataIdentChar(cleanText[pos]))
         {
             pos++;
         }

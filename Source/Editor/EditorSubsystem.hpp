@@ -643,7 +643,6 @@ public:
 
     ///
 
-    /// The folder open in the content browser; imports go there
     HYP_METHOD()
     void SetCurrentAssetFolder(const String& folderPath);
 

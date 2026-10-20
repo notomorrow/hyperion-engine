@@ -23,6 +23,7 @@
 #include <Editor/EditorPlayerSetup.hpp>
 #include <Editor/EditorTemplateLibrary.hpp>
 #include <Editor/EditorNativeModule.hpp>
+#include <Editor/EditorProjectLayout.hpp>
 
 #include <Editor/Tasks/EditorTasks.hpp>
 
@@ -117,7 +118,6 @@
 
 #include <Framework/View.hpp>
 #include <Framework/EngineGlobals.hpp>
-#include <Framework/ProjectLayout.hpp>
 #include <Framework/CVarManager.hpp>
 
 #include <Framework/Server/GameServer.hpp>

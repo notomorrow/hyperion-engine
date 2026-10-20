@@ -12,10 +12,10 @@
 #include <Editor/EditorTask.hpp>
 #include <Editor/EditorState.hpp>
 #include <Editor/EditorNativeModule.hpp>
+#include <Editor/EditorProjectLayout.hpp>
 
 #include <Framework/Game.hpp>
 #include <Framework/EngineGlobals.hpp>
-#include <Framework/ProjectLayout.hpp>
 
 #include <Asset/Assets.hpp>
 #include <Asset/AssetRegistry.hpp>

@@ -8,11 +8,11 @@
 
 #include <Editor/EditorNativeModule.hpp>
 #include <Editor/EditorProject.hpp>
+#include <Editor/EditorProjectLayout.hpp>
 #include <Editor/EditorSubsystem.hpp>
 
 #include <Framework/Game.hpp>
 #include <Framework/EngineGlobals.hpp>
-#include <Framework/ProjectLayout.hpp>
 #include <Framework/CVarManager.hpp>
 
 #include <Scene/World.hpp>
@@ -566,6 +566,7 @@ EDITOR_API String GetNativeProjectName(const FilePath& projectFilepath)
 
     String name;
 
+    // @TODO Centralize in Utils
     for (const char* it = baseName.Data(); *it != 0; ++it)
     {
         const char ch = *it;

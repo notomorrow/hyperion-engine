@@ -6,11 +6,13 @@
 
 #include <HyperionPch.hpp>
 
-#include <Framework/ProjectLayout.hpp>
+#include <Editor/EditorProjectLayout.hpp>
 
 #include <Asset/SerializationUtils.hpp>
 
 #include <Core/Reflection/BoxedValue.hpp>
+
+#include <Core/IO/ByteReader.hpp>
 
 namespace Hyperion {
 
@@ -29,12 +31,16 @@ FilePath FindProjectFile(const FilePath& projectDirectory)
 
 TResult<String> ReadProjectContentSubfolder(const FilePath& projectFile)
 {
-    TResult<BoxedValue> fieldResult = FieldFromHMF(projectFile, "ContentSubfolder"_sh);
+    FileByteReader projectStream { projectFile };
+
+    TResult<BoxedValue> fieldResult = FieldFromHMF(projectStream, "ContentSubfolder"_sh);
 
     if (fieldResult.HasError())
     {
         return fieldResult.GetError();
     }
+
+    projectStream.Close();
 
     const BoxedValue& value = fieldResult.GetValue();
 
