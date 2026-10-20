@@ -5212,9 +5212,9 @@ static void PopulateNewWorld(World* world, const Handle<AssetRegistry>& assetReg
     Handle<DirectionalLight> sun = MakeHandle<DirectionalLight>();
     sun->SetName(NAME("SunLight"));
     // low, side-on golden hour sun - the atmosphere tint warms it and ridges throw long shadows
-    sun->SetDirection(Vec3f(-0.86f, 0.36f, -0.36f).Normalize());
-    sun->SetColor(Color(Vec4f(1.0f, 0.9f, 0.8f, 1.0f)));
-    sun->SetIntensity(10.0f);
+    sun->SetDirection(Vec3f(-0.92f, 0.31f, -0.25f).Normalize());
+    sun->SetColor(Color(Vec4f(1.0f, 0.86f, 0.7f, 1.0f)));
+    sun->SetIntensity(17.0f);
     InitObject(sun);
 
     mainScene->GetRoot()->AddChild(sun);

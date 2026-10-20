@@ -255,7 +255,7 @@ PSOutput PSMain(PSInput input)
 
     const float foliageDirectOcclusion = isFoliage ? lerp(1.0, albedo.a, 0.8) : 1.0;
 
-    const float roughness = clamp(materialParams.roughness, 0.01, 0.999);
+    const float roughness = clamp(materialParams.roughness, isFoliage ? FOLIAGE_MIN_ROUGHNESS : 0.01, 0.999);
     const float metalness = materialParams.metalness;
 
     const float perceptualRoughness = sqrt(roughness);
@@ -375,11 +375,11 @@ PSOutput PSMain(PSInput input)
 
         const float diffuseWeight = isFoliage ? FoliageWrapDiffuse(dot(N, L)) : NdotL;
 
-        float4 direct_component = diffuse * diffuseWeight + specular * float4(energy_compensation, 1.0) * NdotL;
+        float4 direct_component = diffuse * diffuseWeight + specular * float4(energy_compensation, 1.0) * NdotL * (isFoliage ? FoliageSpecularWeight(N, V) : 1.0);
 
         if (isFoliage)
         {
-            direct_component += diffuse * FoliageTransmission(V, L, transmission);
+            direct_component += diffuse * float4(FoliageTransmissionTint(albedo.rgb), 1.0) * FoliageTransmission(V, L, transmission);
         }
 
         result += float4((direct_component * (light_color * shadow * foliageDirectOcclusion * currentLight.position_intensity.w * attenuation)).rgb, attenuation);
@@ -591,11 +591,11 @@ PSOutput PSMain(PSInput input)
     // leaves and grass wrap light around and let some through from behind
     const float diffuseWeight = isFoliage ? FoliageWrapDiffuse(dot(N, L)) : NdotL;
 
-    float4 direct_component = diffuse * diffuseWeight + specular * float4(energy_compensation, 1.0) * NdotL;
+    float4 direct_component = diffuse * diffuseWeight + specular * float4(energy_compensation, 1.0) * NdotL * (isFoliage ? FoliageSpecularWeight(N, V) : 1.0);
 
     if (isFoliage)
     {
-        direct_component += diffuse * FoliageTransmission(V, L, transmission);
+        direct_component += diffuse * float4(FoliageTransmissionTint(albedo.rgb), 1.0) * FoliageTransmission(V, L, transmission);
     }
 
     result += direct_component * (light_color * shadow * foliageDirectOcclusion * currentLight.position_intensity.w * attenuation);

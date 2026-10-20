@@ -570,11 +570,11 @@ PSOutput PSMain(PSInput input)
 
                 const float diffuseWeight = isFoliage ? FoliageWrapDiffuse(dot(N, L)) : NdotL;
 
-                float3 direct_component = diffuse * diffuseWeight + specular * energy_compensation * NdotL;
+                float3 direct_component = diffuse * diffuseWeight + specular * energy_compensation * NdotL * (isFoliage ? FoliageSpecularWeight(N, V) : 1.0);
 
                 if (isFoliage)
                 {
-                    direct_component += diffuse * FoliageTransmission(V, L, foliageTransmission);
+                    direct_component += diffuse * FoliageTransmissionTint(albedo) * FoliageTransmission(V, L, foliageTransmission);
                 }
 
                 direct_lighting += direct_component * (light_color * ao * shadow * currentLight.position_intensity.w * attenuation);
@@ -616,11 +616,11 @@ PSOutput PSMain(PSInput input)
 
                 const float diffuseWeight = isFoliage ? FoliageWrapDiffuse(dot(N, L)) : NdotL;
 
-                float3 direct_component = diffuse_lobe * diffuseWeight + specular_lobe * energy_compensation * NdotL;
+                float3 direct_component = diffuse_lobe * diffuseWeight + specular_lobe * energy_compensation * NdotL * (isFoliage ? FoliageSpecularWeight(N, V) : 1.0);
 
                 if (isFoliage)
                 {
-                    direct_component += diffuse_lobe * FoliageTransmission(V, L, foliageTransmission);
+                    direct_component += diffuse_lobe * FoliageTransmissionTint(albedo) * FoliageTransmission(V, L, foliageTransmission);
                 }
 
                 direct_lighting += direct_component * (currentLight.color.rgb * currentLight.atmosphere_tint.rgb * ao * shadow * currentLight.position_intensity.w);
