@@ -91,6 +91,13 @@
                         ToolTip.Tip="Clear">
                         <controls:Codicon Kind="Close" Size="14" />
                     </Button>
+                    <Button
+                        Classes="gizmo"
+                        Command="{Binding ImportCommand}"
+                        IsEnabled="{Binding CanImport}"
+                        ToolTip.Tip="Import from file...">
+                        <controls:Codicon Kind="Import" Size="14" />
+                    </Button>
                     <ToggleButton
                         Classes="gizmo"
                         IsChecked="{Binding IsEditorExpanded, Mode=TwoWay}"

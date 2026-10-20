@@ -171,6 +171,13 @@ static constexpr const char* PlayNetHostConfigKey = "PlayInEditor.Host";
 static constexpr const char* PlayNetPortConfigKey = "PlayInEditor.Port";
 static constexpr const char* PlayNetCachePortConfigKey = "PlayInEditor.CachePort";
 
+static constexpr ANSIStringView ImportFileFilter[] = {
+    "obj", "fbx", "gltf", "glb", "mesh.xml",
+    "skeleton.xml",
+    "jpg", "jpeg", "png", "tga", "bmp",
+    "wav"
+};
+
 struct SuppressIdleThrottlingContext {};
 
 #pragma region Helpers
@@ -2348,7 +2355,8 @@ EditorSubsystem::EditorSubsystem()
     : m_gizmoController(MakeUnique<EditorGizmoController>()),
       m_swatchOverrideMode(false),
       m_editorCameraEnabled(false),
-      m_shouldCancelNextClick(false)
+      m_shouldCancelNextClick(false),
+      m_pendingEditorCameraRestore(false)
 {
     m_editorDelegates = new EditorDelegates();
 
@@ -5435,6 +5443,8 @@ void EditorSubsystem::CloseProject(bool shutdownWorld)
         m_currentProject.Reset();
     }
 
+    m_pendingEditorCameraRestore = false;
+
     RenderProxyList& pickRpl = g_editorState->GetPickCache().GetRenderProxyList();
 
     pickRpl.BeginWrite();
@@ -5522,28 +5532,54 @@ void EditorSubsystem::OpenProject(const Handle<EditorProject>& project)
         g_editorState->AddRecentProject(m_currentProject->GetFilePath());
     }
 
-    const Vec3f editorCameraDirection = project->GetEditorCameraDirection();
+    m_pendingEditorCameraRestore = true;
+    RestoreProjectEditorCamera();
+}
 
-    if (!MathUtil::ApproxEqual(editorCameraDirection, Vec3f::Zero()))
+void EditorSubsystem::RestoreProjectEditorCamera()
+{
+    AssertOnThread(g_simThread);
+
+    if (!m_pendingEditorCameraRestore)
     {
-        Camera* editorCamera = nullptr;
-
-        if (EditorViewport* mainViewport = GetMainWindowViewport(); mainViewport && !mainViewport->IsOrthographic())
-        {
-            editorCamera = mainViewport->GetCamera();
-        }
-
-        if (!editorCamera)
-        {
-            editorCamera = g_editorState->GetEditorCamera();
-        }
-
-        if (editorCamera)
-        {
-            editorCamera->SetWorldTranslation(project->GetEditorCameraPosition());
-            editorCamera->SetDirection(editorCameraDirection);
-        }
+        return;
     }
+
+    if (!m_currentProject.IsValid())
+    {
+        m_pendingEditorCameraRestore = false;
+
+        return;
+    }
+
+    const Vec3f editorCameraDirection = m_currentProject->GetEditorCameraDirection();
+
+    // never saved with a camera
+    if (MathUtil::ApproxEqual(editorCameraDirection, Vec3f::Zero()))
+    {
+        m_pendingEditorCameraRestore = false;
+
+        return;
+    }
+
+    EditorViewport* viewport = GetMainWindowViewport();
+
+    if (viewport != nullptr && viewport->IsOrthographic())
+    {
+        viewport = FindViewport(EditorViewportType::Perspective);
+    }
+
+    Camera* editorCamera = viewport != nullptr ? viewport->GetCamera().Get() : nullptr;
+
+    if (!editorCamera)
+    {
+        return;
+    }
+
+    editorCamera->SetWorldTranslation(m_currentProject->GetEditorCameraPosition());
+    editorCamera->SetDirection(editorCameraDirection);
+
+    m_pendingEditorCameraRestore = false;
 }
 
 void EditorSubsystem::ShowImportContentDialog()
@@ -5551,7 +5587,7 @@ void EditorSubsystem::ShowImportContentDialog()
     ShowOpenFileDialog(
         "Select the file(s) to import into the project",
         EngineGlobals::GetDataDirectory(),
-        { "obj", "fbx", "jpg", "jpeg", "png", "tga", "bmp", "ogre.xml" },
+        ImportFileFilter,
         /* allowMultiple */ true, /* allowDirectories */ false,
         [](TResult<Array<FilePath>>&& result)
         {
@@ -5590,6 +5626,60 @@ void EditorSubsystem::ShowImportContentDialog()
             batch->LoadAsync();
 
             // Note: The batch will be destroyed automatically by AssetManager when complete
+        });
+}
+
+void EditorSubsystem::RequestAssetImport(uint32 requestId)
+{
+    AssertOnThread(g_simThread);
+
+    if (!CanCreateAssets())
+    {
+        OnAssetImportCompleted(requestId, 0, Name::Invalid(), "Assets can only be imported while a project is open and the simulation is stopped.");
+
+        return;
+    }
+
+    ShowOpenFileDialog(
+        "Select the file to import into the project",
+        EngineGlobals::GetDataDirectory(),
+        ImportFileFilter,
+        /* allowMultiple */ false, /* allowDirectories */ false,
+        [this, requestId](TResult<Array<FilePath>>&& result)
+        {
+            if (result.HasError() || result.GetValue().Empty())
+            {
+                if (result.HasError())
+                {
+                    HYP_LOG(Editor, Info, "Asset import file dialog closed: {}", result.GetError().GetMessage());
+                }
+
+                OnAssetImportCompleted(requestId, 0, Name::Invalid(), String::empty);
+
+                return;
+            }
+
+            const FilePath filePath = result.GetValue()[0];
+
+            ImportEditorContent(
+                this,
+                result.GetValue(),
+                [requestId, filePath](EditorSubsystem& subsystem, const Array<Handle<AssetObject>>& assets)
+                {
+                    for (const Handle<AssetObject>& asset : assets)
+                    {
+                        if (!asset.IsValid() || !asset->GetPath().IsValid())
+                        {
+                            continue;
+                        }
+
+                        subsystem.OnAssetImportCompleted(requestId, asset->GetPath().GetBucket().GetIndex(), asset->GetName(), String::empty);
+
+                        return;
+                    }
+
+                    subsystem.OnAssetImportCompleted(requestId, 0, Name::Invalid(), HYP_FORMAT("Failed to import '{}'. See the console for details.", filePath.Basename()));
+                });
         });
 }
 
@@ -6525,6 +6615,11 @@ void EditorSubsystem::AddViewport(const Handle<EditorViewport>& viewport)
     if (m_editorViewports.Size() == 1)
     {
         OnActiveViewportChanged(viewportStrong);
+    }
+
+    if (!viewport->IsOrthographic())
+    {
+        RestoreProjectEditorCamera();
     }
 }
 
