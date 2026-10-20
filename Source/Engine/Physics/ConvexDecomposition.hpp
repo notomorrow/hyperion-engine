@@ -13,6 +13,7 @@
 #include <Core/Math/Vector3.hpp>
 
 #include <Core/Utilities/Result.hpp>
+#include <Core/Utilities/StringView.hpp>
 
 #include <Physics/PhysicsShape.hpp>
 
@@ -32,7 +33,7 @@ ConvexDecompositionSettings GetConvexDecompositionPreset(uint32 presetIndex);
 
 uint32 GetNumConvexDecompositionPresets();
 
-const char* GetConvexDecompositionPresetName(uint32 presetIndex);
+ANSIStringView GetConvexDecompositionPresetName(uint32 presetIndex);
 
 bool IsConvexDecompositionSupported();
 

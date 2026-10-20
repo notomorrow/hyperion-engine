@@ -596,7 +596,7 @@ public:
     uint32 GetNumConvexCollisionPresets() const;
 
     HYP_METHOD()
-    String GetConvexCollisionPresetName(uint32 presetIndex) const;
+    ANSIStringView GetConvexCollisionPresetName(uint32 presetIndex) const;
 
     HYP_METHOD()
     void ApplyConvexCollisionPreset(uint32 presetIndex);

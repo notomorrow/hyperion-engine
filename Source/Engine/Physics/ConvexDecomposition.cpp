@@ -20,12 +20,14 @@ namespace Hyperion {
 
 ENGINE_API HYP_DECLARE_LOG_CHANNEL(Physics);
 
-static const struct
+struct ConvexDecompositionPreset
 {
-    const char* name;
+    ANSIStringView name;
     uint32 maxHulls;
     uint32 resolution;
-} s_convexDecompositionPresets[] = {
+};
+
+static constexpr ConvexDecompositionPreset ConvexDecompositionPresets[] = {
     { "Single Hull", 1, 1000 },
     { "Low", 4, 4000 },
     { "Medium", 8, 8000 },
@@ -35,17 +37,17 @@ static const struct
 
 uint32 GetNumConvexDecompositionPresets()
 {
-    return uint32(GetArrayCount(s_convexDecompositionPresets));
+    return uint32(GetArrayCount(ConvexDecompositionPresets));
 }
 
-const char* GetConvexDecompositionPresetName(uint32 presetIndex)
+ANSIStringView GetConvexDecompositionPresetName(uint32 presetIndex)
 {
     if (presetIndex >= GetNumConvexDecompositionPresets())
     {
         return "";
     }
 
-    return s_convexDecompositionPresets[presetIndex].name;
+    return ConvexDecompositionPresets[presetIndex].name;
 }
 
 ConvexDecompositionSettings GetConvexDecompositionPreset(uint32 presetIndex)
@@ -57,8 +59,8 @@ ConvexDecompositionSettings GetConvexDecompositionPreset(uint32 presetIndex)
         return settings;
     }
 
-    settings.maxHulls = s_convexDecompositionPresets[presetIndex].maxHulls;
-    settings.resolution = s_convexDecompositionPresets[presetIndex].resolution;
+    settings.maxHulls = ConvexDecompositionPresets[presetIndex].maxHulls;
+    settings.resolution = ConvexDecompositionPresets[presetIndex].resolution;
 
     return settings;
 }
