@@ -83,6 +83,8 @@ static const int* s_dirtyResourceVersionPtr = &s_dirtyResourceVersion;
 
 #define GET_RESOURCE_VERSION(res) (!m_markAllAsDirty ? (res)->GetRenderProxyVersionPtr() : s_dirtyResourceVersionPtr)
 
+namespace {
+
 struct LightSorter
 {
     Camera& camera;
@@ -111,7 +113,7 @@ struct LightSorter
 };
 
 // editor ortho views draw everything as lines, and terrain would bury the rest
-static bool IsMaterialExcludedFromView(EnumFlags<ViewFlags> viewFlags, const Material* material)
+bool IsMaterialExcludedFromView(EnumFlags<ViewFlags> viewFlags, const Material* material)
 {
     if (!(viewFlags & ViewFlags::EDITOR_WIREFRAME_VIEW))
     {
@@ -120,6 +122,13 @@ static bool IsMaterialExcludedFromView(EnumFlags<ViewFlags> viewFlags, const Mat
 
     return RenderHelpers::IsTerrainShader(material->GetAttributes().shaderName);
 }
+
+bool IsWindAnimatedMesh(const Mesh* mesh)
+{
+    return mesh != nullptr && (mesh->GetMeshAttributes().inputLayout.mask & (VT_Tree | VT_Foliage)) != 0;
+}
+
+} // namespace
 
 #pragma region ViewOutputTarget
 
@@ -1024,6 +1033,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
     AssertOnThread(g_simThread | ThreadCategory::THREAD_CATEGORY_TASK);
     AssertReady();
 
+    rpl.hasAnimatedMeshEntities = false;
+
     for (Scene* scene : m_scenes)
     {
         if (scene->GetSceneFlags() & SceneFlags::DETACHED)
@@ -1042,9 +1053,13 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
         [[maybe_unused]] uint32 numCollectedEntities = 0;
         [[maybe_unused]] uint32 numSkippedEntities = 0;
 
-        switch (uint32(flags) & uint32(ViewFlags::COLLECT_ALL_ENTITIES))
+        const uint32 collectMask = uint32(flags) & uint32(ViewFlags::COLLECT_ALL_ENTITIES);
+
+        const bool collectOnlyAnimatedStatics = (collectMask == uint32(ViewFlags::COLLECT_DYNAMIC_ENTITIES)) && desc.splitStaticAnimatedMeshes;
+        const bool collectStatics = (collectMask == uint32(ViewFlags::COLLECT_STATIC_ENTITIES)) || collectOnlyAnimatedStatics;
+
+        if (collectMask == uint32(ViewFlags::COLLECT_ALL_ENTITIES))
         {
-        case uint32(ViewFlags::COLLECT_ALL_ENTITIES):
             if ((flags & ViewFlags::NO_FRUSTUM_CULLING) || !(scene->GetSceneFlags() & SceneFlags::HAS_OCTREE))
             {
                 for (auto [entity, meshComponent, boundingBoxComponent] : scene->GetEntityManager()->GetEntitySet<MeshComponent, BoundingBoxComponent>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
@@ -1073,6 +1088,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     if (Mesh* mesh = meshComponent.mesh)
                     {
                         rpl.GetMeshes().Track(mesh->Id(), mesh);
+
+                        rpl.hasAnimatedMeshEntities |= IsWindAnimatedMesh(mesh);
                     }
 
                     if (Material* material = meshComponent.material)
@@ -1146,6 +1163,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     if (Mesh* mesh = meshComponent.mesh)
                     {
                         rpl.GetMeshes().Track(mesh->Id(), mesh);
+
+                        rpl.hasAnimatedMeshEntities |= IsWindAnimatedMesh(mesh);
                     }
 
                     if (Material* material = meshComponent.material)
@@ -1169,10 +1188,10 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     }
                 }
             }
+        }
 
-            break;
-
-        case uint32(ViewFlags::COLLECT_STATIC_ENTITIES):
+        if (collectStatics)
+        {
             if ((flags & ViewFlags::NO_FRUSTUM_CULLING) || !(scene->GetSceneFlags() & SceneFlags::HAS_OCTREE))
             {
                 for (auto [entity, meshComponent, boundingBoxComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, BoundingBoxComponent, TagComponent<EntityTag::MobStatic>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
@@ -1189,7 +1208,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
 
                     if (!meshComponent.mesh || !meshComponent.material
                         || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING))
-                        || IsMaterialExcludedFromView(flags, meshComponent.material.Get()))
+                        || IsMaterialExcludedFromView(flags, meshComponent.material.Get())
+                        || (desc.splitStaticAnimatedMeshes && IsWindAnimatedMesh(meshComponent.mesh) != collectOnlyAnimatedStatics))
                     {
                         continue;
                     }
@@ -1201,6 +1221,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     if (Mesh* mesh = meshComponent.mesh)
                     {
                         rpl.GetMeshes().Track(mesh->Id(), mesh);
+
+                        rpl.hasAnimatedMeshEntities |= IsWindAnimatedMesh(mesh);
                     }
 
                     if (Material* material = meshComponent.material)
@@ -1262,7 +1284,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
 
                     if (!meshComponent.mesh || !meshComponent.material
                         || (IsShadowCasterView() && (meshComponent.material->GetAttributes().flags & MAF_DISABLE_SHADOW_CASTING))
-                        || IsMaterialExcludedFromView(flags, meshComponent.material.Get()))
+                        || IsMaterialExcludedFromView(flags, meshComponent.material.Get())
+                        || (desc.splitStaticAnimatedMeshes && IsWindAnimatedMesh(meshComponent.mesh) != collectOnlyAnimatedStatics))
                     {
                         continue;
                     }
@@ -1274,6 +1297,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     if (Mesh* mesh = meshComponent.mesh)
                     {
                         rpl.GetMeshes().Track(mesh->Id(), mesh);
+
+                        rpl.hasAnimatedMeshEntities |= IsWindAnimatedMesh(mesh);
                     }
 
                     if (Material* material = meshComponent.material)
@@ -1297,10 +1322,10 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     }
                 }
             }
+        }
 
-            break;
-
-        case uint32(ViewFlags::COLLECT_DYNAMIC_ENTITIES):
+        if (collectMask == uint32(ViewFlags::COLLECT_DYNAMIC_ENTITIES))
+        {
             if ((flags & ViewFlags::NO_FRUSTUM_CULLING) || !(scene->GetSceneFlags() & SceneFlags::HAS_OCTREE))
             {
                 for (auto [entity, meshComponent, boundingBoxComponent, _] : scene->GetEntityManager()->GetEntitySet<MeshComponent, BoundingBoxComponent, TagComponent<EntityTag::MobDynamic>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
@@ -1329,6 +1354,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     if (Mesh* mesh = meshComponent.mesh)
                     {
                         rpl.GetMeshes().Track(mesh->Id(), mesh);
+
+                        rpl.hasAnimatedMeshEntities |= IsWindAnimatedMesh(mesh);
                     }
 
                     if (Material* material = meshComponent.material)
@@ -1402,6 +1429,8 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     if (Mesh* mesh = meshComponent.mesh)
                     {
                         rpl.GetMeshes().Track(mesh->Id(), mesh);
+
+                        rpl.hasAnimatedMeshEntities |= IsWindAnimatedMesh(mesh);
                     }
 
                     if (Material* material = meshComponent.material)
@@ -1425,10 +1454,6 @@ void View::CollectMeshEntities(RenderProxyList& rpl)
                     }
                 }
             }
-
-            break;
-        default:
-            break;
         }
 
 #ifdef HYP_VISIBILITY_CHECK_DEBUG

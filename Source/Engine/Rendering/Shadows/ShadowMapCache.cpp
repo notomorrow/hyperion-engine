@@ -38,6 +38,8 @@ CVar<float> g_cvShadowDepthBiasDirectional("Rendering.ShadowDepthBiasDirectional
 
 extern CVar<bool> g_cvCacheShadowMaps;
 
+CVar<int> g_cvCSMAnimatedCascades("Rendering.Shadows.CSMAnimatedCascades", 1);
+
 static CVar<float> s_cvCSMDepthBiasTexels("Rendering.Shadows.CSMDepthBiasTexels", 1.0f);
 static CVar<bool> s_cvAsyncOmniShadowShaderLoading("Rendering.Shadows.AsyncOmniShaderLoading", true);
 static CVar<bool> s_cvShadowsParallelDrawCallCollection("Rendering.Shadows.ParallelDrawCallCollection", true);
@@ -248,6 +250,11 @@ static ViewDesc GetViewDesc(
     {
         viewDesc.flags |= ViewFlags::COLLECT_ALL_ENTITIES;
     }
+
+    viewDesc.splitStaticAnimatedMeshes = isDirectional
+        && cacheStaticShadowMaps
+        && !onlyStaticShadowMaps
+        && cascadeIndex < uint32(MathUtil::Max(g_cvCSMAnimatedCascades.Get(), 0));
 
     if (!isOmni || !s_cvAsyncOmniShadowShaderLoading.Get())
     {

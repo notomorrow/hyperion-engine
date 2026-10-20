@@ -198,6 +198,9 @@ public:
     CameraMatrices cachedMatrices;
     BoundingBox cachedBounds;
 
+    // any collected mesh sways in the vertex shader (trees, foliage), so its draw changes every frame
+    bool hasAnimatedMeshEntities = false;
+
     // what the view culls with
     Frustum cullingFrustum;
     bool hasCullingFrustum = false;

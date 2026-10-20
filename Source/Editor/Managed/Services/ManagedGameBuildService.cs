@@ -126,12 +126,131 @@ namespace Hyperion.Editor.Services
                 return false;
             }
 
-            if (FindProjectFile(projectFilePath) == null && !HasScripts(projectFilePath))
+            bool isBuilt = FindProjectFile(projectFilePath) == null && !HasScripts(projectFilePath)
+                ? NativeGameBuildService.Instance.BuildPackage(projectFilePath, outputDirectory, scriptsLinkInputsFile: null)
+                : PublishAot(projectFilePath, binariesDirectory, outputDirectory);
+
+            if (isBuilt)
             {
-                return NativeGameBuildService.Instance.BuildPackage(projectFilePath, outputDirectory, scriptsLinkInputsFile: null);
+                StripDebugInfo(outputDirectory);
             }
 
-            return PublishAot(projectFilePath, binariesDirectory, outputDirectory);
+            return isBuilt;
+        }
+
+        private static void StripDebugInfo(string outputDirectory)
+        {
+            List<string> binaries = Directory.GetFiles(outputDirectory).Where(HasEmbeddedDebugInfo).ToList();
+
+            if (binaries.Count == 0)
+            {
+                return;
+            }
+
+            string? stripTool = FindStripTool();
+
+            if (stripTool == null)
+            {
+                Logger.Log(BuildLogChannel, LogLevel.Warning, "No strip or llvm-strip found");
+
+                return;
+            }
+
+            foreach (string binary in binaries)
+            {
+                long sizeBefore = new FileInfo(binary).Length;
+
+                int exitCode = RunProcessAsync(stripTool, outputDirectory, new[] { "--strip-unneeded", binary }, null, _ => { }).GetAwaiter().GetResult();
+
+                if (exitCode != 0)
+                {
+                    Logger.Log(BuildLogChannel, LogLevel.Warning, "Stripping {0} failed (exit code {1})", Path.GetFileName(binary), exitCode);
+
+                    continue;
+                }
+
+                Logger.Log(BuildLogChannel, LogLevel.Info, "Debug Info Stripped {0}: {1} MB -> {2} MB",
+                    Path.GetFileName(binary),
+                    sizeBefore / (1024 * 1024),
+                    new FileInfo(binary).Length / (1024 * 1024));
+            }
+        }
+
+        private static bool HasEmbeddedDebugInfo(string path)
+        {
+            try
+            {
+                using FileStream stream = File.OpenRead(path);
+
+                Span<byte> magic = stackalloc byte[4];
+
+                if (stream.Read(magic) != magic.Length)
+                {
+                    return false;
+                }
+
+                if (magic[0] == 0x7F && magic[1] == (byte)'E' && magic[2] == (byte)'L' && magic[3] == (byte)'F')
+                {
+                    return true;
+                }
+
+                if (magic[0] != (byte)'M' || magic[1] != (byte)'Z')
+                {
+                    return false;
+                }
+
+                stream.Position = 0;
+
+                using PEReader reader = new PEReader(stream);
+
+                return !reader.HasMetadata
+                    && reader.PEHeaders.SectionHeaders.Any(section => section.Name.StartsWith(".debug_") || section.Name.StartsWith("/"));
+            }
+            catch (Exception ex) when (ex is IOException || ex is BadImageFormatException || ex is UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
+        private static string? FindStripTool()
+        {
+            string[] toolNames = OperatingSystem.IsWindows()
+                ? new[] { "strip.exe", "llvm-strip.exe" }
+                : new[] { "strip", "llvm-strip" };
+
+            foreach (string toolName in toolNames)
+            {
+                foreach (string directory in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    try
+                    {
+                        string candidate = Path.Combine(directory.Trim(), toolName);
+
+                        if (File.Exists(candidate))
+                        {
+                            return candidate;
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+                    }
+                }
+            }
+
+            if (OperatingSystem.IsWindows())
+            {
+                foreach (string installPath in NativeGameBuildService.FindVisualStudioInstalls())
+                {
+                    string candidate = Path.Combine(installPath, "VC", "Tools", "Llvm", "x64", "bin", "llvm-strip.exe");
+
+                    if (File.Exists(candidate))
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            return null;
         }
 
         private static bool CookPackage(string projectFilePath, string outputDirectory)
