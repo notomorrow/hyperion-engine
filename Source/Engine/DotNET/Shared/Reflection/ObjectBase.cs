@@ -141,6 +141,11 @@ namespace Hyperion
                         }
 #endif
 
+                        if (isDisposing && IsCachedManagedObject())
+                        {
+                            Object_DetachManagedObject(_classPtr, _nativeAddress);
+                        }
+
                         Object_DecRef(_classPtr, _nativeAddress, false);
 
                         //Logger.Log(LogLevel.Verbose, "Disposed ObjectBase of type " + GetType().Name + ", _classPtr: " + _classPtr + ", _nativeAddress: " + _nativeAddress);
@@ -154,6 +159,16 @@ namespace Hyperion
 
             _classPtr = IntPtr.Zero;
             _nativeAddress = IntPtr.Zero;
+        }
+
+        private bool IsCachedManagedObject()
+        {
+            if (NativeBindings_GetManagedObject(_classPtr, _nativeAddress, out ObjectReference objectReference) == 0)
+            {
+                return false;
+            }
+
+            return ReferenceEquals(objectReference.LoadObject(), this);
         }
 
         public ObjIdBase Id
@@ -359,6 +374,12 @@ namespace Hyperion
 
         [DllImport("hyperion", EntryPoint = "Object_DecRef")]
         private static extern void Object_DecRef([In] IntPtr classPtr, [In] IntPtr nativeAddress, [MarshalAs(UnmanagedType.I1)] bool isWeak);
+
+        [DllImport("hyperion", EntryPoint = "Object_DetachManagedObject")]
+        private static extern void Object_DetachManagedObject([In] IntPtr classPtr, [In] IntPtr nativeAddress);
+
+        [DllImport("hyperion", EntryPoint = "NativeBindings_GetManagedObject")]
+        private static extern byte NativeBindings_GetManagedObject([In] IntPtr classPtr, [In] IntPtr objectPtr, [Out] out ObjectReference outObjectReference);
 
         [DllImport("hyperion", EntryPoint = "Class_GetProperty")]
         private static extern IntPtr Class_GetProperty([In] IntPtr classPtr, [In] ref Name name);

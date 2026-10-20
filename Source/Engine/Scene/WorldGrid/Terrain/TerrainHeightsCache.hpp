@@ -40,7 +40,7 @@ public:
         void Invalidate();
     };
 
-    SharedPtr<const Array<float>> Find(const Vec2i& coord) const;
+    SharedPtr<const Array<float>> FindByCoord(const Vec2i& coord) const;
 
     /// returns what another thread cached first if it beat us to it. Nothing is cached once \p generationEpoch is stale
     SharedPtr<const Array<float>> Insert(

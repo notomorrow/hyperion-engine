@@ -803,7 +803,7 @@ void TerrainWorldGridLayer::OnRemoved(WorldGrid* worldGrid)
 
 Vec3f TerrainWorldGridLayer::ComputeCellBoundsMin(const WorldGridLayerInfo& layerInfo, const Vec2i& coord)
 {
-    return Vec3f {
+    return {
         layerInfo.offset.x + (float(coord.x) - 0.5f) * (float(layerInfo.cellSize) - 1.0f) * layerInfo.scale.x,
         layerInfo.offset.y,
         layerInfo.offset.z + (float(coord.y) - 0.5f) * (float(layerInfo.cellSize) - 1.0f) * layerInfo.scale.z
@@ -815,9 +815,10 @@ Vec2i TerrainWorldGridLayer::ComputeCellCoord(const WorldGridLayerInfo& layerInf
     const float cellWorldSizeX = (float(layerInfo.cellSize) - 1.0f) * layerInfo.scale.x;
     const float cellWorldSizeZ = (float(layerInfo.cellSize) - 1.0f) * layerInfo.scale.z;
 
-    return Vec2i(
+    return {
         int32(MathUtil::Floor((worldXZ.x - layerInfo.offset.x) / cellWorldSizeX + 0.5f)),
-        int32(MathUtil::Floor((worldXZ.y - layerInfo.offset.z) / cellWorldSizeZ + 0.5f)));
+        int32(MathUtil::Floor((worldXZ.y - layerInfo.offset.z) / cellWorldSizeZ + 0.5f))
+    };
 }
 
 Handle<StreamingCell> TerrainWorldGridLayer::CreateStreamingCell(const StreamingCellInfo& cellInfo)
@@ -910,7 +911,7 @@ SharedPtr<const Array<float>> TerrainWorldGridLayer::GetOrGenerateCellHeights(co
     // runs on background threads; if the snapshot is newer than generationEpoch the result just isn't cached
     const WorldGridLayerInfo layerInfo = GetGenerationState().layerInfo;
 
-    if (SharedPtr<const Array<float>> cachedHeights = m_heightsCache.Find(coord); cachedHeights.IsValid())
+    if (SharedPtr<const Array<float>> cachedHeights = m_heightsCache.FindByCoord(coord))
     {
         return cachedHeights;
     }
@@ -934,7 +935,7 @@ SharedPtr<const Array<float>> TerrainWorldGridLayer::GetOrGenerateCellHeights(co
 
 SharedPtr<const Array<float>> TerrainWorldGridLayer::TryGetCachedCellHeights(const Vec2i& coord) const
 {
-    return m_heightsCache.Find(coord);
+    return m_heightsCache.FindByCoord(coord);
 }
 
 void TerrainWorldGridLayer::WarmHeightsCache(const Vec2i& coord) const
