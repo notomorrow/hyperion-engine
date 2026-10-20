@@ -2713,15 +2713,29 @@
                                                                 Padding="8,2"
                                                                 VerticalAlignment="Center"
                                                                 Command="{Binding ContentBrowser.ImportCommand}"
-                                                                Content="Import"
+                                                                Classes="Primary"
                                                                 IsEnabled="{Binding !IsSimulating}"
-                                                                ToolTip.Tip="Import into the open folder" />
+                                                                ToolTip.Tip="Import into the current folder">
+                                                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                    <controls:Codicon
+                                                                        VerticalAlignment="Center"
+                                                                        Kind="Import"
+                                                                        Size="12" />
+                                                                    <TextBlock VerticalAlignment="Center" Text="Import..." />
+                                                                </StackPanel>
+                                                            </Button>
                                                             <Button
                                                                 Grid.Column="9"
                                                                 Padding="8,2"
                                                                 VerticalAlignment="Center"
-                                                                Content="New..."
                                                                 IsEnabled="{Binding !IsSimulating}">
+                                                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                    <controls:Codicon
+                                                                        VerticalAlignment="Center"
+                                                                        Kind="Add"
+                                                                        Size="12" />
+                                                                    <TextBlock VerticalAlignment="Center" Text="Add..." />
+                                                                </StackPanel>
                                                                 <Button.Flyout>
                                                                     <MenuFlyout>
                                                                         <MenuItem
@@ -2845,7 +2859,7 @@
                                                                             CommandParameter="{Binding ContentBrowser.CurrentFolder}"
                                                                             Header="New Folder"
                                                                             IsEnabled="{Binding !IsSimulating}" />
-                                                                        <MenuItem Header="New" IsEnabled="{Binding !IsSimulating}">
+                                                                        <MenuItem Header="Add" IsEnabled="{Binding !IsSimulating}">
                                                                           <MenuItem Command="{Binding ContentBrowser.NewPhysicsShapeCommand}" Header="Physics Shape" />
                                                                           <MenuItem Command="{Binding ContentBrowser.NewMaterialCommand}" Header="Material" />
                                                                           <MenuItem Command="{Binding ContentBrowser.NewDecalCommand}" Header="Decal" />
