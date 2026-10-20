@@ -57,6 +57,7 @@ struct GlimmerProbeLevelShaderData
 {
     Vec4i windowOrigin; // xyz = absolute block of the window's first block, w = 1 once it has been allocated
     Vec4f params;       // x = probe spacing, y = 1 / spacing
+    Vec4f center;       // xyz = the window's center before snapping, in probe spacings
 };
 
 struct GlimmerProbeVolumeShaderData

@@ -72,65 +72,65 @@ public:
     static constexpr uint8 FlagMask_Channel = 0x3u;
     static constexpr uint8 FlagBit_ParallaxInverseHeight = 0x80u;
 
-    HYP_FIELD(Property = "Albedo", Editor, Serialize)
+    HYP_FIELD(Property = "Albedo", Editor, Serialize, EditOrder = 0)
     Color albedo;
 
-    HYP_FIELD(Property = "Metalness", Editor, Serialize)
+    HYP_FIELD(Property = "Metalness", Editor, Serialize, EditOrder = 0)
     float metalness;
 
-    HYP_FIELD(Property = "Roughness", Editor, Serialize)
+    HYP_FIELD(Property = "Roughness", Editor, Serialize, EditOrder = 0)
     float roughness;
 
-    HYP_FIELD(Property = "AlphaThreshold", Editor, Serialize)
+    HYP_FIELD(Property = "AlphaThreshold", Editor, Serialize, EditOrder = 2)
     float alphaThreshold;
 
-    HYP_FIELD(Property = "ParallaxHeightScale", Editor, Serialize)
+    HYP_FIELD(Property = "ParallaxHeightScale", Editor, Serialize, EditOrder = 2)
     float parallaxHeightScale;
 
-    HYP_FIELD(Property = "Transmission", Editor, Serialize)
+    HYP_FIELD(Property = "Transmission", Editor, Serialize, EditOrder = 1)
     float transmission;
 
-    HYP_FIELD(Property = "IOR", Editor, Serialize)
+    HYP_FIELD(Property = "IOR", Editor, Serialize, EditOrder = 1)
     float ior;
 
-    HYP_FIELD(Property = "EmissiveColor", Editor, Serialize)
+    HYP_FIELD(Property = "EmissiveColor", Editor, Serialize, EditOrder = 8)
     Color emissiveColor;
 
-    HYP_FIELD(Property = "EmissiveIntensity", Editor, Serialize)
+    HYP_FIELD(Property = "EmissiveIntensity", Editor, Serialize, EditOrder = 8)
     float emissiveIntensity;
 
-    HYP_FIELD(Property = "UserParams", Editor, Serialize)
+    HYP_FIELD(Property = "UserParams", Editor, Serialize, EditOrder = 20)
     Vec4f userParams;
 
     // how a tree's wind data sways; its bark and leaves must match or the leaves drift off their twigs
-    HYP_FIELD(Property = "WindFrequency", Editor, Serialize)
+    HYP_FIELD(Property = "WindFrequency", Editor, Serialize, EditOrder = 9)
     float windFrequency;
 
     // metres the top of the trunk swings per metre of tree height
-    HYP_FIELD(Property = "WindTrunkFlexibility", Editor, Serialize)
+    HYP_FIELD(Property = "WindTrunkFlexibility", Editor, Serialize, EditOrder = 9)
     float windTrunkFlexibility;
 
-    HYP_FIELD(Property = "WindTreeHeight", Editor, Serialize)
+    HYP_FIELD(Property = "WindTreeHeight", Editor, Serialize, EditOrder = 9)
     float windTreeHeight;
 
     // radians
-    HYP_FIELD(Property = "WindFlutter", Editor, Serialize)
+    HYP_FIELD(Property = "WindFlutter", Editor, Serialize, EditOrder = 9)
     float windFlutter;
 
-    HYP_FIELD(Property = "FoliageNormalBlend", Editor, Serialize)
+    HYP_FIELD(Property = "FoliageNormalBlend", Editor, Serialize, EditOrder = 10)
     float foliageNormalBlend;
 
-    HYP_FIELD(Property = "FoliageBackfaceVolume", Editor, Serialize)
+    HYP_FIELD(Property = "FoliageBackfaceVolume", Editor, Serialize, EditOrder = 10)
     float foliageBackfaceVolume;
 
-    HYP_FIELD(Property = "UVScale", Editor, Serialize)
+    HYP_FIELD(Property = "UVScale", Editor, Serialize, EditOrder = 2)
     Vec2f uvScale;
 
-    HYP_FIELD(Property = "Unlit", Editor, Serialize)
+    HYP_FIELD(Property = "Unlit", Editor, Serialize, EditOrder = 11)
     bool unlit;
 
     // two sided, wrapped lighting with light coming through from behind - leaves, grass, cloth
-    HYP_FIELD(Property = "Foliage", Editor, Serialize)
+    HYP_FIELD(Property = "Foliage", Editor, Serialize, EditOrder = 10)
     bool foliage;
 
     HYP_FIELD(Property = "TerrainColorMatch", Editor, Serialize)
@@ -139,16 +139,16 @@ public:
     HYP_FIELD(Property = "Flags", Serialize, Editor = false)
     uint8 flags;
 
-    HYP_FIELD(Property = "ColorVariation", Editor, Serialize)
+    HYP_FIELD(Property = "ColorVariation", Editor, Serialize, EditOrder = 11)
     float colorVariation;
 
-    HYP_FIELD(Property = "GroundNormalBlend", Editor, Serialize)
+    HYP_FIELD(Property = "GroundNormalBlend", Editor, Serialize, EditOrder = 10)
     float groundNormalBlend;
 
-    HYP_FIELD(Property = "BaseOcclusion", Editor, Serialize)
+    HYP_FIELD(Property = "BaseOcclusion", Editor, Serialize, EditOrder = 11)
     float baseOcclusion;
 
-    HYP_FIELD(Property = "BaseOcclusionHeight", Editor, Serialize)
+    HYP_FIELD(Property = "BaseOcclusionHeight", Editor, Serialize, EditOrder = 11)
     float baseOcclusionHeight;
 
     enum NoInitTag { NoInit };

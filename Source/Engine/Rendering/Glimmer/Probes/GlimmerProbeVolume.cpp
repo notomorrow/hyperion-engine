@@ -190,6 +190,8 @@ struct GlimmerProbeBlendConstants
     Vec4f params;
 
     GlimmerLightShaderData light;
+
+    GlimmerSHVolumeShaderData sh; // where a probe starting over begins from; zeroed while it can't be sampled
 };
 
 static GpuBufferRef CreateProbeBuffer(size_t elementSize, size_t numElements)
@@ -372,10 +374,12 @@ void GlimmerProbeVolume::UpdateWindows(const Vec3f& viewerPosition, const Vec3f&
     {
         const float spacing = GlimmerHelpers::GetGlimmerProbeLevelSpacing(levelIndex);
         const Vec3i origin = GlimmerHelpers::GetGlimmerProbeWindowOrigin(viewerPosition, lookAhead, levelIndex);
+        const Vec3f center = GlimmerHelpers::GetGlimmerProbeWindowCenter(viewerPosition, lookAhead, levelIndex);
 
         GlimmerProbeLevelShaderData& level = m_shaderData.levels[levelIndex];
         level.windowOrigin = Vec4i(origin.x, origin.y, origin.z, 1);
         level.params = Vec4f(spacing, 1.0f / spacing, 0.0f, 0.0f);
+        level.center = Vec4f(center / spacing, 0.0f);
     }
 }
 
@@ -862,6 +866,11 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
             float(sleepMaxInterval));
         constants.light = inputs.light;
 
+        if (hasSHVolume)
+        {
+            constants.sh = inputs.shVolume->GetShaderData();
+        }
+
         GpuBuffer* cbuffer = nullptr;
         size_t cbufferOffset = 0;
         size_t cbufferSize = 0;
@@ -893,6 +902,8 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
         cr << SetShaderUniform(uniformIndex++, "OutVisibility"_sh, m_visibilityBuffer.Get(), ShaderDataOffset(0, sizeof(uint32)));
         cr << SetShaderUniform(uniformIndex++, "OutTrend"_sh, m_trendBuffer.Get(), ShaderDataOffset(0, sizeof(Vec4f)));
         cr << SetShaderUniform(uniformIndex++, "OutSlotTimes"_sh, m_slotTimesBuffer.Get(), ShaderDataOffset(0, sizeof(Vec2u)));
+        cr << SetShaderUniform(uniformIndex++, "GlimmerSHStateTexture"_sh, hasSHVolume ? inputs.shVolume->GetStateImageView() : RI.placeholderData->GetImageView3D1x1x1R8());
+        cr << SetShaderUniform(uniformIndex++, "GlimmerSHLightBuffer"_sh, GetBufferOrPlaceholder(hasSHVolume ? inputs.shVolume->GetLightBuffer() : m_placeholderBuffer).Get(), ShaderDataOffset(0, sizeof(uint32)));
 
         // group per probe
         cr << DispatchCompute(Vec3u { probesPerFrame, 1, 1 });

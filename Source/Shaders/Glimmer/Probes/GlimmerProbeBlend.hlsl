@@ -6,6 +6,7 @@ PERMUTE(MODE, BLEND, COMPOSE)
 
 #include "GlimmerProbeTypes.hlsli"
 #include "../GlimmerLight.hlsli"
+#include "../SH/GlimmerSHCommon.hlsli"
 
 struct GlimmerProbeBlendConstants
 {
@@ -24,6 +25,8 @@ struct GlimmerProbeBlendConstants
     float4 params;
 
     GlimmerLightParams light;
+
+    GlimmerSHVolume sh;
 };
 
 DECLARE_BUFFER_DYNAMIC(GlimmerProbeBlend, CBuffer) cbuffer CBuffer
@@ -91,8 +94,75 @@ DECLARE_UAV(GlimmerProbeBlend, OutTrend) RWStructuredBuffer<float4> OutTrend;
 #include "../GlimmerConstants.hlsli"
 #include "../GlimmerCommon.hlsli"
 
+DECLARE_SRV(GlimmerProbeBlend, GlimmerSHStateTexture) Texture3D<uint4> glimmerSHState;
+DECLARE_SRV(GlimmerProbeBlend, GlimmerSHLightBuffer) StructuredBuffer<uint> glimmerSHLight;
+
+#define GLIMMER_SH_LOAD_DATA(texel) ((float4)0.0)
+#define GLIMMER_SH_LOAD_STATE(texel) glimmerSHState.Load(int4(texel, 0))
+#define GLIMMER_SH_LOAD_RADIANCE(texel) ((float4)0.0)
+#define GLIMMER_SH_LOAD_LIGHT(texel, entry) GLIMMER_SH_LOAD_LIGHT_FROM(glimmerSHLight, texel, entry)
+
+#include "../SH/GlimmerSHSample.hlsli"
+
 // what the relative trend values are relative to at least
 #define GLIMMER_PROBE_MIN_TREND_LUMINANCE 1e-3
+
+#define GLIMMER_PROBE_SEED_UPDATES 3.0
+
+float GlimmerSampleSHEntries(float3 P, out float4 outEntries[GLIMMER_LIGHT_ENTRIES])
+{
+    outEntries = (float4[GLIMMER_LIGHT_ENTRIES])0.0;
+
+    if (constants.sh.info.w == 0u)
+    {
+        return 0.0;
+    }
+
+    float remaining = 1.0;
+
+    [loop]
+    for (uint cascadeIndex = 0; cascadeIndex < GLIMMER_SH_CASCADES && remaining > 1e-3; cascadeIndex++)
+    {
+        GlimmerSHTaps taps;
+        const float cascadeWeight = GlimmerSHGatherTaps(constants.sh, cascadeIndex, P, (float3)0.0, taps);
+
+        if (cascadeWeight <= 0.0)
+        {
+            continue;
+        }
+
+        const float scale = cascadeWeight * remaining / taps.weightSum;
+
+        [loop]
+        for (uint tap = 0; tap < 8; tap++)
+        {
+            [branch]
+            if (taps.weights[tap] > 0.0)
+            {
+                [loop]
+                for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
+                {
+                    outEntries[entry] += GLIMMER_SH_LOAD_LIGHT(taps.texels[tap], entry) * (taps.weights[tap] * scale);
+                }
+            }
+        }
+
+        remaining *= 1.0 - cascadeWeight;
+    }
+
+    const float coverage = 1.0 - remaining;
+
+    if (coverage > 1e-4)
+    {
+        [loop]
+        for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
+        {
+            outEntries[entry] /= coverage;
+        }
+    }
+
+    return coverage;
+}
 
 /// hit distance (negative on back faces, 0 starting inside)
 groupshared float gsRayDistances[GLIMMER_PROBE_MAX_RAYS];
@@ -116,7 +186,7 @@ float GlimmerComposedLuminance(float4 entries[GLIMMER_LIGHT_ENTRIES])
     return GlimmerLuminance(float3(composed[0].x, composed[1].x, composed[2].x));
 }
 
-void GlimmerBlendProbe(uint probeIndex, uint4 state, uint numRays, float invSpacing)
+void GlimmerBlendProbe(uint probeIndex, int4 slot, uint4 state, uint numRays, float invSpacing)
 {
     uint probeState = GlimmerProbeStateOf(state);
 
@@ -408,7 +478,18 @@ void GlimmerBlendProbe(uint probeIndex, uint4 state, uint numRays, float invSpac
         const float estimateScale = max(abs(estimateLuminance), GLIMMER_PROBE_MIN_TREND_LUMINANCE);
         const float relativeVariance = estimateVariance / (estimateScale * estimateScale);
 
-        trend = float4(relativeVariance, 0.0, 2.0 * relativeVariance, 1.0);
+        // starting from the far field, so a new probe eases in from what was shown there rather than from one noisy estimate
+        const float3 position = GlimmerProbeGridPosition(constants.volume.levels[slot.w], GlimmerProbeCoord(slot.xyz, GlimmerLocalProbeOf(probeIndex))) + offset / invSpacing;
+
+        float4 seed[GLIMMER_LIGHT_ENTRIES];
+        const float seedUpdates = GLIMMER_PROBE_SEED_UPDATES * saturate(GlimmerSampleSHEntries(position, seed));
+
+        for (uint seedEntry = 0; seedEntry < GLIMMER_LIGHT_ENTRIES; seedEntry++)
+        {
+            light[seedEntry] = lerp(light[seedEntry], seed[seedEntry], seedUpdates / (seedUpdates + 1.0));
+        }
+
+        trend = float4(relativeVariance, 0.0, 2.0 * relativeVariance, 1.0 + seedUpdates);
     }
 
     if (relocations != 0u && updates >= GLIMMER_PROBE_SETTLE_UPDATES)
@@ -484,7 +565,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
     if (isUpdated && groupIndex == 0u)
     {
-        GlimmerBlendProbe(probeIndex, state, numRays, invSpacing);
+        GlimmerBlendProbe(probeIndex, slot, state, numRays, invSpacing);
     }
 
     GroupMemoryBarrierWithGroupSync();

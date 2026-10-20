@@ -10,13 +10,12 @@ using Hyperion.Editor.Services;
 namespace Hyperion.Editor.ViewModels
 {
     /// <summary>
-    /// Live preview of a material, shown above its properties in the asset editing panel. The native
-    /// renderer draws the material onto a sphere offscreen and we blit the result into a bitmap; moving
-    /// the mouse across the image aims the key light rather than the camera.
+    /// Live preview of a material, shown above its properties in the asset editing panel.
+    /// The native renderer draws the material onto a sphere offscreen and we blit the result into a bitmap.
+    /// Moving the mouse across the image aims the key light.
     /// </summary>
     public sealed class MaterialPreviewViewModel : ViewModelBase, IDisposable
     {
-        /// <summary>Matches MaterialPreviewRenderer::PreviewSize on the native side.</summary>
         private const int PreviewSize = 256;
 
         private readonly EditorSubsystem _editorSubsystem;

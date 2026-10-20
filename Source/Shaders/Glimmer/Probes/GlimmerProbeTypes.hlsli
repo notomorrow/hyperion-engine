@@ -52,6 +52,7 @@ struct GlimmerProbeLevel
 {
     int4 windowOrigin; // xyz = absolute block of the window's first block, w = 1 once it has been allocated
     float4 params;     // x = probe spacing, y = 1 / spacing
+    float4 center;     // xyz = the window's center before snapping, in probe spacings
 };
 
 struct GlimmerProbeVolume

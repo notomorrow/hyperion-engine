@@ -248,14 +248,15 @@ bool GlimmerIsCoveredByFinerLevel(uint levelIndex, int3 block)
     const uint finerIndex = levelIndex - 1u;
     const GlimmerProbeLevel finer = constants.volume.levels[finerIndex];
 
+    const float coveredReach = float(GLIMMER_PROBE_WINDOW * GLIMMER_PROBE_BLOCK) * 0.5 - float(GLIMMER_PROBE_BLOCK) * 2.5;
+
     [unroll]
     for (uint child = 0; child < 8; child++)
     {
         const int3 finerBlock = block * 2 + int3(child & 1u, (child >> 1) & 1u, (child >> 2) & 1u);
-        const int3 local = finerBlock - finer.windowOrigin.xyz;
+        const float3 blockMin = float3(finerBlock * GLIMMER_PROBE_BLOCK) - finer.center.xyz;
 
-        // lighting fades the finer level out over its window's outer blocks
-        if (finer.windowOrigin.w == 0 || any(local < 2) || any(local >= GLIMMER_PROBE_WINDOW - 2))
+        if (finer.windowOrigin.w == 0 || any(blockMin < -coveredReach) || any(blockMin + float(GLIMMER_PROBE_BLOCK) > coveredReach))
         {
             return false;
         }
