@@ -2682,7 +2682,7 @@ public:
         return "Delete Asset";
     }
 
-    /// Arguments are pairs of "<bucketIndex> <assetName>"; one confirmation and one undo step covers them all
+    /// Arguments are pairs of "<bucketIndex> <assetName>"
     virtual void Execute(EditorSubsystem* subsystem) override
     {
         AssertOnThread(g_simThread);
@@ -2763,7 +2763,7 @@ public:
         currentProject->GetActionStack()->PushAction(action);
     }
 
-    /// Removes the assets (and their manifests) and, if given, a folder subtree; reverting puts all of it back where it was
+    /// Removes the assets (and their manifests) and, if given, a folder subtree. Action is reversible
     static Handle<FunctionalEditorAction> MakeDeleteAssetsAction(String text, Array<Handle<AssetObject>> assets, String folderPath, Array<String> folderSubtree)
     {
         Array<AssetPath> assetPaths;
@@ -2858,7 +2858,6 @@ DEFINE_EDITOR_COMMAND(DeleteAsset);
 
 #pragma region DeleteAssetFolder
 
-/// The only argument is the folder path (spaces and all); its assets and subfolders are deleted with it
 class EditorCommandDeleteAssetFolder final : public EditorCommandBase
 {
     HYP_OBJECT_BODY(EditorCommandDeleteAssetFolder);

@@ -11,6 +11,7 @@
 #include <Scene/Entity.hpp>
 #include <Scene/EntityManager.hpp>
 #include <Scene/Scene.hpp>
+
 #include <Scene/Components/SwatchOverridesComponent.hpp>
 
 #include <Core/DataProcessing/HMF/HMF.hpp>
@@ -54,9 +55,14 @@
 
 namespace Hyperion {
 
-struct LoadAssetsFromReferencesContext
-{
-};
+struct LoadAssetsFromReferencesContext {};
+
+// If true, class names will always be written when serializing objects IF the type != the declared type.
+// For example, we're serializing an array of Animal and we encounter a Dog object, we need to write the class name
+// otherwise we won't know to deserialize it as a Dog.
+static constexpr bool ForceWriteClassNamesWhenTypesDiffer = true;
+
+static const FilePath s_noFilePath = "<stream>";
 
 // used to prevent infinite recursion when serializing nested objects
 thread_local Set<Pair<TypeId, const void*>>* t_serializedObjects = nullptr;
@@ -80,11 +86,6 @@ static Set<Pair<TypeId, const void*>>& GetSerializedObjectsGuard()
 
     return *t_serializedObjects;
 }
-
-// If true, class names will always be written when serializing objects IF the type != the declared type.
-// For example, we're serializing an array of Animal and we encounter a Dog object, we need to write the class name
-// otherwise we won't know to deserialize it as a Dog.
-static constexpr bool ForceWriteClassNamesWhenTypesDiffer = true;
 
 ENGINE_API Result BoxedToJSON(
     const BoxedValue& value,
@@ -2528,19 +2529,7 @@ Result BoxedToHMFImpl(
             return {};
         }
 
-        bool isValidIdent = str[0] == '_' || (str[0] >= 'a' && str[0] <= 'z') || (str[0] >= 'A' && str[0] <= 'Z');
-
-        const size_t len = Memory::StrLen(str);
-
-        for (size_t i = 1; i < len && isValidIdent; i++)
-        {
-            if (!(str[i] == '_' || (str[i] >= 'a' && str[i] <= 'z') || (str[i] >= 'A' && str[i] <= 'Z') || (str[i] >= '0' && str[i] <= '9')))
-            {
-                isValidIdent = false;
-            }
-        }
-
-        if (isValidIdent)
+        if (DataProcessing::IsValidIdentifier(str))
         {
             outText += str;
         }
@@ -3414,24 +3403,22 @@ Result ObjectToHMF(
     return {};
 }
 
-TResult<BoxedValue> ObjectFieldsFromHMF(const FilePath& filepath, Span<const StringHash> fieldNames)
+TResult<BoxedValue> ObjectFieldsFromHMF(ByteReader& stream, Span<const StringHash> fieldNames)
 {
-    FileByteReader reader { filepath };
-
-    if (reader.Eof())
+    if (stream.Eof())
     {
-        return HYP_MAKE_ERROR(Error, "Failed to open {}", filepath);
+        return HYP_MAKE_ERROR(Error, "Stream not open");
     }
 
     HMF::ParseOptions parseOptions;
     parseOptions.topLevelFields = fieldNames;
 
-    return HMF::Parse(filepath, reader, parseOptions);
+    return HMF::Parse(s_noFilePath, stream, parseOptions);
 }
 
-TResult<BoxedValue> FieldFromHMF(const FilePath& filepath, StringHash fieldName)
+TResult<BoxedValue> FieldFromHMF(ByteReader& stream, StringHash fieldName)
 {
-    TResult<BoxedValue> objectResult = ObjectFieldsFromHMF(filepath, Span<const StringHash>(&fieldName, size_t(1)));
+    TResult<BoxedValue> objectResult = ObjectFieldsFromHMF(stream, Span<const StringHash>(&fieldName, size_t(1)));
 
     if (objectResult.HasError())
     {
@@ -3443,7 +3430,7 @@ TResult<BoxedValue> FieldFromHMF(const FilePath& filepath, StringHash fieldName)
 
     if (!cls)
     {
-        return HYP_MAKE_ERROR(Error, "{} does not hold an object", filepath);
+        return HYP_MAKE_ERROR(Error, "HMF does not hold an object");
     }
 
     if (Property* property = cls->GetProperty(fieldName))

@@ -2023,7 +2023,6 @@ namespace Hyperion.Editor
 
         private bool _isFolderTreeUserSelecting;
 
-        /// Only a click or key press in the tree opens the folder it selects; the tree also changes its selection by itself when it is rebuilt
         private void MarkFolderTreeUserSelecting()
         {
             _isFolderTreeUserSelecting = true;
@@ -2071,7 +2070,6 @@ namespace Hyperion.Editor
             _isDraggingBrowserItems = false;
             _pendingBrowserSingleSelect = null;
 
-            // Pressing an item of a multi-selection keeps the selection, so all of it can be dragged; a plain click still selects just that item on release
             if (sender is ListBox listBox
                 && item != null
                 && e.KeyModifiers == KeyModifiers.None
@@ -2160,7 +2158,6 @@ namespace Hyperion.Editor
             }
         }
 
-        /// <summary>The folder a drop at the pointer would go into: the folder tile, tree node or path segment under it. Empty grid space means the open folder, for files only.</summary>
         private AssetFolderViewModel? GetBrowserDropFolder(object? sender, DragEventArgs e, bool isFileDrop)
         {
             for (var control = e.Source as Control; control != null; control = control.Parent as Control)
@@ -2471,7 +2468,6 @@ namespace Hyperion.Editor
             return true;
         }
 
-        // Mirror the hovered hierarchy row in the viewport; only re-sent when the hovered row changes
         private void UpdateSceneTreeAssetDropTarget(DragEventArgs e, NodeViewModel? target)
         {
             if (target == _sceneTreeAssetDropTarget)

@@ -2713,7 +2713,6 @@
                                                                 Padding="8,2"
                                                                 VerticalAlignment="Center"
                                                                 Command="{Binding ContentBrowser.ImportCommand}"
-                                                                Classes="Primary"
                                                                 IsEnabled="{Binding !IsSimulating}"
                                                                 ToolTip.Tip="Import into the current folder">
                                                                 <StackPanel Orientation="Horizontal" Spacing="5">

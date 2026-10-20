@@ -105,7 +105,8 @@ public:
 
     void RemoveAssetFolder(const AssetPath& assetPath);
 
-    /// Gives every registered asset without a folder the folder named after its bucket. Returns true if any were added.
+    /// Gives every registered asset without a folder the folder named after its bucket.
+    /// Returns true if any were added.
     HYP_METHOD()
     bool SyncWithRegistry();
 

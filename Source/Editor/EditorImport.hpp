@@ -22,8 +22,13 @@ class AssetObject;
 
 using EditorImportCallback = Proc<void(EditorSubsystem&, const Array<Handle<AssetObject>>&)>;
 
-/// Imported assets are filed under targetFolder; a model gets its own <targetFolder>/<ModelName>/ with a subfolder per asset type
-void ImportEditorContent(EditorSubsystem* subsystem, const Array<FilePath>& files, const String& targetFolder, EditorImportCallback&& onImported = {});
+/// Imported assets are filed under targetFolder.
+/// a model gets its own <targetFolder>/<ModelName>/ with a subfolder per asset type
+void ImportEditorContent(
+    EditorSubsystem* subsystem,
+    const Array<FilePath>& files,
+    const String& targetFolder,
+    EditorImportCallback&& onImported = {});
 
 static inline bool IsEditorImportModelFile(const FilePath& filepath)
 {

@@ -21,6 +21,7 @@
 
 #include <Core/Defines.hpp>
 
+#include <Core/DataProcessing/Shared/Utils.hpp>
 
 namespace Hyperion {
 class ByteReader;

@@ -24,7 +24,7 @@ namespace Hyperion.Editor.ViewModels
 
         public string DisplayName => _assetDesc.Name.ToString();
 
-        /// <summary>The virtual folder the asset is filed under; empty for the root.</summary>
+        /// <summary>The virtual folder the asset is filed under. If empty, it's at the root</summary>
         public string FolderPath { get; init; } = string.Empty;
 
         public bool IsPrefab => _bucket?.BucketIndex == AssetBucket.Prefabs.Value;
@@ -77,6 +77,8 @@ namespace Hyperion.Editor.ViewModels
         }
 
         /// <summary>
+        /// @TODO REMOVE REMOVE REMOVE!!! Find a better way. Go through native code? Bindings for SerializationUtils?
+        /// 
         /// Reads an asset's concrete class name out of its .hmf manifest without deserializing it.
         /// HMF is a text format whose first token is the class name, e.g. <c>Material "CubeMaterial" {</c>,
         /// so a short read off the front is enough. Returns null if the file can't be read.
@@ -94,7 +96,6 @@ namespace Hyperion.Editor.ViewModels
             }
             catch (Exception)
             {
-                // An unreadable manifest just means no type icon; the asset still lists.
                 return null;
             }
 
@@ -102,8 +103,6 @@ namespace Hyperion.Editor.ViewModels
             {
                 char c = buffer[i];
 
-                // The class name runs until the first separator - whitespace, the quoted asset name,
-                // or the opening brace when the asset is anonymous.
                 if (char.IsWhiteSpace(c) || c == '"' || c == '{')
                 {
                     return i > 0 ? new string(buffer.Slice(0, i)) : null;

@@ -8,7 +8,6 @@
 
 #include <Framework/Commandlet/Commandlet.hpp>
 #include <Framework/EngineGlobals.hpp>
-#include <Framework/ProjectLayout.hpp>
 #include <Framework/EngineDefaults.hpp>
 #include <Framework/CVarManager.hpp>
 
@@ -69,6 +68,7 @@
 #include <Rendering/RenderHelpers.hpp>
 
 #include <Editor/EditorProject.hpp>
+#include <Editor/EditorProjectLayout.hpp>
 #include <Editor/EditorState.hpp>
 #include <Editor/EditorPackagingSettings.hpp>
 

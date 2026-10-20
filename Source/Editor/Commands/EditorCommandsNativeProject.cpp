@@ -4,8 +4,7 @@
 #include <Core/IO/ByteReader.hpp>
 
 #include <Editor/EditorNativeModule.hpp>
-
-#include <Framework/ProjectLayout.hpp>
+#include <Editor/EditorProjectLayout.hpp>
 
 #include <Core/Threading/Threads.hpp>
 

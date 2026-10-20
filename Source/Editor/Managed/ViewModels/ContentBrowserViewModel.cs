@@ -600,7 +600,6 @@ namespace Hyperion.Editor.ViewModels
             }, DispatcherPriority.Background);
         }
 
-        /// <summary>Rebuilds the folder tree and the asset index from the project, then reopens <paramref name="folderPath"/> (or its nearest surviving parent). Must run on the UI thread.</summary>
         private void ReloadAll(string folderPath, IEnumerable<string>? restoredExpandedPaths = null)
         {
             Dispatcher.UIThread.VerifyAccess();
@@ -832,7 +831,6 @@ namespace Hyperion.Editor.ViewModels
             RebuildItems();
         }
 
-        /// <summary>Rebuilds <see cref="Items"/> for the current folder, honouring the search text, type filter and sort mode. Must run on the UI thread.</summary>
         private void RebuildItems()
         {
             Dispatcher.UIThread.VerifyAccess();
@@ -840,7 +838,7 @@ namespace Hyperion.Editor.ViewModels
             object? preserved = _selectedItem;
 
             HashSet<uint>? typeFilter = HasTypeFilter
-                ? new HashSet<uint>(TypeFilters.Where(filter => filter.IsChecked).Select(filter => filter.BucketIndex))
+                ? [.. TypeFilters.Where(filter => filter.IsChecked).Select(filter => filter.BucketIndex)]
                 : null;
 
             IEnumerable<AssetFolderViewModel> folders;
@@ -930,7 +928,7 @@ namespace Hyperion.Editor.ViewModels
             });
         }
 
-        /// <summary>Makes a "New Folder" under <paramref name="parent"/> and puts its name up for editing.</summary>
+        /// <summary>Makes a new folder under <paramref name="parent"/> and prepares the name to be edited</summary>
         public void CreateFolder(AssetFolderViewModel parent)
         {
             EditorAssetFolders? assetFolders = _assetFolders;
@@ -976,7 +974,6 @@ namespace Hyperion.Editor.ViewModels
                 revert: () => assetFolders.RenameFolder(newPath, oldName));
         }
 
-        /// <summary>Files <paramref name="items"/> (folders and assets) under <paramref name="target"/>, as one undo step.</summary>
         public void MoveItems(IReadOnlyList<object> items, AssetFolderViewModel target)
         {
             EditorAssetFolders? assetFolders = _assetFolders;
@@ -1052,7 +1049,6 @@ namespace Hyperion.Editor.ViewModels
                 });
         }
 
-        /// <summary>Deletes the given assets and folders (with their contents). Each delete asks first and is one undo step.</summary>
         public void DeleteItems(IReadOnlyList<object> items)
         {
             List<AssetObjectViewModel> assets = items.OfType<AssetObjectViewModel>().Where(asset => asset.Bucket != null).ToList();
@@ -1079,7 +1075,6 @@ namespace Hyperion.Editor.ViewModels
             });
         }
 
-        /// <summary>Imports files from disk into <paramref name="folder"/>; a model gets its own folder there.</summary>
         public void ImportFiles(IReadOnlyList<string> paths, AssetFolderViewModel folder)
         {
             if (paths.Count == 0)
@@ -1135,7 +1130,6 @@ namespace Hyperion.Editor.ViewModels
             return name;
         }
 
-        /// <summary>Runs <paramref name="create"/> on the sim thread, files whatever it added to the bucket into the current folder, and focuses it.</summary>
         private void CreateInCurrentFolder(string assetDescription, uint bucketIndex, bool openEditor, Action create)
         {
             string folderPath = _currentFolder.Path;
@@ -1179,10 +1173,6 @@ namespace Hyperion.Editor.ViewModels
             });
         }
 
-        /// <summary>
-        /// Assets created this session but not yet saved have no manifest to read a type from, so the type
-        /// comes from the live object in the registry instead.
-        /// </summary>
         private static void ResolveUnsavedAssetTypeNames(List<AssetObjectViewModel> assetVms)
         {
             if (assetVms.Count == 0)
@@ -1242,7 +1232,6 @@ namespace Hyperion.Editor.ViewModels
             _onProjectClosingHandler?.Dispose();
         }
 
-        /// <summary>Opens the folder holding the asset and selects it, once the asset has been listed.</summary>
         public void FocusAsset(uint bucketIndex, string name, bool openEditor = false)
         {
             Dispatcher.UIThread.VerifyAccess();
@@ -1300,7 +1289,6 @@ namespace Hyperion.Editor.ViewModels
             }
         }
 
-        /// <summary>Opens a folder, or edits an asset (switches to it, for a World).</summary>
         public void OpenItem(object? item)
         {
             switch (item)

@@ -6,7 +6,7 @@ namespace Hyperion.Editor.Services
 {
     public static class ShellService
     {
-        /// <summary>Opens the system file manager with <paramref name="path"/> selected, or at the directory itself when it is one.</summary>
+        /// <summary>Opens the system file manager with <paramref name="path"/> selected if it is a file, or if it is a directory, at the directory</summary>
         public static void RevealInFileManager(string path)
         {
             try
