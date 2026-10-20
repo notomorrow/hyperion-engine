@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -104,6 +105,8 @@ namespace Hyperion.Generators
         private readonly INamedTypeSymbol? _obsoleteAttributeType;
         private readonly INamedTypeSymbol? _unmanagedCallersOnlyAttributeType;
         private readonly INamedTypeSymbol? _experimentalAttributeType;
+        private readonly INamedTypeSymbol? _marshalAsAttributeType;
+        private readonly INamedTypeSymbol? _structLayoutAttributeType;
 
         private readonly StringBuilder _members = new StringBuilder();
         private readonly StringBuilder _register = new StringBuilder();
@@ -119,6 +122,8 @@ namespace Hyperion.Generators
             _obsoleteAttributeType = compilation.GetTypeByMetadataName("System.ObsoleteAttribute");
             _unmanagedCallersOnlyAttributeType = compilation.GetTypeByMetadataName("System.Runtime.InteropServices.UnmanagedCallersOnlyAttribute");
             _experimentalAttributeType = compilation.GetTypeByMetadataName("System.Diagnostics.CodeAnalysis.ExperimentalAttribute");
+            _marshalAsAttributeType = compilation.GetTypeByMetadataName("System.Runtime.InteropServices.MarshalAsAttribute");
+            _structLayoutAttributeType = compilation.GetTypeByMetadataName("System.Runtime.InteropServices.StructLayoutAttribute");
         }
 
         public void AddType(INamedTypeSymbol type)
@@ -640,7 +645,7 @@ namespace Hyperion.Generators
 
         private string? EmitMarshalObject(INamedTypeSymbol type, string typeName, int typeIndex)
         {
-            if (type.TypeKind != TypeKind.Struct)
+            if (type.TypeKind != TypeKind.Struct || !IsMarshalable(type))
             {
                 return null;
             }
@@ -658,7 +663,7 @@ namespace Hyperion.Generators
 
         private string? EmitNativeSize(INamedTypeSymbol type, string typeName, int typeIndex)
         {
-            if (type.TypeKind != TypeKind.Struct)
+            if (type.TypeKind != TypeKind.Struct || !IsMarshalable(type))
             {
                 return null;
             }
@@ -676,7 +681,7 @@ namespace Hyperion.Generators
 
         private string? EmitMarshalOut(INamedTypeSymbol type, string typeName, int typeIndex)
         {
-            if (type.TypeKind != TypeKind.Struct)
+            if (type.TypeKind != TypeKind.Struct || !IsMarshalable(type))
             {
                 return null;
             }
@@ -953,6 +958,83 @@ namespace Hyperion.Generators
             }
 
             return false;
+        }
+
+        // Returns whether or not Marshal.SizeOf/PtrToStructure/StructureToPtr work on the given type on every platform
+        // Array and object fields without [MarshalAs] default to SAFEARRAY/VARIANT, which only Windows supports.
+        private bool IsMarshalable(INamedTypeSymbol type)
+        {
+            if (type.IsUnmanagedType)
+            {
+                return true;
+            }
+
+            foreach (AttributeData attribute in type.GetAttributes())
+            {
+                if (_structLayoutAttributeType != null && SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _structLayoutAttributeType)
+                    && attribute.ConstructorArguments.Length > 0 && attribute.ConstructorArguments[0].Value is int layoutKind && layoutKind == (int)LayoutKind.Auto)
+                {
+                    return false;
+                }
+            }
+
+            foreach (IFieldSymbol field in type.GetMembers().OfType<IFieldSymbol>())
+            {
+                if (field.IsStatic || field.IsConst)
+                {
+                    continue;
+                }
+
+                ITypeSymbol fieldType = field.Type;
+
+                AttributeData? marshalAs = field.GetAttributes().FirstOrDefault(attribute => SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, _marshalAsAttributeType));
+
+                if (marshalAs != null && marshalAs.ConstructorArguments.Length > 0 && marshalAs.ConstructorArguments[0].Value != null)
+                {
+                    if (!IsMarshalAsPortable(fieldType, (UnmanagedType)Convert.ToInt32(marshalAs.ConstructorArguments[0].Value, CultureInfo.InvariantCulture)))
+                    {
+                        return false;
+                    }
+
+                    continue;
+                }
+
+                if (fieldType.IsUnmanagedType || fieldType.SpecialType == SpecialType.System_String || fieldType.TypeKind == TypeKind.Delegate)
+                {
+                    continue;
+                }
+
+                if (fieldType.TypeKind == TypeKind.Struct && fieldType is INamedTypeSymbol fieldStruct && IsMarshalable(fieldStruct))
+                {
+                    continue;
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
+        // IUnknown/IDispatch/Interface/SafeArray etc are COM types only Windows supports
+        private bool IsMarshalAsPortable(ITypeSymbol fieldType, UnmanagedType unmanagedType)
+        {
+            switch (unmanagedType)
+            {
+            case UnmanagedType.IUnknown:
+            case UnmanagedType.IDispatch:
+            case UnmanagedType.Interface:
+            case UnmanagedType.SafeArray:
+                return false;
+            case UnmanagedType.Struct:
+                return fieldType.TypeKind == TypeKind.Struct && fieldType is INamedTypeSymbol fieldStruct && IsMarshalable(fieldStruct);
+            case UnmanagedType.ByValArray:
+                ITypeSymbol? elementType = (fieldType as IArrayTypeSymbol)?.ElementType;
+
+                return elementType != null
+                    && (elementType.IsUnmanagedType || elementType.SpecialType == SpecialType.System_String || (elementType.TypeKind == TypeKind.Struct && elementType is INamedTypeSymbol elementStruct && IsMarshalable(elementStruct)));
+            default:
+                return true;
+            }
         }
 
         private static bool HasAttribute(ISymbol symbol, INamedTypeSymbol? attributeType)

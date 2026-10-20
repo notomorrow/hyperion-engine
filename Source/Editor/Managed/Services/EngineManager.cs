@@ -357,20 +357,21 @@ namespace Hyperion.Editor
                     string assemblyPath = Path.Combine(AppContext.BaseDirectory, assemblyName);
                     assemblyPathPtr = Marshal.StringToCoTaskMemUTF8(assemblyPath);
 
-                    res = NativeInterop.InitializeAssemblyManaged(assemblyGuidPtr, IntPtr.Zero, assemblyPathPtr, /* isCoreAssembly */ 1);
+                    res = NativeInterop.InitializeAssemblyManaged(assemblyGuidPtr, IntPtr.Zero, assemblyPathPtr, /* isCoreAssembly */ 1, out Exception? error);
 
                     Marshal.FreeCoTaskMem(assemblyPathPtr);
                     assemblyPathPtr = IntPtr.Zero;
 
                     if (res != (int)LoadAssemblyResult.Ok)
                     {
-                        throw new Exception("Failed to initialize assembly at: " + assemblyPath + ". Error code: " + (LoadAssemblyResult)res);
+                        throw new Exception("Failed to initialize assembly at: " + assemblyPath + ". Error code: " + (LoadAssemblyResult)res
+                            + (error != null ? "\n" + error.GetType().Name + ": " + error.Message : string.Empty), error);
                     }
                 }
             }
             catch (Exception ex)
             {
-                throw new Exception("Exception during Hyperion .NET runtime initialization: " + ex.Message);
+                throw new Exception("Exception during Hyperion .NET runtime initialization: " + ex.Message, ex);
             }
             finally
             {

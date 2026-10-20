@@ -175,6 +175,14 @@ namespace Hyperion
 
         public static unsafe int InitializeAssemblyManaged(IntPtr outAssemblyGuid, IntPtr assemblyPtr, IntPtr assemblyPathStringPtr, int isCoreAssembly)
         {
+            return InitializeAssemblyManaged(outAssemblyGuid, assemblyPtr, assemblyPathStringPtr, isCoreAssembly, out _);
+        }
+
+        // error is the exception behind an UnknownError result, so a managed caller can report it
+        public static unsafe int InitializeAssemblyManaged(IntPtr outAssemblyGuid, IntPtr assemblyPtr, IntPtr assemblyPathStringPtr, int isCoreAssembly, out Exception? error)
+        {
+            error = null;
+
             try
             {
                 // Create a managed string from the pointer
@@ -245,6 +253,8 @@ namespace Hyperion
             catch (Exception ex)
             {
                 Logger.Log(LogLevel.Error, "Error loading assembly: {0}", ex);
+
+                error = ex;
 
                 return (int)LoadAssemblyResult.UnknownError;
             }
