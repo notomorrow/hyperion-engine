@@ -1289,7 +1289,7 @@ set(SUB_LIBRARIES ${SUB_LIBRARIES} ${THIRD_PARTY_LIBRARIES})
 target_link_libraries(${BUILD_NAME} PUBLIC ${COMMON_LIBRARIES})
 target_link_libraries(${BUILD_NAME} PUBLIC ${RENDERER_LIBRARIES})
 
-if(HYP_DXC AND WIN32 AND NOT HYP_BUILD_STATIC)
+if(HYP_DXC AND MSVC AND NOT HYP_BUILD_STATIC)
   target_link_options(${BUILD_NAME} PRIVATE /DELAYLOAD:dxcompiler.dll)
   target_link_libraries(${BUILD_NAME} PRIVATE delayimp)
 endif()

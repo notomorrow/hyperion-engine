@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace Hyperion
 {
@@ -7,15 +8,15 @@ namespace Hyperion
     {
         // @TODO Refactor to use [CallerMemberName] and friends.
 
-        public static void Throw(bool condition, string? message = null, params object[] args)
+        public static void Throw(bool condition, string? message = null, params object?[] args)
         {
             if (!condition)
             {
-                var frame = new System.Diagnostics.StackFrame(1, true);
+                StackFrame frame = new StackFrame(1, true);
 
-                if (message == null || ((string)message).Length == 0)
+                if (message == null || message.Length == 0)
                 {
-                    Assert_Throw(null, System.Diagnostics.DiagnosticMethodInfo.Create(frame)?.Name, (uint)frame.GetFileLineNumber());
+                    Assert_Throw(null, DiagnosticMethodInfo.Create(frame)?.Name, (uint)frame.GetFileLineNumber());
                 }
                 else
                 {
@@ -26,20 +27,23 @@ namespace Hyperion
 
                     try
                     {
-                        string formattedMessage = string.Format((string)message, args);
+                        string formattedMessage = string.Format(message, args);
 
-                        Assert_Throw((string)message, System.Diagnostics.DiagnosticMethodInfo.Create(frame)?.Name, (uint)frame.GetFileLineNumber());
+                        Assert_Throw(message, DiagnosticMethodInfo.Create(frame)?.Name, (uint)frame.GetFileLineNumber());
                     }
                     catch (FormatException)
                     {
                         // Do nothing, just log as is
-                        Assert_Throw((string)message, System.Diagnostics.DiagnosticMethodInfo.Create(frame)?.Name, (uint)frame.GetFileLineNumber());
+                        Assert_Throw(message, DiagnosticMethodInfo.Create(frame)?.Name, (uint)frame.GetFileLineNumber());
                     }
                 }
             }
         }
 
         [DllImport("hyperion", EntryPoint = "Assert_Throw")]
-        private static extern void Assert_Throw([MarshalAs(UnmanagedType.LPStr)] string message, [MarshalAs(UnmanagedType.LPStr)] string funcName, uint line);
+        private static extern void Assert_Throw(
+            [MarshalAs(UnmanagedType.LPStr)] string? message,
+            [MarshalAs(UnmanagedType.LPStr)] string? funcName,
+            uint line);
     }
 }
