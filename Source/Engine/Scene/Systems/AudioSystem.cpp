@@ -38,20 +38,23 @@ void AudioSystem::OnEntityAdded(Entity* entity)
 
     AudioComponent& audioComponent = entity->GetEntityManager()->GetComponent<AudioComponent>(entity);
 
-    if (audioComponent.audioSource.IsValid())
+    if (!audioComponent.audioSource.IsValid())
     {
-        InitObject(audioComponent.audioSource);
-
-        audioComponent.audioSource->SetOnChanged([entity]()
-            {
-                entity->MarkDirty();
-            });
-        
-        audioComponent.audioSource->SetPitch(audioComponent.playbackState.speed);
-
-        const bool isLoop = (audioComponent.playbackState.loopMode == AudioLoopMode::Repeat);
-        audioComponent.audioSource->SetLoop(isLoop);
+        // If there is no existing AudioSource, create one - so when adding AudioComponent in editor, we'll have an AudioSource we can start editing immediately.
+        audioComponent.audioSource = MakeHandle<AudioSource>();
     }
+
+    InitObject(audioComponent.audioSource);
+
+    audioComponent.audioSource->SetOnChanged([entity]()
+        {
+            entity->MarkDirty();
+        });
+    
+    audioComponent.audioSource->SetPitch(audioComponent.playbackState.speed);
+
+    const bool isLoop = (audioComponent.playbackState.loopMode == AudioLoopMode::Repeat);
+    audioComponent.audioSource->SetLoop(isLoop);
 }
 
 void AudioSystem::OnEntityRemoved(Entity* entity)
