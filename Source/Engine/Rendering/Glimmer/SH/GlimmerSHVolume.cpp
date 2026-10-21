@@ -8,12 +8,15 @@
 
 #include <Rendering/Glimmer/SH/GlimmerSHVolume.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHOccupancy.hpp>
+
 #include <Rendering/Glimmer/GlimmerSpanCache.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/GlimmerRelight.hpp>
 #include <Rendering/Glimmer/GlimmerSceneInstances.hpp>
+#include <Rendering/Glimmer/GlimmerLocalLights.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
+
 #include <Rendering/Glimmer/Probes/GlimmerProbeVolume.hpp>
 #include <Rendering/Glimmer/Probes/GlimmerProbeCVars.hpp>
 
@@ -78,15 +81,31 @@ struct GlimmerSHUpdateConstants
     GlimmerGroundShaderData ground;
     GlimmerSpanShaderData spans;
     GlimmerSHOccupancyShaderData occupancy;
-    Vec4i boxMin;      // xyz = absolute voxel of the dispatch's first voxel, w = cascade
-    Vec4f rayRotation; // quaternion applied to this update's ray directions
-    Vec4f params;      // x = foliage extinction, y = max ray distance, z = albedo where the ground's isn't known, w = how much of the radiance's history is kept
+
+    /// xyz = voxel pos of the dispatch's first voxel
+    /// w = cascade
+    Vec4i boxMin;
+
+    /// quaternion applied to this update's ray directions
+    Vec4f rayRotation;
+
+    /// x = foliage extinction
+    /// y = max ray distance
+    /// z = albedo where the ground's isn't known
+    /// w = how much of the radiance's history is kept
+    Vec4f params;
     GlimmerRelightShaderData relight;
-    GlimmerProbeVolumeShaderData probes; // zeroed while the probes can't be sampled
+    
+    /// zeroed while the probes can't be sampled
+    GlimmerProbeVolumeShaderData probes;
     GlimmerSkyShaderData sky;
     EnvProbeShaderData skyProbe;
     GlimmerLightShaderData light;
-    Vec4u options;     // x = 1 to light hits from the nearest voxel, rather than the volume's filtered sample
+
+    /// x = 1 to light hits from the nearest voxel rather than the volume's filtered sample
+    Vec4u options;
+
+    GlimmerLocalLightsShaderData localLights;
 };
 
 namespace /* Helpers */ {
@@ -434,6 +453,11 @@ void GlimmerSHVolume::DispatchBox(Frame* frame, uint32 cascadeIndex, const Box& 
     constants.light = inputs.light;
     constants.options = Vec4u(g_cvGlimmerSHNearestHitLight.Get() ? 1u : 0u, 0u, 0u, 0u);
 
+    if (inputs.localLights)
+    {
+        constants.localLights = inputs.localLights->GetShaderData();
+    }
+
     GpuBuffer* cbuffer = nullptr;
     size_t cbufferOffset = 0;
     size_t cbufferSize = 0;
@@ -688,6 +712,30 @@ void GlimmerSHVolume::Update(Frame* frame, const GlimmerSHVolumeUpdateInputs& in
         }
 
         m_seenInstancesGeneration = inputs.sceneInstances->GetGeneration();
+    }
+
+    if (inputs.localLights && inputs.localLights->GetGeneration() != m_seenLightsGeneration)
+    {
+        GlimmerSceneChanges changes;
+
+        if (inputs.localLights->GetChangesSince(m_seenLightsGeneration, changes))
+        {
+            changes.Quantize(MaxSolidChangeBoxes);
+
+            for (const GlimmerSceneChange& change : changes)
+            {
+                AddPendingWorld(change.bounds.min, change.bounds.max, SolidChangeMarginVoxels);
+            }
+        }
+        else
+        {
+            for (uint32 cascadeIndex = 0; cascadeIndex < GlimmerSHCascades; cascadeIndex++)
+            {
+                AddPending(cascadeIndex, GetWindow(*m_cascades[cascadeIndex].origin));
+            }
+        }
+
+        m_seenLightsGeneration = inputs.localLights->GetGeneration();
     }
 
     for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)

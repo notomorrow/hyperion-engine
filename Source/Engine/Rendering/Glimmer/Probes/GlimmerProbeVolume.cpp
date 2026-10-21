@@ -12,6 +12,7 @@
 #include <Rendering/Glimmer/Bricks/GlimmerBrickCVars.hpp>
 #include <Rendering/Glimmer/GlimmerTriangleCache.hpp>
 #include <Rendering/Glimmer/GlimmerSceneInstances.hpp>
+#include <Rendering/Glimmer/GlimmerLocalLights.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHVolume.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHOccupancy.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
@@ -97,7 +98,8 @@ static constexpr uint32 ComposeGroupSize = 64;
 static constexpr uint32 NumProbeCounters = 16; // NOTE must match GLIMMER_PROBE_COUNTERS
 
 static constexpr uint32 MaxInstanceBoxes = 16;
-static constexpr uint32 MaxChangedBoxes = MaxInstanceBoxes + 2 * GlimmerGroundLevels; // GLIMMER_PROBE_MAX_CHANGED_BOXES
+static constexpr uint32 MaxLightBoxes = 4;
+static constexpr uint32 MaxChangedBoxes = MaxInstanceBoxes + MaxLightBoxes + 2 * GlimmerGroundLevels; // GLIMMER_PROBE_MAX_CHANGED_BOXES
 
 static constexpr uint32 MaxRelocations = 2;
 
@@ -172,6 +174,7 @@ struct GlimmerProbeTraceConstants
 
     GlimmerBrickShaderData bricks;
     Vec4u bvh; // x = traced instances in the TLAS
+    GlimmerLocalLightsShaderData localLights;
 };
 
 struct GlimmerProbeBlendConstants
@@ -525,7 +528,7 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
 
         constants.viewer = Vec4f(priorityPoint.x, priorityPoint.y, priorityPoint.z, 0.0f);
 
-        bool wakeEverything = isNewTracer;
+        bool shouldAwaken = isNewTracer;
 
         uint32 numChangedBoxes = 0;
 
@@ -535,7 +538,7 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
 
             if (m_seenInstancesGeneration == ~0u || !inputs.sceneInstances->GetChangesSince(m_seenInstancesGeneration, changes))
             {
-                wakeEverything = true;
+                shouldAwaken = true;
             }
             else
             {
@@ -565,6 +568,30 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
             m_seenInstancesGeneration = inputs.sceneInstances->GetGeneration();
         }
 
+        if (inputs.localLights && inputs.localLights->GetGeneration() != m_seenLightsGeneration)
+        {
+            GlimmerSceneChanges changes;
+
+            if (inputs.localLights->GetChangesSince(m_seenLightsGeneration, changes))
+            {
+                changes.Quantize(MaxLightBoxes);
+
+                for (const GlimmerSceneChange& change : changes)
+                {
+                    constants.changedMin[numChangedBoxes] = Vec4f(change.bounds.min, 0.0f);
+                    constants.changedMax[numChangedBoxes] = Vec4f(change.bounds.max, 0.0f);
+
+                    numChangedBoxes++;
+                }
+            }
+            else
+            {
+                shouldAwaken = true;
+            }
+
+            m_seenLightsGeneration = inputs.localLights->GetGeneration();
+        }
+
         for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)
         {
             const float texelSize = GetGlimmerGroundTexelSize(levelIndex);
@@ -583,11 +610,11 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
             }
         }
 
-        s_statGlimmerProbeWakes += wakeEverything ? 1u : 0u;
+        s_statGlimmerProbeWakes += shouldAwaken ? 1u : 0u;
         s_statGlimmerProbeChangedBoxes += numChangedBoxes;
 
         constants.wake = Vec4u(
-            wakeEverything ? 1u : 0u,
+            shouldAwaken ? 1u : 0u,
             numChangedBoxes,
             sleepMaxInterval,
             SafetyRefreshSeconds);
@@ -704,6 +731,11 @@ void GlimmerProbeVolume::Update(Frame* frame, const GlimmerProbeUpdateInputs& in
         if (hasBVH)
         {
             constants.bvh = Vec4u(inputs.sceneInstances->GetNumTracedInstances(), 0u, 0u, 0u);
+        }
+
+        if (inputs.localLights)
+        {
+            constants.localLights = inputs.localLights->GetShaderData();
         }
 
         const GpuImageViewRef relightImageView = inputs.relight ? inputs.relight->GetImageView() : GpuImageViewRef();

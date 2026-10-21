@@ -64,6 +64,27 @@ struct GlimmerGroundLevelState
     Vec2i validMax;
 };
 
+static constexpr uint32 GlimmerMaxLocalLights = 32; // GLIMMER_MAX_LOCAL_LIGHTS
+
+struct GlimmerLocalLightState
+{
+    uint64 key = 0;
+
+    /// position in xyz
+    /// radius in the w
+    Vec4f positionRadius;
+
+    /// premult by intensity
+    Vec4f color;
+
+    /// if it is indeed spot light then w will be 1.0
+    Vec4f spotDirection;
+
+    /// x = cos of the outer angle
+    /// y = cos of the inner angle.
+    Vec4f spotAngles;
+};
+
 struct GlimmerChannelState
 {
     Vec3f viewerPosition;
@@ -77,6 +98,9 @@ struct GlimmerChannelState
     uint32 groundGeneration = 0;
 
     FixedArray<GlimmerGroundCoverLayerState, GlimmerGroundCoverLayers> groundCover;
+
+    FixedArray<GlimmerLocalLightState, GlimmerMaxLocalLights> localLights {};
+    uint32 numLocalLights = 0;
 };
 
 struct GlimmerProbeDebugRecord

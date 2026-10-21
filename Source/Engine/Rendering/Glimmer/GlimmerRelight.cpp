@@ -125,6 +125,31 @@ void GlimmerRelight::AddEcho(uint32 levelIndex, const Rect& rect)
     }
 }
 
+GlimmerTexelRect GlimmerRelight::GetTexelRect(uint32 levelIndex, const Vec2f& min, const Vec2f& max)
+{
+    const float invTexelSize = 1.0f / GetGlimmerGroundTexelSize(levelIndex);
+
+    return {
+        Vec2i(int32(MathUtil::Floor(min.x * invTexelSize)), int32(MathUtil::Floor(min.y * invTexelSize))),
+        Vec2i(int32(MathUtil::Ceil(max.x * invTexelSize)), int32(MathUtil::Ceil(max.y * invTexelSize)))
+    };
+}
+
+void GlimmerRelight::AddChangedArea(const Vec2f& min, const Vec2f& max)
+{
+    for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)
+    {
+        Level& level = m_levels[levelIndex];
+
+        if (level.hasWindow)
+        {
+            AddPending(level, GetTexelRect(levelIndex, min, max));
+        }
+    }
+
+    AddEchoAround(min, max);
+}
+
 void GlimmerRelight::AddEchoAround(const Vec2f& min, const Vec2f& max)
 {
     for (uint32 levelIndex = 0; levelIndex < GlimmerGroundLevels; levelIndex++)
@@ -136,15 +161,8 @@ void GlimmerRelight::AddEchoAround(const Vec2f& min, const Vec2f& max)
             continue;
         }
 
-        const float invTexelSize = 1.0f / GetGlimmerGroundTexelSize(levelIndex);
-
-        const Rect rect {
-            Vec2i(int32(MathUtil::Floor(min.x * invTexelSize)), int32(MathUtil::Floor(min.y * invTexelSize))),
-            Vec2i(int32(MathUtil::Ceil(max.x * invTexelSize)), int32(MathUtil::Ceil(max.y * invTexelSize)))
-        };
-
         const Rect clipped = Rect::Intersect(
-            rect,
+            GetTexelRect(levelIndex, min, max),
             GlimmerHelpers::GetGlimmerGroundWindow(level.windowOrigin));
 
         if (!clipped.IsEmpty())

@@ -29,6 +29,7 @@ class GlimmerSurfaceCache;
 class GlimmerSpanCache;
 class GlimmerSceneInstances;
 class GlimmerProbeVolume;
+class GlimmerLocalLights;
 struct GlimmerSHOccupancyShaderData;
 struct GlimmerRelightShaderData;
 
@@ -86,6 +87,8 @@ struct GlimmerSHVolumeUpdateInputs
     const CloudPass* cloudPass = nullptr;
 
     GlimmerLightShaderData light;
+
+    const GlimmerLocalLights* localLights = nullptr;
 };
 
 class GlimmerSHVolume final
@@ -185,6 +188,7 @@ private:
     FixedArray<int32, GlimmerSHCascades> m_refreshSlices; // absolute, 2 per voxel along z
     uint32 m_updateIndex;
     uint32 m_seenInstancesGeneration;
+    uint32 m_seenLightsGeneration = 0;
     uint32 m_occupancyWaitFrames;
 
     int32 m_refreshBudget;                              /// voxels the refresh may still trace, carried between frames so a rate below a slice still gets its turn

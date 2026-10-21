@@ -63,6 +63,8 @@ public:
 
     void Invalidate();
 
+    void AddChangedArea(const Vec2f& min, const Vec2f& max);
+
     HYP_FORCE_INLINE const GlimmerRelightShaderData& GetShaderData() const
     {
         return m_shaderData;
@@ -91,6 +93,8 @@ private:
         Rect rect;
         uint32 frame;
     };
+
+    static Rect GetTexelRect(uint32 levelIndex, const Vec2f& min, const Vec2f& max);
 
     void AddPending(Level& level, const Rect& rect);
     void AddEcho(uint32 levelIndex, const Rect& rect);

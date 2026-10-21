@@ -17,6 +17,7 @@ PERMUTE(PROBES);
 #include "../GlimmerCommon.hlsli"
 #include "GlimmerSHCommon.hlsli"
 #include "../GlimmerRelight.hlsli"
+#include "../GlimmerLocalLights.hlsli"
 #include "../Probes/GlimmerProbeTypes.hlsli"
 
 #define GLIMMER_SH_OCCUPANCY_NO_TRACE
@@ -29,15 +30,29 @@ struct GlimmerSHUpdateConstants
     GlimmerGroundParams ground;
     GlimmerSpanParams spans;
     GlimmerSHOccupancyParams occupancy;
-    int4 boxMin;        // xyz = absolute voxel of the dispatch's first voxel, w = cascade
-    float4 rayRotation; // quaternion applied to this update's ray directions
-    float4 params;      // x = foliage extinction, y = max ray distance, z = albedo where the ground's isn't known, w = how much of the radiance's history is kept
+    
+    /// xyz = voxel pos of the dispatch's first voxel
+    /// w = cascade
+    int4 boxMin;
+    
+    /// quaternion applied to this update's ray directions
+    float4 rayRotation;
+    
+    /// x = foliage extinction
+    /// y = max ray distance
+    /// z = albedo where the ground's isn't know
+    /// w = how much of the radiance's history is kept
+    float4 params;
     GlimmerRelightParams relight;
-    GlimmerProbeVolume probes; // the near field, for what lights the hits; zeroed while it can't be sampled
+    GlimmerProbeVolume probes;
     GlimmerSkyParams sky;
     EnvProbe skyProbe;         // textureIndices is ~0 without a sky probe
     GlimmerLightParams light;
-    uint4 options;             // x = 1 to light hits from the nearest voxel, rather than the volume's filtered sample
+    
+    /// x = 1 to light hits from the nearest voxel rather than the volume's filtered sample
+    uint4 options;
+    
+    GlimmerLocalLights localLights;
 };
 
 #include "../../Include/Clouds.hlsli"
@@ -343,6 +358,18 @@ bool GlimmerSHTraceAirRay(float3 origin, float3 direction, uint minGroundLevel, 
     return true;
 }
 
+bool GlimmerSHLocalLightVisible(float3 origin, float3 direction, float tMax)
+{
+    GlimmerHeightfieldHit hit;
+    float4 lightmap;
+
+    return !GlimmerSHTraceScene(origin, direction, tMax, 0u, false, hit, lightmap);
+}
+
+#define GLIMMER_LOCAL_LIGHT_VISIBLE GlimmerSHLocalLightVisible
+#include "../GlimmerLocalLights.hlsli"
+#undef GLIMMER_LOCAL_LIGHT_VISIBLE
+
 GlimmerLight GlimmerSHShadeHit(float3 P, GlimmerHeightfieldHit hit, float3 albedo, float4 lightmap)
 {
     GlimmerLight light;
@@ -357,20 +384,25 @@ GlimmerLight GlimmerSHShadeHit(float3 P, GlimmerHeightfieldHit hit, float3 albed
         return GlimmerShade(albedo, GlimmerRestLight(lightmap.rgb));
     }
 
+    GlimmerLight received;
+    bool hasReceived = false;
+
     // the filtered sample loads every light entry of up to 8 voxels a cascade.
     // lighting a hit from the one voxel, half a voxel off it, is a fraction of the cost
     if (constants.options.x != 0u)
     {
-        GlimmerLight received;
-
-        if (SampleGlimmerNearestProbeLight(constants.probes, P + hit.normal * (0.5 * constants.volume.cascades[0].params.x), hit.normal, received)
-            || GlimmerSHSampleNearestLight(constants.volume, P, hit.normal, 0.5, received))
-        {
-            return GlimmerShade(albedo, received);
-        }
+        hasReceived = SampleGlimmerNearestProbeLight(constants.probes, P + hit.normal * (0.5 * constants.volume.cascades[0].params.x), hit.normal, received)
+            || GlimmerSHSampleNearestLight(constants.volume, P, hit.normal, 0.5, received);
     }
 
-    return GlimmerShadeSurface(P, hit.normal, albedo);
+    if (!hasReceived)
+    {
+        received = GlimmerIndirect(P, hit.normal);
+    }
+
+    received.parts[GLIMMER_LIGHT_REST] += GlimmerLocalLightsAt(constants.localLights, P, hit.normal);
+
+    return GlimmerShade(albedo, received);
 }
 
 float3 GlimmerSHAxisDirection(uint axisIndex)

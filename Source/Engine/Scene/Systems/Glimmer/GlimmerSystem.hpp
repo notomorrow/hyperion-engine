@@ -7,6 +7,7 @@
 #pragma once
 
 #include <Scene/System.hpp>
+#include <Scene/EntityTag.hpp>
 
 #include <Rendering/Glimmer/GlimmerGroundClipmap.hpp>
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
@@ -19,6 +20,7 @@ namespace Hyperion {
 
 class Camera;
 class View;
+class Light;
 class GlimmerChannel;
 
 HYP_CLASS(NoScriptBindings, Serialize = false)
@@ -46,17 +48,21 @@ private:
     void CreateSceneView();
     void SetSceneViewActive(bool active);
     void UpdateSceneRegion(bool force);
+    
+    void UpdateViewerMotion(const Vec3f& viewerPosition, float delta, GlimmerChannelState& outState);
+    void CollectLocalLights(Span<Handle<Scene>> scenes, const Vec3f& nearPosition, GlimmerChannelState& outState);
 
     ////////// DEBUG //////////
     void UpdateProbeDebugRecords(float delta);
-    void UpdateViewerMotion(const Vec3f& viewerPosition, float delta, GlimmerChannelState& outState);
     void LogProbeStats();
     void DebugDrawProbes(const Vec3f& viewerPosition);
     ///////////////////////////
 
     virtual SystemComponentDescriptors GetComponentDescriptors() const override
     {
-        return {};
+        return {
+            ComponentDescriptor<EntityType<Light>, ComponentAccess::READ, false> {}
+        };
     }
 
     Handle<Camera> m_sceneCamera;
