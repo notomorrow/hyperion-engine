@@ -298,25 +298,21 @@ static Time GetTransitiveSourcesLastModifiedTimestamp(const ShaderBundleDecl& de
         maxLastModifiedTimestamp = MathUtil::Max(maxLastModifiedTimestamp, lastModifiedTimestamp);
 
         Array<FilePath> includes;
-        bool wasCached = false;
+        bool isCacheValid = false;
 
         {
             Mutex::Guard guard(s_includeScanCacheMutex);
 
             auto it = s_includeScanCache.Find(fileKey);
 
-            if (it != s_includeScanCache.End())
+            if (it != s_includeScanCache.End() && it->second.lastModifiedTimestamp == lastModifiedTimestamp)
             {
-                wasCached = true;
-
-                if (it->second.lastModifiedTimestamp == lastModifiedTimestamp)
-                {
-                    includes = it->second.includes;
-                }
+                isCacheValid = true;
+                includes = it->second.includes;
             }
         }
 
-        if (!wasCached)
+        if (!isCacheValid)
         {
             includes = ScanSourceFileIncludes(filepath);
 

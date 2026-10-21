@@ -29,7 +29,7 @@ GlimmerLight GlimmerIndirect(float3 P, float3 N)
     [branch]
     if (nearCoverage < 0.999)
     {
-        farCoverage = GlimmerSHSampleVolumeLight(GLIMMER_LIGHTING_SH, P + N * 0.05, N, farField);
+        farCoverage = GlimmerSHSampleVolumeLight(GLIMMER_LIGHTING_SH, P, N, farField);
     }
 
     const float farWeight = farCoverage * (1.0 - nearCoverage);
@@ -53,7 +53,7 @@ GlimmerLight GlimmerIndirectNearest(float3 P, float3 N)
         return light;
     }
 
-    if (GlimmerSHSampleNearestLight(GLIMMER_LIGHTING_SH, P, N, light))
+    if (GlimmerSHSampleNearestLight(GLIMMER_LIGHTING_SH, P, N, 0.0, light))
     {
         return light;
     }

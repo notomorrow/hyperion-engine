@@ -311,7 +311,7 @@ float GlimmerSHSampleVolumeLight(GlimmerSHVolume volume, float3 P, float3 N, out
     return coverage;
 }
 
-bool GlimmerSHSampleNearestLight(GlimmerSHVolume volume, float3 P, float3 N, out GlimmerLight outLight)
+bool GlimmerSHSampleNearestLight(GlimmerSHVolume volume, float3 P, float3 N, float surfaceOffset, out GlimmerLight outLight)
 {
     outLight = GlimmerNoLight();
 
@@ -325,7 +325,7 @@ bool GlimmerSHSampleNearestLight(GlimmerSHVolume volume, float3 P, float3 N, out
     {
         const GlimmerSHCascade cascade = volume.cascades[cascadeIndex];
 
-        const int3 voxel = int3(floor(P * cascade.params.y));
+        const int3 voxel = int3(floor((P + N * (surfaceOffset * cascade.params.x)) * cascade.params.y));
         const int3 local = voxel - cascade.origin.xyz;
 
         if (cascade.origin.w == 0 || any(local < 0) || any(local >= int3(GLIMMER_SH_GRID_XZ, GLIMMER_SH_GRID_Y, GLIMMER_SH_GRID_XZ)))
@@ -340,6 +340,11 @@ bool GlimmerSHSampleNearestLight(GlimmerSHVolume volume, float3 P, float3 N, out
         if (!GlimmerSHUnpackVoxel(GLIMMER_SH_LOAD_STATE(texel), voxel, voxelData) || voxelData.isBuried)
         {
             continue;
+        }
+
+        if (surfaceOffset > 0.0 && dot(GlimmerSHVoxelCenter(cascade, voxel) + voxelData.originOffset * cascade.params.x - P, N) <= 0.0)
+        {
+            return false;
         }
 
         float4 entries[GLIMMER_LIGHT_ENTRIES];
