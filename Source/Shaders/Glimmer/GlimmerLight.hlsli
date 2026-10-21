@@ -100,7 +100,9 @@ GlimmerLight GlimmerDistantLight(float3 direction, float scale)
     [unroll]
     for (uint term = 0; term < GLIMMER_LIGHT_TERMS; term++)
     {
-        light.parts[term] = (float3)(basis[term] * scale);
+        const float cosineLobe = term == 0u ? 1.0 : (term < 4u ? 2.0 / 3.0 : 0.25);
+
+        light.parts[term] = (float3)(basis[term] * cosineLobe * scale);
     }
 
     return light;
@@ -138,19 +140,19 @@ bool GlimmerIsScalarEntry(uint entry)
 }
 
 // an L1 as 11 bits for its mean and 7 for each of the rest, four values an entry as 8 bits each
-uint GlimmerPackTransferEntry(float4 value, bool isScalars)
+uint GlimmerPackTransferEntry(float4 value, bool isScalars, float4 dither)
 {
     const float4 curved = sign(value) * sqrt(saturate(abs(value) * (1.0 / GLIMMER_LIGHT_TRANSFER_RANGE)));
 
     if (isScalars)
     {
-        const uint4 bytes = uint4(int4(round(curved * 127.0))) & 0xFFu;
+        const uint4 bytes = uint4(int4(floor(curved * 127.0 + dither))) & 0xFFu;
 
         return bytes.x | (bytes.y << 8) | (bytes.z << 16) | (bytes.w << 24);
     }
 
-    const uint mean = uint(int(round(curved.x * 1023.0))) & 0x7FFu;
-    const uint3 rest = uint3(int3(round(curved.yzw * 63.0))) & 0x7Fu;
+    const uint mean = uint(int(floor(curved.x * 1023.0 + dither.x))) & 0x7FFu;
+    const uint3 rest = uint3(int3(floor(curved.yzw * 63.0 + dither.yzw))) & 0x7Fu;
 
     return mean | (rest.x << 11) | (rest.y << 18) | (rest.z << 25);
 }
@@ -167,7 +169,7 @@ float4 GlimmerUnpackTransferEntry(uint packed, bool isScalars)
 
 float GlimmerEvaluateLinearL1(float4 sh, float3 N)
 {
-    return sh.x + 0.5 * dot(sh.yzw, N);
+    return sh.x + dot(sh.yzw, N);
 }
 
 float4 GlimmerGetBounceEntry(float4 entries[GLIMMER_LIGHT_ENTRIES], uint term, uint channel)

@@ -65,9 +65,14 @@ void GlimmerSHWriteComposed(uint3 texel, float4 entries[GLIMMER_LIGHT_ENTRIES])
 
 void GlimmerSHWriteLight(uint3 texel, float4 entries[GLIMMER_LIGHT_ENTRIES])
 {
+    const uint seed = GlimmerProbeHash(GlimmerSHLightIndex(texel, 0u) ^ asuint(constants.rayRotation.x));
+
     for (uint entry = 0; entry < GLIMMER_LIGHT_ENTRIES; entry++)
     {
-        const uint2 packed = GlimmerSHPackLight(entry, entries[entry]);
+        const uint bits = GlimmerProbeHash(seed + entry * 0x9E3779B9u);
+        const float4 dither = float4(bits & 0xFFu, (bits >> 8) & 0xFFu, (bits >> 16) & 0xFFu, bits >> 24) * (1.0 / 256.0);
+
+        const uint2 packed = GlimmerSHPackLight(entry, entries[entry], dither);
         const uint index = GlimmerSHLightIndex(texel, entry);
 
         OutLight[index] = packed.x;
@@ -356,7 +361,13 @@ GlimmerLight GlimmerSHShadeHit(float3 P, GlimmerHeightfieldHit hit, float3 albed
     // lighting a hit from the one voxel, half a voxel off it, is a fraction of the cost
     if (constants.options.x != 0u)
     {
-        return GlimmerShade(albedo, GlimmerIndirectNearest(P + hit.normal * (0.5 * constants.volume.cascades[0].params.x), hit.normal));
+        GlimmerLight received;
+
+        if (SampleGlimmerNearestProbeLight(constants.probes, P + hit.normal * (0.5 * constants.volume.cascades[0].params.x), hit.normal, received)
+            || GlimmerSHSampleNearestLight(constants.volume, P, hit.normal, 0.5, received))
+        {
+            return GlimmerShade(albedo, received);
+        }
     }
 
     return GlimmerShadeSurface(P, hit.normal, albedo);

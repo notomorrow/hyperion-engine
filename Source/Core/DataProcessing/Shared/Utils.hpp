@@ -25,9 +25,8 @@ static inline bool IsValidIdentifier(const ANSIStringView& inStr)
         || (*curr >= 'a' && *curr <= 'z')
         || (*curr >= 'A' && *curr<= 'Z');
 
-    while (isValidIdent && len)
+    while (isValidIdent && --len)
     {
-        --len;
         ++curr;
 
         isValidIdent &= (*curr == '_'

@@ -384,7 +384,7 @@ void GetGlimmerLightShaderData(EnvProbe* skyProbe, GlimmerLightShaderData& outLi
         0.546274f * (sunDirection.x * sunDirection.x - sunDirection.y * sunDirection.y)
     };
 
-    constexpr float WindowOfTerm[9] = { 1.0f, 0.5f, 0.5f, 0.5f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
+    constexpr float WindowOfTerm[9] = { 1.0f, 2.0f / 3.0f, 2.0f / 3.0f, 2.0f / 3.0f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f };
 
     for (uint32 term = 0; term < GlimmerLightTerms; term++)
     {

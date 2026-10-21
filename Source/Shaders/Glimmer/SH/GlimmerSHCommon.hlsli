@@ -80,14 +80,14 @@ float4 GlimmerSHUnpackLight(uint entry, uint word0, uint word1)
     return GlimmerUnpackTransferEntry(word0, GlimmerIsScalarEntry(entry));
 }
 
-uint2 GlimmerSHPackLight(uint entry, float4 value)
+uint2 GlimmerSHPackLight(uint entry, float4 value, float4 dither)
 {
     if (GlimmerSHIsWideLightEntry(entry))
     {
         return GlimmerPackLightEntry(value);
     }
 
-    return uint2(GlimmerPackTransferEntry(value, GlimmerIsScalarEntry(entry)), 0u);
+    return uint2(GlimmerPackTransferEntry(value, GlimmerIsScalarEntry(entry), dither), 0u);
 }
 
 #define GLIMMER_SH_LOAD_LIGHT_FROM(buffer, texel, entry) \

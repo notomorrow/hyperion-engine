@@ -198,7 +198,6 @@ void GlimmerBlendProbe(uint probeIndex, int4 slot, uint4 state, uint numRays, fl
     float4 direct[GLIMMER_LIGHT_TERMS] = (float4[GLIMMER_LIGHT_TERMS])0.0;
 
     float luminanceSquaredSum = 0.0;
-    uint numSeen = 0u;
 
     uint numBackfaces = 0u;
     uint numStartsInside = 0u;
@@ -266,7 +265,6 @@ void GlimmerBlendProbe(uint probeIndex, int4 slot, uint4 state, uint numRays, fl
         const float rayLuminance = GlimmerLuminance(GlimmerComposeRayLight(constants.light, rayLight, direction, escape));
 
         luminanceSquaredSum += rayLuminance * rayLuminance;
-        numSeen++;
 
         freeDirectionSum += direction;
 
@@ -381,29 +379,29 @@ void GlimmerBlendProbe(uint probeIndex, int4 slot, uint4 state, uint numRays, fl
         }
     }
 
-    const float invNumSeen = 1.0 / float(max(numSeen, 1u));
+    const float invNumRays = 1.0 / float(max(numRays, 1u));
 
     float4 light[GLIMMER_LIGHT_ENTRIES] = (float4[GLIMMER_LIGHT_ENTRIES])0.0;
 
     [unroll]
     for (uint projectPart = 0; projectPart < GLIMMER_LIGHT_PARTS; projectPart++)
     {
-        GlimmerSetBounceEntry(light, projectPart, 0u, float4(e0[projectPart].r * invNumSeen, e1R[projectPart] * (2.0 * invNumSeen)));
-        GlimmerSetBounceEntry(light, projectPart, 1u, float4(e0[projectPart].g * invNumSeen, e1G[projectPart] * (2.0 * invNumSeen)));
-        GlimmerSetBounceEntry(light, projectPart, 2u, float4(e0[projectPart].b * invNumSeen, e1B[projectPart] * (2.0 * invNumSeen)));
+        GlimmerSetBounceEntry(light, projectPart, 0u, float4(e0[projectPart].r * invNumRays, e1R[projectPart] * (2.0 * invNumRays)));
+        GlimmerSetBounceEntry(light, projectPart, 1u, float4(e0[projectPart].g * invNumRays, e1G[projectPart] * (2.0 * invNumRays)));
+        GlimmerSetBounceEntry(light, projectPart, 2u, float4(e0[projectPart].b * invNumRays, e1B[projectPart] * (2.0 * invNumRays)));
     }
 
     [unroll]
     for (uint projectTerm = 0; projectTerm < GLIMMER_LIGHT_TERMS; projectTerm++)
     {
         light[GLIMMER_LIGHT_DIRECT_ENTRY + projectTerm] = float4(
-            direct[projectTerm].x * invNumSeen,
-            direct[projectTerm].yzw * (2.0 * invNumSeen));
+            direct[projectTerm].x * invNumRays,
+            direct[projectTerm].yzw * (2.0 * invNumRays));
     }
 
     const float estimateLuminance = GlimmerComposedLuminance(light);
 
-    const float estimateVariance = max(luminanceSquaredSum * invNumSeen - estimateLuminance * estimateLuminance, 0.0) * invNumSeen;
+    const float estimateVariance = max(luminanceSquaredSum * invNumRays - estimateLuminance * estimateLuminance, 0.0) * invNumRays;
 
     const float updateInterval = max(time - asfloat(state.z), 1e-3);
 
