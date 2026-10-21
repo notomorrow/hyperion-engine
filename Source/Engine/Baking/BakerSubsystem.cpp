@@ -71,6 +71,13 @@ void UpdateEpoch(const FogVolume& fogVolume, BakeLayer& bakeLayer)
     bakeLayer.SetAssetEpoch<Cat::LightReceiver>(fogVolume, epoch);
 }
 
+void UpdateEpoch(const Light& light, BakeLayer& bakeLayer)
+{
+    uint64 epoch = BakeEpoch::ComputeEpoch(light, bakeLayer);
+
+    bakeLayer.SetAssetEpoch<Cat::LightProvider>(light, epoch);
+}
+
 } // namespace
 
 #pragma region BakerSubsystem
@@ -179,6 +186,7 @@ void BakerSubsystem::OnBakeCompleted(Baking::BakeLayer& bakeLayer, ObjectBase* s
     }
 
     bakeLayer.sceneHashes.Clear();
+    bakeLayer.lightShadowEpochs.Clear();
 
     if (LightmapVolume* lmv = DynamicCast<LightmapVolume>(source))
     {
@@ -191,6 +199,10 @@ void BakerSubsystem::OnBakeCompleted(Baking::BakeLayer& bakeLayer, ObjectBase* s
     else if (FogVolume* fogVolume = DynamicCast<FogVolume>(source))
     {
         UpdateEpoch(*fogVolume, bakeLayer);
+    }
+    else if (Light* light = DynamicCast<Light>(source))
+    {
+        UpdateEpoch(*light, bakeLayer);
     }
     else
     {
