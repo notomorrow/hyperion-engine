@@ -859,6 +859,7 @@ RendererResult RenderInterface::Initialize()
 
     namedPasses[NamedPass::ShadowMap].ResizeZeroed(NumLightTypes); // 1 ShadowMapRenderer per LightType
     namedPasses[NamedPass::ShadowMap][uint32(LightType::Point)] = new PointLightShadowsPass;
+    namedPasses[NamedPass::ShadowMap][uint32(LightType::Spot)] = new SpotLightShadowsPass;
     namedPasses[NamedPass::ShadowMap][uint32(LightType::Directional)] = new DirectionalLightShadowsPass;
 
     // one global particle volume renderer

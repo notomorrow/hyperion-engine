@@ -748,6 +748,146 @@ void TriangleDebugDrawShape::operator()(const Vec3f& v0, const Vec3f& v1, const 
 
 #pragma endregion TriangleDebugDrawShape
 
+#pragma region LineDebugDrawShape
+
+LineDebugDrawShape::LineDebugDrawShape(DebugDrawCommandList& list)
+    : MeshDebugDrawShapeBase(list)
+{
+    static const int s_shapeId = NextShapeId();
+    shapeId = s_shapeId;
+
+    (void)GetMesh(); // hack to preload mesh so it doesn't try to load during render pass
+}
+
+Mesh* LineDebugDrawShape::GetMesh_Internal() const
+{
+    static struct MeshInitializer
+    {
+        Handle<Mesh> mesh;
+        DelegateHandler onShutdownHandle;
+
+        MeshInitializer()
+        {
+            const Vec3f n(0.0f, 1.0f, 0.0f);
+
+            FixedArray<SimpleVertex, 2> vertices = {
+                SimpleVertex { Vec3f(0.0f, 0.0f, 0.0f), n, Vec2f(0.0f, 0.0f) },
+                SimpleVertex { Vec3f(0.0f, 0.0f, 1.0f), n, Vec2f(1.0f, 0.0f) }
+            };
+
+            FixedArray<uint32, 2> indices = {
+                0, 1
+            };
+
+            MeshDesc meshDesc {};
+            meshDesc.meshAttributes.inputLayout = { VT_Simple };
+            meshDesc.meshAttributes.topology = Topology::Lines;
+            meshDesc.lods[0].numIndices = uint32(indices.Size());
+            meshDesc.lods[0].numVertices = uint32(vertices.Size());
+
+            mesh = MakeHandle<Mesh>();
+            mesh->SetFlags(MeshFlags::ViewIndependent);
+            mesh->SetIsTransient(true);
+            mesh->SetName(NAME("LineDebugDrawShape"));
+
+            VertexArrayView vertexArrayView {};
+            vertexArrayView.floatData = reinterpret_cast<const float*>(vertices.Data());
+            vertexArrayView.vertexCount = vertices.Size();
+            vertexArrayView.layoutDesc = { VT_Simple };
+
+            ConstByteView indicesByteView(
+                reinterpret_cast<const ubyte*>(indices.Data()),
+                indices.Size() * sizeof(uint32));
+
+            MeshDataView meshData {};
+            meshData.vertices[0] = vertexArrayView;
+            meshData.indices[0] = indicesByteView;
+
+            mesh->SetMeshData(meshDesc, meshData);
+            mesh->UploadGpuData();
+
+            GetEngineAssetRegistry()->PutAsset(mesh);
+
+            onShutdownHandle = g_engineDriver->GetDelegates().OnShutdown.Bind(
+                [m = &mesh]()
+                {
+                    m->Reset();
+                });
+        }
+    } s_initializer;
+
+    return s_initializer.mesh;
+}
+
+void LineDebugDrawShape::operator()(const Vec3f& from, const Vec3f& to, const Color& color)
+{
+    RenderableAttributeSet attributes = DefaultAttributes();
+    attributes.GetMeshAttributes().topology = Topology::Lines;
+
+    (*this)(from, to, color, attributes);
+}
+
+void LineDebugDrawShape::operator()(const Vec3f& from, const Vec3f& to, const Color& color, const RenderableAttributeSet& attributes)
+{
+    if (!list.GetDebugDrawer()->IsEnabled() || list.IsFull())
+    {
+        return;
+    }
+
+    const Vec3f z = to - from;
+
+    if (z.LengthSquared() <= MathUtil::epsilonF)
+    {
+        return;
+    }
+
+    Vec3f x;
+    Vec3f y;
+    MathUtil::ComputeOrthonormalBasis(z.Normalized(), x, y);
+
+    Mat4f transformMatrix;
+
+    transformMatrix.rows[0][0] = x.x;
+    transformMatrix.rows[0][1] = y.x;
+    transformMatrix.rows[0][2] = z.x;
+    transformMatrix.rows[0][3] = from.x;
+
+    transformMatrix.rows[1][0] = x.y;
+    transformMatrix.rows[1][1] = y.y;
+    transformMatrix.rows[1][2] = z.y;
+    transformMatrix.rows[1][3] = from.y;
+
+    transformMatrix.rows[2][0] = x.z;
+    transformMatrix.rows[2][1] = y.z;
+    transformMatrix.rows[2][2] = z.z;
+    transformMatrix.rows[2][3] = from.z;
+
+    transformMatrix.rows[3][0] = 0.0f;
+    transformMatrix.rows[3][1] = 0.0f;
+    transformMatrix.rows[3][2] = 0.0f;
+    transformMatrix.rows[3][3] = 1.0f;
+
+    DebugDrawCommandHeader header;
+
+    DebugDrawCommand* ptr = reinterpret_cast<DebugDrawCommand*>(list.Alloc(sizeof(DebugDrawCommand), alignof(DebugDrawCommand), header));
+    new (ptr) DebugDrawCommand {
+        this,
+        transformMatrix,
+        color,
+        attributes
+    };
+
+    header.destructFn = &Memory::Destruct<DebugDrawCommand>;
+    header.moveFn = [](void* dst, void* src)
+    {
+        new (dst) DebugDrawCommand(std::move(*reinterpret_cast<DebugDrawCommand*>(src)));
+    };
+
+    list.Push(header);
+}
+
+#pragma endregion LineDebugDrawShape
+
 #pragma region MeshDebugDrawShape
 
 MeshDebugDrawShape::MeshDebugDrawShape(DebugDrawCommandList& list)
@@ -1392,6 +1532,7 @@ DebugDrawCommandList::DebugDrawCommandList(DebugDrawer* debugDrawer)
       cylinder(*this),
       plane(*this),
       triangle(*this),
+      line(*this),
       m_bufferOffset(0)
 {
 }

@@ -148,11 +148,10 @@ float GetShadowCSM(in float4 shadowMapCoord, // w = slice
 
 float GetShadowPCF(in float4 shadowMapCoord, // w = slice
     in float2 atlasUV, in float2 atlasScale,
-    float3 pos, float2 texcoord, float2 screen_dimensions)
+    float3 pos, float2 texcoord, float2 screen_dimensions,
+    float shadow_filter_size)
 {
     const float layerIndex = shadowMapCoord.w;
-
-    const float shadow_filter_size = HYP_SHADOW_FILTER_SIZE;
 
     float noise = InterleavedGradientNoise(texcoord * screen_dimensions - 0.5) * HYP_FMATH_TWO_PI;
 
@@ -253,6 +252,13 @@ float GetShadowPCF(in float4 shadowMapCoord, // w = slice
     shadowness *= (1.0 / float(HYP_SHADOW_SAMPLE_COUNT));
 
     return shadowness;
+}
+
+float GetShadowPCF(in float4 shadowMapCoord, // w = slice
+    in float2 atlasUV, in float2 atlasScale,
+    float3 pos, float2 texcoord, float2 screen_dimensions)
+{
+    return GetShadowPCF(shadowMapCoord, atlasUV, atlasScale, pos, texcoord, screen_dimensions, HYP_SHADOW_FILTER_SIZE);
 }
 
 float AvgBlockerDepthToPenumbra(float light_size, float avg_blocker_depth, float shadow_map_coord_z)
@@ -505,6 +511,91 @@ float GetPointShadowPCF(in ShadowMap shadowMap, float3 worldToLight, float NdotL
 float GetPointShadow(in ShadowMap shadowMap, uint lightFlags, float3 worldToLight, float NdotL)
 {
     return GetPointShadowPCF(shadowMap, worldToLight, NdotL);
+}
+
+#define HYP_SPOT_SHADOW_NORMAL_OFFSET_TEXELS 1.5
+#define HYP_SPOT_SHADOW_RECEIVER_BIAS_TEXELS 1.0
+#define HYP_SPOT_SHADOW_FILTER_TEXELS 1.5
+
+bool GetSpotShadowCoord(in ShadowMap shadowMap, float3 position, float3 N, float3 L, float NdotL, out float4 shadowMapCoord)
+{
+    shadowMapCoord = (float4)0.0;
+
+    if (shadowMap.dimensionsScale.x <= 0.0)
+    {
+        return false;
+    }
+
+    const float lightDepth = mul(shadowMap.viewProjMat, float4(position, 1.0)).w;
+
+    if (lightDepth <= HYP_FMATH_EPSILON)
+    {
+        return false;
+    }
+
+    const float texelSizeWS = 2.0 * lightDepth * shadowMap.invProjMat[0][0] / shadowMap.dimensionsScale.x;
+    const float sinTheta = sqrt(saturate(1.0 - NdotL * NdotL));
+
+    const float3 offsetPosition = position
+        + N * (texelSizeWS * HYP_SPOT_SHADOW_NORMAL_OFFSET_TEXELS * sinTheta)
+        + L * (texelSizeWS * HYP_SPOT_SHADOW_RECEIVER_BIAS_TEXELS);
+
+    const float4 offsetPositionCS = mul(shadowMap.viewProjMat, float4(offsetPosition, 1.0));
+
+    if (offsetPositionCS.w <= HYP_FMATH_EPSILON)
+    {
+        return false;
+    }
+
+    const float3 ndc = offsetPositionCS.xyz / offsetPositionCS.w;
+    const float3 coord = float3(ndc.xy * float2(0.5, -0.5) + 0.5, ndc.z);
+
+    if (any(coord.xy < 0.0) || any(coord.xy > 1.0) || coord.z > 1.0)
+    {
+        return false;
+    }
+
+    shadowMapCoord = float4(coord, float(shadowMap.layerIndex));
+
+    return true;
+}
+
+float GetSpotShadow(in ShadowMap shadowMap, float3 position, float3 N, float3 L, float NdotL, float2 texcoord, float2 screenDimensions)
+{
+    float4 shadowMapCoord;
+
+    if (!GetSpotShadowCoord(shadowMap, position, N, L, NdotL, shadowMapCoord))
+    {
+        return 1.0;
+    }
+
+    const float2 atlasUV = float2(shadowMap.aabbMin.w, shadowMap.aabbMax.w);
+
+    return GetShadowPCF(shadowMapCoord,
+        atlasUV, shadowMap.dimensionsScale.zw,
+        position, texcoord, screenDimensions,
+        HYP_SPOT_SHADOW_FILTER_TEXELS / shadowMap.dimensionsScale.x);
+}
+
+float GetSpotShadowStandard(in ShadowMap shadowMap, float3 position, float3 L)
+{
+    float4 shadowMapCoord;
+
+    if (!GetSpotShadowCoord(shadowMap, position, L, L, 1.0, shadowMapCoord))
+    {
+        return 1.0;
+    }
+
+    const float2 atlasUV = float2(shadowMap.aabbMin.w, shadowMap.aabbMax.w);
+    const float2 uv = (clamp(shadowMapCoord.xy, HYP_SHADOW_ATLAS_EDGE_BIAS, 1.0 - HYP_SHADOW_ATLAS_EDGE_BIAS) * shadowMap.dimensionsScale.zw) + atlasUV;
+
+#if defined(BACKEND_WEBGPU) && defined(HYP_SAMPLER_NEAREST)
+    const float shadowDepth = SAMPLE_TEXTURE_2D_ARRAY_LOD(HYP_SAMPLER_NEAREST, shadow_maps, float3(uv, shadowMapCoord.w), 0).r;
+#else
+    const float shadowDepth = SAMPLE_TEXTURE_2D_ARRAY_LOD(HYP_SAMPLER_LINEAR, shadow_maps, float3(uv, shadowMapCoord.w), 0).r;
+#endif
+
+    return step(shadowMapCoord.z, shadowDepth);
 }
 
 #endif

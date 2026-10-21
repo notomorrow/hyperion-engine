@@ -116,6 +116,15 @@ public:
 protected:
 };
 
+class SpotLightShadowsPass : public ShadowsPassBase
+{
+public:
+    SpotLightShadowsPass() = default;
+    virtual ~SpotLightShadowsPass() override = default;
+
+protected:
+};
+
 class DirectionalLightShadowsPass : public ShadowsPassBase
 {
 public:

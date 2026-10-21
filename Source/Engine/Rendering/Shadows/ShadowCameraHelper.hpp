@@ -22,6 +22,13 @@ namespace ShadowCameraHelpers {
 
 float GetOmniShadowFarClip(const Light& light);
 
+float GetSpotShadowFOV(const Light& light);
+float GetSpotShadowNearClip(const Light& light);
+float GetSpotShadowFarClip(const Light& light);
+
+Mat4f CalculateSpotShadowViewMatrix(const Light& light);
+Mat4f CalculateSpotShadowProjectionMatrix(const Light& light);
+
 Mat4f CalculateShadowViewMatrix(
     const BoundingSphere& sceneWorldBounds,
     const Vec3f& lightDir);

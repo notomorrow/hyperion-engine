@@ -90,14 +90,23 @@ void ShadowMapCaptureState::Begin()
         return;
     }
 
-    const float farClip = isOmni
-        ? ShadowCameraHelpers::GetOmniShadowFarClip(*m_light)
-        : 1000.0f;
+    const bool isSpot = m_light->GetLightType() == LightType::Spot;
+
+    float farClip = 1000.0f;
+
+    if (isOmni)
+    {
+        farClip = ShadowCameraHelpers::GetOmniShadowFarClip(*m_light);
+    }
+    else if (isSpot)
+    {
+        farClip = ShadowCameraHelpers::GetSpotShadowFarClip(*m_light);
+    }
 
     m_camera = MakeHandle<Camera>(int(dimensions.x), int(dimensions.y));
     m_camera->SetName(NAME_FMT("{}_ShadowBakeCamera", m_light->GetName()));
-    m_camera->SetFOV(90.0f);
-    m_camera->SetNearClip(0.01f);
+    m_camera->SetFOV(isSpot ? ShadowCameraHelpers::GetSpotShadowFOV(*m_light) : 90.0f);
+    m_camera->SetNearClip(isSpot ? ShadowCameraHelpers::GetSpotShadowNearClip(*m_light) : 0.01f);
     m_camera->SetFarClip(farClip);
     m_camera->AddCameraController(MakeHandle<PerspectiveCameraController>());
 
@@ -105,7 +114,10 @@ void ShadowMapCaptureState::Begin()
 
     m_camera->SetWorldTranslation(m_light->GetWorldTranslation());
 
-    const Mat4f projMat = m_camera->GetProjectionMatrix();
+    // baked spot maps are copied straight into the atlas, so they must use the runtime projection
+    const Mat4f projMat = isSpot
+        ? ShadowCameraHelpers::CalculateSpotShadowProjectionMatrix(*m_light)
+        : m_camera->GetProjectionMatrix();
 
     MaterialAttributes materialAttributes;
     materialAttributes.shaderName = isOmni ? NAME("DrawCubemap") : NAME("DrawShadowMap");
@@ -194,16 +206,7 @@ void ShadowMapCaptureState::Begin()
         }
         else
         {
-            const Vec3f forward = m_light->GetNormal().Normalized();
-
-            Vec3f up = Vec3f::UnitY();
-
-            if (MathUtil::Abs(forward.Dot(up)) > 0.999f)
-            {
-                up = Vec3f::UnitX();
-            }
-
-            viewMat = Mat4f::LookAt(origin, origin + forward, up);
+            viewMat = ShadowCameraHelpers::CalculateSpotShadowViewMatrix(*m_light);
         }
 
         view->cachedMatrices.view = viewMat;

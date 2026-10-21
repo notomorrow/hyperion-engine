@@ -54,7 +54,13 @@ struct SpriteInstanceData
 {
     Vec4f positionSize;
     Vec4f color;
-    Vec4u flags; // x = alwaysFaceCamera, y = bindless texture index (~0u = untextured)
+
+    /// x = alwaysFaceCamera
+    /// y = bindless texture index (~0u = untextured)
+    Vec4u flags;
+
+    /// w = 1 when set
+    Vec4f pointDirection;
 };
 
 struct SpriteDrawEntry
@@ -571,11 +577,14 @@ void SpritePass::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
             entry.instanceData.positionSize = Vec4f(sprite->GetWorldTranslation(), sprite->size);
             entry.instanceData.color = Vec4f(sprite->color);
             entry.instanceData.color.w *= sprite->opacity;
+
             entry.instanceData.flags = Vec4u(
                 spriteProxy->bufferData.alwaysFaceCamera,
                 !spriteProxy->texture ? ~0u : (s_isBindlessSupported ? GetBindlessTextureIndex(spriteProxy->texture) : 0u),
                 0u,
                 0u);
+
+            entry.instanceData.pointDirection = Vec4f(sprite->pointDirection, sprite->pointDirection.LengthSquared() > MathUtil::epsilonF ? 1.0f : 0.0f);
         }
 
         if (s_isBindlessSupported)

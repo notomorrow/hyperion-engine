@@ -3313,6 +3313,55 @@ void EditorSubsystem::DebugDrawSelectedInstances(DebugDrawCommandList& debugDraw
     }
 }
 
+void EditorSubsystem::DebugDrawSpotLight(DebugDrawCommandList& debugDrawCommandList, const Light& light)
+{
+    static constexpr uint32 NumRimSegments = 32;
+    static constexpr uint32 NumConeEdges = 4;
+
+    const Vec3f apex = light.GetWorldTranslation();
+    const Vec3f axis = light.GetSpotDirection();
+    const float radius = light.GetRadius();
+
+    Vec3f tangent;
+    Vec3f bitangent;
+    MathUtil::ComputeOrthonormalBasis(axis, tangent, bitangent);
+
+    auto drawRim = [&](float angleDegrees, const Color& color, bool drawConeEdges)
+    {
+        const float angle = MathUtil::DegToRad(MathUtil::Clamp(MathUtil::Abs(angleDegrees), 0.0f, 179.0f));
+
+        const Vec3f rimCenter = apex + axis * (radius * MathUtil::Cos(angle));
+        const float rimRadius = radius * MathUtil::Sin(angle);
+
+        Vec3f previousPoint;
+
+        for (uint32 segmentIndex = 0; segmentIndex <= NumRimSegments; segmentIndex++)
+        {
+            const float theta = (float(segmentIndex) / float(NumRimSegments)) * MathUtil::pi<float> * 2.0f;
+            const Vec3f point = rimCenter + (tangent * MathUtil::Cos(theta) + bitangent * MathUtil::Sin(theta)) * rimRadius;
+
+            if (segmentIndex > 0)
+            {
+                debugDrawCommandList.line(previousPoint, point, color);
+            }
+
+            if (drawConeEdges && segmentIndex < NumRimSegments && segmentIndex % (NumRimSegments / NumConeEdges) == 0)
+            {
+                debugDrawCommandList.line(apex, point, color);
+            }
+
+            previousPoint = point;
+        }
+    };
+
+    const Vec2f& spotAngles = light.GetSpotAngles();
+
+    drawRim(spotAngles.x, Color::Cyan(), true);
+    drawRim(spotAngles.y, Color(0.0f, 0.45f, 0.45f, 1.0f), false);
+
+    debugDrawCommandList.line(apex, apex + axis * radius, Color::Cyan());
+}
+
 void EditorSubsystem::DebugDrawMeshLods(DebugDrawCommandList& debugDrawCommandList)
 {
     if (!s_cvShowMeshLods.Get() || !m_currentProject.IsValid())
@@ -3694,6 +3743,13 @@ void EditorSubsystem::Update(float delta)
         {
             if (node.IsValid())
             {
+                if (const Light* light = DynamicCast<Light>(node.Get()); light && light->GetLightType() == LightType::Spot)
+                {
+                    DebugDrawSpotLight(dbg, *light);
+
+                    continue;
+                }
+
                 const BoundingBox worldBounds = node->GetWorldBounds();
 
                 if (worldBounds.IsFinite())

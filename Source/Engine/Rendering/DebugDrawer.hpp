@@ -234,6 +234,20 @@ private:
     virtual Mesh* GetMesh_Internal() const override;
 };
 
+class ENGINE_API LineDebugDrawShape : public MeshDebugDrawShapeBase
+{
+public:
+    LineDebugDrawShape(DebugDrawCommandList& list);
+
+    virtual ~LineDebugDrawShape() override = default;
+
+    void operator()(const Vec3f& from, const Vec3f& to, const Color& color);
+    void operator()(const Vec3f& from, const Vec3f& to, const Color& color, const RenderableAttributeSet& attributes);
+
+private:
+    virtual Mesh* GetMesh_Internal() const override;
+};
+
 class ENGINE_API MeshDebugDrawShape : public MeshDebugDrawShapeBase
 {
 public:
@@ -286,6 +300,7 @@ public:
     CylinderDebugDrawShape cylinder;
     PlaneDebugDrawShape plane;
     TriangleDebugDrawShape triangle;
+    LineDebugDrawShape line;
 
 private:
     DebugDrawer* m_debugDrawer;

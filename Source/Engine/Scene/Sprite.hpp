@@ -63,7 +63,10 @@ public:
     
     HYP_FIELD(Property = "AlwaysFaceCamera", Serialize, Editor)
     bool alwaysFaceCamera = true;
-    
+
+    HYP_FIELD(Property = "PointDirection", Serialize, Editor)
+    Vec3f pointDirection = Vec3f::Zero();
+
     Handle<Texture> texture;
 };
 
