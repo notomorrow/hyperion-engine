@@ -9,7 +9,10 @@
 #include <Scene/Systems/Glimmer/GlimmerSystem.hpp>
 
 #include <Scene/World.hpp>
+#include <Scene/Scene.hpp>
+#include <Scene/EntityManager.hpp>
 #include <Scene/Camera/Camera.hpp>
+#include <Scene/Light/Light.hpp>
 #include <Scene/Util/SceneHelpers.hpp>
 
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
@@ -31,6 +34,8 @@
 #include <Core/Threading/AtomicVar.hpp>
 
 #include <Core/Profiling/ProfileScope.hpp>
+
+#include <algorithm>
 
 #include <GlimmerSystem.generated.inl>
 
@@ -370,12 +375,111 @@ void GlimmerSystem::Process(float delta, Span<Handle<Scene>> scenes)
 
     m_groundClipmap.FillState(state);
 
+    CollectLocalLights(scenes, state.hasViewer ? viewerPosition : m_regionCenter, state);
+
     m_channel->Publish(state, std::move(groundUploads));
 
     if (state.hasViewer)
     {
         UpdateProbeDebugRecords(delta);
         DebugDrawProbes(viewerPosition);
+    }
+}
+
+void GlimmerSystem::CollectLocalLights(Span<Handle<Scene>> scenes, const Vec3f& nearPosition, GlimmerChannelState& outState)
+{
+    HYP_SCOPE;
+
+    outState.numLocalLights = 0;
+
+    if (!m_hasRegion)
+    {
+        return;
+    }
+
+    using Candidate = Pair<
+        float, /* distance*/
+        GlimmerLocalLightState /* state */ >;
+
+    Array<Candidate, GlimmerTempAllocator> candidates;
+
+    const LayersMask& activeLayers = GetWorld()->GetActiveLayers();
+
+    for (Scene* scene : scenes)
+    {
+        if (!ShouldProcessScene(scene))
+        {
+            continue;
+        }
+
+        for (auto [light] : scene->GetEntityManager()->GetEntitySet<EntityType<Light>>().GetScopedView(GetComponentInfos()))
+        {
+            const LightType lightType = light->GetLightType();
+
+            if ((lightType != LightType::Point && lightType != LightType::Spot) || !light->IsStatic())
+            {
+                continue;
+            }
+
+            if (!light->HasNoLayers() && !light->IsInAnyLayers(activeLayers))
+            {
+                continue;
+            }
+
+            const BoundingSphere sphere = light->GetBoundingSphere(true);
+            const Vec3f color = Vec4f(light->GetColor()).GetXYZ() * light->GetIntensity();
+
+            if (sphere.radius <= 0.0f || MathUtil::Max(color.x, MathUtil::Max(color.y, color.z)) <= 0.0f)
+            {
+                continue;
+            }
+
+            const Vec3f fromRegion = sphere.center - m_regionCenter;
+
+            if (MathUtil::Abs(fromRegion.x) > m_regionRadius + sphere.radius
+                || MathUtil::Abs(fromRegion.z) > m_regionRadius + sphere.radius
+                || MathUtil::Abs(fromRegion.y) > SceneVerticalHalfExtent + sphere.radius)
+            {
+                continue;
+            }
+
+            GlimmerLocalLightState state;
+            state.key = light->Id().GetHashCode().Value();
+            state.positionRadius = Vec4f(sphere.center, sphere.radius);
+            state.color = Vec4f(color, 0.0f);
+
+            if (lightType == LightType::Spot)
+            {
+                const Vec2f& spotAngles = light->GetSpotAngles();
+
+                const float cosOuter = MathUtil::Cos(MathUtil::DegToRad(spotAngles.x));
+                const float cosInner = MathUtil::Max(MathUtil::Cos(MathUtil::DegToRad(spotAngles.y)), cosOuter + 0.0001f);
+
+                state.spotDirection = Vec4f(light->GetNormal().Normalized(), 1.0f);
+                state.spotAngles = Vec4f(cosOuter, cosInner, 0.0f, 0.0f);
+            }
+
+            candidates.EmplaceBack(
+                MathUtil::Max(sphere.center.Distance(nearPosition) - sphere.radius, 0.0f),
+                state);
+        }
+    }
+
+    std::sort(candidates.Begin(), candidates.End(), [](const Candidate& a, const Candidate& b)
+        {
+            return a.first != b.first
+                ? a.first < b.first
+                : a.second.key < b.second.key;
+        });
+
+    for (const Candidate& candidate : candidates)
+    {
+        if (outState.numLocalLights >= GlimmerMaxLocalLights)
+        {
+            break;
+        }
+
+        outState.localLights[outState.numLocalLights++] = candidate.second;
     }
 }
 

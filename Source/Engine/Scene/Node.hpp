@@ -860,7 +860,9 @@ public:
 
     HYP_FORCE_INLINE bool IsStatic() const
     {
-        return bool(m_nodeFlags & NodeFlags::MobilityStatic);
+        return bool(m_nodeFlags & NodeFlags::MobilityStatic)
+            || (bool(m_nodeFlags & NodeFlags::MobilityStaticByProxy)
+                    && !(m_nodeFlags & NodeFlags::MobilityDynamic));
     }
 
     void SetIsStatic(bool isStatic);

@@ -37,6 +37,7 @@ class GlimmerChannel;
 class GlimmerSHOccupancy;
 class GlimmerSHVolume;
 class GlimmerRelight;
+class GlimmerLocalLights;
 class GlimmerBrickWorld;
 struct GlimmerChannelState;
 
@@ -131,7 +132,10 @@ private:
     UniquePtr<GlimmerSHOccupancy, GlimmerAllocator> m_shOccupancy;
     UniquePtr<GlimmerSHVolume, GlimmerAllocator> m_shVolume;
     UniquePtr<GlimmerRelight, GlimmerAllocator> m_relight;
+    UniquePtr<GlimmerLocalLights, GlimmerAllocator> m_localLights;
     UniquePtr<GlimmerBrickWorld, GlimmerAllocator> m_brickWorld;
+
+    uint32 m_relightLightsGeneration = 0;
 
     GpuBufferRef m_scratchBuffer;
 

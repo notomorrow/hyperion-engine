@@ -28,6 +28,7 @@ class GlimmerTriangleCache;
 class GlimmerSceneInstances;
 class GlimmerSHVolume;
 class GlimmerRelight;
+class GlimmerLocalLights;
 class GlimmerBrickWorld;
 struct GlimmerSHOccupancyShaderData;
 
@@ -92,6 +93,8 @@ struct GlimmerProbeUpdateInputs
 
     GlimmerLightShaderData light;
 
+    const GlimmerLocalLights* localLights = nullptr;
+
     GpuBuffer* scratchBuffer = nullptr;
 };
 
@@ -152,6 +155,7 @@ private:
     Time m_startTime;
     uint32 m_frameIndex;
     uint32 m_seenInstancesGeneration;
+    uint32 m_seenLightsGeneration = 0;
     uint32 m_nearTracer = 0;
     uint32 m_poolBlocks;
     uint32 m_maxProbesPerFrame;

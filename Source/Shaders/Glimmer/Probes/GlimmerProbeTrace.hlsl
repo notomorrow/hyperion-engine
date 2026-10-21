@@ -16,6 +16,7 @@ PERMUTE(TRACER, BRICKS, BVH)
 #include "../SH/GlimmerSHCommon.hlsli"
 
 #include "../GlimmerRelight.hlsli"
+#include "../GlimmerLocalLights.hlsli"
 
 #if defined(TRACER_BVH)
 #include "../../Include/RayTracing/BVH.hlsli"
@@ -45,16 +46,35 @@ struct GlimmerProbeTraceConstants
     GlimmerProbeVolume volume;
     GlimmerGroundParams ground;
     GlimmerSpanParams spans;
-    uint4 dispatch; // x = probes traced per frame at most
-    float4 params;  // x = foliage extinction
+    
+    /// x = probes traced per frame at most
+    uint4 dispatch;
+    
+    /// x = foliage extinction
+    float4 params;
     GlimmerSkyParams sky;
-    GlimmerSHVolume sh;  // the far field, sampled where a ray's hit is past the probes
+    
+    GlimmerSHVolume sh;
     EnvProbe skyProbe;   // textureIndices is ~0 without a sky probe. used for ratios in relight pass.
     GlimmerRelightParams relight;
-    int4 relightRect;    // relight pass: xy = absolute texel of the rect to light, zw = its extent
-    uint4 relightInfo;   // relight pass: x = ground level, y = groups along x
+    
+    /// relight pass ///
+    /// xy = texel of the rect to light
+    /// zw = its extent
+    int4 relightRect;
+    
+    /// x = ground level
+    /// y = groups along x
+    uint4 relightInfo;
+    
+    ////////////////////
+    
     GlimmerBrickParams bricks;
-    uint4 bvh;           // x = traced instances in the TLAS
+    
+    /// x = traced instances in the TLAS
+    uint4 bvh;
+    
+    GlimmerLocalLights localLights;
 };
 
 #include "../../Include/Clouds.hlsli"
@@ -154,6 +174,42 @@ DECLARE_SRV(GlimmerProbeTrace, GlimmerRelightTexture) Texture2DArray<float4> gli
 
 #include "../GlimmerHeightfield.hlsli"
 
+bool GlimmerProbeLocalLightVisible(float3 origin, float3 direction, float tMax)
+{
+#if defined(TRACER_BVH)
+    GlimmerBVHHit bvhHit;
+    GlimmerBVHStats stats = GlimmerMakeBVHStats();
+
+    if (TraceGlimmerBVH(origin, direction, 0.0, tMax, constants.bvh.x, true, bvhHit, stats))
+    {
+        return false;
+    }
+#else
+    GlimmerBrickHit brickHit;
+
+    if (TraceGlimmerBricks(constants.bricks, origin, direction, 0.0, tMax, brickHit))
+    {
+        return false;
+    }
+#endif
+
+    GlimmerHeightfieldHit heightfieldHit;
+
+    return !GlimmerTraceHeightfield(constants.ground, constants.spans, origin, direction, tMax, 0u, tMax, constants.params.x, false, heightfieldHit);
+}
+
+#define GLIMMER_LOCAL_LIGHT_VISIBLE GlimmerProbeLocalLightVisible
+#include "../GlimmerLocalLights.hlsli"
+#undef GLIMMER_LOCAL_LIGHT_VISIBLE
+
+GlimmerLight GlimmerReceivedAt(float3 P, float3 N)
+{
+    GlimmerLight received = GlimmerIndirect(P, N);
+    received.parts[GLIMMER_LIGHT_REST] += GlimmerLocalLightsAt(constants.localLights, P, N);
+
+    return received;
+}
+
 #if defined(MODE_RELIGHT)
 
 bool GlimmerRelightSurfaceAt(uint level, uint surface, int2 texel, out float3 outP, out float3 outN)
@@ -212,12 +268,14 @@ void GlimmerRelightBlock(int2 texel, uint level, uint surface)
 
     if (hasSurface)
     {
-        received = GlimmerIndirect(P, N);
+        received = GlimmerReceivedAt(P, N);
     }
 
     for (uint part = 0; part < GLIMMER_LIGHT_PARTS; part++)
     {
-        OutRelight[GlimmerRelightTexel(texel, level, surface, part)] = float4(received.parts[part], part == 0u && !hasSurface ? -1.0 : 0.0);
+        OutRelight[GlimmerRelightTexel(texel, level, surface, part)] = float4(
+            received.parts[part],
+            part == 0u && !hasSurface ? -1.0 : 0.0);
     }
 }
 
@@ -327,7 +385,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
             rayLight.parts[part] = GlimmerUnpackLightPart(uint2(OutRays[base + 2u + part * 2u], OutRays[base + 3u + part * 2u]));
         }
 
-        const GlimmerLight surfaceLight = GlimmerShadeSurface(P, N, albedo);
+        const GlimmerLight surfaceLight = GlimmerShade(albedo, GlimmerReceivedAt(P, N));
 
         GlimmerAddLight(rayLight, surfaceLight, (float3)transmittance);
 

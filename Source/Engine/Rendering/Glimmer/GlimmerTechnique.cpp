@@ -16,12 +16,14 @@
 #include <Rendering/Glimmer/SH/GlimmerSHVolume.hpp>
 #include <Rendering/Glimmer/SH/GlimmerSHOccupancy.hpp>
 #include <Rendering/Glimmer/GlimmerRelight.hpp>
-#include <Rendering/Glimmer/Bricks/GlimmerBrickWorld.hpp>
-#include <Rendering/Glimmer/Bricks/GlimmerBrickCVars.hpp>
+#include <Rendering/Glimmer/GlimmerLocalLights.hpp>
 #include <Rendering/Glimmer/GlimmerSurfaceCache.hpp>
 #include <Rendering/Glimmer/GlimmerChannel.hpp>
 #include <Rendering/Glimmer/GlimmerHelpers.hpp>
 #include <Rendering/Glimmer/GlimmerCVars.hpp>
+
+#include <Rendering/Glimmer/Bricks/GlimmerBrickWorld.hpp>
+#include <Rendering/Glimmer/Bricks/GlimmerBrickCVars.hpp>
 
 #include <Rendering/RenderInterface.hpp>
 #include <Rendering/RenderProxy.hpp>
@@ -199,6 +201,9 @@ void GlimmerTechnique::ResetLighting()
     m_shOccupancy = MakeUniqueWithAllocator<GlimmerSHOccupancy, GlimmerAllocator>();
     m_shVolume = MakeUniqueWithAllocator<GlimmerSHVolume, GlimmerAllocator>();
     m_relight = MakeUniqueWithAllocator<GlimmerRelight, GlimmerAllocator>();
+    m_localLights = MakeUniqueWithAllocator<GlimmerLocalLights, GlimmerAllocator>();
+
+    m_relightLightsGeneration = 0;
 }
 
 bool GlimmerTechnique::IsReady() const
@@ -268,8 +273,29 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
 
         const GlimmerLightShaderData& light = m_light;
 
+        m_localLights->Update(*context.channelState);
+
         if (probesEnabled)
         {
+            if (m_localLights->GetGeneration() != m_relightLightsGeneration)
+            {
+                GlimmerSceneChanges changes;
+
+                if (m_localLights->GetChangesSince(m_relightLightsGeneration, changes))
+                {
+                    for (const GlimmerSceneChange& change : changes)
+                    {
+                        m_relight->AddChangedArea(Vec2f(change.bounds.min.x, change.bounds.min.z), Vec2f(change.bounds.max.x, change.bounds.max.z));
+                    }
+                }
+                else
+                {
+                    m_relight->AddChangedArea(Vec2f(-1e6f), Vec2f(1e6f));
+                }
+
+                m_relightLightsGeneration = m_localLights->GetGeneration();
+            }
+
             m_relight->Schedule(*context.channelState, *context.surfaceCache, *context.spanCache);
         }
         else
@@ -315,6 +341,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         shInputs.skyProbe = context.skyProbe;
         shInputs.cloudPass = context.cloudPass;
         shInputs.light = light;
+        shInputs.localLights = m_localLights.Get();
 
         m_shVolume->Update(context.frame, shInputs);
 
@@ -335,6 +362,7 @@ void GlimmerTechnique::Update(const GlimmerTechniqueUpdateContext& context)
         probeInputs.brickWorld = m_brickWorld.Get();
         probeInputs.cloudPass = context.cloudPass;
         probeInputs.light = light;
+        probeInputs.localLights = m_localLights.Get();
         probeInputs.scratchBuffer = m_scratchBuffer.Get();
 
         if (probesEnabled)

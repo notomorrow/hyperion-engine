@@ -42,6 +42,9 @@
 
 namespace Hyperion {
 
+/// Excludes those that indicate it takes after its own parent
+constexpr EnumFlags<NodeFlags> ExplicitMobilityFlags = NodeFlags::MobilityStatic | NodeFlags::MobilityDynamic;
+
 ScriptableDelegate<void, Node*, bool> Node::OnChildAdded;
 ScriptableDelegate<void, Node*, bool> Node::OnChildRemoved;
 ScriptableDelegate<void, Node*> Node::TransformUpdated;
@@ -207,6 +210,18 @@ bool Node::HasName() const
 
 void Node::SetNodeFlags(EnumFlags<NodeFlags> flags)
 {
+    if ((m_nodeFlags & ExplicitMobilityFlags) && !(flags & ExplicitMobilityFlags) && m_parentNode)
+    {
+        if (m_parentNode->IsStatic())
+        {
+            flags |= NodeFlags::MobilityStaticByProxy;
+        }
+        else
+        {
+            flags &= ~NodeFlags::MobilityStaticByProxy;
+        }
+    }
+
     if (m_nodeFlags == flags)
     {
         return;
