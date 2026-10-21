@@ -73,9 +73,7 @@ float3 UnpackMaterialParamFloat3(uint4 uValue, uint index)
 
 float4 UnpackMaterialParamFloat4(uint4 uValue, uint index)
 {
-    float4 v = UINT_TO_VEC4(uValue[index >> 2]);
-    // since we never have multiple params cross the boundary of the uint4, we can just return the whole thing rather than swizzling it.
-    return v;
+    return UINT_TO_VEC4(uValue[index >> 2]);
 }
 
 // Get float param
@@ -130,7 +128,7 @@ float SelectMaterialChannel(float4 v, uint channel)
 #endif // !(defined(HYP_FEATURES_BINDLESS_TEXTURES) && !defined(LIGHT_TYPE_AREA_RECT))
 
 
-#if defined(PIXEL_SHADER) || defined(COMPUTE_SHADER)
+#ifdef PIXEL_SHADER
 
 #define SAMPLE_MATERIAL_TEXTURE(mat, name, texcoord) \
     SAMPLE_TEXTURE_2D(texture_sampler, GET_TEXTURE(mat, name), (texcoord))
@@ -141,9 +139,10 @@ float SelectMaterialChannel(float4 v, uint channel)
 #define SAMPLE_MATERIAL_TEXTURE_CUBE(mat, name, texcoord) \
     SAMPLE_TEXTURE_CUBE(texture_sampler, GET_TEXTURE(mat, name), (texcoord))
 
-#else // !(defined(PIXEL_SHADER) || defined(COMPUTE_SHADER))
+#else // !PIXEL_SHADER
 
-/// sampling with implicit lod is only allowed in fragment and compute shaders
+/// sampling with implicit lod is only allowed in pixel [compute shader reqs >= SM 6.6]
+/// so we just use lod 0.0 in place of it.
 
 #define SAMPLE_MATERIAL_TEXTURE(mat, name, texcoord) \
     SAMPLE_TEXTURE_2D_LOD(texture_sampler, GET_TEXTURE(mat, name), (texcoord), 0.0)
@@ -151,7 +150,7 @@ float SelectMaterialChannel(float4 v, uint channel)
 #define SAMPLE_MATERIAL_TEXTURE_CUBE(mat, name, texcoord) \
     SAMPLE_TEXTURE_CUBE_LOD(texture_sampler, GET_TEXTURE(mat, name), (texcoord), 0.0)
 
-#endif // !(defined(PIXEL_SHADER) || defined(COMPUTE_SHADER))
+#endif // PIXEL_SHADER
 
 #define SAMPLE_MATERIAL_TEXTURE_LOD(mat, name, texcoord, lod) \
     SAMPLE_TEXTURE_2D_LOD(texture_sampler, GET_TEXTURE(mat, name), (texcoord), (lod))
