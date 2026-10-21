@@ -258,7 +258,7 @@ struct UnalignedRef final
         return &value;
     }
 
-    HYP_FORCE_INLINE T& Get() &
+    HYP_FORCE_INLINE T& Get()
     {
         return value;
     }
