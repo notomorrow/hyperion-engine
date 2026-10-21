@@ -191,7 +191,7 @@ struct ExposureSettings
     float saturation = 0.95f;
 
     HYP_FIELD(Property = "Contrast", Serialize, Label = "Contrast")
-    float contrast = 1.05f;
+    float contrast = 0.92f;
 
     HYP_FIELD(Property = "Vignette", Serialize, Label = "Vignette")
     float vignette = 0.25f;
