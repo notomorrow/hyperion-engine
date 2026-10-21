@@ -5,7 +5,7 @@ using System.Text;
 namespace Hyperion
 {
     [StructLayout(LayoutKind.Sequential)]
-    public unsafe struct StrataString
+    public unsafe struct ABIString
     {
         public byte* Data;
         public uint Length;
@@ -13,13 +13,13 @@ namespace Hyperion
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public unsafe struct StrataArray
+    public unsafe struct ABIArray
     {
         public void* Data;
         public uint Length;
         public uint Capacity;
 
-        public StrataArray(void* data, int length)
+        public ABIArray(void* data, int length)
         {
             Data = data;
             Length = (uint)length;
@@ -68,7 +68,7 @@ namespace Hyperion
             }
         }
 
-        public static string TakeString(StrataString* value)
+        public static string TakeString(ABIString* value)
         {
             if (value->Data == null)
             {
@@ -83,7 +83,7 @@ namespace Hyperion
             return result;
         }
 
-        public static T[] TakeArray<T>(StrataArray* value) where T : unmanaged
+        public static T[] TakeArray<T>(ABIArray* value) where T : unmanaged
         {
             if (value->Data == null)
             {
@@ -98,7 +98,7 @@ namespace Hyperion
             return result;
         }
 
-        public static T?[] TakeObjectArray<T>(StrataArray* value) where T : class
+        public static T?[] TakeObjectArray<T>(ABIArray* value) where T : class
         {
             if (value->Data == null)
             {
@@ -119,14 +119,14 @@ namespace Hyperion
             return result;
         }
 
-        public static string[] TakeStringArray(StrataArray* value)
+        public static string[] TakeStringArray(ABIArray* value)
         {
             if (value->Data == null)
             {
                 return Array.Empty<string>();
             }
 
-            StrataString* strings = (StrataString*)value->Data;
+            ABIString* strings = (ABIString*)value->Data;
             string[] result = new string[value->Length];
 
             for (int i = 0; i < result.Length; i++)

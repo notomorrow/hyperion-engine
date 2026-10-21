@@ -125,7 +125,7 @@ static bool TryEmitDirectBinding(
     };
 
     static const String s_bindings = "global::Hyperion.NativeBindings";
-    static const String s_strataArray = "global::Hyperion.StrataArray";
+    static const String s_abiArray = "global::Hyperion.ABIArray";
 
     if (!libraryName.Any() || thunk.isStatic)
     {
@@ -181,7 +181,7 @@ static bool TryEmitDirectBinding(
 
             fixedStatements.PushBack(HYP_FORMAT("fixed ({}* {}Data = {}Elements)", elementType, localName, localName));
 
-            nativeParams.PushBack(HYP_FORMAT("{}* {}", s_strataArray, name));
+            nativeParams.PushBack(HYP_FORMAT("{}* {}", s_abiArray, name));
             nativeArgs.PushBack(HYP_FORMAT("&{}Array", localName));
         }
         else if (strataMapping.isString)
@@ -285,9 +285,9 @@ static bool TryEmitDirectBinding(
             return false;
         }
 
-        nativeParams.PushBack(HYP_FORMAT("{}* outReturn", s_strataArray));
+        nativeParams.PushBack(HYP_FORMAT("{}* outReturn", s_abiArray));
         nativeArgs.PushBack("&result");
-        body.PushBack(HYP_FORMAT("{} result = default;", s_strataArray));
+        body.PushBack(HYP_FORMAT("{} result = default;", s_abiArray));
         body.PushBack(nativeCall() + ";");
 
         if (strataReturn.isHandleArray)
@@ -310,9 +310,9 @@ static bool TryEmitDirectBinding(
             return false;
         }
 
-        nativeParams.PushBack("global::Hyperion.StrataString* outReturn");
+        nativeParams.PushBack("global::Hyperion.ABIString* outReturn");
         nativeArgs.PushBack("&result");
-        body.PushBack("global::Hyperion.StrataString result = default;");
+        body.PushBack("global::Hyperion.ABIString result = default;");
         body.PushBack(nativeCall() + ";");
         body.PushBack(HYP_FORMAT("return {}.TakeString(&result);", s_bindings));
     }
@@ -407,7 +407,7 @@ static bool TryEmitDirectBinding(
             const String& name = methodArgNames[i];
             const String localName = name.StartsWith("@") ? String(name.Substr(1)) : name;
 
-            out += indent + HYP_FORMAT("{} {}Array = new {}({}Data, {}Elements.Length);\n", s_strataArray, localName, s_strataArray, localName, localName);
+            out += indent + HYP_FORMAT("{} {}Array = new {}({}Data, {}Elements.Length);\n", s_abiArray, localName, s_abiArray, localName, localName);
         }
     }
 

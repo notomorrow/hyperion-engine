@@ -4,12 +4,12 @@
  *  @licence MIT
  */
 
-#include <Core/Scripting/Strata/StrataMarshal.hpp>
+#include <Core/ABI/ABIMarshal.hpp>
 
 #include <Core/Memory/Pool/Pool.hpp>
 
 namespace Hyperion {
-namespace Strata {
+namespace ABI {
 
 static Pool& GetPool()
 {
@@ -41,5 +41,5 @@ char* AllocReturnString(const char* data, size_t size)
     return buffer;
 }
 
-} // namespace Strata
+} // namespace ABI
 } // namespace Hyperion

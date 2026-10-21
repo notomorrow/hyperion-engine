@@ -58,8 +58,8 @@ String SelfAccess(const Analyzer& analyzer, const ClassDefinition& cls, bool isC
     if (HasUnalignedSelf(analyzer, cls))
     {
         return isConst
-            ? HYP_FORMAT("::Hyperion::Strata::LoadUnaligned<{}>(self).", cls.name)
-            : HYP_FORMAT("::Hyperion::Strata::UnalignedRef<{}>(self)->", cls.name);
+            ? HYP_FORMAT("::Hyperion::ABI::LoadUnaligned<{}>(self).", cls.name)
+            : HYP_FORMAT("::Hyperion::ABI::UnalignedRef<{}>(self)->", cls.name);
     }
 
     return "self->";
@@ -97,7 +97,7 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
     if (paramTypeMapping.isStrongHandle)
     {
         sigParams.PushBack(HYP_FORMAT("{}* {}", paramTypeMapping.CxxTypeName(), paramName));
-        callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::ToHandle({})", paramName));
+        callArgs.PushBack(HYP_FORMAT("::Hyperion::ABI::ToHandle({})", paramName));
     }
     else if (paramTypeMapping.isEnumFlags)
     {
@@ -106,14 +106,14 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
     }
     else if (paramTypeMapping.isHandleArray)
     {
-        sigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::SArray<{}*>* {}", paramTypeMapping.elementCxxType, paramName));
+        sigParams.PushBack(HYP_FORMAT("::Hyperion::ABI::ABIArray<{}*>* {}", paramTypeMapping.elementCxxType, paramName));
         callArgs.PushBack(paramTypeMapping.isRawPointerElement
                 ? HYP_FORMAT("Array<{}*>({}->data, size_t({}->length))", paramTypeMapping.elementCxxType, paramName, paramName)
-                : HYP_FORMAT("::Hyperion::Strata::ToHandleArray({})", paramName));
+                : HYP_FORMAT("::Hyperion::ABI::ToHandleArray({})", paramName));
     }
     else if (paramTypeMapping.isString)
     {
-        // Strata strings have no length; pass the raw char*.
+        // String params cross as a NUL-terminated char*.
         const String stringCxxTypeName = unwrappedParamType->typeName->ToString(/* includeNamespace */ false);
 
         sigParams.PushBack(HYP_FORMAT("const char* {}", paramName));
@@ -125,7 +125,7 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
         const String elementCxxType = unwrappedParamType->templateArguments[0]->type->Format();
         const String arrayCxxTypeName = unwrappedParamType->typeName->ToString(/* includeNamespace */ false);
 
-        sigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::SArray<{}>* {}", elementCxxType, paramName));
+        sigParams.PushBack(HYP_FORMAT("::Hyperion::ABI::ABIArray<{}>* {}", elementCxxType, paramName));
         callArgs.PushBack(HYP_FORMAT("{}<{}>({}->data, size_t({}->length))", arrayCxxTypeName, elementCxxType, paramName, paramName));
     }
     else if (paramTypeMapping.isVector)
@@ -135,12 +135,12 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
         if (IsMutableReference(paramType))
         {
             sigParams.PushBack(HYP_FORMAT("void* {}", paramName));
-            callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::UnalignedRef<{}>({}).Get()", vectorCxxTypeName, paramName));
+            callArgs.PushBack(HYP_FORMAT("::Hyperion::ABI::UnalignedRef<{}>({}).Get()", vectorCxxTypeName, paramName));
         }
         else
         {
             sigParams.PushBack(HYP_FORMAT("const void* {}", paramName));
-            callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::LoadUnaligned<{}>({})", vectorCxxTypeName, paramName));
+            callArgs.PushBack(HYP_FORMAT("::Hyperion::ABI::LoadUnaligned<{}>({})", vectorCxxTypeName, paramName));
         }
     }
     else if (paramTypeMapping.isStructValue)
@@ -154,7 +154,7 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
         {
             // Engine writes through the reference; give it an aligned copy, written back after the call
             sigParams.PushBack(HYP_FORMAT("void* {}", paramName));
-            callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::UnalignedRef<{}>({}).Get()", paramTypeMapping.CxxTypeName(), paramName));
+            callArgs.PushBack(HYP_FORMAT("::Hyperion::ABI::UnalignedRef<{}>({}).Get()", paramTypeMapping.CxxTypeName(), paramName));
         }
         else if (IsMutableReference(paramType))
         {
@@ -164,7 +164,7 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
         else
         {
             sigParams.PushBack(HYP_FORMAT("const void* {}", paramName));
-            callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::LoadUnaligned<{}>({})", paramTypeMapping.CxxTypeName(), paramName));
+            callArgs.PushBack(HYP_FORMAT("::Hyperion::ABI::LoadUnaligned<{}>({})", paramTypeMapping.CxxTypeName(), paramName));
         }
     }
     else
@@ -185,7 +185,7 @@ String FormatThunkDefinition(const String& externName, const StrataTypeMapping& 
     if (returnTypeMapping.isStrongHandle)
     {
         methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT {}* {}({})", returnTypeMapping.CxxTypeName(), externName, sigParamsString);
-        methodOutput += " { return ::Hyperion::Strata::RetainObject(";
+        methodOutput += " { return ::Hyperion::ABI::RetainObject(";
         methodOutput += callExpr;
         methodOutput += "); }\n";
     }
@@ -201,14 +201,14 @@ String FormatThunkDefinition(const String& externName, const StrataTypeMapping& 
     else if (returnTypeMapping.isHandleArray)
     {
         methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
-        methodOutput += " { ::Hyperion::Strata::SetReturnObjectArray(outReturn, ";
+        methodOutput += " { ::Hyperion::ABI::SetReturnObjectArray(outReturn, ";
         methodOutput += callExpr;
         methodOutput += "); }\n";
     }
     else if (returnTypeMapping.isStringArray)
     {
         methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
-        methodOutput += " { ::Hyperion::Strata::SetReturnStringArray(outReturn, ";
+        methodOutput += " { ::Hyperion::ABI::SetReturnStringArray(outReturn, ";
         methodOutput += callExpr;
         methodOutput += "); }\n";
     }
@@ -217,7 +217,7 @@ String FormatThunkDefinition(const String& externName, const StrataTypeMapping& 
         methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
         methodOutput += " { const auto& hypReturnValue = ";
         methodOutput += callExpr;
-        methodOutput += "; ::Hyperion::Strata::SetReturnArray(outReturn, hypReturnValue.Data(), hypReturnValue.Size()); }\n";
+        methodOutput += "; ::Hyperion::ABI::SetReturnArray(outReturn, hypReturnValue.Data(), hypReturnValue.Size()); }\n";
     }
     else if (returnTypeMapping.isStructValue || returnTypeMapping.isVector)
     {
@@ -226,7 +226,7 @@ String FormatThunkDefinition(const String& externName, const StrataTypeMapping& 
             : returnTypeMapping.CxxTypeName();
 
         methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
-        methodOutput += " { ::Hyperion::Strata::StoreUnaligned<";
+        methodOutput += " { ::Hyperion::ABI::StoreUnaligned<";
         methodOutput += storeTypeName;
         methodOutput += ">(outReturn, ";
         methodOutput += callExpr;
@@ -236,7 +236,7 @@ String FormatThunkDefinition(const String& externName, const StrataTypeMapping& 
     {
         // `string` returns come back through the out-param ({ptr, len} fat).
         methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
-        methodOutput += " { ::Hyperion::Strata::SetReturnString(outReturn, ";
+        methodOutput += " { ::Hyperion::ABI::SetReturnString(outReturn, ";
         methodOutput += callExpr;
         methodOutput += "); }\n";
     }
@@ -271,7 +271,7 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
         if (!wroteIncludes)
         {
             writer.WriteString("\n#ifdef HYP_STRATA\n#include <Core/Scripting/Strata/ThunkDrawer.hpp>\n#endif\n");
-            writer.WriteString("#include <Core/Scripting/Strata/StrataMarshal.hpp>\n\n");
+            writer.WriteString("#include <Core/ABI/ABIMarshal.hpp>\n\n");
 
             wroteIncludes = true;
         }
@@ -334,11 +334,11 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
 
             if (returnTypeMapping.isHandleArray)
             {
-                allSigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::SArray<{}*>* outReturn", returnTypeMapping.elementCxxType));
+                allSigParams.PushBack(HYP_FORMAT("::Hyperion::ABI::ABIArray<{}*>* outReturn", returnTypeMapping.elementCxxType));
             }
             else if (returnTypeMapping.isStringArray)
             {
-                allSigParams.PushBack("::Hyperion::Strata::SArray<::Hyperion::Strata::SString>* outReturn");
+                allSigParams.PushBack("::Hyperion::ABI::ABIArray<::Hyperion::ABI::ABIString>* outReturn");
             }
             else if (returnTypeMapping.isArray)
             {
@@ -349,12 +349,12 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
 
                 const String returnElementCxxType = unwrappedReturnType->templateArguments[0]->type->Format();
 
-                allSigParams.PushBack(HYP_FORMAT("::Hyperion::Strata::SArray<{}>* outReturn", returnElementCxxType));
+                allSigParams.PushBack(HYP_FORMAT("::Hyperion::ABI::ABIArray<{}>* outReturn", returnElementCxxType));
             }
             else if (returnTypeMapping.isString)
             {
                 // `string` is a {ptr, len} fat; the host writes it via SetReturnString.
-                allSigParams.PushBack("::Hyperion::Strata::SString* outReturn");
+                allSigParams.PushBack("::Hyperion::ABI::ABIString* outReturn");
             }
             else if (returnsViaOutParam)
             {
@@ -426,7 +426,7 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
 
                     if (prop.mapping.isString)
                     {
-                        getterSigParams.PushBack("::Hyperion::Strata::SString* outReturn");
+                        getterSigParams.PushBack("::Hyperion::ABI::ABIString* outReturn");
                     }
                     else if (prop.mapping.isVector)
                     {

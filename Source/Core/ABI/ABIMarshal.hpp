@@ -15,120 +15,11 @@
 #include <new>
 #include <type_traits>
 
-#include <Core/Math/Vector2.hpp>
-#include <Core/Math/Vector3.hpp>
-#include <Core/Math/Vector4.hpp>
-
 #include <Core/Defines.hpp>
 #include <Core/Types.hpp>
 
-#if defined(HYP_ARM)
-#include <arm_neon.h>
-#elif defined(__SSE4_1__) || (HYP_MSVC && defined(_M_X64))
-#include <immintrin.h>
-#endif
-
 namespace Hyperion {
-namespace Strata {
-
-#if defined(HYP_ARM)
-using SimdVector = float32x4_t;
-
-HYP_FORCE_INLINE SimdVector ToSimdVector(const Vec3f& value)
-{
-    alignas(16) float data[4] = { value.x, value.y, value.z, 0.0f };
-
-    return vld1q_f32(data);
-}
-
-HYP_FORCE_INLINE SimdVector ToSimdVector(const Vec4f& value)
-{
-    alignas(16) float data[4] = { value.x, value.y, value.z, value.w };
-
-    return vld1q_f32(data);
-}
-
-HYP_FORCE_INLINE Vec3f SimdVectorToVec3f(SimdVector value)
-{
-    alignas(16) float data[4];
-    vst1q_f32(data, value);
-
-    return { data[0], data[1], data[2] };
-}
-
-HYP_FORCE_INLINE Vec4f SimdVectorToVec4f(SimdVector value)
-{
-    alignas(16) float data[4];
-    vst1q_f32(data, value);
-
-    return { data[0], data[1], data[2], data[3] };
-}
-
-#else
-
-using SimdVector = __m128;
-
-HYP_FORCE_INLINE SimdVector ToSimdVector(const Vec3f& value)
-{
-    return _mm_setr_ps(value.x, value.y, value.z, 0.0f);
-}
-
-HYP_FORCE_INLINE SimdVector ToSimdVector(const Vec4f& value)
-{
-    return _mm_setr_ps(value.x, value.y, value.z, value.w);
-}
-
-HYP_FORCE_INLINE Vec3f SimdVectorToVec3f(SimdVector value)
-{
-    alignas(16) float data[4];
-    _mm_store_ps(data, value);
-
-    return { data[0], data[1], data[2] };
-}
-
-HYP_FORCE_INLINE Vec4f SimdVectorToVec4f(SimdVector value)
-{
-    alignas(16) float data[4];
-    _mm_store_ps(data, value);
-
-    return { data[0], data[1], data[2], data[3] };
-}
-
-#endif
-
-#if defined(HYP_MSVC)
-union SimdVector2
-{
-    float values[2];
-    struct { float x; float y; };
-};
-
-HYP_FORCE_INLINE SimdVector2 ToSimdVector2(const Vec2f& value)
-{
-    SimdVector2 result;
-    result.x = value.x;
-    result.y = value.y;
-
-    return result;
-}
-
-HYP_FORCE_INLINE Vec2f SimdVector2ToVec2f(SimdVector2 value)
-{
-    return { value.x, value.y };
-}
-#else
-using SimdVector2 = float __attribute__((vector_size(8)));
-
-HYP_FORCE_INLINE SimdVector2 ToSimdVector2(const Vec2f& value)
-{
-    return SimdVector2 { value.x, value.y };
-}
-
-HYP_FORCE_INLINE Vec2f SimdVector2ToVec2f(SimdVector2 value)
-{
-    return { value[0], value[1] };
-}
-#endif
+namespace ABI {
 
 CORE_API void* Alloc(size_t size);
 CORE_API void Free(void* ptr);
@@ -141,19 +32,19 @@ HYP_FORCE_INLINE char* AllocReturnString(const StringType& str)
     return AllocReturnString(str.Data(), str.Size());
 }
 
-/// Strata Array wrapper
+/// {data, length, cap} array crossing the C ABI (C#, Strata, wasm); allocated with ABI::Alloc
 template <class T>
-struct SArray
+struct ABIArray
 {
     T* data;
     uint32 length;
     uint32 cap;
 };
 
-using SString = SArray<char>;
+using ABIString = ABIArray<char>;
 
 template <class T>
-HYP_FORCE_INLINE void SetReturnArray(SArray<T>* outArray, const T* data, size_t count)
+HYP_FORCE_INLINE void SetReturnArray(ABIArray<T>* outArray, const T* data, size_t count)
 {
     T* copy = nullptr;
 
@@ -169,7 +60,7 @@ HYP_FORCE_INLINE void SetReturnArray(SArray<T>* outArray, const T* data, size_t 
     outArray->cap = uint64(count);
 }
 
-HYP_FORCE_INLINE void SetReturnString(SString* outString, const char* data, size_t size)
+HYP_FORCE_INLINE void SetReturnString(ABIString* outString, const char* data, size_t size)
 {
     outString->data = AllocReturnString(data, size);
     outString->length = uint64(size);
@@ -179,7 +70,7 @@ HYP_FORCE_INLINE void SetReturnString(SString* outString, const char* data, size
 }
 
 template <class StringType>
-HYP_FORCE_INLINE void SetReturnString(SString* outString, const StringType& str)
+HYP_FORCE_INLINE void SetReturnString(ABIString* outString, const StringType& str)
 {
     SetReturnString(outString, str.Data(), str.Size());
 }
@@ -288,7 +179,7 @@ HYP_FORCE_INLINE Handle<T> ToHandle(T* ptr)
 }
 
 template <class T>
-HYP_FORCE_INLINE Array<Handle<T>> ToHandleArray(const SArray<T*>* objects)
+HYP_FORCE_INLINE Array<Handle<T>> ToHandleArray(const ABIArray<T*>* objects)
 {
     Array<Handle<T>> result;
     result.Reserve(objects->length);
@@ -302,7 +193,7 @@ HYP_FORCE_INLINE Array<Handle<T>> ToHandleArray(const SArray<T*>* objects)
 }
 
 template <class T, class ContainerType>
-HYP_FORCE_INLINE void SetReturnObjectArray(SArray<T*>* outArray, const ContainerType& objects)
+HYP_FORCE_INLINE void SetReturnObjectArray(ABIArray<T*>* outArray, const ContainerType& objects)
 {
     const size_t count = objects.Size();
 
@@ -319,11 +210,11 @@ HYP_FORCE_INLINE void SetReturnObjectArray(SArray<T*>* outArray, const Container
 }
 
 template <class ContainerType>
-HYP_FORCE_INLINE void SetReturnStringArray(SArray<SString>* outArray, const ContainerType& strings)
+HYP_FORCE_INLINE void SetReturnStringArray(ABIArray<ABIString>* outArray, const ContainerType& strings)
 {
     const size_t count = strings.Size();
 
-    SString* data = count > 0 ? reinterpret_cast<SString*>(Alloc(count * sizeof(SString))) : nullptr;
+    ABIString* data = count > 0 ? reinterpret_cast<ABIString*>(Alloc(count * sizeof(ABIString))) : nullptr;
 
     for (size_t i = 0; i < count; i++)
     {
@@ -335,5 +226,5 @@ HYP_FORCE_INLINE void SetReturnStringArray(SArray<SString>* outArray, const Cont
     outArray->cap = uint32(count);
 }
 
-} // namespace Strata
+} // namespace ABI
 } // namespace Hyperion

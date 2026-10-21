@@ -38,7 +38,7 @@
 
 
 #ifdef HYP_STRATA
-#    include <Core/Scripting/Strata/StrataMarshal.hpp>
+#    include <Core/ABI/ABIMarshal.hpp>
 
 #    include <Scripting/StrataTypes.hpp>
 
@@ -81,12 +81,12 @@ extern "C"
 {
     void* strata_alloc(size_t count)
     {
-        return Alloc(count);
+        return ABI::Alloc(count);
     }
 
     static void strata_free(void* ptr)
     {
-        Free(ptr);
+        ABI::Free(ptr);
     }
 } // extern "C"
 

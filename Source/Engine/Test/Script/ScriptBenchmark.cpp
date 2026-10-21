@@ -13,7 +13,7 @@
 
 #if defined(HYP_TESTS) && defined(HYP_STRATA) && defined(HYP_STRATA_JIT)
 
-#include <Core/Scripting/Strata/StrataMarshal.hpp>
+#include <Core/ABI/ABIMarshal.hpp>
 
 #include <Core/Profiling/PerformanceClock.hpp>
 
@@ -299,7 +299,7 @@ HYP_EXPORT void RunScriptBenchmark()
         return;
     }
 
-    strataJitSetAllocFreeFunctions(compiler, (void*)&Strata::Alloc, (void*)&Strata::Free);
+    strataJitSetAllocFreeFunctions(compiler, (void*)&ABI::Alloc, (void*)&ABI::Free);
 
     {
         const char* err = nullptr;

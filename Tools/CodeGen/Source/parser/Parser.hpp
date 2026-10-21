@@ -54,8 +54,8 @@ struct StrataTypeMapping
     // C ABI only (no Strata spelling)
     bool isStrongHandle = false; // Handle<T>: params pass T*, returns hand back T* holding one strong reference
     bool isEnumFlags = false;    // EnumFlags<E>: ABI is E
-    bool isHandleArray = false;  // Array<Handle<T>> or Array<T*>: SArray<T*>, returned elements each hold one strong reference
-    bool isStringArray = false;  // Array<String>: SArray<SString>
+    bool isHandleArray = false;  // Array<Handle<T>> or Array<T*>: ABIArray<T*>, returned elements each hold one strong reference
+    bool isStringArray = false;  // Array<String>: ABIArray<ABIString>
     bool isRawPointerElement = false;
 
     String elementTypeName;

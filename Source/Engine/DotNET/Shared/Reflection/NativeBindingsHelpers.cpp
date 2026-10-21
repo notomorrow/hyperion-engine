@@ -8,7 +8,7 @@
 
 #include <Core/Reflection/Class.hpp>
 
-#include <Core/Scripting/Strata/StrataMarshal.hpp>
+#include <Core/ABI/ABIMarshal.hpp>
 
 #include <DotNET/ManagedObject.hpp>
 
@@ -36,6 +36,6 @@ extern "C"
 
     HYP_EXPORT void NativeBindings_FreeString(void* data)
     {
-        Strata::Free(data);
+        ABI::Free(data);
     }
 }
