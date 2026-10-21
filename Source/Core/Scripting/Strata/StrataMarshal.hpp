@@ -12,6 +12,7 @@
 
 #include <bit>
 #include <cstring>
+#include <new>
 #include <type_traits>
 
 #include <Core/Math/Vector2.hpp>
@@ -183,9 +184,8 @@ HYP_FORCE_INLINE void SetReturnString(SString* outString, const StringType& str)
     SetReturnString(outString, str.Data(), str.Size());
 }
 
-// Struct pointers from foreign callers (C#, wasm) are only naturally aligned, not to the engine type's alignas
 template <class T>
-HYP_FORCE_INLINE T LoadUnaligned(const T* source)
+HYP_FORCE_INLINE T LoadUnaligned(const void* source)
 {
     if constexpr (std::is_trivially_copyable_v<T>)
     {
@@ -198,14 +198,22 @@ HYP_FORCE_INLINE T LoadUnaligned(const T* source)
 
         return std::bit_cast<T>(bytes);
     }
+    else if constexpr (alignof(T) > alignof(void*))
+    {
+        // Over-aligned value types with user-defined copies need the memcpy from an aligned buffer.
+        alignas(T) unsigned char storage[sizeof(T)];
+        std::memcpy(storage, source, sizeof(T));
+
+        return *std::launder(reinterpret_cast<const T*>(storage));
+    }
     else
     {
-        return *source;
+        return *static_cast<const T*>(source);
     }
 }
 
 template <class T, class ValueType>
-HYP_FORCE_INLINE void StoreUnaligned(T* destination, ValueType&& value)
+HYP_FORCE_INLINE void StoreUnaligned(void* destination, ValueType&& value)
 {
     if constexpr (std::is_trivially_copyable_v<T>)
     {
@@ -213,13 +221,49 @@ HYP_FORCE_INLINE void StoreUnaligned(T* destination, ValueType&& value)
 
         std::memcpy(destination, &temp, sizeof(T));
     }
+    else if constexpr (alignof(T) > alignof(void*))
+    {
+        const T temp = std::forward<ValueType>(value);
+
+        std::memcpy(destination, &temp, sizeof(T));
+    }
     else
     {
-        *destination = std::forward<ValueType>(value);
+        *static_cast<T*>(destination) = std::forward<ValueType>(value);
     }
 }
 
-// Returned objects carry one strong reference, which the caller releases
+template <class T>
+struct UnalignedRef final
+{
+    void* destination;
+    T value;
+
+    explicit UnalignedRef(void* destination)
+        : destination(destination),
+          value(LoadUnaligned<T>(destination))
+    {
+    }
+
+    UnalignedRef(const UnalignedRef&) = delete;
+    UnalignedRef& operator=(const UnalignedRef&) = delete;
+
+    ~UnalignedRef()
+    {
+        StoreUnaligned<T>(destination, value);
+    }
+
+    HYP_FORCE_INLINE T* operator->()
+    {
+        return &value;
+    }
+
+    HYP_FORCE_INLINE T& Get() &
+    {
+        return value;
+    }
+};
+
 template <class T>
 HYP_FORCE_INLINE T* RetainObject(T* ptr)
 {

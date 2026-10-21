@@ -69,6 +69,13 @@ TResult<StrataTypeMapping> MapToThunkType(const Analyzer& analyzer, const ASTTyp
 
 bool IsBlittableStruct(const Analyzer& analyzer, const String& typeName, int depth = 0);
 
+/// Non-const lvalue reference. i.e. an in/out parameter
+bool IsMutableReference(const ASTType* type);
+
+/// Raw pointer to a value the script side owns (eg vector / blittable struct)
+/// it is only naturally aligned and can't be marshalled by copy without breaking pointer identity, so such methods get no thunk
+bool IsForeignValuePointer(const Analyzer& analyzer, const ASTType* type, const StrataTypeMapping& mapping);
+
 Array<MethodThunk> CollectMethodThunks(const Analyzer& analyzer, const ClassDefinition& cls, const Set<String>& allHandleNames);
 
 bool IsStrataScriptable(const Analyzer& analyzer, const ClassDefinition& cls);

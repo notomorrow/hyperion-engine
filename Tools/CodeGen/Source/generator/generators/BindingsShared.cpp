@@ -19,10 +19,15 @@
 
 #include <Core/Utilities/StringUtil.hpp>
 
+#include <Core/Logging/Logger.hpp>
+
 #include <utility>
 
 namespace Hyperion {
 namespace CodeGen {
+
+HYP_DECLARE_LOG_CHANNEL(Tool);
+
 namespace BindingsShared {
 
 bool IsStrataScriptable(const Analyzer& analyzer, const ClassDefinition& cls)
@@ -604,6 +609,21 @@ bool IsBlittableStruct(const Analyzer& analyzer, const String& typeName, int dep
     return anyFields;
 }
 
+bool IsMutableReference(const ASTType* type)
+{
+    return type && type->isLvalueReference && !(type->refTo && type->refTo->isConst);
+}
+
+bool IsForeignValuePointer(const Analyzer& analyzer, const ASTType* type, const StrataTypeMapping& mapping)
+{
+    if (!type || !type->isPointer)
+    {
+        return false;
+    }
+
+    return mapping.isVector || (mapping.isStructValue && IsBlittableStruct(analyzer, mapping.typeName));
+}
+
 static bool IsBlittableFieldType(const Analyzer& analyzer, const ASTType* type, int depth)
 {
     static const Set<String> s_scalarTypes {
@@ -931,6 +951,15 @@ Array<MethodThunk> CollectMethodThunks(const Analyzer& analyzer, const ClassDefi
 
             if (paramRes.HasError() || !isDeclared(paramRes.GetValue()) || paramRes.GetValue().isStringArray)
             {
+                paramsOk = false;
+                break;
+            }
+
+            if (IsForeignValuePointer(analyzer, parameter->type.Get(), paramRes.GetValue()))
+            {
+                HYP_LOG(Tool, Warning, "{}::{}: parameter '{}' is a raw pointer to script-owned {}; take it by value or reference to bind it",
+                    cls.name, member.name, parameter->name, paramRes.GetValue().typeName);
+
                 paramsOk = false;
                 break;
             }

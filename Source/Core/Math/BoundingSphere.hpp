@@ -39,39 +39,6 @@ struct CORE_API BoundingSphere
     {
     }
 
-    constexpr BoundingSphere(const BoundingSphere& other)
-        : center(other.center),
-          radius(other.radius)
-    {
-    }
-
-    BoundingSphere& operator=(const BoundingSphere& other)
-    {
-        center = other.center;
-        radius = other.radius;
-
-        return *this;
-    }
-
-    constexpr BoundingSphere(BoundingSphere&& other) noexcept
-        : center(other.center),
-          radius(other.radius)
-    {
-        other.center = Vec3f::Zero();
-        other.radius = 0.0f;
-    }
-
-    BoundingSphere& operator=(BoundingSphere&& other) noexcept
-    {
-        center = other.center;
-        radius = other.radius;
-
-        other.center = Vec3f::Zero();
-        other.radius = 0.0f;
-
-        return *this;
-    }
-
     constexpr BoundingSphere(const BoundingBox& box)
         : BoundingSphere()
     {
@@ -81,6 +48,12 @@ struct CORE_API BoundingSphere
             radius = box.GetRadius();
         }
     }
+
+    constexpr BoundingSphere(const BoundingSphere& other) = default;
+    BoundingSphere& operator=(const BoundingSphere& other) = default;
+
+    constexpr BoundingSphere(BoundingSphere&& other) noexcept = default;
+    BoundingSphere& operator=(BoundingSphere&& other) noexcept = default;
 
     HYP_FORCE_INLINE constexpr const Vec3f& GetCenter() const
     {

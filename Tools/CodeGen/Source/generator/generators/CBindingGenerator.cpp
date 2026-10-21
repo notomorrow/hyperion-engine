@@ -38,6 +38,33 @@ String UnwrappedTypeName(const ASTType* type)
     return unwrapped->typeName->ToString(/* includeNamespace */ false);
 }
 
+bool HasUnalignedSelf(const Analyzer& analyzer, const ClassDefinition& cls)
+{
+    return cls.type == ClassDefinitionType::Struct && IsBlittableStruct(analyzer, cls.name);
+}
+
+String SelfSigParam(const Analyzer& analyzer, const ClassDefinition& cls, bool isConst)
+{
+    if (HasUnalignedSelf(analyzer, cls))
+    {
+        return isConst ? "const void* self" : "void* self";
+    }
+
+    return HYP_FORMAT("{}* self", cls.name);
+}
+
+String SelfAccess(const Analyzer& analyzer, const ClassDefinition& cls, bool isConst)
+{
+    if (HasUnalignedSelf(analyzer, cls))
+    {
+        return isConst
+            ? HYP_FORMAT("::Hyperion::Strata::LoadUnaligned<{}>(self).", cls.name)
+            : HYP_FORMAT("::Hyperion::Strata::UnalignedRef<{}>(self)->", cls.name);
+    }
+
+    return "self->";
+}
+
 TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const Set<String>& allHandleNames,
     const ASTType* paramType, const String& paramName, Array<String>& sigParams, Array<String>& callArgs)
 {
@@ -56,6 +83,11 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
     {
         return HYP_MAKE_ERROR(Error, "Type '{}' is not a declared Strata {}", paramTypeMapping.typeName,
             paramTypeMapping.isEnum ? "enum" : "handle");
+    }
+
+    if (IsForeignValuePointer(analyzer, paramType, paramTypeMapping))
+    {
+        return HYP_MAKE_ERROR(Error, "Raw pointer to script-owned '{}' can't be bound", paramTypeMapping.typeName);
     }
 
     const ASTType* unwrappedParamType = (paramType->isLvalueReference || paramType->isRvalueReference)
@@ -100,24 +132,39 @@ TResult<StrataTypeMapping> BuildThunkInputParam(const Analyzer& analyzer, const 
     {
         const String vectorCxxTypeName = unwrappedParamType->typeName->ToString(/* includeNamespace */ false);
 
-        sigParams.PushBack(HYP_FORMAT("const {}* {}", vectorCxxTypeName, paramName));
-        callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::LoadUnaligned({})", paramName));
+        if (IsMutableReference(paramType))
+        {
+            sigParams.PushBack(HYP_FORMAT("void* {}", paramName));
+            callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::UnalignedRef<{}>({}).Get()", vectorCxxTypeName, paramName));
+        }
+        else
+        {
+            sigParams.PushBack(HYP_FORMAT("const void* {}", paramName));
+            callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::LoadUnaligned<{}>({})", vectorCxxTypeName, paramName));
+        }
     }
     else if (paramTypeMapping.isStructValue)
     {
-        sigParams.PushBack(HYP_FORMAT("{}* {}", paramTypeMapping.CxxTypeName(), paramName));
-
         if (paramType->isPointer)
         {
+            sigParams.PushBack(HYP_FORMAT("{}* {}", paramTypeMapping.CxxTypeName(), paramName));
             callArgs.PushBack(paramName);
         }
-        else if (paramType->isLvalueReference && !(paramType->refTo && paramType->refTo->isConst))
+        else if (IsMutableReference(paramType) && IsBlittableStruct(analyzer, paramTypeMapping.typeName))
         {
+            // Engine writes through the reference; give it an aligned copy, written back after the call
+            sigParams.PushBack(HYP_FORMAT("void* {}", paramName));
+            callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::UnalignedRef<{}>({}).Get()", paramTypeMapping.CxxTypeName(), paramName));
+        }
+        else if (IsMutableReference(paramType))
+        {
+            sigParams.PushBack(HYP_FORMAT("{}* {}", paramTypeMapping.CxxTypeName(), paramName));
             callArgs.PushBack(HYP_FORMAT("*{}", paramName));
         }
         else
         {
-            callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::LoadUnaligned({})", paramName));
+            sigParams.PushBack(HYP_FORMAT("const void* {}", paramName));
+            callArgs.PushBack(HYP_FORMAT("::Hyperion::Strata::LoadUnaligned<{}>({})", paramTypeMapping.CxxTypeName(), paramName));
         }
     }
     else
@@ -174,8 +221,14 @@ String FormatThunkDefinition(const String& externName, const StrataTypeMapping& 
     }
     else if (returnTypeMapping.isStructValue || returnTypeMapping.isVector)
     {
+        const String storeTypeName = returnTypeMapping.isVector
+            ? UnwrappedTypeName(cxxReturnType)
+            : returnTypeMapping.CxxTypeName();
+
         methodOutput += HYP_FORMAT("extern \"C\" HYP_EXPORT void {}({})", externName, sigParamsString);
-        methodOutput += " { ::Hyperion::Strata::StoreUnaligned(outReturn, ";
+        methodOutput += " { ::Hyperion::Strata::StoreUnaligned<";
+        methodOutput += storeTypeName;
+        methodOutput += ">(outReturn, ";
         methodOutput += callExpr;
         methodOutput += "); }\n";
     }
@@ -271,7 +324,7 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
 
             if (!isStatic)
             {
-                allSigParams.PushBack(HYP_FORMAT("{}* self", cls.name));
+                allSigParams.PushBack(SelfSigParam(analyzer, cls, functionType->isConstMethod));
             }
 
             for (const String& sigParam : sigParams)
@@ -303,13 +356,10 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
                 // `string` is a {ptr, len} fat; the host writes it via SetReturnString.
                 allSigParams.PushBack("::Hyperion::Strata::SString* outReturn");
             }
-            else if (returnTypeMapping.isVector && returnsViaOutParam)
-            {
-                allSigParams.PushBack(HYP_FORMAT("{}* outReturn", UnwrappedTypeName(functionType->returnType.Get())));
-            }
             else if (returnsViaOutParam)
             {
-                allSigParams.PushBack(HYP_FORMAT("{}* outReturn", returnTypeMapping.CxxTypeName()));
+                // Vector / struct value; untyped so StoreUnaligned can't be lowered to an aligned store
+                allSigParams.PushBack("void* outReturn");
             }
 
             const String sigParamsString = allSigParams.Any() ? String::Join(allSigParams, ", ") : String("");
@@ -317,7 +367,7 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
 
             const String callExpr = isStatic
                 ? HYP_FORMAT("{}::{}({})", cls.name, member.name, callArgsString)
-                : HYP_FORMAT("self->{}({})", member.name, callArgsString);
+                : HYP_FORMAT("{}{}({})", SelfAccess(analyzer, cls, functionType->isConstMethod), member.name, callArgsString);
 
             // Wrap the thunk + registrar in the method's preprocessor condition.
             const StrataTypeMapping thunkReturnMapping = propertySetterIdiom
@@ -360,20 +410,19 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
                     continue;
                 }
 
-                const String selfParam = HYP_FORMAT("{}* self", cls.name);
-
                 if (binding.getterSynthesized)
                 {
+                    const String getterSelf = SelfAccess(analyzer, cls, /* isConst */ true);
                     const String getterCall = prop.getter->cxxType->isFunction
-                        ? HYP_FORMAT("self->{}()", prop.getter->name)
-                        : HYP_FORMAT("self->{}", prop.getter->name);
+                        ? HYP_FORMAT("{}{}()", getterSelf, prop.getter->name)
+                        : HYP_FORMAT("{}{}", getterSelf, prop.getter->name);
 
                     // String getters write the {ptr, len} fat through an out-param.
                     // -- Why? They don't have to, anymore --
                     // They don't have to per se; but because strata extern char* returns do NOT hand off ownership,
                     // we do it this way so ownership is created on the C++ side and strata takes it over.
                     Array<String> getterSigParams;
-                    getterSigParams.PushBack(selfParam);
+                    getterSigParams.PushBack(SelfSigParam(analyzer, cls, /* isConst */ true));
 
                     if (prop.mapping.isString)
                     {
@@ -381,7 +430,7 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
                     }
                     else if (prop.mapping.isVector)
                     {
-                        getterSigParams.PushBack(HYP_FORMAT("{}* outReturn", UnwrappedTypeName(prop.getterValueType)));
+                        getterSigParams.PushBack("void* outReturn");
                     }
 
                     String getterThunk = FormatThunkDefinition(prop.getterSymbol, prop.mapping, prop.getterValueType,
@@ -412,15 +461,16 @@ Result CBindingGenerator::EmitThunks(const Analyzer& analyzer, const Module& mod
                 {
                     Array<String> sigParams;
                     Array<String> callArgs;
-                    sigParams.PushBack(selfParam);
+                    sigParams.PushBack(SelfSigParam(analyzer, cls, /* isConst */ false));
 
                     TResult<StrataTypeMapping> valueRes = BuildThunkInputParam(analyzer, allHandleNames, prop.setterValueType, "value", sigParams, callArgs);
 
                     if (!valueRes.HasError())
                     {
+                        const String setterSelf = SelfAccess(analyzer, cls, /* isConst */ false);
                         const String setterCall = prop.setter->cxxType->isFunction
-                            ? HYP_FORMAT("self->{}({})", prop.setter->name, String::Join(callArgs, ", "))
-                            : HYP_FORMAT("self->{} = {}", prop.setter->name, callArgs[0]);
+                            ? HYP_FORMAT("{}{}({})", setterSelf, prop.setter->name, String::Join(callArgs, ", "))
+                            : HYP_FORMAT("{}{} = {}", setterSelf, prop.setter->name, callArgs[0]);
 
                         String setterThunk = FormatThunkDefinition(prop.setterSymbol, StrataTypeMapping { "void" }, nullptr, String::Join(sigParams, ", "), setterCall);
                         setterThunk += HYP_FORMAT("#ifdef HYP_STRATA\nstatic const bool s_strataPropertyBinding_{}_set_{} = ::Hyperion::Strata::ThunkDrawer::Register(\"{}\"_sh, reinterpret_cast<void*>(&{}));\n#endif\n",

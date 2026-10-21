@@ -141,6 +141,7 @@ static bool TryEmitDirectBinding(
     Array<String> nativeArgs;
     Array<String> prelude;
     Array<String> fixedStatements;
+    Array<String> argDecls = methodArgDecls;
     bool usesStrings = false;
 
     if (cls.type == ClassDefinitionType::Class)
@@ -225,7 +226,18 @@ static bool TryEmitDirectBinding(
             }
 
             nativeParams.PushBack(HYP_FORMAT("{}* {}", csharpMapping.typeName, name));
-            nativeArgs.PushBack(HYP_FORMAT("&{}", name));
+
+            // C++ `T&` writes back, so the caller's variable is passed by ref and pinned
+            if (BindingsShared::IsMutableReference(thunk.functionType->parameters[i]->type.Get()))
+            {
+                argDecls[i] = HYP_FORMAT("ref {} {}", csharpMapping.typeName, name);
+                fixedStatements.PushBack(HYP_FORMAT("fixed ({}* {}Ptr = &{})", csharpMapping.typeName, localName, name));
+                nativeArgs.PushBack(HYP_FORMAT("{}Ptr", localName));
+            }
+            else
+            {
+                nativeArgs.PushBack(HYP_FORMAT("&{}", name));
+            }
         }
         else if (s_scalarTypes.Contains(csharpMapping.typeName))
         {
@@ -365,7 +377,7 @@ static bool TryEmitDirectBinding(
 
     out += HYP_FORMAT("        public static {} {}(this {} obj{})\n",
         AppendNullable(returnTypeMapping.typeName, returnTypeMapping.isNullable), managedName, cls.name,
-        methodArgDecls.Any() ? ", " + String::Join(methodArgDecls, ", ") : "");
+        argDecls.Any() ? ", " + String::Join(argDecls, ", ") : "");
     out += "        {\n";
 
     String indent = "            ";
