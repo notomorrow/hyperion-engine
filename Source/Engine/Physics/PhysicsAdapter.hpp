@@ -27,7 +27,7 @@ struct CharacterControllerConfig
     Handle<PhysicsShape> shape;
     Vec3f startTranslation;
     float stepHeight = 0.35f;
-    float maxSlopeAngle = 45.0f;
+    float maxSlopeAngle = 55.0f;
     float jumpSpeed = 4.9f;
     float fallSpeed = 55.0f;
 

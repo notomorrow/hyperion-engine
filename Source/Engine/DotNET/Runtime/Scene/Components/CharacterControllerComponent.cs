@@ -14,7 +14,7 @@ namespace Hyperion
         public float Friction = 8.0f;
         public float StopSpeed = 2.5f;
         public float StepHeight = 0.35f;
-        public float MaxSlopeAngle = 45.0f;
+        public float MaxSlopeAngle = 55.0f;
         public float SprintAcceleration = 7.0f;
         public float SprintTurnRate = 140.0f;
         public float TurnSpeedLoss = 1.5f;
