@@ -48,7 +48,7 @@ struct CharacterMovementSettings
     float stepHeight = 0.35f;
 
     HYP_FIELD(Property = "MaxSlopeAngle", Serialize, Title = "Max Slope Angle")
-    float maxSlopeAngle = 45.0f;
+    float maxSlopeAngle = 55.0f;
 
     HYP_FIELD(Property = "SprintAcceleration", Serialize, Title = "Sprint Acceleration")
     float sprintAcceleration = 7.0f;

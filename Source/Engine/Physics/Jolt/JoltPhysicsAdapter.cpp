@@ -76,6 +76,7 @@ static constexpr JPH::BroadPhaseLayer JoltBroadPhaseNON_MOVING(0);
 static constexpr JPH::BroadPhaseLayer JoltBroadPhaseMOVING(1);
 
 static constexpr float CharacterApexVerticalSpeed = 1.0f;
+static constexpr float CharacterSteepSupportMaxAngle = MathUtil::DegToRad(75.0f);
 
 } // namespace
 
@@ -1338,6 +1339,59 @@ static JPH::Vec3 AccelerateCharacterHorizontal(JPH::Vec3 horizontalVelocity, con
     return horizontalVelocity + wishDirection * accelSpeed;
 }
 
+static JPH::Vec3 AlignCharacterVelocityToGround(const JPH::Vec3& horizontalVelocity, const JPH::Vec3& groundNormal)
+{
+    const float speed = horizontalVelocity.Length();
+
+    if (speed <= MathUtil::epsilonF || groundNormal.GetY() <= MathUtil::epsilonF)
+    {
+        return horizontalVelocity;
+    }
+
+    const JPH::Vec3 alongGround = horizontalVelocity - JPH::Vec3::sAxisY() * (horizontalVelocity.Dot(groundNormal) / groundNormal.GetY());
+
+    return alongGround.NormalizedOr(JPH::Vec3::sZero()) * speed;
+}
+
+static JPH::Vec3 CancelBlockedCharacterVelocity(const JPH::CharacterVirtual& character, JPH::Vec3 horizontalVelocity, const JPH::Vec3& achievedHorizontalVelocity)
+{
+    for (const JPH::CharacterContact& contact : character.GetActiveContacts())
+    {
+        if (!contact.mHadCollision || contact.mWasDiscarded || !character.IsSlopeTooSteep(contact.mSurfaceNormal))
+        {
+            continue;
+        }
+
+        JPH::Vec3 normal(contact.mContactNormal.GetX(), 0.0f, contact.mContactNormal.GetZ());
+        const float normalLength = normal.Length();
+
+        if (normalLength <= MathUtil::epsilonF)
+        {
+            continue;
+        }
+
+        normal /= normalLength;
+
+        const float commandedInto = horizontalVelocity.Dot(normal);
+
+        if (commandedInto >= 0.0f)
+        {
+            continue;
+        }
+
+        const float achievedInto = MathUtil::Min(achievedHorizontalVelocity.Dot(normal), 0.0f);
+
+        if (achievedInto <= commandedInto)
+        {
+            continue;
+        }
+
+        horizontalVelocity -= normal * (commandedInto - achievedInto);
+    }
+
+    return horizontalVelocity;
+}
+
 void JoltPhysicsAdapter::StepCharacterController(const SharedPtr<void>& physicsHandle, float deltaTime)
 {
     JoltCharacterControllerInternalData* internalData = static_cast<JoltCharacterControllerInternalData*>(physicsHandle.GetVoid());
@@ -1364,7 +1418,13 @@ void JoltPhysicsAdapter::StepCharacterController(const SharedPtr<void>& physicsH
     {
         const JPH::Vec3 currentVelocity = character->GetLinearVelocity();
 
-        const bool isGrounded = character->GetGroundState() == JPH::CharacterVirtual::EGroundState::OnGround;
+        const JPH::CharacterVirtual::EGroundState groundState = character->GetGroundState();
+        const JPH::Vec3 groundNormal = character->GetGroundNormal();
+
+        const bool isGrounded = groundState == JPH::CharacterVirtual::EGroundState::OnGround;
+        const bool isOnSteepGround = groundState == JPH::CharacterVirtual::EGroundState::OnSteepGround
+            && groundNormal.GetY() >= std::cos(CharacterSteepSupportMaxAngle);
+        const bool isSupported = isGrounded || isOnSteepGround;
 
         JPH::Vec3 groundVelocity = character->GetGroundVelocity();
 
@@ -1398,7 +1458,7 @@ void JoltPhysicsAdapter::StepCharacterController(const SharedPtr<void>& physicsH
 
         const bool movingTowardsGround = (currentVelocity.GetY() - groundVelocity.GetY()) < 0.1f;
 
-        if (isGrounded)
+        if (isSupported)
         {
             internalData->coyoteTimeRemaining = internalData->coyoteTime;
             internalData->isRisingFromJump = false;
@@ -1448,12 +1508,14 @@ void JoltPhysicsAdapter::StepCharacterController(const SharedPtr<void>& physicsH
             }
         }
 
-        internalData->commandedHorizontalVelocity = horizontalVelocity;
+        const JPH::Vec3 moveVelocity = isGrounded
+            ? AlignCharacterVelocityToGround(horizontalVelocity, groundNormal)
+            : horizontalVelocity;
 
-        JPH::Vec3 newVelocity = horizontalVelocity + groundHorizontalVelocity;
-        newVelocity.SetY(isGrounded ? groundVelocity.GetY() : currentVelocity.GetY());
+        JPH::Vec3 newVelocity = JPH::Vec3(moveVelocity.GetX(), 0.0f, moveVelocity.GetZ()) + groundHorizontalVelocity;
+        newVelocity.SetY(isGrounded ? groundVelocity.GetY() + moveVelocity.GetY() : currentVelocity.GetY());
 
-        const bool canJump = internalData->jumpBufferTimeRemaining > 0.0f && (isGrounded || internalData->coyoteTimeRemaining > 0.0f);
+        const bool canJump = internalData->jumpBufferTimeRemaining > 0.0f && (isSupported || internalData->coyoteTimeRemaining > 0.0f);
 
         bool isTakingOff = false;
 
@@ -1461,7 +1523,7 @@ void JoltPhysicsAdapter::StepCharacterController(const SharedPtr<void>& physicsH
         {
             internalData->jumpWindupRemaining = MathUtil::Max(0.0f, internalData->jumpWindupRemaining - substepDelta);
 
-            isTakingOff = internalData->jumpWindupRemaining <= 0.0f && (isGrounded || internalData->coyoteTimeRemaining > 0.0f);
+            isTakingOff = internalData->jumpWindupRemaining <= 0.0f && (isSupported || internalData->coyoteTimeRemaining > 0.0f);
         }
         else if (canJump && movingTowardsGround)
         {
@@ -1485,13 +1547,21 @@ void JoltPhysicsAdapter::StepCharacterController(const SharedPtr<void>& physicsH
         {
             newVelocity += JPH::Vec3(0.0f, internalData->jumpSpeed, 0.0f);
 
+            if (isOnSteepGround)
+            {
+                const JPH::Vec3 pushOff = JPH::Vec3(groundNormal.GetX(), 0.0f, groundNormal.GetZ()) * internalData->jumpSpeed;
+
+                horizontalVelocity += pushOff;
+                newVelocity += pushOff;
+            }
+
             internalData->coyoteTimeRemaining = 0.0f;
             internalData->isRisingFromJump = true;
         }
 
         float gravityScale = 1.0f;
 
-        if (!isGrounded)
+        if (!isSupported)
         {
             const float verticalSpeed = newVelocity.GetY();
 
@@ -1511,7 +1581,11 @@ void JoltPhysicsAdapter::StepCharacterController(const SharedPtr<void>& physicsH
             }
         }
 
-        newVelocity += gravity * gravityScale * substepDelta;
+        const JPH::Vec3 appliedGravity = isGrounded && !isTakingOff
+            ? groundNormal * groundNormal.Dot(gravity)
+            : gravity;
+
+        newVelocity += appliedGravity * gravityScale * substepDelta;
 
         if (newVelocity.GetY() < -internalData->fallSpeed)
         {
@@ -1552,16 +1626,30 @@ void JoltPhysicsAdapter::StepCharacterController(const SharedPtr<void>& physicsH
             JPH::ShapeFilter(),
             *m_tempAllocator);
 
-        const float achievedVerticalSpeed = JPH::Vec3(character->GetPosition() - previousPosition).GetY() / substepDelta;
+        const JPH::Vec3 achievedStep = JPH::Vec3(character->GetPosition() - previousPosition);
+        const float achievedVerticalSpeed = achievedStep.GetY() / substepDelta;
+
+        const JPH::Vec3 achievedHorizontalVelocity = JPH::Vec3(achievedStep.GetX(), 0.0f, achievedStep.GetZ()) / substepDelta - groundHorizontalVelocity;
+
+        const bool isSliding = character->GetGroundState() == JPH::CharacterVirtual::EGroundState::OnSteepGround && !isTakingOff;
+
+        internalData->commandedHorizontalVelocity = isSliding
+            ? achievedHorizontalVelocity
+            : CancelBlockedCharacterVelocity(*character, horizontalVelocity, achievedHorizontalVelocity);
 
         JPH::Vec3 resolvedVelocity = character->GetLinearVelocity();
+
+        if (isGrounded && !isTakingOff && resolvedVelocity.GetY() > groundVelocity.GetY())
+        {
+            resolvedVelocity.SetY(groundVelocity.GetY());
+        }
 
         if (resolvedVelocity.GetY() < 0.0f && achievedVerticalSpeed > resolvedVelocity.GetY())
         {
             resolvedVelocity.SetY(MathUtil::Min(achievedVerticalSpeed, 0.0f));
-
-            character->SetLinearVelocity(resolvedVelocity);
         }
+
+        character->SetLinearVelocity(resolvedVelocity);
     }
 }
 
