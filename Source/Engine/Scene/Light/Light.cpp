@@ -64,6 +64,17 @@ static constexpr Vec2u DefaultShadowMapDimensions[NumLightTypes] = {
     Vec2u(256, 256)    // LightType::AreaRect
 };
 
+static Quat4f SpotRotationFromDirection(const Vec3f& direction)
+{
+    const Vec3f forward = direction.Normalized();
+
+    const Vec3f up = MathUtil::Abs(forward.Dot(Vec3f::UnitY())) > 0.999f
+        ? Vec3f::UnitZ()
+        : Vec3f::UnitY();
+
+    return Quat4f::LookAt(forward, up).Inverse();
+}
+
 #pragma region Light
 
 Light::Light()
@@ -227,6 +238,21 @@ void Light::SetNormal(const Vec3f& normal)
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
+}
+
+Vec3f Light::GetSpotDirection() const
+{
+    return GetWorldRotation().RotateVector(Vec3f::UnitZ()).Normalized();
+}
+
+void Light::SetSpotDirection(const Vec3f& direction)
+{
+    if (direction.LengthSquared() <= MathUtil::epsilonF)
+    {
+        return;
+    }
+
+    SetWorldRotation(SpotRotationFromDirection(direction));
 }
 
 void Light::SetAreaSize(const Vec2f& areaSize)
@@ -445,6 +471,20 @@ BoundingBox Light::CalculateLightBounds() const
         return BoundingBox(GetBoundingSphere(false));
     }
 
+    if (m_type == LightType::Spot)
+    {
+        // the lit region is a spherical sector along local +Z, apex at the origin
+        const float outerAngle = MathUtil::DegToRad(MathUtil::Clamp(MathUtil::Abs(m_spotAngles.x), 0.0f, 180.0f));
+
+        const float sideExtent = outerAngle >= MathUtil::pi<float> * 0.5f
+            ? m_radius
+            : m_radius * MathUtil::Sin(outerAngle);
+
+        const float minZ = MathUtil::Min(0.0f, m_radius * MathUtil::Cos(outerAngle));
+
+        return BoundingBox(Vec3f(-sideExtent, -sideExtent, minZ), Vec3f(sideExtent, sideExtent, m_radius));
+    }
+
     return BoundingBox::Empty();
 }
 
@@ -496,7 +536,7 @@ void Light::UpdateRenderProxy(RenderProxyLight* proxy)
         const float cosInner = MathUtil::Max(MathUtil::Cos(MathUtil::DegToRad(m_spotAngles.y)), cosOuter + 0.0001f);
 
         bufferData.areaSize = Vec2f(cosOuter, cosInner);
-        bufferData.spotLightDir = m_normal;
+        bufferData.spotLightDir = GetSpotDirection();
         break;
     }
     case LightType::Point:
@@ -521,6 +561,11 @@ HashCode Light::GetLightingHashCode() const
     hashCode.Add(m_radius);
     hashCode.Add(m_falloff);
     hashCode.Add(m_spotAngles);
+
+    if (m_type == LightType::Spot)
+    {
+        hashCode.Add(GetSpotDirection());
+    }
 
     return hashCode;
 }
@@ -605,7 +650,7 @@ PointLight::PointLight(const Vec3f& position, const Color& color, float intensit
 #pragma region SpotLight
 
 SpotLight::SpotLight()
-    : SpotLight(Vec3f(0.0f), Vec3f(0.0f, 0.0f, -1.0f), Vec2f(30.0f, 15.0f), Color::White(), 1.0f, 10.0f)
+    : SpotLight(Vec3f(0.0f), -Vec3f::UnitY(), Vec2f(30.0f, 15.0f), Color::White(), 1.0f, 10.0f)
 {
 }
 
@@ -613,6 +658,13 @@ SpotLight::SpotLight(const Vec3f& position, const Vec3f& direction, const Vec2f&
     : Light(LightType::Spot, position, direction, Vec2f::Zero(), color, intensity, radius)
 {
     m_spotAngles = angles;
+
+    if (direction.LengthSquared() > MathUtil::epsilonF)
+    {
+        Entity::SetLocalRotation(SpotRotationFromDirection(direction));
+    }
+
+    Entity::SetLocalBounds(CalculateLightBounds());
 }
 
 #pragma endregion SpotLight

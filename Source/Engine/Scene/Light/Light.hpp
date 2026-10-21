@@ -90,7 +90,7 @@ public:
     /*! \brief Get the normal for the light. This is used only for area lights.
      *
      *  \return The normal. */
-    HYP_METHOD(Property = "Normal", Serialize, Editor)
+    HYP_METHOD(Property = "Normal", Serialize, Editor, EditCondition = "UsesNormal")
     const Vec3f& GetNormal() const
     {
         return m_normal;
@@ -99,8 +99,20 @@ public:
     /*! \brief Set the normal for the light. This is used only for area lights.
      *
      *  \param normal The normal to set. */
-    HYP_METHOD(Property = "Normal", Serialize, Editor)
+    HYP_METHOD(Property = "Normal", Serialize, Editor, EditCondition = "UsesNormal")
     void SetNormal(const Vec3f& normal);
+
+    HYP_METHOD()
+    bool UsesNormal() const
+    {
+        return m_type == LightType::AreaRect;
+    }
+
+    HYP_METHOD()
+    Vec3f GetSpotDirection() const;
+
+    HYP_METHOD()
+    void SetSpotDirection(const Vec3f& direction);
 
     /*! \brief Get the area size for the light. This is used only for area lights.
      *
@@ -142,10 +154,8 @@ public:
         {
         case LightType::Directional:
             return INFINITY;
-        case LightType::Point:
-            return m_radius;
         default:
-            return 0.0f;
+            return m_radius;
         }
     }
 

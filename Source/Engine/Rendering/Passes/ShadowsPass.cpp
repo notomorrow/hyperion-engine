@@ -265,6 +265,8 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     const bool isOmni = (lightType == LightType::Point);
     const bool isDirectional = (lightType == LightType::Directional);
 
+    const uint32 numCascades = isDirectional ? MathUtil::Clamp(lightProxy->numCascades, 1u, MaxShadowMapCascades) : 1;
+
     const bool hasBakedStaticShadowMaps = (light->GetLightFlags() & LightFlags::BakeStaticShadows) && lightProxy->bakedShadowMap != nullptr;
     const bool cacheStaticShadowMaps = g_cvCacheShadowMaps.Get() && !hasBakedStaticShadowMaps && (light->GetLightFlags() & LightFlags::CacheStaticShadowMaps);
     const bool onlyStaticShadowMaps = (light->GetLightFlags() & LightFlags::OnlyDrawStaticShadowMaps);
@@ -380,7 +382,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
     uint32 numOmniFacesWarmedThisFrame = 0;
     const uint32 maxOmniFacesWarmedPerFrame = uint32(MathUtil::Max(s_cvOmniShadowMaxNewFacesPerFrame.Get(), 1));
 
-    for (uint32 cascadeIndex = 0; cascadeIndex < lightProxy->numCascades; cascadeIndex++)
+    for (uint32 cascadeIndex = 0; cascadeIndex < numCascades; cascadeIndex++)
     {
         View* shadowViewDynamic;
         View* shadowViewStatic;
@@ -530,7 +532,7 @@ void ShadowsPassBase::RenderFrame(Frame* frame, const RenderSetup& renderSetup)
 
                     dirty = true;
 
-                    cachedData->nextDirtyDrawCascade = (cascadeIndex + 1) % lightProxy->numCascades;
+                    cachedData->nextDirtyDrawCascade = (cascadeIndex + 1) % numCascades;
                 }
             }
 

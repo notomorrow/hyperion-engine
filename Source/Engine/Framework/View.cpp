@@ -99,9 +99,12 @@ struct LightSorter
     bool operator()(Light* a, Light* b) const
     {
         // Prirotize directional lights first
-        if (a->GetLightType() != b->GetLightType())
+        const bool isDirectionalA = (a->GetLightType() == LightType::Directional);
+        const bool isDirectionalB = (b->GetLightType() == LightType::Directional);
+
+        if (isDirectionalA != isDirectionalB)
         {
-            return a->GetLightType() == LightType::Directional;
+            return isDirectionalA;
         }
 
         // Then sort by distance to camera (closest first)
@@ -428,12 +431,11 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                 continue;
             }
 
-            if (light->GetLightType() == LightType::Spot
-                || light->GetLightType() == LightType::AreaRect)
+            if (light->GetLightType() == LightType::AreaRect)
             {
                 // @TODO
                 // https://github.com/HyperionGameTech/HyperionEngine/issues/306
-                // We don't support shadow maps for these light types, yet.
+                // We don't support shadow maps for area lights, yet.
                 continue;
             }
 
@@ -454,9 +456,6 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                     isLightInFrustum = cachedFrustum.ContainsBoundingSphere(light->GetBoundingSphere(true));
                     break;
                 case LightType::Spot:
-                    /// \todo Implement frustum culling for spot lights
-                    isLightInFrustum = true;
-                    break;
                 case LightType::AreaRect:
                     isLightInFrustum = cachedFrustum.ContainsAABB(light->GetWorldBounds());
                     break;
@@ -491,6 +490,7 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
         View* shadowViewsDynamic[6] {};
 
         const bool isOmni = (light->GetLightType() == LightType::Point);
+        const bool isSpot = (light->GetLightType() == LightType::Spot);
         const bool isDirectional = (light->GetLightType() == LightType::Directional);
 
         const uint32 numCascades = (isDirectional ? light->GetNumShadowMapCascades() : 1);
@@ -777,6 +777,12 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
                     {
                         shadowCamera->SetFarClip(ShadowCameraHelpers::GetOmniShadowFarClip(*light));
                     }
+                    else if (isSpot)
+                    {
+                        shadowCamera->SetFOV(ShadowCameraHelpers::GetSpotShadowFOV(*light));
+                        shadowCamera->SetNearClip(ShadowCameraHelpers::GetSpotShadowNearClip(*light));
+                        shadowCamera->SetFarClip(ShadowCameraHelpers::GetSpotShadowFarClip(*light));
+                    }
                 }
 
                 if (isOmni)
@@ -788,6 +794,16 @@ void View::PrepareShadowViews(Array<View*, SceneTempAllocator>& outShadowViews)
 
                     shadowViewProjMatrix = shadowCamera->GetProjectionMatrix() * shadowViewMatrix;
                     shadowInvProjMatrix = shadowCamera->GetProjectionMatrix().Inverse();
+
+                    shadowViewFrustum.SetFromViewProjectionMatrix(shadowViewProjMatrix);
+                }
+                else if (isSpot)
+                {
+                    const Mat4f spotProjMatrix = ShadowCameraHelpers::CalculateSpotShadowProjectionMatrix(*light);
+
+                    shadowViewMatrix = ShadowCameraHelpers::CalculateSpotShadowViewMatrix(*light);
+                    shadowViewProjMatrix = spotProjMatrix * shadowViewMatrix;
+                    shadowInvProjMatrix = spotProjMatrix.Inverse();
 
                     shadowViewFrustum.SetFromViewProjectionMatrix(shadowViewProjMatrix);
                 }
@@ -1525,9 +1541,6 @@ void View::CollectLights(RenderProxyList& rpl)
                     isLightInFrustum = cachedFrustum.ContainsBoundingSphere(light->GetBoundingSphere(true));
                     break;
                 case LightType::Spot:
-                    /// \todo Implement frustum culling for spot lights
-                    isLightInFrustum = true;
-                    break;
                 case LightType::AreaRect:
                     isLightInFrustum = cachedFrustum.ContainsAABB(light->GetWorldBounds());
                     break;

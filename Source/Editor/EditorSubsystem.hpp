@@ -925,6 +925,7 @@ private:
 
     void DebugDrawPhysicsShapes(class DebugDrawCommandList& debugDrawCommandList);
     void DebugDrawMeshLods(class DebugDrawCommandList& debugDrawCommandList);
+    void DebugDrawSpotLight(class DebugDrawCommandList& debugDrawCommandList, const class Light& light);
     void DebugDrawSelectedInstances(class DebugDrawCommandList& debugDrawCommandList);
 
     void DetachUnselectedInstanceHandles(const Array<Handle<Node>>& selectedNodes);

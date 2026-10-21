@@ -43,7 +43,10 @@ float3x3 GetInstanceNormalMatrix(float4x4 transform)
 
     if (abs(determinant) < 1e-12)
     {
-        return float3x3(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+        return float3x3(
+            1.0, 0.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.0, 0.0, 1.0);
     }
 
     return float3x3(row0, row1, row2) / determinant;

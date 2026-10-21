@@ -324,8 +324,7 @@ PSOutput PSMain(PSInput input)
         float4 light_color = currentLight.color;
 
         float attenuation = 1.0;
-
-        float shadow = 1.0; // @TODO shadows for clustered deferred
+        float shadow = 1.0;
 
         const float D = CalculateDistributionTerm(perceptualRoughness, NdotH);
         const float G = V_SmithGGXCorrelated(roughness * roughness, NdotV, NdotL);
@@ -351,8 +350,13 @@ PSOutput PSMain(PSInput input)
 
                 attenuation *= saturate((theta - spot_angles[0]) / (spot_angles[1] - spot_angles[0])) * step(spot_angles[0], theta);
 
-                // @TODO Spot shadows for clustered deferred
+                if ((currentLight.flags & LF_SHADOW_CASTER) != 0 && attenuation > 0.0)
+                {
+                    uint shadowMapIndex = GetShadowMapIndexForLight(lightIndex);
+                    ShadowMap shadowMap = shadowMaps[shadowMapIndex];
 
+                    shadow = GetSpotShadow(shadowMap, position.xyz, N, L, NdotL, texcoord, camera.dimensions.xy);
+                }
             }
             else
             {
@@ -577,6 +581,11 @@ PSOutput PSMain(PSInput input)
     float2 spot_angles = currentLight.area_size.xy;
 
     attenuation *= saturate((theta - spot_angles[0]) / (spot_angles[1] - spot_angles[0])) * step(spot_angles[0], theta);
+
+    if ((currentLight.flags & LF_SHADOW_CASTER) != 0 && attenuation > 0.0)
+    {
+        shadow = GetSpotShadow(shadowMap, position.xyz, N, L, NdotL, texcoord, camera.dimensions.xy);
+    }
 #endif // LIGHT_TYPE_SPOT
 
 #else // LIGHT_TYPE_POINT || LIGHT_TYPE_SPOT

@@ -274,7 +274,7 @@ void BakeJob<FogVolume>::DispatchOcclusionBake()
 
         if (lightType == LightType::Spot)
         {
-            direction = light->GetNormal();
+            direction = light->GetSpotDirection();
 
             // same packing as Light::UpdateRenderProxy - degrees in, cosines out
             const Vec2f spotAnglesDegrees = light->GetSpotAngles();

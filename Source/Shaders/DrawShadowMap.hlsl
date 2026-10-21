@@ -151,10 +151,7 @@ VSOutput VSMain(VSInput input, uint instanceId : SV_InstanceID, uint vertexId : 
     output.v_texcoord0 = float2(input.a_texcoord0.x, 1.0 - input.a_texcoord0.y) * CURRENT_MATERIAL.uv_scale;
     output.cutout_seed = AlphaCutoutSeed(model_matrix, vertexId);
 
-    float4 position_ndc = mul(vpMatrix, position);
-    position_ndc /= position_ndc.w;
-
-    output.position_cs = position_ndc;
+    output.position_cs = mul(vpMatrix, position);
 
     return output;
 }
@@ -196,7 +193,7 @@ PSOutput PSMain(PSInput input)
     }
 #endif
 
-    const float depth = input.position_cs.z / input.position_cs.w;
+    const float depth = input.position_cs.z;
 
 #ifdef VSM
     float2 moments = float2(depth, HYP_FMATH_SQR(depth));

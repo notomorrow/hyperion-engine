@@ -126,6 +126,11 @@ void EditorSpriteSystem::Process(float delta, Span<Handle<Scene>> scenes)
             {
                 mapping.sprite->color = lightColor;
             }
+
+            if (light->GetLightType() == LightType::Spot)
+            {
+                mapping.sprite->pointDirection = light->GetSpotDirection();
+            }
         }
     }
 }

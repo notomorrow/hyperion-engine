@@ -23,9 +23,57 @@ static constexpr float MinLogarithmicSplitNear = 0.5f;
 
 static constexpr float MinOmniShadowFarClip = 1.0f;
 
+static constexpr float SpotShadowFOVPaddingDegrees = 2.0f;
+static constexpr float MaxSpotShadowFOV = 170.0f;
+
+static constexpr float SpotShadowNearClipRatio = 0.01f;
+static constexpr float MinSpotShadowNearClip = 0.05f;
+
 float GetOmniShadowFarClip(const Light& light)
 {
     return MathUtil::Max(light.GetRadius(), MinOmniShadowFarClip);
+}
+
+float GetSpotShadowFOV(const Light& light)
+{
+    const float outerAngle = MathUtil::Abs(light.GetSpotAngles().x);
+
+    return MathUtil::Clamp((outerAngle + SpotShadowFOVPaddingDegrees) * 2.0f, 1.0f, MaxSpotShadowFOV);
+}
+
+float GetSpotShadowNearClip(const Light& light)
+{
+    return MathUtil::Max(GetSpotShadowFarClip(light) * SpotShadowNearClipRatio, MinSpotShadowNearClip);
+}
+
+float GetSpotShadowFarClip(const Light& light)
+{
+    return MathUtil::Max(light.GetRadius(), MinOmniShadowFarClip);
+}
+
+Mat4f CalculateSpotShadowViewMatrix(const Light& light)
+{
+    const Vec3f position = light.GetWorldTranslation();
+
+    const Vec3f forward = light.GetSpotDirection();
+
+    const Vec3f up = MathUtil::Abs(forward.Dot(Vec3f::UnitY())) > 0.999f
+        ? Vec3f::UnitX()
+        : Vec3f::UnitY();
+
+    return Mat4f::LookAt(position, position + forward, up);
+}
+
+Mat4f CalculateSpotShadowProjectionMatrix(const Light& light)
+{
+    const Vec2u dimensions = light.GetShadowMapDimensions();
+
+    return Mat4f::Perspective(
+        GetSpotShadowFOV(light),
+        int(MathUtil::Max(dimensions.x, 1u)),
+        int(MathUtil::Max(dimensions.y, 1u)),
+        GetSpotShadowNearClip(light),
+        GetSpotShadowFarClip(light));
 }
 
 Mat4f CalculateShadowViewMatrix(

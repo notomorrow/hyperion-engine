@@ -62,7 +62,10 @@ bool ShadowMapAtlas::AddElement(const Vec2u& elementDimensions, ShadowMapAtlasEl
 ShadowMapAllocator::ShadowMapAllocator()
     : m_atlasDimensions(2048, 2048)
 {
+    // We need at least two, or CSM will fill up the first
+    // leaving no room for spot lights.
     m_atlases.EmplaceBack(0, m_atlasDimensions);
+    m_atlases.EmplaceBack(1, m_atlasDimensions);
 }
 
 ShadowMapAllocator::~ShadowMapAllocator()
@@ -74,6 +77,12 @@ ShadowMapAllocator::~ShadowMapAllocator()
 
 void ShadowMapAllocator::Initialize()
 {
+    for (size_t atlasIndex = 1; atlasIndex < m_atlases.Size(); atlasIndex++)
+    {
+        Assert(m_atlases[atlasIndex].atlasDimensions == m_atlases[atlasIndex - 1].atlasDimensions,
+               "All atlases must be of equal dimension");
+    }
+
     m_atlasTextureArray = MakeHandle<Texture>(TextureDesc {
         TextureType::Texture2DArray,
         TextureFormat::D16,
@@ -82,10 +91,12 @@ void ShadowMapAllocator::Initialize()
         TextureFilterMode::Nearest,
         TextureWrapMode::ClampToEdge,
         uint16(m_atlases.Size()),
-        ImageUsage::Sampled | ImageUsage::Attachment });
+        ImageUsage::Sampled | ImageUsage::Attachment
+    });
 
     m_atlasTextureArray->SetName(NAME("Shadows"));
     m_atlasTextureArray->SetIsTransient(true);
+
     Check(m_atlasTextureArray->Create());
 
     GetEngineAssetRegistry()->PutAsset(m_atlasTextureArray);

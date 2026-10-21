@@ -505,6 +505,16 @@ float4 RayMarch(float3 rayOrigin, float3 rayDir, float tNear, float tFar,
                     float2 spot_angles = light.area_size.xy;
 
                     attenuation *= saturate((theta - spot_angles[0]) / (spot_angles[1] - spot_angles[0])) * step(spot_angles[0], theta);
+
+                    if ((light.flags & LF_SHADOW_CASTER) != 0 && attenuation > 0.0)
+                    {
+                        uint shadowMapIndex = GetShadowMapIndexForLight(lightIndex);
+
+                        if (shadowMapIndex < MAX_CLUSTERED_SHADOW_MAPS)
+                        {
+                            shadow = GetSpotShadowStandard(shadowMaps[shadowMapIndex], currentPos, lightDir);
+                        }
+                    }
                     break;
                 }
                 default: continue;

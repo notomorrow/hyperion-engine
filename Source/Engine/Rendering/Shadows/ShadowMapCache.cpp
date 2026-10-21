@@ -125,6 +125,7 @@ static FramebufferDesc GetFramebufferDesc(Light* light, ShaderDesc& outShaderDes
         break;
     }
     case LightType::Directional:
+    case LightType::Spot:
     {
         framebufferDesc.numAttachments = 0;
 
@@ -158,6 +159,14 @@ static Camera* CreateShadowCamera(Light* light, uint32 cascadeIndex)
         shadowMapCamera->SetFOV(90.0f);
         shadowMapCamera->SetNearClip(0.01f);
         shadowMapCamera->SetFarClip(ShadowCameraHelpers::GetOmniShadowFarClip(*light));
+
+        shadowMapCamera->AddCameraController(MakeHandle<PerspectiveCameraController>());
+
+        break;
+    case LightType::Spot:
+        shadowMapCamera->SetFOV(ShadowCameraHelpers::GetSpotShadowFOV(*light));
+        shadowMapCamera->SetNearClip(ShadowCameraHelpers::GetSpotShadowNearClip(*light));
+        shadowMapCamera->SetFarClip(ShadowCameraHelpers::GetSpotShadowFarClip(*light));
 
         shadowMapCamera->AddCameraController(MakeHandle<PerspectiveCameraController>());
 

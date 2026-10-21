@@ -2,9 +2,6 @@
 #include "../include/Clouds.hlsli"
 #include "../include/CloudNoise.hlsli"
 
-// Top-down map of how much sunlight gets through the clouds, for points on the y = 0 plane. Marched through the same
-// density as the sky, so ground shadows match the clouds above. Filled a band of rows at a time
-
 DECLARE_UAV(Clouds, OutShadowMap) RWTexture2D<float> OutShadowMap;
 
 DECLARE_SRV(Clouds, CloudWeatherMapTexture) Texture2DArray CloudWeatherMapTexture;
@@ -25,8 +22,6 @@ DECLARE_BUFFER_DYNAMIC(Clouds, CloudShadowMapConstants) cbuffer CloudShadowMapCo
 static const float ShadowMarchStepLength = 150.0;
 static const uint ShadowMarchMinSteps = 8;
 static const uint ShadowMarchMaxSteps = 32;
-
-// a low sun crosses tens of kilometers of layer; past this the light is gone anyway
 static const float ShadowMarchMaxPathLength = 12000.0;
 
 [numthreads(8, 8, 1)]

@@ -9,7 +9,13 @@ struct SpriteInstanceData
 {
     float4 positionSize;
     float4 color;
-    uint4 flags; // x = alwaysFaceCamera, y = bindless texture index (~0u = untextured)
+    
+    /// x = alwaysFaceCamera
+    /// y = bindless texture index (~0u = untextured)
+    uint4 flags;
+    
+    /// w = 1 when set
+    float4 pointDirection;
 };
 
 #ifdef VERTEX_SHADER
@@ -52,9 +58,23 @@ VSOutput VSMain(VSInput input, uint instanceId : SV_InstanceID)
         float3 camRight = float3(camera.view[0][0], camera.view[0][1], camera.view[0][2]);
         float3 camUp = float3(camera.view[1][0], camera.view[1][1], camera.view[1][2]);
 
+        float3 axisX = camRight;
+        float3 axisY = camUp;
+
+        if (instance.pointDirection.w > 0.0f)
+        {
+            const float2 screenDir = float2(dot(instance.pointDirection.xyz, camRight), dot(instance.pointDirection.xyz, camUp));
+            const float screenDirLength = length(screenDir);
+
+            const float2 down = screenDirLength > 0.01f ? screenDir / screenDirLength : float2(0.0f, -1.0f);
+
+            axisX = camRight * -down.y + camUp * down.x;
+            axisY = camRight * -down.x + camUp * -down.y;
+        }
+
         worldPos = center
-            + camRight * (input.a_position.x - 0.5f) * size
-            + camUp * (input.a_position.y - 0.5f) * size;
+            + axisX * (input.a_position.x - 0.5f) * size
+            + axisY * (input.a_position.y - 0.5f) * size;
     }
     else
     {

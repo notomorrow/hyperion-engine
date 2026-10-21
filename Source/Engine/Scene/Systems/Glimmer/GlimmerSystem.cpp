@@ -455,7 +455,7 @@ void GlimmerSystem::CollectLocalLights(Span<Handle<Scene>> scenes, const Vec3f& 
                 const float cosOuter = MathUtil::Cos(MathUtil::DegToRad(spotAngles.x));
                 const float cosInner = MathUtil::Max(MathUtil::Cos(MathUtil::DegToRad(spotAngles.y)), cosOuter + 0.0001f);
 
-                state.spotDirection = Vec4f(light->GetNormal().Normalized(), 1.0f);
+                state.spotDirection = Vec4f(light->GetSpotDirection(), 1.0f);
                 state.spotAngles = Vec4f(cosOuter, cosInner, 0.0f, 0.0f);
             }
 
