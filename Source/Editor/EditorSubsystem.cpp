@@ -3371,7 +3371,7 @@ void EditorSubsystem::DebugDrawMeshLods(DebugDrawCommandList& debugDrawCommandLi
 
     static const RenderableAttributeSet wireframeAttributes = PhysicsWireframeAttributes();
 
-    static const Color lodColors[] = {
+    static const Color s_lodColors[] = {
         Color(0.3f, 1.0f, 0.4f, 1.0f),
         Color(1.0f, 0.9f, 0.3f, 1.0f),
         Color(1.0f, 0.5f, 0.2f, 1.0f),
@@ -3404,7 +3404,7 @@ void EditorSubsystem::DebugDrawMeshLods(DebugDrawCommandList& debugDrawCommandLi
             debugDrawCommandList.sphere(
                 boundingSphere.center,
                 boundingSphere.radius,
-                lodColors[MathUtil::Min(selectedLod, uint8(GetArrayCount(lodColors) - 1))],
+                s_lodColors[MathUtil::Min(selectedLod, uint8(GetArrayCount(s_lodColors) - 1))],
                 wireframeAttributes);
         }
     }
@@ -3413,7 +3413,7 @@ void EditorSubsystem::DebugDrawMeshLods(DebugDrawCommandList& debugDrawCommandLi
 // Hulls of one decomposition are easier to tell apart when each gets its own colour.
 static Color HullDebugColor(uint32 hullIndex)
 {
-    static const Color hullColors[] = {
+    static const Color s_hullColors[] = {
         Color(1.0f, 0.85f, 0.2f, 1.0f),
         Color(0.3f, 0.9f, 1.0f, 1.0f),
         Color(1.0f, 0.4f, 0.7f, 1.0f),
@@ -3422,7 +3422,7 @@ static Color HullDebugColor(uint32 hullIndex)
         Color(0.7f, 0.6f, 1.0f, 1.0f)
     };
 
-    return hullColors[hullIndex % GetArrayCount(hullColors)];
+    return s_hullColors[hullIndex % GetArrayCount(s_hullColors)];
 }
 
 static void DebugDrawPhysicsShape(DebugDrawCommandList& debugDrawCommandList, Entity* entity, PhysicsShape* shape, bool highlighted)
@@ -7022,6 +7022,7 @@ void EditorSubsystem::UpdateBakeStatus()
     Array<String, EditorAllocator> reflectionProbeNames;
     Array<String, EditorAllocator> irradianceProbeNames;
     Array<String, EditorAllocator> fogVolumeNames;
+    Array<String, EditorAllocator> bakedShadowLightNames;
 
     for (const Handle<Scene>& scene : world->GetScenes())
     {
@@ -7122,9 +7123,33 @@ void EditorSubsystem::UpdateBakeStatus()
                 fogVolumeNames.PushBack(*volume->GetName());
             }
         }
+
+        for (auto [light] : scene->GetEntityManager()->GetEntitySet<EntityType<Light>>().GetScopedView(DataAccessFlags::ACCESS_READ, HYP_FUNCTION_NAME_LIT))
+        {
+            if (!(light->GetLightFlags() & LightFlags::BakeStaticShadows) || !light->GetBakedShadowMap().IsValid())
+            {
+                continue;
+            }
+
+            if (!activeSwatch.IsValid())
+            {
+                continue;
+            }
+
+            Baking::BakeLayer& bakeLayer = activeSwatch->bakeLayer;
+
+            uint64 storedEpoch;
+
+            // not tracked yet counts as out of date. bake it to track it
+            if (!bakeLayer.TryGetAssetEpoch<Baking::BakeLayerCategory::LightProvider>(*light, storedEpoch)
+                || storedEpoch != Baking::BakeEpoch::ComputeEpoch(*light, bakeLayer))
+            {
+                bakedShadowLightNames.PushBack(*light->GetName());
+            }
+        }
     }
 
-    if (lightmapVolumeNames.Empty() && reflectionProbeNames.Empty() && irradianceProbeNames.Empty() && fogVolumeNames.Empty())
+    if (lightmapVolumeNames.Empty() && reflectionProbeNames.Empty() && irradianceProbeNames.Empty() && fogVolumeNames.Empty() && bakedShadowLightNames.Empty())
     {
         m_messagesOverlay->ClearMessage(s_bakeStatusMessageKey);
 
@@ -7167,6 +7192,7 @@ void EditorSubsystem::UpdateBakeStatus()
     appendSection("ReflectionProbes", reflectionProbeNames);
     appendSection("IrradianceProbes", irradianceProbeNames);
     appendSection("FogVolumes", fogVolumeNames);
+    appendSection("Light shadow maps", bakedShadowLightNames);
 
     m_messagesOverlay->PutMessage(MessageEntry {
         s_bakeStatusMessageKey,

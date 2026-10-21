@@ -46,6 +46,13 @@ struct BakeLayerHashes
     FixedArray<uint64, Max> transformHashes;    //!< UUID + transform hashes, plus mesh revisions / light parameters
 };
 
+struct LightShadowEpochCache
+{
+    uint64 sceneChecksum = 0;
+    uint64 lightHash = 0;
+    uint64 epoch = 0;
+};
+
 HYP_STRUCT()
 struct BakeLayerCategory
 {
@@ -83,6 +90,9 @@ struct BakeLayer
     // transient, cached are constructed on first use.
     HYP_FIELD(Property = "SceneHashes", Transient)
     Map<UUID, BakeLayerHashes, BakerAllocator> sceneHashes;
+
+    // per-light shadow epochs - keyed by light's UUID. transient.
+    Map<UUID, LightShadowEpochCache, BakerAllocator> lightShadowEpochs;
 
     BakeLayer()
     {
