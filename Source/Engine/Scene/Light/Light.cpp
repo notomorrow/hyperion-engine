@@ -210,9 +210,20 @@ void Light::SetLightFlags(EnumFlags<LightFlags> flags)
         return;
     }
 
-    if (!(flags & LightFlags::BakeStaticShadows) && m_shadowMap.IsValid())
+    const EnumFlags<LightFlags> changedFlags = m_lightFlags ^ flags;
+
+    bool doBakeShadows = false;
+
+    if (changedFlags & LightFlags::BakeStaticShadows)
     {
-        EnqueueDeletion(std::move(m_shadowMap));
+        if (flags & LightFlags::BakeStaticShadows)
+        {
+            doBakeShadows = true;
+        }
+        else if (m_shadowMap.IsValid())
+        {
+            EnqueueDeletion(std::move(m_shadowMap));
+        }
     }
 
     m_lightFlags = flags;
@@ -221,6 +232,19 @@ void Light::SetLightFlags(EnumFlags<LightFlags> flags)
 
     SetNeedsRenderProxyUpdate();
     MarkDirty();
+
+#ifdef HYP_EDITOR
+    // deserialized lights aren't initialized yet,
+    // don't want to bake them just because the flag was set on load!
+    if (doBakeShadows
+        && IsInitCalled()
+        && GetWorld() != nullptr
+        && !m_shadowMap.IsValid()
+        && CanBakeStaticShadows())
+    {
+        BakeStaticShadows();
+    }
+#endif
 }
 
 void Light::SetNormal(const Vec3f& normal)
@@ -572,7 +596,7 @@ HashCode Light::GetLightingHashCode() const
 
 bool Light::CanBakeStaticShadows() const
 {
-    return !IsA(DirectionalLight::StaticClass());
+    return !IsA(DirectionalLight::StaticClass()) && IsStatic();
 }
 
 void Light::BakeStaticShadows()

@@ -244,14 +244,7 @@ public:
 #ifdef HYP_EDITOR
     HashCode GetLightingHashCode() const;
 
-    HYP_METHOD(EditorOnly, EditorAction = "Bake Shadow Map", EditCondition = "CanBakeStaticShadows")
     void BakeStaticShadows();
-
-    HYP_METHOD(EditorOnly, EditorAction = "Remove Baked Shadow Map", EditCondition = "CanBakeStaticShadows")
-    void RemoveBakedShadows()
-    {
-        SetBakedShadowMap(Handle<Texture>::Null());
-    }
 
     HYP_METHOD(EditorOnly)
     bool CanBakeStaticShadows() const;

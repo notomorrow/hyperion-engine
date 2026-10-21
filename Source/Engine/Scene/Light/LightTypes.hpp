@@ -42,7 +42,7 @@ enum class LightFlags : uint32
     ShadowCaster = 0x1,                             //!< @title="Render shadows"
 
     CacheStaticShadowMaps = 0x10,                   //!< @title="Cache shadow maps for static objects"
-    BakeStaticShadows = 0x20,                       //!< @editor=false
+    BakeStaticShadows = 0x20,                       //!< @title="Bake static shadow map" @editcondition="CanBakeStaticShadows"
 
     OnlyDrawStaticShadowMaps = 0x40,                //!< @title="Only render shadows for static objects"
 

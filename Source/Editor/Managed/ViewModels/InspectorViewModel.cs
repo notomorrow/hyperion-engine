@@ -456,6 +456,7 @@ namespace Hyperion.Editor.ViewModels
                     Property flagsProperty = Class.GetClass<Node>().GetProperty("NodeFlags") ?? throw new Exception("Failed to get NodeFlags property");
 
                     var mobilityVm = new MobilityPropertyViewModel(primaryNode, flagsProperty);
+                    mobilityVm.ValueChangedCallback = OnPropertyValueChanged;
                     mobilityVm.AttachPeers(peerNodes.Select(peer => PropertyTarget.ForObject(peer, flagsProperty)).ToList());
                     mobilityVm.RefreshValue();
 
