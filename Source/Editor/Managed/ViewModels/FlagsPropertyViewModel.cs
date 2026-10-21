@@ -52,10 +52,12 @@ namespace Hyperion.Editor.ViewModels
             _ = EngineManager.PostToSimThread(() =>
             {
                 List<object?> rawValues;
+                Dictionary<EnumFlagEntry, bool> conditionResults;
 
                 try
                 {
                     rawValues = ReadAllTargets(boxed => boxed.GetValue());
+                    conditionResults = EvaluateEditConditions();
                 }
                 catch (Exception ex)
                 {
@@ -78,6 +80,7 @@ namespace Hyperion.Editor.ViewModels
                             HasMixedValues = !isShared;
 
                             UpdateFlagSelectionsFromValues(rawValues);
+                            UpdateFlagEnabledStates(conditionResults);
                         });
                     }
                     finally
@@ -118,8 +121,11 @@ namespace Hyperion.Editor.ViewModels
 
                     BuildEnumFlagEntryTitleAndDescription(staticField, out title, out description);
 
+                    ClassAttribute? attrEditCondition = staticField.GetAttribute("editcondition");
+                    string? editCondition = attrEditCondition != null && attrEditCondition.Value.IsString ? attrEditCondition.Value.GetString() : null;
+
                     EnumFlagEntry? entry = null;
-                    entry = new EnumFlagEntry(title, description, flagValue, () => OnFlagEntryChanged(entry!));
+                    entry = new EnumFlagEntry(title, description, flagValue, editCondition, () => OnFlagEntryChanged(entry!));
 
                     _enumFlagEntries.Add(entry);
                 }
@@ -127,6 +133,80 @@ namespace Hyperion.Editor.ViewModels
                 {
                     Logger.Log(LogLevel.Warning, $"Inspector failed to read enum flag static field '{staticField.Name}': {ex.Message}");
                 }
+            }
+        }
+
+        // Sim thread. A flag's editcondition is a bool method on the edited object; it must hold for every selected object.
+        private Dictionary<EnumFlagEntry, bool> EvaluateEditConditions()
+        {
+            var results = new Dictionary<EnumFlagEntry, bool>();
+
+            List<ObjectBase> owners = new List<ObjectBase>();
+
+            if (IsEntityLevelRow && _target != null)
+            {
+                owners.Add(_target);
+            }
+
+            foreach (PropertyTarget peer in Peers)
+            {
+                if (peer.Owner != null)
+                {
+                    owners.Add(peer.Owner);
+                }
+            }
+
+            foreach (EnumFlagEntry entry in _enumFlagEntries)
+            {
+                if (entry.EditCondition == null)
+                {
+                    continue;
+                }
+
+                results[entry] = owners.TrueForAll(owner => EvaluateEditCondition(owner, entry.EditCondition));
+            }
+
+            return results;
+        }
+
+        private static bool EvaluateEditCondition(ObjectBase owner, string methodName)
+        {
+            if (!owner.IsValid)
+            {
+                return false;
+            }
+
+            Method? conditionMethod = owner.Class.GetMethod(new Name(methodName));
+
+            if (conditionMethod == null)
+            {
+                Logger.Log(LogLevel.Warning, $"Enum flag editcondition method '{methodName}' not found on class '{owner.Class.Name}'");
+
+                return true;
+            }
+
+            using BoxedValue resultData = conditionMethod.Value.Invoke(owner);
+
+            if (resultData.GetValue() is bool boolResult)
+            {
+                return boolResult;
+            }
+
+            Logger.Log(LogLevel.Warning, $"Enum flag editcondition method '{methodName}' did not return a bool");
+
+            return true;
+        }
+
+        private void UpdateFlagEnabledStates(Dictionary<EnumFlagEntry, bool> conditionResults)
+        {
+            foreach (EnumFlagEntry entry in _enumFlagEntries)
+            {
+                if (!conditionResults.TryGetValue(entry, out bool isConditionMet))
+                {
+                    continue;
+                }
+
+                entry.IsEnabled = isConditionMet || entry.IsSelected != false;
             }
         }
 
@@ -224,12 +304,14 @@ namespace Hyperion.Editor.ViewModels
         {
             private readonly Action _onChanged;
             private bool? _isSelected;
+            private bool _isEnabled = true;
 
-            public EnumFlagEntry(string title, string? description, object? value, Action onChanged)
+            public EnumFlagEntry(string title, string? description, object? value, string? editCondition, Action onChanged)
             {
                 Title = title;
                 Description = description ?? string.Empty;
                 Value = value;
+                EditCondition = editCondition;
                 _onChanged = onChanged;
             }
 
@@ -237,6 +319,14 @@ namespace Hyperion.Editor.ViewModels
             public string Description { get; }
 
             public object? Value { get; }
+
+            public string? EditCondition { get; }
+
+            public bool IsEnabled
+            {
+                get => _isEnabled;
+                set => SetProperty(ref _isEnabled, value);
+            }
 
             public bool? IsSelected
             {

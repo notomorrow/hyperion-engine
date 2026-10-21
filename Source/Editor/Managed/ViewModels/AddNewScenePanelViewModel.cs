@@ -97,7 +97,13 @@ namespace Hyperion.Editor.ViewModels
                 string title = GetFlagEntryTitle(staticField);
                 string description = GetFlagEntryDescription(staticField);
 
-                var entry = new FlagsPropertyViewModel.EnumFlagEntry(title, description, flagValue, () => { });
+                var entry = new FlagsPropertyViewModel.EnumFlagEntry(
+                    title,
+                    description,
+                    flagValue,
+                    null,           // editCondition
+                    () => { });
+
                 FlagEntries.Add(entry);
 
                 if (flagValue != null)
