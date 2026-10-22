@@ -31,6 +31,23 @@ namespace Hyperion.Editor
 
         private DelegateHandler? _gameLaunchedHandler;
 
+        static EditorViewportControl()
+        {
+            if (OperatingSystem.IsLinux())
+            {
+                PointerPressedEvent.AddClassHandler<Window>(
+                    (window, _) =>
+                    {
+                        if (window.TryGetPlatformHandle() is { HandleDescriptor: "XID" } handle)
+                        {
+                            X11Interop.ReclaimKeyboardFocus((ulong)handle.Handle);
+                        }
+                    },
+                    Avalonia.Interactivity.RoutingStrategies.Tunnel,
+                    handledEventsToo: true);
+            }
+        }
+
         public EditorViewportControl()
         {
             Focusable = true;
@@ -227,6 +244,12 @@ namespace Hyperion.Editor
         {
             [DllImport("hyperion", EntryPoint = "Hyp_CocoaWindow_ResizeEmbeddedView")]
             public static extern void ResizeEmbeddedView(IntPtr nsView, int width, int height);
+        }
+
+        private static class X11Interop
+        {
+            [DllImport("hyperion", EntryPoint = "Hyp_X11_ReclaimKeyboardFocus")]
+            public static extern void ReclaimKeyboardFocus(ulong topLevelWindow);
         }
 
         private static class WinInterop

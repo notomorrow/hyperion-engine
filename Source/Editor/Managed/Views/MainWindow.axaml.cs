@@ -1672,6 +1672,8 @@ namespace Hyperion.Editor
             var data = new DataTransfer();
             data.Add(DataTransferItem.Create(NodeViewModelDragFormat, candidate));
 
+            _dragPressedArgs.Source = _sceneTree;
+
             try
             {
                 await DragDrop.DoDragDropAsync(_dragPressedArgs, data, DragDropEffects.Move);
@@ -2167,12 +2169,21 @@ namespace Hyperion.Editor
                 }
             }
 
+            if (sender is Visual dragSource)
+            {
+                _browserDragPressedArgs.Source = dragSource;
+            }
+
             try
             {
                 await DragDrop.DoDragDropAsync(_browserDragPressedArgs, data, DragDropEffects.Copy | DragDropEffects.Move);
             }
             catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException)
             {
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Error, $"Content browser drag-and-drop failed: {ex}");
             }
             finally
             {

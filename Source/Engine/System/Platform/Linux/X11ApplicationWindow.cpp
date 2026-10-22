@@ -722,3 +722,60 @@ void X11ApplicationWindow::Close()
 }
 
 } // namespace Hyperion
+
+extern "C" HYP_EXPORT void Hyp_X11_ReclaimKeyboardFocus(Hyperion::uint64 topLevelWindow)
+{
+    using namespace Hyperion;
+
+    if (topLevelWindow == 0)
+    {
+        return;
+    }
+
+    ::Display* display = X11_AcquireDisplay();
+
+    if (display == nullptr)
+    {
+        return;
+    }
+
+    ::Window focusWindow = 0;
+    int revertTo = 0;
+    XGetInputFocus(display, &focusWindow, &revertTo);
+
+    bool isFocusInsideTopLevel = false;
+
+    for (::Window current = focusWindow; current != 0 && current != PointerRoot && current != ::Window(topLevelWindow);)
+    {
+        ::Window root = 0;
+        ::Window parent = 0;
+        ::Window* children = nullptr;
+        unsigned int numChildren = 0;
+
+        if (!XQueryTree(display, current, &root, &parent, &children, &numChildren))
+        {
+            break;
+        }
+
+        if (children != nullptr)
+        {
+            XFree(children);
+        }
+
+        if (parent == ::Window(topLevelWindow))
+        {
+            isFocusInsideTopLevel = true;
+            break;
+        }
+
+        current = parent == root ? 0 : parent;
+    }
+
+    if (isFocusInsideTopLevel)
+    {
+        XSetInputFocus(display, ::Window(topLevelWindow), RevertToParent, CurrentTime);
+        XFlush(display);
+    }
+
+    X11_ReleaseDisplay();
+}
