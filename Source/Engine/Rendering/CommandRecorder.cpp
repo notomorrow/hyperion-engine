@@ -58,6 +58,21 @@ void EndCurrentPass(CommandBuffer* commandBuffer)
     }
 }
 
+void InvalidateDuplicateShaderUniforms(RenderInterface::State& state, uint32 uniformIndex)
+{
+    const Name name = state.shaderUniforms[uniformIndex].name;
+
+    FOR_EACH_BIT((state.validUniforms | state.dirtyUniforms) & ~(1u << uniformIndex), otherIndex)
+    {
+        if (state.shaderUniforms[otherIndex].name == name)
+        {
+            state.validUniforms &= ~(1u << otherIndex);
+            state.dirtyUniforms &= ~(1u << otherIndex);
+            state.dirtyBufferOffsets &= ~(1u << otherIndex);
+        }
+    }
+}
+
 } // namespace
 
 void MergeGlobalShaderProperties(ShaderPropertySet& out);
@@ -1180,6 +1195,8 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer, bo
                 {
                     uniform = cmd->uniform;
                     state.dirtyUniforms |= (1u << cmd->uniformIndex);
+
+                    InvalidateDuplicateShaderUniforms(state, cmd->uniformIndex);
                 }
 
                 if (cmd->uniform.type == ShaderUniform::UT_Buffer)
@@ -1220,6 +1237,8 @@ void TCommandRecorder<RenderAllocator>::Execute(CommandBuffer* commandBuffer, bo
                     {
                         dstUniform = srcUniform;
                         state.dirtyUniforms |= (1u << i);
+
+                        InvalidateDuplicateShaderUniforms(state, i);
                     }
 
                     if (srcUniform.type == ShaderUniform::UT_Buffer)

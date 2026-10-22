@@ -189,12 +189,7 @@ public:
         return !m_layerInfo.infinite && m_layerInfo.range.x < m_layerInfo.range.y;
     }
 
-    ///CDLOD - tuned through the Terrain.Lod.* cvars, shared by every terrain layer
-
-    ///the tile's quadtree needs (cellSize - 1) to be a power of two
     static Vec3f ComputeCellBoundsMin(const WorldGridLayerInfo& layerInfo, const Vec2i& coord);
-
-    ///inverse of ComputeCellBoundsMin - caller must ensure the cell's world size is non-zero
     static Vec2i ComputeCellCoord(const WorldGridLayerInfo& layerInfo, const Vec2f& worldXZ);
 
     static uint32 RoundCellSizeForQuadtree(uint32 cellSize);
@@ -210,15 +205,11 @@ public:
     void MarkHeightsDirty(const WorldGridLayerInfo& layerInfo, const Vec2i& coord) const;
     void MarkHeightsDirty(const Vec4f& worldRect) const;
 
-    ///sim thread only - reselects the drawn patches of every loaded tile
     void UpdateLodSelection(Span<const Vec3f> viewpoints);
 
-    ///sim thread only - lets tiles streaming in pick which quadtree levels to build before the LOD system sees them
     void SetLodViewpoints(Span<const Vec3f> viewpoints);
-
     Array<Vec3f> GetLodViewpoints() const;
 
-    ///infinity until the LOD system has run
     float GetNearestLodViewpointDistance(const BoundingBox& worldBounds) const;
 
     HYP_FORCE_INLINE TerrainGroundCoverResources& GetGroundCoverResources()
