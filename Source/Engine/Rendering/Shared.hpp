@@ -1119,7 +1119,7 @@ struct ImageSubResource
     }
 };
 
-constexpr inline uint64 GetImageSubResourceKey(const ImageSubResource& subResource)
+inline constexpr uint64 GetImageSubResourceKey(const ImageSubResource& subResource)
 {
     return uint64(subResource.baseMipLevel) | (uint64(subResource.numLevels) << 8)
         | (uint64(subResource.baseArrayLayer) << 16) | (uint64(subResource.numLayers) << 32);
@@ -2377,7 +2377,7 @@ struct ShaderPropertySet
 
     void WriteToBinary(ByteWriter& stream) const;
 
-    HYP_FORCE_INLINE HashCode GetHashCode() const
+    HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
         return HashCode::GetHashCode(
             reinterpret_cast<const ubyte*>(this),
@@ -2642,7 +2642,7 @@ enum class ShaderModuleType : uint8
 
 static constexpr uint8 NumShaderModuleTypes = uint8(ShaderModuleType::Max);
 
-static constexpr inline bool IsRayTracingShaderModule(ShaderModuleType type)
+static inline constexpr bool IsRayTracingShaderModule(ShaderModuleType type)
 {
     return type == ShaderModuleType::RayGen
         || type == ShaderModuleType::Intersect

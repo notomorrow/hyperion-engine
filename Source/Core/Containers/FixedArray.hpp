@@ -337,13 +337,13 @@ template <class T, size_t N>
 using FixedArray = containers::FixedArray<T, N>;
 
 template <class T, size_t N>
-HYP_FORCE_INLINE constexpr size_t GetArrayCount(const FixedArray<T, N>&)
+static constexpr size_t GetArrayCount(const FixedArray<T, N>&)
 {
     return N;
 }
 
 template <class T, size_t N>
-constexpr inline FixedArray<T, N> MakeFixedArray(const T (&values)[N])
+static constexpr FixedArray<T, N> MakeFixedArray(const T (&values)[N])
 {
     FixedArray<T, N> result;
 
@@ -356,7 +356,7 @@ constexpr inline FixedArray<T, N> MakeFixedArray(const T (&values)[N])
 }
 
 template <class... Ts>
-constexpr inline auto MakeFixedArray(Ts&&... values)
+static constexpr auto MakeFixedArray(Ts&&... values)
 {
     return FixedArray<std::common_type_t<Ts...>, sizeof...(Ts)> { std::forward<Ts>(values)... };
 }

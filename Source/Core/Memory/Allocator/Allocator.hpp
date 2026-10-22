@@ -23,7 +23,7 @@ namespace memory {
 class Pool;
 
 template <class T>
-constexpr bool HasDefaultAllocatorInstance = std::is_default_constructible_v<T>;
+static inline constexpr bool HasDefaultAllocatorInstance = std::is_default_constructible_v<T>;
 
 template <typename TAllocator, typename TEnable>
 TAllocator* GetDefaultAllocatorInstance();
@@ -88,7 +88,7 @@ struct DynamicAllocationBase : AllocationBase<T>
     };
 
     template <class AllocatorType>
-    HYP_FORCE_INLINE void Allocate(AllocatorType* allocator, size_t count, size_t alignment = alignof(T))
+    HYP_FORCE_INLINE void Allocate(AllocatorType* HYP_NOTNULL allocator, size_t count, size_t alignment = alignof(T))
     {
         HYP_CORE_ASSERT(buffer == nullptr);
 
@@ -106,7 +106,7 @@ struct DynamicAllocationBase : AllocationBase<T>
     }
 
     template <class AllocatorType>
-    HYP_FORCE_INLINE void Free(AllocatorType* allocator)
+    HYP_FORCE_INLINE void Free(AllocatorType* HYP_NOTNULL allocator)
     {
         if (buffer != nullptr)
         {
@@ -116,7 +116,7 @@ struct DynamicAllocationBase : AllocationBase<T>
         SetToInitialState();
     }
 
-    HYP_FORCE_INLINE void TakeOwnership(T* ptr, size_t ptrCapacity)
+    HYP_FORCE_INLINE void TakeOwnership(T* HYP_NOTNULL ptr, size_t ptrCapacity)
     {
         HYP_CORE_ASSERT(buffer == nullptr);
 
@@ -124,7 +124,7 @@ struct DynamicAllocationBase : AllocationBase<T>
         capacity = ptrCapacity;
     }
 
-    HYP_FORCE_INLINE void InitFromRangeCopy(const T* begin, const T* end, size_t offset = 0)
+    HYP_FORCE_INLINE void InitFromRangeCopy(const T* HYP_NOTNULL begin, const T* HYP_NOTNULL end, size_t offset = 0)
     {
         HYP_CORE_ASSERT(end >= begin);
 
@@ -145,7 +145,7 @@ struct DynamicAllocationBase : AllocationBase<T>
         }
     }
 
-    HYP_FORCE_INLINE void InitFromRangeMove(T* begin, T* end, size_t offset = 0)
+    HYP_FORCE_INLINE void InitFromRangeMove(T* HYP_NOTNULL begin, T* HYP_NOTNULL end, size_t offset = 0)
     {
         HYP_CORE_ASSERT(end >= begin);
 

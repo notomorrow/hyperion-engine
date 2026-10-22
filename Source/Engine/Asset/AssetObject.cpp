@@ -34,8 +34,12 @@ extern HYP_NODISCARD String SanitizeName(const UTF8StringView& nameStr);
 extern HYP_NODISCARD Name SanitizeName(Name name);
 extern HYP_NODISCARD Name CreateFriendlyName(Name name);
 
+namespace {
+
+thread_local uint32 t_loadRecursionDepth = 0;
+
 template <class T>
-static Name GetUniqueName(Name baseName, T&& elements)
+Name GetUniqueName(Name baseName, T&& elements)
 {
     baseName = SanitizeName(baseName);
 
@@ -56,6 +60,8 @@ static Name GetUniqueName(Name baseName, T&& elements)
 
     return baseName;
 }
+
+} // namespace
 
 #pragma region AssetObject
 
@@ -552,11 +558,10 @@ Result AssetObject::Load(
     Handle<AssetObject>& outAssetObject)
 {
     static constexpr uint32 MaxRecursionDepth = 32;
-    thread_local uint32 t_recursionDepth = 0;
 
-    HYP_DEFER({ --t_recursionDepth; });
+    HYP_DEFER({ --t_loadRecursionDepth; });
 
-    if (++t_recursionDepth >= MaxRecursionDepth)
+    if (++t_loadRecursionDepth >= MaxRecursionDepth)
     {
         return HYP_MAKE_ERROR(Error, "Recursion depth limit reached. Is the asset self-referential causing a circular dependency?");
     }

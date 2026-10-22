@@ -377,6 +377,11 @@ else()
     # discarding a HYP_NODISCARD return value. Keep it a warning rather than a hard
     # error under GCC so that idiom keeps working instead of erroring at every call site.
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=unused-result")
+
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+    # need or else we'll get linker errors around thread_locals
+    add_compile_options(-ftls-model=global-dynamic)
   endif()
 
   if(HYP_CLANG_WINDOWS)

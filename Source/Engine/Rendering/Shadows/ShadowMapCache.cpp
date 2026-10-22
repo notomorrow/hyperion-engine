@@ -72,10 +72,8 @@ static HYP_FORCE_INLINE bool IsShadowMapCameraDependent(Light& light)
         // So we must cache shadow map data per-view
         return light.GetLightType() == LightType::Directional;
     }
-    else
-    {
-        return false;
-    }
+    
+    return false;
 }
 
 ShadowMapCacheKey MakeShadowMapCacheKey(Light* light, View* view)
@@ -83,13 +81,13 @@ ShadowMapCacheKey MakeShadowMapCacheKey(Light* light, View* view)
     AssertDebug(light != nullptr);
 
     ShadowMapCacheKey key {};
-    key.lightHash = uint32(BitCast<uint64>(light->Id()) % 0xFFFFFFFFu);
+    key.lightHash = uint32(ByteUtil::BitCast<uint64>(light->Id()) % 0xFFFFFFFFu);
 
     if (IsShadowMapCameraDependent(*light))
     {
         AssertDebug(view != nullptr && view->GetCamera() != nullptr);
 
-        key.cameraHash = uint32(BitCast<uint64>(view->GetCamera()->Id()) % 0x7FFFFFFFu);
+        key.cameraHash = uint32(ByteUtil::BitCast<uint64>(view->GetCamera()->Id()) % 0x7FFFFFFFu);
         key.isCameraDependent = 1;
     }
 

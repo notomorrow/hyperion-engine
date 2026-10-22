@@ -26,7 +26,7 @@ namespace ByteUtil {
 /*! \brief Packs a float into a 32-bit integer.
     *  \param value The value to pack.
     *  \return The 32-bit integer packed from the value. */
-static constexpr inline uint32 PackFloat(float value)
+static inline constexpr uint32 PackFloat(float value)
 {
     return std::bit_cast<uint32>(value);
 }
@@ -34,17 +34,17 @@ static constexpr inline uint32 PackFloat(float value)
 /*! \brief Unpacks a 32-bit integer into a float.
     *  \param value The value to unpack.
     *  \return The float unpacked from the value. */
-static constexpr inline float UnpackFloat(uint32 value)
+static inline constexpr float UnpackFloat(uint32 value)
 {
     return std::bit_cast<float>(value);
 }
 
-static constexpr inline uint32 QuantizeFloat(float f, uint8 bits)
+static inline constexpr uint32 QuantizeFloat(float f, uint8 bits)
 {
     return uint32(MathUtil::Round(MathUtil::Clamp(f, 0.0f, 1.0f) * ((1u << bits) - 1)));
 }
 
-static constexpr inline float UnquantizeFloat(uint32 x, uint8 bits)
+static inline constexpr float UnquantizeFloat(uint32 x, uint8 bits)
 {
     return float(x) / float((1u << bits) - 1);
 }
@@ -52,7 +52,7 @@ static constexpr inline float UnquantizeFloat(uint32 x, uint8 bits)
 /*! \brief Packs a 4-component vector into a 32-bit integer.
     *  \param vec The vector to pack.
     *  \return The 32-bit integer packed from the vector. */
-static constexpr inline uint32 PackVec4f(const Vec4f& vec)
+static inline constexpr uint32 PackVec4f(const Vec4f& vec)
 {
     uint8 bytes[4] = {
         MathUtil::Round<float, uint8>(MathUtil::Clamp(vec.values[0], 0.0f, 1.0f) * 255.0f),
@@ -67,7 +67,7 @@ static constexpr inline uint32 PackVec4f(const Vec4f& vec)
 /*! \brief Unpacks a 32-bit integer into a 4-component vector.
     *  \param value The value to unpack.
     *  \return The 4-component vector unpacked from the value. */
-static constexpr inline Vec4f UnpackVec4f(uint32 value)
+static inline constexpr Vec4f UnpackVec4f(uint32 value)
 {
     return {
         float((value & 0xFF000000u) >> 24) / 255.0f,
@@ -83,7 +83,7 @@ static constexpr inline Vec4f UnpackVec4f(uint32 value)
     *  \param alignment The alignment to use.
     *  \return The value aligned to the specified alignment. */
 template <class T>
-static constexpr inline T AlignAs(T value, uint32 alignment)
+static inline constexpr T AlignAs(T value, uint32 alignment)
 {
     // mask has to be T wide, a uint32 mask would clear the upper bits of 64-bit values (addresses)
     const T mask = T(alignment) - 1;
@@ -132,7 +132,7 @@ static inline uint32 HighestSetBitIndex(uint64 bits)
 /*! \brief Counts the number of bits set in a 64-bit integer.
  *  \param value The value to count the bits of.
  *  \return The number of bits set in the value. */
-static constexpr inline uint64 BitCount(uint64 value)
+static inline constexpr uint64 BitCount(uint64 value)
 {
     // std::popcount lowers to POPCNT on x86/x64 and CNT (or FMOV-based fallback) on ARM64
     return (uint64)std::popcount(value);
@@ -146,7 +146,7 @@ static constexpr inline uint64 BitCount(uint64 value)
  *  \return The value of type \ref From converted to type \ref To.
  */
 template <class To, class From>
-static constexpr inline decltype(auto) BitCast(From&& from)
+static inline constexpr decltype(auto) BitCast(From&& from)
 {
     static_assert(std::is_trivial_v<To>
         && std::is_trivially_copyable_v<NormalizedType<From>>
@@ -237,7 +237,7 @@ static inline constexpr int64 SwapEndian(int64 value)
     return i;
 }
 
-static constexpr inline bool IsBigEndian()
+static inline constexpr bool IsBigEndian()
 {
     uint32 i = 0x01020304u;
     struct S { uint8 u[sizeof(uint32)]; };
@@ -245,7 +245,7 @@ static constexpr inline bool IsBigEndian()
     return std::bit_cast<S>(i).u[0] == 1;
 }
 
-static constexpr inline bool IsLittleEndian()
+static inline constexpr bool IsLittleEndian()
 {
     return !ByteUtil::IsBigEndian();
 }

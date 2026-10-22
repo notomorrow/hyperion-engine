@@ -13,6 +13,7 @@ set(CMAKE_BUILD_PARALLEL_LEVEL 8)
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "C++ standard to be used")
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configurations to build" FORCE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(COMMON_LIBRARIES
     ${COMMON_LIBRARIES}
@@ -32,13 +33,17 @@ if(HYP_PLATFORM_NAME STREQUAL "Android")
 endif()
 
 find_package(Threads REQUIRED)
-find_package(ZLIB)
+
+set(HYP_USE_ZLIB true)
+if(HYP_USE_ZLIB)
+  find_package(ZLIB)
+endif()
 
 if(MSVC)
   set(CMAKE_CXX_FLAGS "/Zc:preprocessor /MD /O2 /Z7 /Zc:__cplusplus")
   add_definitions("/DNOMINMAX")
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 -fpermissive")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -fpermissive")
 endif()
 
 # if Win32, link with DbgHelp

@@ -41,7 +41,7 @@ Vec3u WrapComputeGroupCount(uint32 numGroups);
 ///// Shader Helpers /////
 //////////////////////////
 
-constexpr inline bool IsCubemapShader(StringHash shaderNameHash)
+inline constexpr bool IsCubemapShader(StringHash shaderNameHash)
 {
     constexpr StringHash CubemapShaderNames[] = {
         "DrawCubemap"_sh,
@@ -52,7 +52,7 @@ constexpr inline bool IsCubemapShader(StringHash shaderNameHash)
         || shaderNameHash == CubemapShaderNames[1];
 }
 
-constexpr inline bool IsGeometryPassFamily(StringHash shaderNameHash)
+inline constexpr bool IsGeometryPassFamily(StringHash shaderNameHash)
 {
     constexpr StringHash GeometryPassShaderNames[] = {
         "GeometryPass"_sh,
@@ -70,14 +70,14 @@ constexpr inline bool IsGeometryPassFamily(StringHash shaderNameHash)
     return false;
 }
 
-constexpr inline bool IsTerrainShader(StringHash shaderNameHash)
+inline constexpr bool IsTerrainShader(StringHash shaderNameHash)
 {
     return shaderNameHash == "Terrain"_sh;
 }
 
 ENGINE_API bool IsEmissive(const MaterialParameters& materialParameters);
 
-constexpr inline bool ShaderSupportsMorph(StringHash shaderNameHash)
+inline constexpr bool ShaderSupportsMorph(StringHash shaderNameHash)
 {
     constexpr StringHash MorphShaderNames[] = {
         "Terrain"_sh,

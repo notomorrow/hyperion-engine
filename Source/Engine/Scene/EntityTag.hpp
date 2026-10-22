@@ -176,12 +176,12 @@ inline constexpr EntityTag GetEntityTagByName(StringHash nameHash)
 // Mask for the actual TypeId to be stored in the upper 32 bits of the EntityTag value.
 static constexpr uint64 EntityTypeTagMask = 0xFFFFFFFF00000000ull;
 
-static constexpr inline bool IsEntityTypeTag(EntityTag tag)
+static inline constexpr bool IsEntityTypeTag(EntityTag tag)
 {
     return (uint64(tag) & uint64(EntityTag::EntityTypeSentinel)) != 0;
 }
 
-static constexpr inline TypeId GetTypeIdFromEntityTag(EntityTag tag)
+static inline constexpr TypeId GetTypeIdFromEntityTag(EntityTag tag)
 {
     static_assert(sizeof(TypeId) == sizeof(uint32), "Using this requires sizeof(TypeId) is 32 bit");
     if (!IsEntityTypeTag(tag))
@@ -201,7 +201,7 @@ struct EntityType_Impl
         : EntityTag((uint64(CONSTEXPR_TYPE_ID(T)) << 32) | uint64(EntityTag::EntityTypeSentinel));
 };
 
-static constexpr inline EntityTag MakeEntityTypeTag(TypeId typeId)
+static inline constexpr EntityTag MakeEntityTypeTag(TypeId typeId)
 {
     if (typeId == TypeId::Void() || typeId == TypeId::ForType<Entity>())
     {
