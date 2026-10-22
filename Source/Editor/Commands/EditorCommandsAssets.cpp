@@ -1,3 +1,9 @@
+/*!
+ *  @author: The Hyperion Contributors
+ *  @date 2016-2026
+ *  @licence MIT
+*/
+
 #include <Editor/Commands/EditorCommandsCommon.hpp>
 #include <Editor/EditorAssetDrop.hpp>
 #include <Editor/EditorTemplateLibrary.hpp>
