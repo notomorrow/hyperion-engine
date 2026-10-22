@@ -313,12 +313,17 @@
                 BorderBrush="{DynamicResource Brush.BorderLight}"
                 BorderThickness="1"
                 CornerRadius="{DynamicResource Radius.Medium}">
-                <StackPanel Width="280" Spacing="12">
+                <StackPanel Width="280" Spacing="6">
                     <TextBlock
                         HorizontalAlignment="Center"
                         Text="{Binding BusyText}"
                         TextTrimming="CharacterEllipsis" />
-                    <ProgressBar IsIndeterminate="True" />
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{DynamicResource Brush.TextMuted}"
+                        Text="{Binding LoadStatusText}"
+                        TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Border>
         </Border>

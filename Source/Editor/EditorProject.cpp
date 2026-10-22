@@ -646,6 +646,8 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
 
     HYP_LOG(Editor, Info, "Loading registry assets from {}", registryDir);
 
+    g_editorState->ReportProjectLoadStage(ProjectLoadStage::ReadAssetRegistry);
+
     // create registry to load assets into
     Handle<AssetRegistry> registry = MakeHandle<AssetRegistry>(
         AssetRegistryId::Game, registryDir);
@@ -659,6 +661,8 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
     }
 
     Handle<EditorProject> project;
+
+    g_editorState->ReportProjectLoadStage(ProjectLoadStage::ReadProjectFile);
 
     { // load project and all its assets into the registry we just created.
         GlobalContextScope assetRegistryContextScope { AssetRegistryContext { registry } };
@@ -695,6 +699,8 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
 
         project->m_contentSubfolder = contentSubfolder;
     }
+
+    g_editorState->ReportProjectLoadStage(ProjectLoadStage::LoadGameModule);
 
     // a project with a built C++ game module plays with the module's Game class
     TResult<Handle<Game>> moduleGameResult = CreateGameFromNativeModule(projectFilepath);
@@ -735,8 +741,12 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
 
     project->m_gameInstance->SetAssetRegistry(registry);
 
+    g_editorState->ReportProjectLoadStage(ProjectLoadStage::LoadScripts);
+
     // C# classes the scenes may contain (e.g Entity subclasses) must exist before any world is read
     project->m_scriptAssembly = ScriptSystem::LoadProjectScriptAssembly(registryDir);
+
+    g_editorState->ReportProjectLoadStage(ProjectLoadStage::LoadAssetFolders);
 
     if (Result loadFoldersResult = project->m_assetFolders->Load(dir / EditorAssetFolders::s_fileName); loadFoldersResult.HasError())
     {

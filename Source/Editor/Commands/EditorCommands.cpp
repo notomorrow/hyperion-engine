@@ -361,6 +361,8 @@ public:
                             return;
                         }
 
+                        g_editorState->ReportProjectLoadStage(ProjectLoadStage::CloseProject);
+
                         subsystem->CloseProject();
 
                         TResult<Handle<EditorProject>> loadProjectResult = EditorProject::Load(projectFilepath);
@@ -434,6 +436,8 @@ public:
         {
             return;
         }
+
+        g_editorState->ReportProjectLoadStage(ProjectLoadStage::CloseProject);
 
         subsystem->CloseProject();
 

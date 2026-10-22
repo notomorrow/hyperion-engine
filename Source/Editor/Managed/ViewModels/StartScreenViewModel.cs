@@ -15,6 +15,7 @@ namespace Hyperion.Editor.ViewModels
         private const int SearchThreshold = 8;
 
         private readonly DelegateHandler _currentProjectChangedHandler;
+        private readonly DelegateHandler _projectLoadStatusChangedHandler;
 
         private readonly List<RecentProjectItemViewModel> _allRecentProjects = new();
         private RecentProjectItemViewModel? _selectedProject;
@@ -22,6 +23,7 @@ namespace Hyperion.Editor.ViewModels
         private bool _alwaysOpenLastProject;
         private bool _isBusy;
         private string _busyText = string.Empty;
+        private string _loadStatusText = string.Empty;
         private bool _awaitingProjectOpen;
         private bool _awaitingNewProject;
         private bool _isFinished;
@@ -74,6 +76,12 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _busyText, value);
         }
 
+        public string LoadStatusText
+        {
+            get => _loadStatusText;
+            private set => SetProperty(ref _loadStatusText, value);
+        }
+
         public ICommand NewProjectCommand { get; }
         public ICommand BrowseCommand { get; }
         public ICommand OpenRecentProjectCommand { get; }
@@ -117,12 +125,19 @@ namespace Hyperion.Editor.ViewModels
 
                     Dispatcher.UIThread.Post(() => OnCurrentProjectChanged(isSaved));
                 });
+
+            _projectLoadStatusChangedHandler = EditorState.Instance.GetOnProjectLoadStatusChangedDelegate()
+                .Bind((string status, uint percent) =>
+                {
+                    Dispatcher.UIThread.Post(() => OnProjectLoadStatusChanged(status, percent));
+                });
         }
 
         public void Dispose()
         {
             RecentProjectsService.Instance.Changed -= RefreshRecentProjects;
             _currentProjectChangedHandler.Remove();
+            _projectLoadStatusChangedHandler.Remove();
         }
 
         private void RefreshRecentProjects()
@@ -193,7 +208,8 @@ namespace Hyperion.Editor.ViewModels
             {
                 _awaitingProjectOpen = true;
 
-                BusyText = $"Opening {item.Name}...";
+                BusyText = $"Opening {item.Name}";
+                LoadStatusText = string.Empty;
                 IsBusy = true;
                 RaiseCanExecuteChanged();
             }
@@ -229,6 +245,23 @@ namespace Hyperion.Editor.ViewModels
             // Opening failed and the engine fell back to a new project
             IsBusy = false;
             RaiseCanExecuteChanged();
+        }
+
+        private void OnProjectLoadStatusChanged(string status, uint percent)
+        {
+            if (!_awaitingProjectOpen || _isFinished)
+            {
+                return;
+            }
+
+            if (!IsBusy)
+            {
+                BusyText = "Opening project";
+                IsBusy = true;
+                RaiseCanExecuteChanged();
+            }
+
+            LoadStatusText = $"{status}... {percent}%";
         }
 
         private void Finish()
