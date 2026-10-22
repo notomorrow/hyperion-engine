@@ -669,10 +669,7 @@ bool EditorAssetFolders::SyncWithRegistry()
                 continue;
             }
 
-            const String bucketFolder = GetAssetBucketName(assetPath.bucketIndex);
-
-            CreateFolder_Internal(bucketFolder);
-            m_assetFolders.Set(assetPath, bucketFolder);
+            m_assetFolders.Set(assetPath, String::empty);
 
             changed = true;
         }
