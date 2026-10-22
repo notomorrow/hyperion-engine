@@ -40,6 +40,8 @@
 #include <Core/Threading/Threads.hpp>
 #include <Core/Threading/TaskSystem.hpp>
 
+#include <Core/Debug/StackDump.hpp>
+
 #include <Core/Memory/Allocator/ArenaAllocator.hpp>
 #include <Core/Memory/Pool/Pool.hpp>
 
@@ -241,6 +243,15 @@ static void HandleSignal(int signum)
         return;
     }
 
+    if (signum == SIGSEGV || signum == SIGABRT)
+    {
+        // not using the logging system here as it may already be shut down
+        const String trace = debug::StackDump(40, 1).ToString();
+
+        std::fprintf(stdout, "\n[CRASH] %s! Stack trace:\n%s\n", signum == SIGSEGV ? "Segmentation fault" : "Aborted", trace.Data());
+        std::fflush(stdout);
+    }
+
     // Call atexit functions
     exit(signum);
 }
@@ -251,7 +262,12 @@ void InitSignalHandlers()
 {
     // Init signal handlers
     signal(SIGINT, SignalHandlers::HandleSignal);
+#ifndef HYP_WINDOWS
+    // on Windows the unhandled exception filter reports access violations, with a stack trace the signal can't give
     signal(SIGSEGV, SignalHandlers::HandleSignal);
+#endif
+
+    signal(SIGABRT, SignalHandlers::HandleSignal);
     atexit(SignalHandlers::HandleExit);
 }
 
@@ -741,6 +757,10 @@ extern "C"
 
         s_hypIsInitialized = false;
 
+#ifdef HYP_WINDOWS
+        Win32ApplicationWindow::DetachAllFromParents();
+#endif
+
         if (g_appContext.IsValid())
         {
             g_appContext->PurgeClosedWindows();
@@ -1060,6 +1080,11 @@ extern "C"
     {
         AssertOnThread(g_mainThread);
 
+        if (!g_mainThreadInstance)
+        {
+            return;
+        }
+
         g_mainThreadInstance->Update();
     }
 
@@ -1070,7 +1095,22 @@ extern "C"
 
     HYP_EXPORT void Hyp_RequestQuit()
     {
-        s_quitRequested.Set(true, MemoryOrder::RELEASE);
+        // the managed host polls for it; otherwise shut down as closing the main window does
+        if (IsDetached())
+        {
+            s_quitRequested.Set(true, MemoryOrder::RELEASE);
+
+            return;
+        }
+
+        g_mainThreadInstance->GetScheduler().Enqueue(
+            []()
+            {
+                Hyp_Shutdown();
+
+                std::exit(0);
+            },
+            TaskEnqueueFlags::FIRE_AND_FORGET);
     }
 
 #if HYP_DOTNET

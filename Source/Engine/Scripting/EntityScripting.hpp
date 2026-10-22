@@ -7,11 +7,15 @@
 #pragma once
 
 #include <Core/Containers/String.hpp>
+#include <Core/Containers/Array.hpp>
+
+#include <Core/Name/Name.hpp>
 
 namespace Hyperion {
 
 class Entity;
 class World;
+class AssetRegistry;
 
 struct ScriptComponent;
 struct ScriptDesc;
@@ -48,6 +52,8 @@ void InitializeEntityScript(Entity* entity, ScriptComponent& scriptComponent, co
 void ShutdownEntityScript(Entity* entity, ScriptComponent& scriptComponent, const GameState& gameState);
 
 ANSIString GetCSharpAssemblyLoadPath(const ScriptDesc& scriptDesc);
+
+Array<Name> FindUnavailableScripts(AssetRegistry& registry);
 
 void UpdateScriptedEntities(World& world, float delta);
 

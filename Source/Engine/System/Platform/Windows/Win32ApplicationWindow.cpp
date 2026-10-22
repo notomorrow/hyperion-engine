@@ -88,8 +88,9 @@ struct AliveWindows
 
     static AliveWindows& GetInstance()
     {
-        static AliveWindows s_instance;
-        return s_instance;
+        // NOTE: Purposely leaked
+        static AliveWindows* s_instance = new AliveWindows();
+        return *s_instance;
     }
 
     void Add(Win32ApplicationWindow* window)
@@ -108,6 +109,12 @@ struct AliveWindows
     {
         TSharedLock lock(mutex);
         return set.Find(window) != set.End();
+    }
+
+    void Clear()
+    {
+        TUniqueLock lock(mutex);
+        set.Clear();
     }
 };
 
@@ -491,6 +498,11 @@ Win32ApplicationWindow::Win32ApplicationWindow(ANSIString title, Vec2i size)
     : ApplicationWindow(std::move(title), size)
 {
     m_hinst = GetModuleHandleW(nullptr);
+}
+
+void Win32ApplicationWindow::DetachAllFromParents()
+{
+    AliveWindows::GetInstance().Clear();
 }
 
 Win32ApplicationWindow::~Win32ApplicationWindow()

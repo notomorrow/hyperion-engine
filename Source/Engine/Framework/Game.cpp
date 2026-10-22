@@ -45,6 +45,9 @@
 
 #include <Scripting/ScriptingService.hpp>
 #include <Scripting/ScriptObjectResource.hpp>
+#include <Scripting/EntityScripting.hpp>
+
+#include <HyperionEngine.hpp>
 
 #include <Input/Event.hpp>
 
@@ -517,8 +520,35 @@ void Game::AfterContentLoaded()
     AssertOnThread(g_simThread);
 
     Assert(m_isLaunched.Get(MemoryOrder::ACQUIRE) == false);
-    
+
     m_syncState.currentTask = {};
+
+    if (!EngineGlobals::IsEditor())
+    {
+        if (const Array<Name> unavailableScripts = EntityScripting::FindUnavailableScripts(*m_assetRegistry); unavailableScripts.Any())
+        {
+            const String message = HYP_FORMAT(
+                "This build was not packaged, and therefore does not include script code.\n\n"
+                "Play it from the editor, or use Package Game from the editor to create a build that can be ran directly.");
+
+            HYP_LOG(Game, Error, "{}", message);
+
+            if (!EngineGlobals::IsHeadless())
+            {
+                SystemMessageBox(MessageBoxType::CRITICAL)
+                    .Title("Scripts not included")
+                    .Text(message)
+                    .Button("Quit", NoOpFunction<void> {})
+                    .Show();
+            }
+
+            m_syncState.SetState(ContentSyncState::Failed);
+
+            Hyp_RequestQuit();
+
+            return;
+        }
+    }
 
     const Name startupWorldName = GetStartupWorldName();
 

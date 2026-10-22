@@ -54,6 +54,8 @@
 
 #include <System/AppContext.hpp>
 
+#include <HyperionEngine.hpp>
+
 #include <semaphore>
 
 #if HYP_APPLE
@@ -206,6 +208,8 @@ void RenderThread::Update()
     Frame* frame = RI.GetCurrentFrame();
     Assert(frame != nullptr);
 
+    const bool isShuttingDown = EngineGlobals::IsShuttingDown() || Hyp_IsQuitRequested() != 0;
+
     Array<PresentTarget, RenderTempAllocator> presentTargets;
     Array<Swapchain*, RenderTempAllocator> swapchains;
 
@@ -225,12 +229,12 @@ void RenderThread::Update()
         target.outputExtent = swapchain->GetExtent();
     };
 
-    if (mainWindow != nullptr)
+    if (mainWindow != nullptr && !isShuttingDown)
     {
         addPresentTarget(mainWindow);
     }
 
-    if (g_appContext.IsValid())
+    if (g_appContext.IsValid() && !isShuttingDown)
     {
         g_appContext->ForEachPresentWindow([&](ApplicationWindow* window)
             {
@@ -255,7 +259,7 @@ void RenderThread::Update()
 
     Span<World*> worldsToRender = GetActiveWorlds();
 
-    if (worldsToRender)
+    if (worldsToRender && !isShuttingDown)
     {
         PassBase* mainRenderer = RI.namedPasses[NamedPass::Deferred][0];
         AssertDebug(mainRenderer != nullptr);

@@ -760,6 +760,48 @@ ANSIString GetCSharpAssemblyLoadPath(const ScriptDesc& scriptDesc)
         + ".dll";
 }
 
+Array<Name> FindUnavailableScripts(AssetRegistry& registry)
+{
+    Array<Name> unavailableScripts;
+
+    Array<AssetDesc> assetDescs;
+    registry.GetBucketAssetDescs(AssetBuckets::Scripts.GetIndex(), assetDescs);
+
+    for (const AssetDesc& assetDesc : assetDescs)
+    {
+        Handle<AssetObject> assetObject = registry.GetAsset(AssetBuckets::Scripts, assetDesc.name);
+
+        if (!assetObject.IsValid() || !assetObject->IsA<ScriptAsset>())
+        {
+            continue;
+        }
+
+        ScriptAsset* scriptAsset = static_cast<ScriptAsset*>(assetObject.Get());
+
+        auto readScope = scriptAsset->GetReadScope();
+
+        const ScriptDesc& scriptDesc = scriptAsset->GetScriptDesc();
+
+        if (scriptDesc.language != ScriptLanguage::CSharp)
+        {
+            continue;
+        }
+
+#ifdef HYP_DOTNET
+        SharedPtr<dotnet::Assembly> assembly = DotNETHost::GetInstance().LoadAssembly(GetCSharpAssemblyLoadPath(scriptDesc).Data());
+
+        if (assembly && assembly->FindClassByName(scriptDesc.className.Data()))
+        {
+            continue;
+        }
+#endif
+
+        unavailableScripts.PushBack(assetDesc.name);
+    }
+
+    return unavailableScripts;
+}
+
 void InitializeEntityScript(Entity* entity, ScriptComponent& scriptComponent, const GameState& gameState)
 {
     World* world = entity->GetWorld();

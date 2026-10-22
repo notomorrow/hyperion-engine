@@ -53,6 +53,9 @@ class CORE_API StackDump
 
 public:
     StackDump(uint32 depth = 20, uint32 offset = 0);
+
+    StackDump(const void* context, uint32 depth);
+
     StackDump(const RawStackTrace& rawTrace);
 
     StackDump(const StackDump& other);

@@ -86,6 +86,8 @@ namespace Hyperion.Editor
         private int _frameCounter;
         private bool _viewportNativeHidden;
         private bool _isClosing;
+        private int _mainThreadUpdateDepth;
+        private bool _closeDeferred;
         private bool _suppressPanelSync;
         private readonly Dictionary<string, object?> _dockContents = new Dictionary<string, object?>();
         private readonly Dictionary<EditorViewportType, Control> _orthoViewportContents = new();
@@ -2490,6 +2492,16 @@ namespace Hyperion.Editor
 
         protected override void OnClosing(WindowClosingEventArgs e)
         {
+            // The engine's message pump can dispatch WM_CLOSE from inside Hyp_MainThreadUpdate; shutting down there
+            // frees the engine under the pump, so close again once the update has returned
+            if (_mainThreadUpdateDepth > 0)
+            {
+                e.Cancel = true;
+                _closeDeferred = true;
+
+                return;
+            }
+
             _isClosing = true;
 
             // Disable main thread loop until this is done
@@ -2558,7 +2570,23 @@ namespace Hyperion.Editor
         {
             if (!EngineManager.DisableMainLoop)
             {
-                NativeBindings.Hyp_MainThreadUpdate();
+                _mainThreadUpdateDepth++;
+
+                try
+                {
+                    NativeBindings.Hyp_MainThreadUpdate();
+                }
+                finally
+                {
+                    _mainThreadUpdateDepth--;
+                }
+            }
+
+            if (_closeDeferred && _mainThreadUpdateDepth == 0)
+            {
+                _closeDeferred = false;
+
+                Close();
             }
 
             ConsoleService.Instance.ProcessLogQueue();

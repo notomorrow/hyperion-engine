@@ -64,6 +64,7 @@ struct StackDump::Impl
 
 #if HYP_WINDOWS
         HANDLE process = GetCurrentProcess();
+        SymSetOptions(SymGetOptions() | SYMOPT_LOAD_LINES);
         SymInitialize(process, nullptr, true);
 
         for (void* frame : rawFrames)
@@ -79,13 +80,44 @@ struct StackDump::Impl
             if (SymFromAddr(process, address, &displacementSym, symbol))
             {
                 char line[2048];
-                snprintf(line, 2048, "%s - 0x%0llX", symbol->Name, symbol->Address);
+
+                IMAGEHLP_LINE64 sourceLine = {};
+                sourceLine.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+                DWORD displacementLine = 0;
+
+                if (SymGetLineFromAddr64(process, address, &displacementLine, &sourceLine))
+                {
+                    snprintf(line, 2048, "%s+0x%llX - 0x%0llX (%s:%lu)", symbol->Name, displacementSym, symbol->Address, sourceLine.FileName, sourceLine.LineNumber);
+                }
+                else
+                {
+                    snprintf(line, 2048, "%s+0x%llX - 0x%0llX", symbol->Name, displacementSym, symbol->Address);
+                }
+
                 stringCache.PushBack(line);
+
+                continue;
+            }
+
+            // without symbols, the module and offset still say where it is (no module: e.g code of an unloaded DLL)
+            HMODULE module = nullptr;
+            char modulePath[MAX_PATH] = {};
+
+            char line[2048];
+
+            if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCSTR>(address), &module)
+                && GetModuleFileNameA(module, modulePath, MAX_PATH) != 0)
+            {
+                const char* moduleName = strrchr(modulePath, '\\');
+
+                snprintf(line, 2048, "(unknown) %s+0x%llX", moduleName ? moduleName + 1 : modulePath, address - reinterpret_cast<DWORD64>(module));
             }
             else
             {
-                stringCache.PushBack("(unknown)");
+                snprintf(line, 2048, "(unknown) 0x%llX, in no loaded module", address);
             }
+
+            stringCache.PushBack(line);
         }
 
         SymCleanup(process);
@@ -112,7 +144,7 @@ struct StackDump::Impl
     }
 };
 
-static void CaptureRawStackFrames(Array<void*>& rawFrames, uint32 depth, uint32 offset)
+static void CaptureRawStackFrames(Array<void*>& rawFrames, uint32 depth, uint32 offset, const void* fromContext = nullptr)
 {
     rawFrames.Clear();
     rawFrames.Reserve(depth);
@@ -122,8 +154,16 @@ static void CaptureRawStackFrames(Array<void*>& rawFrames, uint32 depth, uint32 
     SymInitialize(process, nullptr, true);
 
     CONTEXT context = {};
-    context.ContextFlags = CONTEXT_FULL;
-    RtlCaptureContext(&context);
+
+    if (fromContext != nullptr)
+    {
+        context = *static_cast<const CONTEXT*>(fromContext);
+    }
+    else
+    {
+        context.ContextFlags = CONTEXT_FULL;
+        RtlCaptureContext(&context);
+    }
 
     STACKFRAME64 stackFrame = {};
     stackFrame.AddrPC.Mode = AddrModeFlat;
@@ -199,6 +239,12 @@ StackDump::StackDump(uint32 depth, uint32 offset)
 {
     m_impl.Emplace();
     CaptureRawStackFrames(m_impl->rawFrames, depth, offset);
+}
+
+StackDump::StackDump(const void* context, uint32 depth)
+{
+    m_impl.Emplace();
+    CaptureRawStackFrames(m_impl->rawFrames, depth, 0, context);
 }
 
 StackDump::StackDump(const RawStackTrace& rawTrace)
