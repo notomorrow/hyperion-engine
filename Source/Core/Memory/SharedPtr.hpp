@@ -123,7 +123,7 @@ HYP_NODISCARD static inline ControlBlock<CountType>* NewInlineBlock(Args&&... ar
     void* pObj = reinterpret_cast<void*>(UIntPtr(pBlock) + objOffset);
 
     new (pBlock) ControlBlock<CountType> {
-        static_cast<T*>(pObj),
+        const_cast<void*>(pObj),
         &TypeOf<T>(),
         CountType(1),
         CountType(1),
