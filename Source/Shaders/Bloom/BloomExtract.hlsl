@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 PERMUTE(HALFRES);
 
@@ -22,10 +22,10 @@ DECLARE_SRV(BloomExtract, DeferredShadingTexture) Texture2D DeferredShadingTextu
 DECLARE_SAMPLER(BloomExtract, SamplerLinear) SamplerState sampler_linear;
 DECLARE_SAMPLER(BloomExtract, SamplerNearest) SamplerState sampler_nearest;
 
-#include "../include/Shared.hlsli"
-#include "../include/Scene.hlsli"
-#include "../include/Gbuffer.hlsli"
-#include "../include/Packing.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/Packing.hlsli"
 
 static const float2 LUMINANCE_WEIGHTS = float2(0.2126f, 0.7152f);
 

@@ -8,8 +8,8 @@ layout(location = 0) in vec3 v_position;
 layout(location = 1) in vec2 v_texcoord;
 layout(location = 0) out vec4 color_output;
 
-#include "../include/Defines.hlsli"
-#include "../include/Shared.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Shared.hlsli"
 
 DECLARE_SRV(GenerateMipmap, InputTexture) uniform texture2D input_texture;
 DECLARE_SAMPLER(GenerateMipmap, SamplerLinear) uniform sampler sampler_linear;

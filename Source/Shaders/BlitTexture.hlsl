@@ -1,10 +1,10 @@
-#include "include/Defines.hlsli"
-#include "include/Shared.hlsli"
+#include "Include/Defines.hlsli"
+#include "Include/Shared.hlsli"
 
 PERMUTE(CHECKERBOARDED);
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "include/Scene.hlsli"
+#include "Include/Scene.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 DECLARE_SAMPLER(RenderTextureToScreenDescriptorSet, SamplerLinear) SamplerState sampler_linear;

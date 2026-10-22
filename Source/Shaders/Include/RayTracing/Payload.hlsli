@@ -1,7 +1,7 @@
 #ifndef HYP_PAYLOAD
 #define HYP_PAYLOAD
 
-#include "../../include/Vertex.hlsli"
+#include "../../Include/Vertex.hlsli"
 
 struct RayPayload
 {

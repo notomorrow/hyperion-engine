@@ -1,7 +1,7 @@
 STATIC(MAX_LIGHTS, 4)
 
-#include "../include/Defines.hlsli"
-#include "../include/Shared.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Shared.hlsli"
 
 #define HYP_NO_CUBEMAP
 
@@ -12,18 +12,18 @@ DECLARE_SAMPLER(RTReflections, SamplerLinear) SamplerState sampler_linear;
 #define HYP_SAMPLER_NEAREST sampler_nearest
 #define HYP_SAMPLER_LINEAR sampler_linear
 
-#include "../include/Vertex.hlsli"
+#include "../Include/Vertex.hlsli"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../include/Material.hlsli"
-#include "../include/Entity.hlsli"
-#include "../include/Scene.hlsli"
+#include "../Include/Material.hlsli"
+#include "../Include/Entity.hlsli"
+#include "../Include/Scene.hlsli"
 
-#include "../include/BRDF.hlsli"
+#include "../Include/BRDF.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../include/RayTracing/Mesh.hlsli"
-#include "../include/RayTracing/Payload.hlsli"
+#include "../Include/RayTracing/Mesh.hlsli"
+#include "../Include/RayTracing/Payload.hlsli"
 
 /* Shadows */
 
@@ -31,10 +31,10 @@ DECLARE_SRV(RTReflections, ShadowMapsTextureArray) Texture2DArray<float> shadow_
 DECLARE_SRV(RTReflections, PointLightShadowMapsTextureArray) TextureCubeArray point_shadow_maps;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../include/Shadows.hlsli"
+#include "../Include/Shadows.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../include/RayTracing/RayTracingHelpers.hlsli"
+#include "../Include/RayTracing/RayTracingHelpers.hlsli"
 
 /* End Shadows */
 

@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 #ifdef VERTEX_SHADER
 
@@ -27,7 +27,7 @@ VSOutput VSMain(VSInput input)
 
 #ifdef PIXEL_SHADER
 
-#include "../include/Gbuffer.hlsli"
+#include "../Include/Gbuffer.hlsli"
 
 DECLARE_SRV(DecalResolve, DecalNormalAccumTexture) Texture2D DecalNormalAccumTexture;
 DECLARE_SRV(DecalResolve, DecalBaseNormalsTexture) Texture2D DecalBaseNormalsTexture;

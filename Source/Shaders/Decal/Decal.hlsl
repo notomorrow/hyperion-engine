@@ -1,8 +1,8 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../include/Scene.hlsli"
-#include "../include/Shared.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/Shared.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #include "./Decal.hlsli"
@@ -93,7 +93,7 @@ DECLARE_SRV(Decal, DecalNormalTexture) Texture2D DecalNormalTexture;
 DECLARE_SAMPLER(Decal, SamplerNearest) SamplerState SamplerNearest;
 DECLARE_SAMPLER(Decal, SamplerLinear) SamplerState SamplerLinear;
 
-#include "../include/Gbuffer.hlsli"
+#include "../Include/Gbuffer.hlsli"
 
 struct PSInput
 {

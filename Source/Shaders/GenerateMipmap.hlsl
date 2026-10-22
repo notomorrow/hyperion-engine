@@ -1,5 +1,5 @@
-#include "include/Defines.hlsli"
-#include "include/Shared.hlsli"
+#include "Include/Defines.hlsli"
+#include "Include/Shared.hlsli"
 
 DECLARE_SAMPLER(GenerateMipmaps, SamplerLinear) SamplerState SamplerLinear;
 

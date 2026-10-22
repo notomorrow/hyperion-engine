@@ -1,5 +1,5 @@
-#include "../include/Defines.hlsli"
-#include "../include/Shared.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Shared.hlsli"
 
 PERMUTE(MAX_PARTICLES, 1024, 2048, 4096, 8192, 16384);
 
@@ -13,10 +13,10 @@ DECLARE_SRV(UpdateParticlesDescriptorSet, GBufferVelocityTexture) Texture2D GBuf
 DECLARE_SRV(UpdateParticlesDescriptorSet, GBufferDepthTexture) Texture2D GBufferDepthTexture;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../include/Scene.hlsli"
-#include "../include/Entity.hlsli"
-#include "../include/Packing.hlsli"
-#include "../include/Gbuffer.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/Entity.hlsli"
+#include "../Include/Packing.hlsli"
+#include "../Include/Gbuffer.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 struct ParticleShaderData

@@ -1,14 +1,14 @@
-#include "../include/Defines.hlsli"
-#include "../include/Shared.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Shared.hlsli"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../include/Scene.hlsli"
-#include "../include/EnvProbes.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/EnvProbes.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../include/Clouds.hlsli"
-#include "../include/CloudNoise.hlsli"
-#include "../include/Atmosphere.hlsli"
+#include "../Include/Clouds.hlsli"
+#include "../Include/CloudNoise.hlsli"
+#include "../Include/Atmosphere.hlsli"
 
 // Composites clouds over the sky probe's capture before it's convolved, so ambient and reflections include them.
 // InSkyTexture is the cloud-free capture; the faces of OutSkyProbeTexture get sky * transmittance + cloud light
@@ -41,8 +41,8 @@ DECLARE_BUFFER_DYNAMIC(Clouds, CloudSkyProbeConstants) cbuffer CloudSkyProbeCons
     uint hasSun;
 };
 
-#include "../include/CloudDensity.hlsli"
-#include "../include/CloudMarch.hlsli"
+#include "../Include/CloudDensity.hlsli"
+#include "../Include/CloudMarch.hlsli"
 
 [numthreads(8, 8, 1)]
 void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)

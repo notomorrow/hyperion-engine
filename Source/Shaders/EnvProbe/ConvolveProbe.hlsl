@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 PERMUTE(NUM_SAMPLES, 256);
 PERMUTE(LOBE_SIZE, 0.0, 0.143, 0.286, 0.429, 0.571, 0.714, 0.857, 1.0);
@@ -10,15 +10,15 @@ PERMUTE(LOBE_SIZE, 0.0, 0.143, 0.286, 0.429, 0.571, 0.714, 0.857, 1.0);
 #define HYP_SAMPLER_NEAREST sampler_nearest
 #define HYP_SAMPLER_LINEAR sampler_linear
 
-#include "../include/Shared.hlsli"
-#include "../include/Noise.hlsli"
-#include "../include/Packing.hlsli"
-#include "../include/Scene.hlsli"
-#include "../include/BRDF.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/Noise.hlsli"
+#include "../Include/Packing.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/BRDF.hlsli"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../include/EnvProbes.hlsli"
+#include "../Include/EnvProbes.hlsli"
 
 DECLARE_SRV(ConvolveProbe, ColorTexture) TextureCube color_texture;
 

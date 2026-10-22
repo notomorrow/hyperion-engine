@@ -1,4 +1,4 @@
-#include "include/Defines.hlsli"
+#include "Include/Defines.hlsli"
 
 PERMUTE(SKINNING);
 PERMUTE(ALPHA_DISCARD);
@@ -49,16 +49,16 @@ DECLARE_SAMPLER(Default, SamplerNearest) SamplerState sampler_nearest;
 
 #define HAS_REFRACTION 1
 
-#include "include/Material.hlsli"
+#include "Include/Material.hlsli"
 
-#include "include/Scene.hlsli"
-#include "include/Packing.hlsli"
-#include "include/EnvProbes.hlsli"
-#include "include/Gbuffer.hlsli"
-#include "include/Entity.hlsli"
-#include "include/Noise.hlsli"
-#include "include/AlphaCutout.hlsli"
-#include "include/TerrainColor.hlsli"
+#include "Include/Scene.hlsli"
+#include "Include/Packing.hlsli"
+#include "Include/EnvProbes.hlsli"
+#include "Include/Gbuffer.hlsli"
+#include "Include/Entity.hlsli"
+#include "Include/Noise.hlsli"
+#include "Include/AlphaCutout.hlsli"
+#include "Include/TerrainColor.hlsli"
 
 DECLARE_SRV(Default, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
 #define world_shader_data _worlds_buffer[0]
@@ -85,8 +85,8 @@ DECLARE_SRV(Default, GBufferMipChain) Texture2D GBufferMipChain;
 DECLARE_SRV(Default, ShadowMapsTextureArray) Texture2DArray<float> shadow_maps;
 DECLARE_SRV(Default, PointLightShadowMapsTextureArray) TextureCubeArray point_shadow_maps;
 
-#include "include/BRDF.hlsli"
-#include "include/FoliageLighting.hlsli"
+#include "Include/BRDF.hlsli"
+#include "Include/FoliageLighting.hlsli"
 
 #ifdef FORWARD_CLUSTERED
 
@@ -95,9 +95,9 @@ DECLARE_SRV(Default, LightsBuffer) StructuredBuffer<Light> LightsBuffer;
 DECLARE_SRV(Default, ClusterGridBuffer) ByteAddressBuffer ClusterGridBuffer;
 DECLARE_SRV(Default, ClusterIndexBuffer) ByteAddressBuffer ClusterIndexBuffer;
 
-#include "deferred/ClusteredShading.hlsli"
+#include "Deferred/ClusteredShading.hlsli"
 
-#include "include/SkyVisibility.hlsli"
+#include "Include/SkyVisibility.hlsli"
 
 DECLARE_BUFFER_DYNAMIC(Default, ForwardIndirectConstants) cbuffer ForwardIndirectConstants
 {
@@ -111,24 +111,24 @@ DECLARE_SRV(Default, SkyVisibilityTexture) Texture2D SkyVisibilityTexture;
 DECLARE_SRV(Default, DDGIIrradianceTexture) Texture2D probe_irradiance;
 DECLARE_SRV(Default, DDGIDepthTexture) Texture2D probe_depth;
 
-#include "include/RayTracing/GlobalIllumination/ProbeUniforms.hlsli"
+#include "Include/RayTracing/GlobalIllumination/ProbeUniforms.hlsli"
 
 DECLARE_BUFFER(Default, DDGIConstants) cbuffer DDGI
 {
     DDGIConstants ddgiConstants;
 };
 
-#include "include/RayTracing/GlobalIllumination/SampleDDGI.hlsli"
+#include "Include/RayTracing/GlobalIllumination/SampleDDGI.hlsli"
 #endif // RT_GI
 
 #define DEFERRED_LIGHTING_HAS_SKY
 #endif // FORWARD_CLUSTERED
 
-#include "deferred/DeferredLighting.hlsli"
+#include "Deferred/DeferredLighting.hlsli"
 
 #undef DEFERRED_LIGHTING_HAS_SKY
 
-#include "include/Shadows.hlsli"
+#include "Include/Shadows.hlsli"
 
 #ifdef FORWARD_SHADING
 
@@ -209,7 +209,7 @@ float GetDirectionalCSMShadow(float3 position, float3 N, float NdotL)
 #define CURRENT_MATERIAL material
 #endif // CURRENT_MATERIAL
 
-#include "include/Parallax.hlsli"
+#include "Include/Parallax.hlsli"
 
 // @TODO!!! Replace with vertex tangents.
 bool ComputeUVTangentFrame(float3 N, float3 P, float2 uv, out float3 tangent, out float3 bitangent)

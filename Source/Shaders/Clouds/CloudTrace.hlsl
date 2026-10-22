@@ -1,13 +1,13 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../include/Scene.hlsli"
-#include "../include/EnvProbes.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/EnvProbes.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../include/Clouds.hlsli"
-#include "../include/CloudNoise.hlsli"
-#include "../include/Atmosphere.hlsli"
+#include "../Include/Clouds.hlsli"
+#include "../Include/CloudNoise.hlsli"
+#include "../Include/Atmosphere.hlsli"
 
 DECLARE_UAV(Clouds, OutCloudTexture) RWTexture2D<float4> OutCloudTexture;
 DECLARE_UAV(Clouds, OutCloudDistanceTexture) RWTexture2D<float> OutCloudDistanceTexture;
@@ -26,7 +26,7 @@ DECLARE_SRV(Clouds, BlueNoiseBuffer) StructuredBuffer<int4> BlueNoiseBuffer;
 
 DECLARE_SAMPLER(Clouds, SamplerLinear) SamplerState SamplerLinear;
 
-#include "../include/BlueNoise.hlsli"
+#include "../Include/BlueNoise.hlsli"
 
 DECLARE_BUFFER_DYNAMIC(Clouds, CloudTraceConstants) cbuffer CloudTraceConstants
 {
@@ -53,8 +53,8 @@ DECLARE_BUFFER_DYNAMIC(Clouds, CloudTraceConstants) cbuffer CloudTraceConstants
     uint _pad1;
 };
 
-#include "../include/CloudDensity.hlsli"
-#include "../include/CloudMarch.hlsli"
+#include "../Include/CloudDensity.hlsli"
+#include "../Include/CloudMarch.hlsli"
 
 [numthreads(8, 8, 1)]
 void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)

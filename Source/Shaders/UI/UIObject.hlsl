@@ -1,6 +1,6 @@
-#include "../include/Defines.hlsli"
-#include "../include/Shared.hlsli"
-#include "../include/Entity.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/Entity.hlsli"
 #include "./UIObject.hlsli"
 
 PERMUTE(TEXTURED);
@@ -28,7 +28,7 @@ struct VSOutput
     nointerpolation uint4 properties : TEXCOORD5;
 };
 
-#include "../include/Scene.hlsli"
+#include "../Include/Scene.hlsli"
 
 DECLARE_SRV_DYNAMIC(Default, CamerasBuffer) StructuredBuffer<Camera> _cameras_buffer;
 #define camera _cameras_buffer[0]
@@ -37,7 +37,7 @@ DECLARE_SRV_DYNAMIC(Default, EntityInstanceBatchesBuffer) ByteAddressBuffer Enti
 DECLARE_SRV(Default, InstanceDataBuffer) StructuredBuffer<UIInstanceData> InstanceData;
 
 #define HYP_CUSTOM_INSTANCE_DATA
-#include "../include/Instancing.hlsli"
+#include "../Include/Instancing.hlsli"
 
 VSOutput VSMain(VSInput input, uint instanceId : SV_InstanceID)
 {
@@ -104,9 +104,9 @@ struct PSOutput
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../include/Gbuffer.hlsli"
-#include "../include/Material.hlsli"
-#include "../include/Scene.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/Material.hlsli"
+#include "../Include/Scene.hlsli"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 

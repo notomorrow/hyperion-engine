@@ -1,6 +1,6 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
-#include "../include/Shared.hlsli"
+#include "../Include/Shared.hlsli"
 #include "./Shared.hlsli"
 
 DECLARE_SRV(DepthPyramidDescriptorSet, InImage) Texture2D InImage;

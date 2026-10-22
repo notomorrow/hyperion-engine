@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 PERMUTE(MODE, CLEAR, BUILD_COEFFICIENTS, REDUCE, FINALIZE);
 
@@ -16,10 +16,10 @@ struct SHTile
 DECLARE_SAMPLER(ComputeSH, SamplerLinear) SamplerState sampler_linear;
 DECLARE_SAMPLER(ComputeSH, SamplerNearest) SamplerState sampler_nearest;
 
-#include "../include/Shared.hlsli"
-#include "../include/Packing.hlsli"
-#include "../include/Scene.hlsli"
-#include "../include/Octahedron.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/Packing.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/Octahedron.hlsli"
 
 DECLARE_SRV(ComputeSH, InColorCubemap) TextureCube cubemap_color;
 

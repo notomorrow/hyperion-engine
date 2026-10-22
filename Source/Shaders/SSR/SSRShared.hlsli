@@ -12,11 +12,11 @@
 #endif
 #endif
 
-#include "../include/Defines.hlsli"
-#include "../include/Packing.hlsli"
-#include "../include/Scene.hlsli"
-#include "../include/Shared.hlsli"
-#include "../include/Noise.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Packing.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/Noise.hlsli"
 
 #define HYP_SSR_ROUGHNESS_MAX 1.0
 

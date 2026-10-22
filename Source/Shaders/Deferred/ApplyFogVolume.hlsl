@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 PERMUTE(CLUSTERED_LIGHTS)
 PERMUTE(FOG_VOLUME_USE_SDF)
@@ -32,8 +32,8 @@ struct VSOutput
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../include/Scene.hlsli"
-#include "../include/Shared.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/Shared.hlsli"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -94,13 +94,13 @@ DECLARE_SAMPLER(FogVolume, SamplerNearest) SamplerState SamplerNearest;
 
 DECLARE_SRV(FogVolume, DepthTexture) Texture2D DepthTexture;
 
-#include "../include/Scene.hlsli"
-#include "../include/Material.hlsli"
-#include "../include/Entity.hlsli"
-#include "../include/Packing.hlsli"
-#include "../include/Shared.hlsli"
-#include "../include/Gbuffer.hlsli"
-#include "../include/EnvProbes.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/Material.hlsli"
+#include "../Include/Entity.hlsli"
+#include "../Include/Packing.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/EnvProbes.hlsli"
 
 DECLARE_SRV_DYNAMIC(FogVolume, CamerasBuffer) StructuredBuffer<Camera> _cameras_buffer;
 #define camera _cameras_buffer[0]
@@ -120,7 +120,7 @@ DECLARE_SRV(FogVolume, ShadowMapIndexBuffer) ByteAddressBuffer LightToShadowMapI
 
 #include "./ClusteredShading.hlsli"
 
-#include "../include/BRDF.hlsli"
+#include "../Include/BRDF.hlsli"
 
 #define HYP_DEFERRED_NO_REFRACTION
 #define HYP_DEFERRED_NO_ENV_PROBE
@@ -130,7 +130,7 @@ DECLARE_SRV(FogVolume, ShadowMapIndexBuffer) ByteAddressBuffer LightToShadowMapI
 #undef HYP_DEFERRED_NO_REFRACTION
 #undef HYP_DEFERRED_NO_ENV_PROBE
 
-#include "../include/Shadows.hlsli"
+#include "../Include/Shadows.hlsli"
 
 #ifndef CURRENT_MATERIAL
 #define CURRENT_MATERIAL material
@@ -141,14 +141,14 @@ DECLARE_SRV(FogVolume, ShadowMapIndexBuffer) ByteAddressBuffer LightToShadowMapI
 /// Blue noise
 DECLARE_SRV(FogVolume, BlueNoiseBuffer) StructuredBuffer<int4> BlueNoiseBuffer;
 
-#include "../include/BlueNoise.hlsli"
+#include "../Include/BlueNoise.hlsli"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 DECLARE_SRV(FogVolume, DataMap) Texture3D<float4> DataMap;
 DECLARE_SRV(FogVolume, NoiseMap) Texture3D<float> NoiseMap;
 
-#include "../include/Clouds.hlsli"
+#include "../Include/Clouds.hlsli"
 
 DECLARE_SRV(FogVolume, CloudWeatherMapTexture) Texture2DArray CloudWeatherMapTexture;
 #include "../Glimmer/GlimmerApply.hlsli"

@@ -2,11 +2,11 @@ STATIC(MAX_LIGHTS, 4)
 
 #define DDGI
 
-#include "../../include/Defines.hlsli"
-#include "../../include/Shared.hlsli"
-#include "../../include/Noise.hlsli"
-#include "../../include/Packing.hlsli"
-#include "../../include/BRDF.hlsli"
+#include "../../Include/Defines.hlsli"
+#include "../../Include/Shared.hlsli"
+#include "../../Include/Noise.hlsli"
+#include "../../Include/Packing.hlsli"
+#include "../../Include/BRDF.hlsli"
 
 DECLARE_SAMPLER(DDGI, SamplerNearest) SamplerState sampler_nearest;
 DECLARE_SAMPLER(DDGI, SamplerLinear) SamplerState sampler_linear;
@@ -17,15 +17,15 @@ DECLARE_SAMPLER(DDGI, SamplerLinear) SamplerState sampler_linear;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../../include/Scene.hlsli"
-#include "../../include/Noise.hlsli"
-#include "../../include/Octahedron.hlsli"
-#include "../../include/EnvProbes.hlsli"
+#include "../../Include/Scene.hlsli"
+#include "../../Include/Noise.hlsli"
+#include "../../Include/Octahedron.hlsli"
+#include "../../Include/EnvProbes.hlsli"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../../include/RayTracing/Payload.hlsli"
-#include "../../include/RayTracing/GlobalIllumination/ProbeUniforms.hlsli"
+#include "../../Include/RayTracing/Payload.hlsli"
+#include "../../Include/RayTracing/GlobalIllumination/ProbeUniforms.hlsli"
 
 DECLARE_SRV(DDGI, TLAS) RaytracingAccelerationStructure tlas;
 
@@ -38,8 +38,8 @@ DECLARE_BUFFER_DYNAMIC(DDGI, CBuffer) cbuffer CBuffer
 
 DECLARE_UAV(DDGI, ProbeRayData) RWStructuredBuffer<ProbeRayData> probe_rays;
 
-#include "../../include/RayTracing/GlobalIllumination/Shared.hlsli"
-#include "../../include/RayTracing/RayTracingHelpers.hlsli"
+#include "../../Include/RayTracing/GlobalIllumination/Shared.hlsli"
+#include "../../Include/RayTracing/RayTracingHelpers.hlsli"
 
 DECLARE_SRV(DDGI, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
 #define world_shader_data _worlds_buffer[0]

@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 #ifdef VERTEX_SHADER
 
@@ -40,7 +40,7 @@ struct PSOutput
     float output_depth : SV_Depth;
 };
 
-#include "../include/Scene.hlsli"
+#include "../Include/Scene.hlsli"
 
 DECLARE_SRV_DYNAMIC(EditorGrid, CamerasBuffer) StructuredBuffer<Camera> _cameras_buffer;
 #define camera _cameras_buffer[0]

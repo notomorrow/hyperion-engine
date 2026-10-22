@@ -1,4 +1,4 @@
-#include "include/Defines.hlsli"
+#include "Include/Defines.hlsli"
 
 PERMUTE(INSTANCING);
 PERMUTE(TERRAIN_MORPH);
@@ -97,10 +97,10 @@ DECLARE_SAMPLER(Default, SamplerNearest) SamplerState sampler_nearest;
 
 #define texture_sampler sampler_linear
 
-#include "include/Material.hlsli"
+#include "Include/Material.hlsli"
 
-#include "include/TerrainMaterial.hlsli"
-#include "include/TerrainColor.hlsli"
+#include "Include/TerrainMaterial.hlsli"
+#include "Include/TerrainColor.hlsli"
 
 #ifndef HYP_FEATURES_BINDLESS_TEXTURES
 DECLARE_SRV(Material, TerrainSplatMap) Texture2D TerrainSplatMap;
@@ -115,11 +115,11 @@ DECLARE_SRV(Material, TerrainNormal3) Texture2D TerrainNormal3;
 DECLARE_SRV(Material, TerrainNormalMap) Texture2D TerrainNormalMap;
 #endif // !HYP_FEATURES_BINDLESS_TEXTURES
 
-#include "include/Scene.hlsli"
-#include "include/Packing.hlsli"
-#include "include/EnvProbes.hlsli"
-#include "include/Gbuffer.hlsli"
-#include "include/Entity.hlsli"
+#include "Include/Scene.hlsli"
+#include "Include/Packing.hlsli"
+#include "Include/EnvProbes.hlsli"
+#include "Include/Gbuffer.hlsli"
+#include "Include/Entity.hlsli"
 
 DECLARE_BUFFER_DYNAMIC(Default, CBuffer) cbuffer CBuffer
 {

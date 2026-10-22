@@ -6,7 +6,7 @@
 #ifndef CLUSTERED_SHADING_HLSLI
 #define CLUSTERED_SHADING_HLSLI
 
-#include "include/Defines.hlsli"
+#include "Include/Defines.hlsli"
 
 // Every shader that includes this declares STATIC(TILE_SIZE, 32) / STATIC(TILE_Z_BINS, 16), but a variant
 // compiled from a request that lost those statics would otherwise fail to build. The defaults have to match

@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 PERMUTE(CONE_TRACING);
 
@@ -37,7 +37,7 @@ VSOutput VSMain(VSInput input)
 #ifdef PIXEL_SHADER
 
 #include "SSRShared.hlsli"
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 struct PSInput
 {
@@ -70,10 +70,10 @@ DECLARE_SAMPLER(RenderSSR, SamplerNearest) SamplerState sampler_nearest;
 DECLARE_SAMPLER(RenderSSR, SamplerLinear) SamplerState sampler_linear;
 DECLARE_SRV(RenderSSR, BlueNoiseBuffer) StructuredBuffer<int4> BlueNoiseBuffer;
 
-#include "../include/Noise.hlsli"
-#include "../include/Shared.hlsli"
-#include "../include/Gbuffer.hlsli"
-#include "../include/EnvProbes.hlsli"
+#include "../Include/Noise.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/EnvProbes.hlsli"
 
 float IsoscelesTriangleOpposite(float adjacent_length, float cone_theta)
 {

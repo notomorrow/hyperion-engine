@@ -1,10 +1,10 @@
 #define PATHTRACER
 #define LIGHTMAPPER
 
-#include "../../include/Defines.hlsli"
-#include "../../include/Shared.hlsli"
-#include "../../include/Noise.hlsli"
-#include "../../include/Packing.hlsli"
+#include "../../Include/Defines.hlsli"
+#include "../../Include/Shared.hlsli"
+#include "../../Include/Noise.hlsli"
+#include "../../Include/Packing.hlsli"
 
 PERMUTE(MODE, LIGHTMAP, IRRADIANCE, RADIANCE, MOMENTS, BENT_NORMALS);
 
@@ -19,10 +19,10 @@ DECLARE_SRV(LightmapPathTracer, TLAS) RaytracingAccelerationStructure tlas;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../../include/Scene.hlsli"
-#include "../../include/Packing.hlsli"
-#include "../../include/Noise.hlsli"
-#include "../../include/BRDF.hlsli"
+#include "../../Include/Scene.hlsli"
+#include "../../Include/Packing.hlsli"
+#include "../../Include/Noise.hlsli"
+#include "../../Include/BRDF.hlsli"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -31,16 +31,16 @@ DECLARE_SRV(LightmapPathTracer, BlueNoiseBuffer) StructuredBuffer<int4> BlueNois
 
 DECLARE_SRV(LightmapPathTracer, EnvProbesColorTexture) TextureCubeArray envProbesColorTexture;
 
-#include "../../include/BlueNoise.hlsli"
-#include "../../include/EnvProbes.hlsli"
+#include "../../Include/BlueNoise.hlsli"
+#include "../../Include/EnvProbes.hlsli"
 
 DECLARE_SRV(LightmapPathTracer, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
 #define world_shader_data _worlds_buffer[0]
 
-#include "../../include/Octahedron.hlsli"
+#include "../../Include/Octahedron.hlsli"
 
-#include "../../include/RayTracing/RayTracingHelpers.hlsli"
-#include "../../include/RayTracing/Payload.hlsli"
+#include "../../Include/RayTracing/RayTracingHelpers.hlsli"
+#include "../../Include/RayTracing/Payload.hlsli"
 
 DECLARE_UAV(LightmapPathTracer, HitsBuffer) RWStructuredBuffer<float4> hits;
 
