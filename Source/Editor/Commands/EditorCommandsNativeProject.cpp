@@ -440,6 +440,9 @@ Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir,
     //    args += " --singleplayer";
     //}
 
+    // until packaging has multiplayer settings again. without it the game waits in its loading world for a server
+    args += " --singleplayer";
+
     const String config = String("{\n  \"App\": {\n    \"Name\": \"") + name
         + "\",\n    \"Args\": \"" + args
         + "\"\n  }\n}\n";
