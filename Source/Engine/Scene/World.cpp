@@ -387,6 +387,14 @@ void World::Shutdown()
         return;
     }
 
+    for (const Handle<Scene>& scene : m_scenes)
+    {
+        if (scene)
+        {
+            scene->SetOwnerThreadId(CurrentThreadId());
+        }
+    }
+
     if (m_worldGrid)
     {
         m_worldGrid->Shutdown();
