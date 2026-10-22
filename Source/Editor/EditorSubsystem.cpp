@@ -24,6 +24,7 @@
 #include <Editor/EditorTemplateLibrary.hpp>
 #include <Editor/EditorNativeModule.hpp>
 #include <Editor/EditorProjectLayout.hpp>
+#include <Editor/EditorProjectSettings.hpp>
 
 #include <Editor/Tasks/EditorTasks.hpp>
 
@@ -4313,6 +4314,16 @@ String EditorSubsystem::GetProjectContentDirectory(const String& projectPath) co
     }
 
     return contentDirResult.GetValue();
+}
+
+String EditorSubsystem::GetProjectModuleName(const String& projectPath) const
+{
+    return GetNativeProjectName(FilePath(projectPath));
+}
+
+String EditorSubsystem::GetProjectGameTitle(const String& projectPath) const
+{
+    return Hyperion::GetProjectGameTitle(FilePath(projectPath));
 }
 
 void EditorSubsystem::ConnectPlayNetClient()

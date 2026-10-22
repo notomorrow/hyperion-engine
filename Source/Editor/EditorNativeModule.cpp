@@ -9,6 +9,7 @@
 #include <Editor/EditorNativeModule.hpp>
 #include <Editor/EditorProject.hpp>
 #include <Editor/EditorProjectLayout.hpp>
+#include <Editor/EditorProjectSettings.hpp>
 #include <Editor/EditorSubsystem.hpp>
 
 #include <Framework/Game.hpp>
@@ -33,6 +34,7 @@
 #include <Core/Reflection/ScriptObjectFunctions.hpp>
 
 #include <Core/Utilities/GlobalContext.hpp>
+#include <Core/Utilities/StringUtil.hpp>
 
 #include <Core/IO/ByteWriter.hpp>
 #include <Core/IO/ByteReader.hpp>
@@ -562,30 +564,7 @@ static void ReplaceRetiredProjectGame(EditorProject* project, const LoadedNative
 
 EDITOR_API String GetNativeProjectName(const FilePath& projectFilepath)
 {
-    const String baseName = FilePath(projectFilepath.Basename()).StripExtension();
-
-    String name;
-
-    // @TODO Centralize in Utils
-    for (const char* it = baseName.Data(); *it != 0; ++it)
-    {
-        const char ch = *it;
-
-        const bool isAlpha = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
-        const bool isDigit = ch >= '0' && ch <= '9';
-
-        if (isAlpha || ch == '_' || (isDigit && name.Any()))
-        {
-            name.Append(ch);
-        }
-    }
-
-    if (name.Empty())
-    {
-        name = "MyGame";
-    }
-
-    return name;
+    return ReadProjectModuleName(projectFilepath);
 }
 
 EDITOR_API FilePath GetNativeModulePath(const FilePath& projectFilepath)
@@ -932,10 +911,10 @@ struct GameProjectFile
     FilePath filepath;
 };
 
-Array<GameProjectFile> GetGameProjectFiles(const FilePath& projectFilepath, GameProjectLanguage language)
+Array<GameProjectFile> GetGameProjectFiles(const FilePath& projectFilepath, GameProjectLanguage language, const String& name)
 {
     const FilePath sourceDir = projectFilepath.BasePath() / "Source";
-    const String className = GetNativeProjectName(projectFilepath) + "Game";
+    const String className = name + "Game";
 
     Array<GameProjectFile> files;
 
@@ -943,10 +922,10 @@ Array<GameProjectFile> GetGameProjectFiles(const FilePath& projectFilepath, Game
     {
         const FilePath templateDir = CoreApi::GetBaseDirectory() / "Source/Templates/ManagedGame";
 
-        files.PushBack({ templateDir / "Game.csproj.in", GetManagedProjectFilePath(projectFilepath) });
+        files.PushBack({ templateDir / "Game.csproj.in", sourceDir / (name + ".csproj") });
         files.PushBack({ templateDir / "Game.cs.in", sourceDir / (className + ".cs") });
         files.PushBack({ templateDir / "Program.cs.in", sourceDir / "Program.cs" });
-        files.PushBack({ templateDir / "Game.slnx.in", projectFilepath.BasePath() / (GetNativeProjectName(projectFilepath) + ".slnx") });
+        files.PushBack({ templateDir / "Game.slnx.in", projectFilepath.BasePath() / (name + ".slnx") });
     }
     else if (language == GameProjectLanguage::Native)
     {
@@ -983,7 +962,7 @@ bool ReadTextFile(const FilePath& filepath, String& outText)
     return true;
 }
 
-bool RenderGameProjectTemplate(const FilePath& templatePath, const FilePath& projectFilepath, String& outText)
+bool RenderGameProjectTemplate(const FilePath& templatePath, const FilePath& projectFilepath, const String& name, String& outText)
 {
     String templateText;
 
@@ -991,8 +970,6 @@ bool RenderGameProjectTemplate(const FilePath& templatePath, const FilePath& pro
     {
         return false;
     }
-
-    const String name = GetNativeProjectName(projectFilepath);
 
     String contentDir = "../../";
 
@@ -1045,16 +1022,17 @@ EDITOR_API bool IsGameProjectUnmodified(const FilePath& projectFilepath)
     }
 
     const FilePath sourceDir = projectFilepath.BasePath() / "Source";
+    const String name = GetNativeProjectName(projectFilepath);
 
     std::error_code errorCode;
     Array<std::filesystem::path> generatedPaths;
 
-    for (const GameProjectFile& file : GetGameProjectFiles(projectFilepath, language))
+    for (const GameProjectFile& file : GetGameProjectFiles(projectFilepath, language, name))
     {
         String expectedText;
         String actualText;
 
-        if (!RenderGameProjectTemplate(file.templatePath, projectFilepath, expectedText)
+        if (!RenderGameProjectTemplate(file.templatePath, projectFilepath, name, expectedText)
             || !ReadTextFile(file.filepath, actualText)
             || expectedText != actualText)
         {
@@ -1105,11 +1083,14 @@ EDITOR_API Result GenerateGameProjectFiles(const FilePath& projectFilepath, Game
         return HYP_MAKE_ERROR(Error, "No game project language given");
     }
 
-    for (const GameProjectFile& file : GetGameProjectFiles(projectFilepath, language))
+    // before any file is written, Source/ existing changes what the project's name resolves to
+    const String name = GetNativeProjectName(projectFilepath);
+
+    for (const GameProjectFile& file : GetGameProjectFiles(projectFilepath, language, name))
     {
         String text;
 
-        if (!RenderGameProjectTemplate(file.templatePath, projectFilepath, text))
+        if (!RenderGameProjectTemplate(file.templatePath, projectFilepath, name, text))
         {
             return HYP_MAKE_ERROR(Error, "Template {} is missing", file.templatePath);
         }
@@ -1149,13 +1130,19 @@ EDITOR_API Result RemoveGameProjectFiles(const FilePath& projectFilepath)
 
     const GameProjectLanguage language = GetGameProjectLanguage(projectFilepath);
     const FilePath sourceDir = projectFilepath.BasePath() / "Source";
+    const String name = GetNativeProjectName(projectFilepath);
+
+    // a module built from the removed sources would still be picked up for play
+    const FilePath modulePath = language == GameProjectLanguage::Managed
+        ? GetManagedModulePath(projectFilepath)
+        : GetNativeModulePath(projectFilepath);
 
     if (!sourceDir.RemoveRecursively())
     {
         return HYP_MAKE_ERROR(Error, "Failed to remove {}", sourceDir);
     }
 
-    for (const GameProjectFile& file : GetGameProjectFiles(projectFilepath, language))
+    for (const GameProjectFile& file : GetGameProjectFiles(projectFilepath, language, name))
     {
         if (file.filepath.Exists())
         {
@@ -1163,14 +1150,151 @@ EDITOR_API Result RemoveGameProjectFiles(const FilePath& projectFilepath)
         }
     }
 
-    // a module built from the removed sources would still be picked up for play
-    const FilePath modulePath = language == GameProjectLanguage::Managed
-        ? GetManagedModulePath(projectFilepath)
-        : GetNativeModulePath(projectFilepath);
-
     if (modulePath.Exists())
     {
         modulePath.Remove();
+    }
+
+    return {};
+}
+
+EDITOR_API Result RenameGameProjectFiles(const FilePath& projectFilepath, const String& oldName, const String& newName)
+{
+    const GameProjectLanguage language = GetGameProjectLanguage(projectFilepath);
+
+    if (language == GameProjectLanguage::None)
+    {
+        return HYP_MAKE_ERROR(Error, "{} has no game code to rename", projectFilepath);
+    }
+
+    const Array<GameProjectFile> oldFiles = GetGameProjectFiles(projectFilepath, language, oldName);
+    const Array<GameProjectFile> newFiles = GetGameProjectFiles(projectFilepath, language, newName);
+
+    for (size_t index = 0; index < oldFiles.Size(); index++)
+    {
+        if (oldFiles[index].filepath != newFiles[index].filepath && oldFiles[index].filepath.Exists() && newFiles[index].filepath.Exists())
+        {
+            return HYP_MAKE_ERROR(Error, "Can't rename {} to {}, it already exists", oldFiles[index].filepath, newFiles[index].filepath);
+        }
+    }
+
+    for (size_t index = 0; index < oldFiles.Size(); index++)
+    {
+        if (oldFiles[index].filepath == newFiles[index].filepath || !oldFiles[index].filepath.Exists())
+        {
+            continue;
+        }
+
+        std::error_code errorCode;
+        std::filesystem::rename(oldFiles[index].filepath.Data(), newFiles[index].filepath.Data(), errorCode);
+
+        if (errorCode)
+        {
+            return HYP_MAKE_ERROR(Error, "Failed to rename {} to {}: {}", oldFiles[index].filepath, newFiles[index].filepath, errorCode.message().c_str());
+        }
+    }
+
+    // g_cls<Name>Game is the reflection global of the Game class
+    const Pair<String, String> classReplacements[] = {
+        { String("g_cls") + oldName + "Game", String("g_cls") + newName + "Game" },
+        { oldName + "Game", newName + "Game" }
+    };
+
+    // the bare name is only the build's: targets, assembly and project file names
+    const Pair<String, String> buildReplacements[] = {
+        { oldName + "Game", newName + "Game" },
+        { oldName, newName }
+    };
+
+    static const char* const s_codeExtensions[] = { ".cpp", ".cc", ".c", ".hpp", ".h", ".inl", ".cs" };
+    static const char* const s_buildExtensions[] = { ".csproj", ".props", ".targets", ".txt", ".cmake", ".slnx", ".sln" };
+
+    Array<std::filesystem::path> codeFiles;
+    std::error_code errorCode;
+
+    const FilePath sourceDir = projectFilepath.BasePath() / "Source";
+
+    for (std::filesystem::recursive_directory_iterator it(sourceDir.Data(), errorCode), end; !errorCode && it != end; it.increment(errorCode))
+    {
+        if (it->is_directory(errorCode))
+        {
+            if (IsGameProjectScratchDirectory(it->path()))
+            {
+                it.disable_recursion_pending();
+            }
+
+            continue;
+        }
+
+        codeFiles.PushBack(it->path());
+    }
+
+    for (const GameProjectFile& file : newFiles)
+    {
+        if (file.filepath.BasePath() == projectFilepath.BasePath() && file.filepath.Exists())
+        {
+            codeFiles.PushBack(std::filesystem::path(file.filepath.Data()));
+        }
+    }
+
+    for (const std::filesystem::path& codeFile : codeFiles)
+    {
+        const std::string extension = codeFile.extension().string();
+
+        const auto hasExtension = [&extension](Span<const char* const> extensions)
+        {
+            return std::find_if(extensions.Begin(), extensions.End(), [&extension](const char* candidate)
+                       {
+                           return extension == candidate;
+                       })
+                != extensions.End();
+        };
+
+        Span<const Pair<String, String>> replacements;
+
+        if (hasExtension(s_codeExtensions))
+        {
+            replacements = classReplacements;
+        }
+        else if (hasExtension(s_buildExtensions))
+        {
+            replacements = buildReplacements;
+        }
+        else
+        {
+            continue;
+        }
+
+        const FilePath filepath(codeFile.string().c_str());
+
+        String text;
+
+        if (!ReadTextFile(filepath, text))
+        {
+            continue;
+        }
+
+        String renamedText = text;
+
+        for (const Pair<String, String>& replacement : replacements)
+        {
+            renamedText = StringUtil::ReplaceIdentifier(renamedText, replacement.first, replacement.second);
+        }
+
+        if (renamedText == text)
+        {
+            continue;
+        }
+
+        FileByteWriter writer { filepath };
+
+        if (!writer.IsOpen())
+        {
+            return HYP_MAKE_ERROR(Error, "Failed to open {} for writing", filepath);
+        }
+
+        writer.Write(renamedText.Data(), renamedText.Size());
+        writer.Close();
     }
 
     return {};

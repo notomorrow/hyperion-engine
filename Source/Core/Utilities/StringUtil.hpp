@@ -263,6 +263,75 @@ static inline auto ToSnakeCase(const containers::String<StringType, AllocatorTyp
     return result;
 }
 
+template <class CharType>
+static inline bool IsIdentifierChar(CharType ch)
+{
+    return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_';
+}
+
+/// Keeps the characters valid in a C++/C# identifier, dropping any leading digits
+template <int StringType, class AllocatorType>
+static inline auto ToIdentifier(const containers::String<StringType, AllocatorType>& str)
+{
+    containers::String<StringType, AllocatorType> result;
+
+    for (auto* it = str.Data(); *it != 0; ++it)
+    {
+        const bool isDigit = *it >= '0' && *it <= '9';
+
+        if (IsIdentifierChar(*it) && !(isDigit && result.Empty()))
+        {
+            result.Append(*it);
+        }
+    }
+
+    return result;
+}
+
+/// Replaces each \p search that isn't part of a longer identifier
+template <int StringType, class AllocatorType>
+static inline auto ReplaceIdentifier(
+    const containers::String<StringType, AllocatorType>& text,
+    const containers::String<StringType, AllocatorType>& search,
+    const containers::String<StringType, AllocatorType>& replace)
+{
+    if (search.Empty())
+    {
+        return text;
+    }
+
+    containers::String<StringType, AllocatorType> result;
+
+    const auto* data = text.Data();
+    const size_t size = text.Size();
+    const size_t searchSize = search.Size();
+
+    size_t copyStart = 0;
+    size_t index = 0;
+
+    while (index + searchSize <= size)
+    {
+        if (std::equal(data + index, data + index + searchSize, search.Data())
+            && (index == 0 || !IsIdentifierChar(data[index - 1]))
+            && (index + searchSize == size || !IsIdentifierChar(data[index + searchSize])))
+        {
+            result.Append(data + copyStart, data + index);
+            result.Append(replace.Data());
+
+            index += searchSize;
+            copyStart = index;
+
+            continue;
+        }
+
+        ++index;
+    }
+
+    result.Append(data + copyStart, data + size);
+
+    return result;
+}
+
 template <int StringType, class AllocatorType, class Predicate>
 static inline auto TakeWhile(const containers::String<StringType, AllocatorType>& src, Predicate&& predicate)
 {

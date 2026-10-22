@@ -5,6 +5,9 @@
 
 #include <Editor/EditorNativeModule.hpp>
 #include <Editor/EditorProjectLayout.hpp>
+#include <Editor/EditorProjectSettings.hpp>
+
+#include <Core/DataProcessing/JSON/JSON.hpp>
 
 #include <Core/Threading/Threads.hpp>
 
@@ -63,17 +66,30 @@ void GenerateGameProject(EditorSubsystem* subsystem, GameProjectLanguage languag
 
     const GameProjectLanguage currentLanguage = GetGameProjectLanguage(projectFilepath);
 
+    if (currentLanguage != GameProjectLanguage::None && (currentLanguage == language || !IsGameProjectUnmodified(projectFilepath)))
+    {
+        PlatformUtils::OpenInFileBrowser(sourceDir);
+
+        return;
+    }
+
+    const String moduleName = currentProject->GetModuleName();
+
+    // once the code exists, a new title no longer renames it
+    if (currentProject->GetProjectSettings()->moduleName != moduleName)
+    {
+        currentProject->GetProjectSettings()->moduleName = moduleName;
+
+        if (!SaveProjectWithPromptOrAlert(currentProject, "The operation will be aborted to prevent loss of data"))
+        {
+            return;
+        }
+    }
+
     Result result;
 
     if (currentLanguage != GameProjectLanguage::None)
     {
-        if (currentLanguage == language || !IsGameProjectUnmodified(projectFilepath))
-        {
-            PlatformUtils::OpenInFileBrowser(sourceDir);
-
-            return;
-        }
-
         result = RemoveGameProjectFiles(projectFilepath);
     }
 
@@ -95,7 +111,7 @@ void GenerateGameProject(EditorSubsystem* subsystem, GameProjectLanguage languag
         return;
     }
 
-    HYP_LOG(Editor, Info, "Generated {} project for '{}' at {}", languageName, GetNativeProjectName(projectFilepath), sourceDir);
+    HYP_LOG(Editor, Info, "Generated {} project for '{}' at {}", languageName, moduleName, sourceDir);
 
     if (openFolder)
     {
@@ -380,8 +396,33 @@ bool HasNativeGameCode(const FilePath& projectFilepath)
     return (projectFilepath.BasePath() / "Source" / "Game").Exists();
 }
 
-Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir, const String& name, Name startupWorldName, const PackagingOptions& packagingOptions)
+Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir, const String& title, const String& moduleName, Name startupWorldName, const PackagingOptions& packagingOptions)
 {
+#ifdef HYP_WINDOWS
+    static const char* const s_executableExtension = ".exe";
+#else
+    static const char* const s_executableExtension = "";
+#endif
+
+    // the launcher is built under the module name, the player sees the title
+    const FilePath builtExecutable = outputDir / (moduleName + s_executableExtension);
+    const String executableName = MakeFileNameFromTitle(title);
+
+    if (executableName.Any() && executableName != moduleName && builtExecutable.Exists())
+    {
+        const FilePath titledExecutable = outputDir / (executableName + s_executableExtension);
+
+        if (titledExecutable.Exists())
+        {
+            titledExecutable.Remove();
+        }
+
+        if (!builtExecutable.Rename(titledExecutable))
+        {
+            return HYP_MAKE_ERROR(Error, "Failed to rename {} to {}", builtExecutable, titledExecutable);
+        }
+    }
+
     // a redistributed editor carries the C++ runtime next to it; a dev build relies on the installed one
     static const char* const s_runtimeLibraries[] = {
         "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "msvcp140_atomic_wait.dll", "msvcp140_codecvt_ids.dll",
@@ -443,11 +484,14 @@ Result StagePackagedGame(const FilePath& binariesDir, const FilePath& outputDir,
     // until packaging has multiplayer settings again. without it the game waits in its loading world for a server
     args += " --singleplayer";
 
-    const String config = String("{\n  \"App\": {\n    \"Name\": \"") + name
-        + "\",\n    \"Args\": \"" + args
-        + "\"\n  }\n}\n";
+    JSON::Object appConfig;
+    appConfig.Set("Name", JSON::JString(title));
+    appConfig.Set("Args", JSON::JString(args));
 
-    writer.Write(config.Data(), config.Size());
+    JSON::Object config;
+    config.Set("App", JSON::Value(std::move(appConfig)));
+
+    writer.WriteString(JSON::Value(std::move(config)).ToString(true).ToUtf8());
     writer.Close();
 
     return {};
@@ -498,7 +542,14 @@ public:
         const std::time_t now = std::time(nullptr);
         std::strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S", std::localtime(&now));
 
-        Package(currentProject, currentProject->GetFilePath().BasePath() / "Packaged" / (String("Build_") + timestamp));
+        String folderName = MakeFileNameFromTitle(currentProject->GetGameTitle());
+
+        if (folderName.Empty())
+        {
+            folderName = "Build";
+        }
+
+        Package(currentProject, currentProject->GetFilePath().BasePath() / "Packaged" / (folderName + "_" + timestamp));
     }
 
 private:
@@ -511,7 +562,8 @@ private:
             return;
         }
 
-        const String name = GetNativeProjectName(project->GetFilePath());
+        const String title = project->GetGameTitle();
+        const String moduleName = GetNativeProjectName(project->GetFilePath());
 
         if (!outputDir.Exists() && !outputDir.MkDir())
         {
@@ -530,7 +582,8 @@ private:
 
         TaskSystem::GetInstance().Enqueue(
             [editorTaskScope,
-                name,
+                title,
+                moduleName,
                 outputDir,
                 projectFilepath = project->GetFilePath(),
                 binariesDir = GetNativeModulePath(project->GetFilePath()).BasePath(),
@@ -548,7 +601,7 @@ private:
                 {
                     editorTaskScope->GetEditorTask()->SetDescription("Copying the game");
 
-                    result = StagePackagedGame(binariesDir, outputDir, name, startupWorldName, packagingOptions);
+                    result = StagePackagedGame(binariesDir, outputDir, title, moduleName, startupWorldName, packagingOptions);
                 }
 
                 if (result.HasError())

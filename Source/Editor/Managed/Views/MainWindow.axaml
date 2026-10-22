@@ -1322,6 +1322,9 @@
                             </StackPanel>
                             <DropDownButton.ContextMenu>
                                 <ContextMenu Placement="Bottom" Opened="OnToolSettingsMenuOpened">
+                                    <MenuItem Header="Project Settings"
+                                              Click="OnProjectSettingsClick"
+                                              ToolTip.Tip="Manage settings for the game's project" />
                                     <MenuItem Header="World Settings"
                                               Click="OnWorldSettingsClick"
                                               ToolTip.Tip="Manage settings for the game's world" />

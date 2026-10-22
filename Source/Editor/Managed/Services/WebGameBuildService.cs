@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,9 +42,9 @@ namespace Hyperion.Editor.Services
                 return false;
             }
 
-            string projectName = GetProjectName(projectFilePath, projectDirectory);
+            string gameTitle = ProjectLayout.GetGameTitle(projectFilePath!);
 
-            ExternalEditorTask task = new ExternalEditorTask($"Building {projectName} for Web", "Starting");
+            ExternalEditorTask task = new ExternalEditorTask($"Building {gameTitle} for Web", "Starting");
             task.SetIsForegroundTask(true);
             task.Commit();
 
@@ -55,6 +56,7 @@ namespace Hyperion.Editor.Services
                 bool isCancelled = false;
 
                 List<string> arguments = new List<string> { "-ContentDir", ProjectLayout.GetContentDirectory(projectFilePath!) };
+                arguments.AddRange(GetNameArguments(projectFilePath!));
 
                 if (run)
                 {
@@ -139,12 +141,12 @@ namespace Hyperion.Editor.Services
                 return;
             }
 
-            string projectName = GetProjectName(projectFilePath, projectDirectory);
+            string gameTitle = ProjectLayout.GetGameTitle(projectFilePath!);
             DateTime? builtTime = GetBuiltTime(projectDirectory);
 
             if (builtTime == null)
             {
-                ShowMessage(MessageBox.Info("Not built for the web yet", $"{projectName} hasn't been built for the web yet. Build it now and run it in the browser?")
+                ShowMessage(MessageBox.Info("Not built for the web yet", $"{gameTitle} hasn't been built for the web yet. Build it now and run it in the browser?")
                     .Button("Build and Run", BuildAndRun)
                     .Button("Cancel", () => { }));
 
@@ -155,15 +157,15 @@ namespace Hyperion.Editor.Services
 
             if (outOfDateReason != null)
             {
-                ShowMessage(MessageBox.Warning("Web build out of date", $"{outOfDateReason} since {projectName} was last built for the web. Rebuild it before running?")
+                ShowMessage(MessageBox.Warning("Web build out of date", $"{outOfDateReason} since {gameTitle} was last built for the web. Rebuild it before running?")
                     .Button("Rebuild and Run", BuildAndRun)
-                    .Button("Run Anyway", () => _ = Task.Run(() => ServeAsync(scriptPath, projectDirectory)))
+                    .Button("Run Anyway", () => _ = Task.Run(() => ServeAsync(scriptPath, projectFilePath!, projectDirectory)))
                     .Button("Cancel", () => { }));
 
                 return;
             }
 
-            await ServeAsync(scriptPath, projectDirectory).ConfigureAwait(false);
+            await ServeAsync(scriptPath, projectFilePath!, projectDirectory).ConfigureAwait(false);
         }
 
         private static void BuildAndRun()
@@ -171,11 +173,11 @@ namespace Hyperion.Editor.Services
             EngineManager.EditorGame?.EditorSubsystem?.ExecuteCommandByName(new Name("EditorCommandBuildWebGame"), "--run");
         }
 
-        private static async Task ServeAsync(string scriptPath, string projectDirectory)
+        private static async Task ServeAsync(string scriptPath, string projectFilePath, string projectDirectory)
         {
             string? firstError = null;
 
-            int exitCode = await RunScriptAsync(scriptPath, projectDirectory, new[] { "-ServeOnly" }, line =>
+            int exitCode = await RunScriptAsync(scriptPath, projectDirectory, GetNameArguments(projectFilePath).Append("-ServeOnly").ToArray(), line =>
             {
                 if (firstError == null && ErrorLineRegex.IsMatch(line))
                 {
@@ -319,12 +321,22 @@ namespace Hyperion.Editor.Services
             return true;
         }
 
-        private static string GetProjectName(string? projectFilePath, string projectDirectory)
+        private static string[] GetNameArguments(string projectFilePath)
         {
-            return Path.GetFileNameWithoutExtension(projectFilePath) ?? Path.GetFileName(projectDirectory);
+            return [
+                "-Name",
+                ProjectLayout.GetModuleName(projectFilePath),
+                "-Title",
+                ProjectLayout.GetGameTitle(projectFilePath)
+            ];
         }
 
-        private static async Task<int> RunScriptAsync(string scriptPath, string projectDirectory, string[] arguments, Action<string> onOutputLine, Action<Process> onStarted)
+        private static async Task<int> RunScriptAsync(
+            string scriptPath,
+            string projectDirectory,
+            string[] arguments,
+            Action<string> onOutputLine,
+            Action<Process> onStarted)
         {
             ProcessStartInfo startInfo = new ProcessStartInfo
             {

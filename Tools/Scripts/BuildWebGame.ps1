@@ -6,6 +6,8 @@ param(
     [switch]$FastLink,
     [int]$MaxTextureSize = 0,
     [string]$Worlds = "",
+    [string]$Name = "",
+    [string]$Title = "",
     [int]$Port = 8137
 )
 
@@ -16,6 +18,7 @@ param(
 #   -Run        serve Binaries/Web on localhost afterwards and open it in the browser; keeps function names in the wasm for readable stacks
 #   -ServeOnly  skip the build: serve the last one and open it in the browser
 #   -FastLink   link at -O1: minutes faster, for testing locally; a build to host links at -Oz
+#   -Name       the name of the game's code and page files, -Title the page title; the editor passes both from the project settings
 #
 # Build/Web/Built.stamp is written by a finished build, dated when that build started.
 
@@ -73,13 +76,24 @@ if (-not $projectFile)
     Fail "No .hypproject in $Project"
 }
 
-# the same name the editor gives a project's game code
-$name = ($projectFile.BaseName -replace '[^A-Za-z0-9_]', '') -replace '^[0-9]+', ''
+# without -Name, the name the editor gives the game code of a project with no settings for it
+if ($name -eq "")
+{
+    $name = ($projectFile.BaseName -replace '[^A-Za-z0-9_]', '') -replace '^[0-9]+', ''
+}
 
 if ($name -eq "")
 {
     $name = "MyGame"
 }
+
+if ($Title -eq "")
+{
+    $Title = $name
+}
+
+# cmd expands %VAR% even inside quotes
+$pageTitle = [System.Net.WebUtility]::HtmlEncode($Title) -replace '%', '&#37;'
 
 $managedProject = Join-Path $Project "Source\$name.csproj"
 $isManaged = Test-Path $managedProject
@@ -383,7 +397,7 @@ $linkOptimization = if ($FastLink) { "-O1" } else { "-Oz" }
 $keepsFunctionNames = if ($Run) { "ON" } else { "OFF" }
 
 Invoke-Cmd ("set `"EMSDK_QUIET=1`" && call `"$env:EMSDK\emsdk_env.bat`" >nul && emcmake cmake -S `"$templateDir`" -B `"$cmakeDir`" -G Ninja -DCMAKE_BUILD_TYPE=Release " + `
-    "-DHYPERION_WEB_SDK=`"$($webSdk -replace '\\', '/')`" -DHYP_WEB_PAGE_NAME=$name -DHYP_WEB_PACKAGE=`"$($packageDir -replace '\\', '/')`" " + `
+    "-DHYPERION_WEB_SDK=`"$($webSdk -replace '\\', '/')`" -DHYP_WEB_PAGE_NAME=$name -DHYP_WEB_PAGE_TITLE=`"$pageTitle`" -DHYP_WEB_PACKAGE=`"$($packageDir -replace '\\', '/')`" " + `
     "-DHYP_WEB_GAME_DIR=`"$gameDirArgument`" -DHYP_WEB_OUTPUT=`"$($pageDir -replace '\\', '/')`" -DHYP_WEB_LINK_OPTIMIZATION=$linkOptimization -DHYP_WEB_FUNCTION_NAMES=$keepsFunctionNames " + `
     "-DHYP_WEB_MANAGED_LINK_INPUTS=`"$($managedLinkInputs -replace '\\', '/')`" -DHYP_WEB_GAME_CLASS=`"$gameClassArgument`" && cmake --build `"$cmakeDir`"") `
     "Building the page failed"

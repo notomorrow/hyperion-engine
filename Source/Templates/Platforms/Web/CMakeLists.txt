@@ -11,6 +11,10 @@ foreach(requiredVariable HYPERION_WEB_SDK HYP_WEB_PAGE_NAME HYP_WEB_PACKAGE HYP_
   endif()
 endforeach()
 
+if(NOT HYP_WEB_PAGE_TITLE)
+  set(HYP_WEB_PAGE_TITLE "${HYP_WEB_PAGE_NAME}")
+endif()
+
 include("${HYPERION_WEB_SDK}")
 
 set(CMAKE_CXX_STANDARD 20)

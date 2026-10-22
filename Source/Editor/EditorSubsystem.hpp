@@ -262,6 +262,12 @@ public:
     HYP_METHOD()
     String GetProjectContentDirectory(const String& projectPath) const;
 
+    HYP_METHOD()
+    String GetProjectModuleName(const String& projectPath) const;
+
+    HYP_METHOD()
+    String GetProjectGameTitle(const String& projectPath) const;
+
     ////////////////////
 
     HYP_METHOD()

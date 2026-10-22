@@ -68,6 +68,7 @@ if(HYP_WEB)
   set(HYP_WEB_NODE_PACKAGE_DIR "" CACHE PATH "Host folder to mount as the package when running under node")
 
   set(HYP_WEB_PAGE_NAME ${BUILD_NAME})
+  set(HYP_WEB_PAGE_TITLE "Hyperion")
   configure_file("${HYP_PLATFORM_DIR}/index.html.in" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/index.html" @ONLY)
   configure_file("${HYP_PLATFORM_DIR}/isolation-worker.js" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/isolation-worker.js" COPYONLY)
 
