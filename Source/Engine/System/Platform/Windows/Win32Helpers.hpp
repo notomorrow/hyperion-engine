@@ -15,4 +15,6 @@ bool HandleWindowEvent(
     Win32ApplicationWindow* window, Event& event,
     HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+HWND GetDialogOwnerWindow();
+
 } // namespace Hyperion

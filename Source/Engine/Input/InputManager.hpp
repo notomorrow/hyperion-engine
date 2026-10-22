@@ -266,6 +266,8 @@ private:
     };
 
     InputEventQueue* m_eventQueue;
+    uint32 m_numDroppedEvents = 0;
+
     InputState m_inputState;
 
     AtomicVec2i m_mousePosition;

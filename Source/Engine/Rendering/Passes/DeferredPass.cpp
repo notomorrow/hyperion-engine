@@ -1314,6 +1314,17 @@ void DeferredPass::ResizeView(Viewport viewport, Vec2u outputExtent, View* view,
     GBuffer* gbuffer = view->GetOutputTarget().GetGBuffer();
     Assert(gbuffer != nullptr && gbuffer->IsCreated());
 
+    passData.taaPass.Reset();
+    passData.fogVolumePass.Reset();
+    passData.tonemapPass.Reset();
+    passData.reflectionsOnlyPass.Reset();
+    passData.reflectionsPass.Reset();
+    passData.bloomPass.Reset();
+    passData.ssgi.Reset();
+    passData.glimmerIrradiancePass.Reset();
+    passData.gtao.Reset();
+    passData.rayTracingReflections.Reset();
+
     gbuffer->Resize(newSize);
 
     Framebuffer* opaquePassFramebuffer = view->GetOutputTarget().GetFramebuffer(GBufferPass::Opaque);
@@ -1423,8 +1434,11 @@ void DeferredPass::ResizeView(Viewport viewport, Vec2u outputExtent, View* view,
     passData.tonemapPass = MakeUnique<TonemapPass>(outputExtent, gbuffer);
     passData.tonemapPass->Create();
 
-    passData.lightmapPass = MakeUnique<LightmapPass>();
-    passData.lightmapPass->Create();
+    if (!passData.lightmapPass)
+    {
+        passData.lightmapPass = MakeUnique<LightmapPass>();
+        passData.lightmapPass->Create();
+    }
 
     passData.fogVolumePass = MakeUnique<FogVolumePass>(newSize, gbuffer);
     passData.fogVolumePass->Create();
@@ -1433,8 +1447,11 @@ void DeferredPass::ResizeView(Viewport viewport, Vec2u outputExtent, View* view,
     passData.cloudPass->Resize(newSize);
 
 #ifdef HYP_EDITOR
-    passData.editorGridPass = MakeUnique<EditorGridPass>();
-    passData.editorGridPass->Create();
+    if (!passData.editorGridPass)
+    {
+        passData.editorGridPass = MakeUnique<EditorGridPass>();
+        passData.editorGridPass->Create();
+    }
 #endif
 
     passData.taaPass = MakeUnique<TAAPass>(newSize, outputExtent, gbuffer);

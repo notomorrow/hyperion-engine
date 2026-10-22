@@ -241,6 +241,35 @@ static KeyCode MapWin32VirtualKeyToKeyCode(LPARAM lParam, WPARAM wParam)
     return KeyCode::KEY_UNKNOWN;
 }
 
+HWND GetDialogOwnerWindow()
+{
+    if (!g_appContext.IsValid())
+    {
+        return nullptr;
+    }
+
+    ApplicationWindow* mainWindow = g_appContext->GetMainWindow();
+
+    if (mainWindow == nullptr || mainWindow->GetHWND() == nullptr)
+    {
+        return nullptr;
+    }
+
+    HWND owner = GetAncestor(mainWindow->GetHWND(), GA_ROOT);
+
+    if (owner != nullptr && GetWindowThreadProcessId(owner, nullptr) != GetCurrentThreadId())
+    {
+        DWORD_PTR result = 0;
+
+        if (!SendMessageTimeoutW(owner, WM_NULL, 0, 0, SMTO_ABORTIFHUNG | SMTO_BLOCK, 250, &result))
+        {
+            return nullptr;
+        }
+    }
+
+    return owner;
+}
+
 bool HandleWindowEvent(
     Win32ApplicationWindow* window, Event& event,
     HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)

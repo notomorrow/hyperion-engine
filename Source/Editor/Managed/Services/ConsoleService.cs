@@ -188,7 +188,14 @@ namespace Hyperion.Editor.Services
             _ringBuffer.DrainTo(_pendingEntries);
 
             if (_pendingEntries.Count == 0)
+            {
                 return;
+            }
+
+            if (_pendingEntries.Count > 1000)
+            {
+                _pendingEntries.RemoveRange(0, _pendingEntries.Count - 1000);
+            }
 
             if (Interlocked.CompareExchange(ref _isSubmittingPendingEntries, 1, 0) == 1)
             {
@@ -204,6 +211,11 @@ namespace Hyperion.Editor.Services
             {
                 _logsSource.Edit(list =>
                 {
+                    if (toSubmit.Count > 1000)
+                    {
+                        toSubmit.RemoveRange(0, toSubmit.Count - 1000);
+                    }
+
                     list.AddRange(toSubmit);
 
                     if (list.Count > 1000)
@@ -214,7 +226,7 @@ namespace Hyperion.Editor.Services
 
                 toSubmit.Clear(); // return to pool for next swap
                 _isSubmittingPendingEntries = 0;
-            });
+            }, DispatcherPriority.Background);
         }
 
         public void LoadCompletionNames()

@@ -25,6 +25,8 @@
 
 #include <Core/Debug/Debug.hpp>
 
+#include <System/Platform/Windows/Win32Helpers.hpp>
+
 #include <string>
 
 namespace Hyperion {
@@ -214,7 +216,7 @@ void ShowOpenFileDialog(
 
                 OPENFILENAMEW ofn {};
                 ofn.lStructSize = sizeof(ofn);
-                ofn.hwndOwner = nullptr;
+                ofn.hwndOwner = GetDialogOwnerWindow();
                 ofn.lpstrFile = reinterpret_cast<wchar_t*>(fileNameBufferData.Data());
                 ofn.nMaxFile = (DWORD)(fileNameBufferData.Size() / sizeof(wchar_t));
                 ofn.lpstrFilter = reinterpret_cast<wchar_t*>(filterBufferWriter.GetBuffer().Data());
@@ -330,7 +332,7 @@ void ShowSaveFileDialog(
 
     OPENFILENAMEW ofn {};
     ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = nullptr;
+    ofn.hwndOwner = GetDialogOwnerWindow();
     ofn.lpstrFile = reinterpret_cast<wchar_t*>(fileNameBufferData.Data());
     ofn.nMaxFile = (DWORD)(fileNameBufferData.Size() / sizeof(wchar_t));
     ofn.lpstrFilter = reinterpret_cast<wchar_t*>(filterBufferWriter.GetBuffer().Data());
@@ -466,7 +468,7 @@ void ShowSelectFolderDialog(
 
             pFileDialog->SetTitle(titleWide.Data());
 
-            hr = pFileDialog->Show(NULL);
+            hr = pFileDialog->Show(GetDialogOwnerWindow());
 
             if (!SUCCEEDED(hr))
             {

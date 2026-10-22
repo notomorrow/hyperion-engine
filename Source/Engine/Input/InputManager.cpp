@@ -713,7 +713,16 @@ void InputManager::ProcessEvent(Event&& event)
 
     if (!m_eventQueue->Push(std::move(event)))
     {
-        HYP_LOG(Input, Warning, "Input event queue full! Skipped event of type {}", eventType);
+        if (m_numDroppedEvents++ == 0)
+        {
+            HYP_LOG(Input, Warning, "Input event queue full! Skipping events, starting with type {}", eventType);
+        }
+    }
+    else if (m_numDroppedEvents != 0)
+    {
+        HYP_LOG(Input, Warning, "Input event queue drained after skipping {} events", m_numDroppedEvents);
+
+        m_numDroppedEvents = 0;
     }
 }
 

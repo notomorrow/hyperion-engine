@@ -4,6 +4,8 @@
 #include <Windows.h>
 #include <CommCtrl.h>
 
+#include <System/Platform/Windows/Win32Helpers.hpp>
+
 static void ToWideString(const char* utf8, wchar_t*& outWide)
 {
     int len = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, nullptr, 0);
@@ -147,7 +149,7 @@ extern "C"
 
         TASKDIALOGCONFIG config = {};
         config.cbSize = sizeof(config);
-        config.hwndParent = nullptr;
+        config.hwndParent = Hyperion::GetDialogOwnerWindow();
         config.pszWindowTitle = wideTitle;
 
         switch (type)
