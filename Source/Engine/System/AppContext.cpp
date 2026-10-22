@@ -34,6 +34,7 @@
 #elif HYP_ANDROID
 #include <vulkan/vulkan_android.h>
 #elif HYP_LINUX
+#include <System/Platform/Linux/X11Helpers.hpp>
 #include <vulkan/vulkan_xlib.h>
 #endif
 

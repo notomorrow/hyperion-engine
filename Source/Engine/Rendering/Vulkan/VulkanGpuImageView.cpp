@@ -4,7 +4,6 @@
  *  @licence MIT
 */
 
-#include "Vulkan/vulkan_core.h"
 #include <VulkanPch.hpp>
 
 #include <Rendering/Vulkan/VulkanGpuImageView.hpp>

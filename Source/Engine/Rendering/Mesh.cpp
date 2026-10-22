@@ -300,7 +300,7 @@ private:
             {
                 static constexpr uint32 NoBoneIndices = UINT32_MAX;
 
-                bs.vertexData.PushBack(BitCast<float>(NoBoneIndices));
+                bs.vertexData.PushBack(ByteUtil::BitCast<float>(NoBoneIndices));
 
                 // Weights
                 bs.vertexData.PushBack(0.0f);

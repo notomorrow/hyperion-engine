@@ -18,7 +18,7 @@ namespace Resources {
 
 #pragma region ResourceBindings
 
-#include <Rendering/resources/ResourceBindings.inl>
+#include <Rendering/Resources/ResourceBindings.inl>
 
 struct SubtypeResourceBindings
 {

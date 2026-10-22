@@ -62,7 +62,7 @@ struct alignas(alignof(T) * 4) Vec3
     {
     }
 
-    explicit constexpr Vec3(const Vec2<Type>& xy, Type z)
+    constexpr explicit Vec3(const Vec2<Type>& xy, Type z)
         : x(xy.x),
           y(xy.y),
           z(z)
@@ -71,9 +71,9 @@ struct alignas(alignof(T) * 4) Vec3
 
     constexpr Vec3(const Vec3& other) = default;
     constexpr Vec3& operator=(const Vec3& other) = default;
+
     constexpr Vec3(Vec3&& other) noexcept = default;
     constexpr Vec3& operator=(Vec3&& other) noexcept = default;
-    ~Vec3() = default;
 
     HYP_FORCE_INLINE constexpr Type GetX() const
     {
@@ -395,7 +395,7 @@ struct alignas(alignof(float) * 4) CORE_API Vec3<float>
     {
     }
 
-    explicit constexpr Vec3(const Vec2<Type>& xy, Type z)
+    constexpr explicit Vec3(const Vec2<Type>& xy, Type z)
         : x(xy.x),
           y(xy.y),
           z(z)
@@ -404,8 +404,10 @@ struct alignas(alignof(float) * 4) CORE_API Vec3<float>
 
     constexpr Vec3(const Vec3& other) = default;
     constexpr Vec3& operator=(const Vec3& other) = default;
+
     constexpr Vec3(Vec3&& other) noexcept = default;
     constexpr Vec3& operator=(Vec3&& other) noexcept = default;
+
     ~Vec3() = default;
 
     HYP_FORCE_INLINE constexpr Type GetX() const

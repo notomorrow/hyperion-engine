@@ -47,7 +47,7 @@ struct alignas(alignof(T) * 4) Vec4
         Type values[4];
     };
 
-    Vec4()
+    constexpr Vec4()
         : x(0),
           y(0),
           z(0),
@@ -55,7 +55,7 @@ struct alignas(alignof(T) * 4) Vec4
     {
     }
 
-    Vec4(Type xyzw)
+    constexpr Vec4(Type xyzw)
         : x(xyzw),
           y(xyzw),
           z(xyzw),
@@ -63,7 +63,7 @@ struct alignas(alignof(T) * 4) Vec4
     {
     }
 
-    Vec4(Type x, Type y, Type z, Type w)
+    constexpr Vec4(Type x, Type y, Type z, Type w)
         : x(x),
           y(y),
           z(z),
@@ -71,7 +71,7 @@ struct alignas(alignof(T) * 4) Vec4
     {
     }
 
-    explicit Vec4(const Vec2<Type>& xy, Type z, Type w)
+    constexpr explicit Vec4(const Vec2<Type>& xy, Type z, Type w)
         : x(xy.x),
           y(xy.y),
           z(z),
@@ -79,7 +79,7 @@ struct alignas(alignof(T) * 4) Vec4
     {
     }
 
-    explicit Vec4(const Vec2<Type>& xy, const Vec2<Type>& zw)
+    constexpr explicit Vec4(const Vec2<Type>& xy, const Vec2<Type>& zw)
         : x(xy.x),
           y(xy.y),
           z(zw.x),
@@ -87,7 +87,7 @@ struct alignas(alignof(T) * 4) Vec4
     {
     }
 
-    explicit Vec4(const Vec3<Type>& xyz, Type w)
+    constexpr explicit Vec4(const Vec3<Type>& xyz, Type w)
         : x(xyz.x),
           y(xyz.y),
           z(xyz.z),
@@ -95,8 +95,11 @@ struct alignas(alignof(T) * 4) Vec4
     {
     }
 
-    Vec4(const Vec4& other) = default;
-    Vec4& operator=(const Vec4& other) = default;
+    constexpr Vec4(const Vec4& other) = default;
+    constexpr Vec4& operator=(const Vec4& other) = default;
+
+    constexpr Vec4(Vec4&& other) noexcept = default;
+    constexpr Vec4& operator=(Vec4&& other) noexcept = default;
 
     HYP_FORCE_INLINE constexpr Type GetX() const
     {
@@ -336,7 +339,7 @@ struct alignas(alignof(float) * 4) CORE_API Vec4<float>
 #endif
     };
 
-    Vec4()
+    constexpr Vec4()
         : x(0),
           y(0),
           z(0),
@@ -345,13 +348,13 @@ struct alignas(alignof(float) * 4) CORE_API Vec4<float>
     }
 
 #if HYP_VEC4F_HAS_SSE
-    explicit Vec4(__m128 value)
+    constexpr explicit Vec4(__m128 value)
         : _value(value)
     {
     }
 #endif
 
-    Vec4(Type xyzw)
+    constexpr Vec4(Type xyzw)
         : x(xyzw),
           y(xyzw),
           z(xyzw),
@@ -359,7 +362,7 @@ struct alignas(alignof(float) * 4) CORE_API Vec4<float>
     {
     }
 
-    Vec4(Type x, Type y, Type z, Type w)
+    constexpr Vec4(Type x, Type y, Type z, Type w)
         : x(x),
           y(y),
           z(z),
@@ -367,7 +370,7 @@ struct alignas(alignof(float) * 4) CORE_API Vec4<float>
     {
     }
 
-    explicit Vec4(const Vec2<Type>& xy, Type z, Type w)
+    constexpr explicit Vec4(const Vec2<Type>& xy, Type z, Type w)
         : x(xy.x),
           y(xy.y),
           z(z),
@@ -375,7 +378,7 @@ struct alignas(alignof(float) * 4) CORE_API Vec4<float>
     {
     }
 
-    explicit Vec4(const Vec2<Type>& xy, const Vec2<Type>& zw)
+    constexpr explicit Vec4(const Vec2<Type>& xy, const Vec2<Type>& zw)
         : x(xy.x),
           y(xy.y),
           z(zw.x),
@@ -383,7 +386,7 @@ struct alignas(alignof(float) * 4) CORE_API Vec4<float>
     {
     }
 
-    explicit Vec4(const Vec3<Type>& xyz, Type w)
+    constexpr explicit Vec4(const Vec3<Type>& xyz, Type w)
         : x(xyz.x),
           y(xyz.y),
           z(xyz.z),
@@ -391,8 +394,11 @@ struct alignas(alignof(float) * 4) CORE_API Vec4<float>
     {
     }
 
-    Vec4(const Vec4& other) = default;
-    Vec4& operator=(const Vec4& other) = default;
+    constexpr Vec4(const Vec4& other) = default;
+    constexpr Vec4& operator=(const Vec4& other) = default;
+    
+    constexpr Vec4(Vec4&& other) noexcept = default;
+    constexpr Vec4& operator=(Vec4&& other) noexcept = default;
 
     HYP_FORCE_INLINE constexpr Type GetX() const
     {

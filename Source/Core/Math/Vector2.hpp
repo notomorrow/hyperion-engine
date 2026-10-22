@@ -55,9 +55,9 @@ struct alignas(alignof(T) * 2) Vec2
 
     constexpr Vec2(const Vec2& other) = default;
     constexpr Vec2& operator=(const Vec2& other) = default;
+
     constexpr Vec2(Vec2&& other) noexcept = default;
     constexpr Vec2& operator=(Vec2&& other) noexcept = default;
-    ~Vec2() = default;
 
     HYP_FORCE_INLINE constexpr T GetX() const
     {
@@ -393,6 +393,9 @@ struct alignas(alignof(float) * 2) CORE_API Vec2<float>
 
     constexpr Vec2(const Vec2& other) = default;
     constexpr Vec2& operator=(const Vec2& other) = default;
+
+    constexpr Vec2(Vec2&& other) noexcept = default;
+    constexpr Vec2& operator=(Vec2&& other) noexcept = default;
 
     HYP_FORCE_INLINE constexpr float GetX() const
     {
