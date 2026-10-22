@@ -5631,7 +5631,17 @@ void EditorSubsystem::OpenProject(const Handle<EditorProject>& project)
         m_delegateHandlers.Add(actionStack->OnAfterActionPop.Bind(actionStack.Get(), rebakeAfterAction));
     }
 
+    if (!isSimulationStateChange)
+    {
+        g_editorState->ReportProjectLoadStage(ProjectLoadStage::LoadWorld);
+    }
+
     InitializeProjectWorld(m_currentProject, isStartSimulation);
+
+    if (!isSimulationStateChange)
+    {
+        g_editorState->ReportProjectLoadStage(ProjectLoadStage::StartEditor);
+    }
 
     InitializePreviewServices(m_currentProject->GetWorld().Get());
 

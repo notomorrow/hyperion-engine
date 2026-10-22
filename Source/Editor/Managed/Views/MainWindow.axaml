@@ -1224,15 +1224,16 @@
                             <DropDownButton.Flyout>
                                 <MenuFlyout Opened="OnBuildFlyoutOpened" Placement="Bottom">
                                     <MenuItem Command="{Binding GameProjectMenuCommand}" Header="{Binding NativeProjectMenuText}" />
+                                    <Separator IsVisible="{Binding CanChangeGameProjectLanguage}" />
                                     <MenuItem
                                         Command="{Binding ChangeGameProjectLanguageCommand}"
                                         Header="Change Language..."
                                         IsVisible="{Binding CanChangeGameProjectLanguage}" />
                                     <Separator />
-                                    <MenuItem Command="{Binding BuildNativeGame}" Header="Build Game" />
-                                    <MenuItem Command="{Binding ReloadGameModule}" Header="Reload Game" />
-                                    <MenuItem Command="{Binding PackageGame}" Header="Package Game" />
+                                    <MenuItem Command="{Binding BuildNativeGame}" Header="Compile Game Module" />
+                                    <MenuItem Command="{Binding ReloadGameModule}" Header="Reload Game Module" />
                                     <Separator />
+                                    <MenuItem Command="{Binding PackageGame}" Header="Package Game" />
                                     <MenuItem Command="{Binding BuildWebGame}" Header="Package for Web" />
                                     <Separator />
                                     <MenuItem Click="OnPackagingSettingsClick" Header="Packaging Settings..." />

@@ -874,8 +874,8 @@ bool EntityManager::RemoveEntity(Entity* entity, bool calledFromEntityDestructor
             // - needed to ensure proper lifecycle. every OnComponentRemoved() call must be matched with an OnComponentAdded() call and vice versa
             if (componentContainerIt->second->GetComponentInterface().IsEntityTag())
             {
-                // Remove the tag from the entity
-                entity->OnTagRemoved(componentContainerIt->second->GetComponentInterface().GetEntityTag());
+                // the entity is leaving this manager, so don't add refresh tags back onto it
+                entity->OnTagRemoved(componentContainerIt->second->GetComponentInterface().GetEntityTag(), /* refreshDependentTags */ false);
             }
             else
             {

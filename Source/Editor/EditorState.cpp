@@ -42,6 +42,13 @@ static constexpr const char* RecentProjectsPinnedConfigKey = "Projects.RecentPin
 static constexpr const char* AlwaysOpenLastProjectConfigKey = "Projects.AlwaysOpenLastProject";
 static constexpr uint32 MaxRecentProjects = 10;
 
+struct ProjectLoadStageInfo
+{
+    ProjectLoadStage stage;
+    ANSIStringView description;
+    uint32 weight;
+};
+
 String NormalizeProjectFilepath(const String& projectFilepath)
 {
     const String trimmed = projectFilepath.Trimmed();
@@ -67,6 +74,17 @@ int64 GetUnixTimeSeconds()
 {
     return int64(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 }
+
+static constexpr ProjectLoadStageInfo ProjectLoadStages[] = {
+    { ProjectLoadStage::CloseProject, "Closing current project", 1 },
+    { ProjectLoadStage::ReadAssetRegistry, "Reading asset registry", 1 },
+    { ProjectLoadStage::ReadProjectFile, "Reading project file", 3 },
+    { ProjectLoadStage::LoadGameModule, "Loading game module", 2 },
+    { ProjectLoadStage::LoadScripts, "Loading scripts", 1 },
+    { ProjectLoadStage::LoadAssetFolders, "Loading asset folders", 1 },
+    { ProjectLoadStage::LoadWorld, "Loading world", 8 },
+    { ProjectLoadStage::StartEditor, "Starting editor", 2 }
+};
 
 } // namespace
 
@@ -196,6 +214,28 @@ void EditorState::AddTask(const Handle<EditorTaskBase>& task)
     }
 
     m_taskManager.AddTask(task);
+}
+
+void EditorState::ReportProjectLoadStage(ProjectLoadStage stage)
+{
+    const ProjectLoadStageInfo* info = nullptr;
+    uint32 weightBefore = 0;
+    uint32 totalWeight = 0;
+
+    for (const ProjectLoadStageInfo& it : ProjectLoadStages)
+    {
+        if (it.stage == stage)
+        {
+            info = &it;
+            weightBefore = totalWeight;
+        }
+
+        totalWeight += it.weight;
+    }
+
+    Assert(info != nullptr);
+
+    OnProjectLoadStatusChanged(String(info->description), weightBefore * 100 / totalWeight);
 }
 
 void EditorState::Update(float delta)

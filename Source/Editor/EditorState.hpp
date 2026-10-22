@@ -34,6 +34,18 @@ namespace Baking {
 struct BakeLayer;
 } // namespace Baking
 
+enum class ProjectLoadStage : uint32
+{
+    CloseProject,
+    ReadAssetRegistry,
+    ReadProjectFile,
+    LoadGameModule,
+    LoadScripts,
+    LoadAssetFolders,
+    LoadWorld,
+    StartEditor
+};
+
 HYP_CLASS()
 class EDITOR_API EditorState : public ObjectBase
 {
@@ -71,6 +83,8 @@ public:
 
     HYP_METHOD()
     void AddTask(const Handle<EditorTaskBase>& task);
+
+    void ReportProjectLoadStage(ProjectLoadStage stage);
 
     HYP_METHOD()
     Array<Handle<Node>> GetClipboardNodes() const;
@@ -119,6 +133,9 @@ public:
 
     HYP_FIELD()
     ScriptableDelegate<void, Handle<EditorProject>, bool /* isSimulationStateChange */ > OnCurrentProjectChanged;
+
+    HYP_FIELD()
+    ScriptableDelegate<void, String, uint32 /* percent */ > OnProjectLoadStatusChanged;
 
     HYP_FIELD()
     ScriptableDelegate<void, Handle<EditorTaskBase>> OnTaskStarted;
