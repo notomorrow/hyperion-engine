@@ -100,7 +100,10 @@ struct Formatter<StringType, UUID>
     }
 };
 
-constexpr UUID SwapEndian(UUID value)
+} // namespace utilities
+
+namespace ByteUtil {
+static constexpr inline UUID SwapEndian(UUID value)
 {
     UUID result = UUID::Invalid();
     result.data0 = SwapEndian(value.data0);
@@ -108,7 +111,6 @@ constexpr UUID SwapEndian(UUID value)
 
     return result;
 }
-
-} // namespace utilities
+} // namespace ByteUtil
 
 } // namespace Hyperion

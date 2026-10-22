@@ -658,9 +658,9 @@ public:
 
         const Handle<Scene> activeScene = subsystem->GetActiveScene();
 
-        uint64 newParentAddress = 0;
+        uintptr_t newParentAddress = 0;
 
-        if (!StringUtil::Parse(GetArgument(NumArguments() - 1), &newParentAddress) || newParentAddress == NULL)
+        if (!StringUtil::Parse(GetArgument(NumArguments() - 1), &newParentAddress) || newParentAddress == uintptr_t(NULL))
         {
             HYP_LOG(Editor, Error, "EditorCommandReparentNode: invalid new parent address");
             return;
@@ -678,9 +678,9 @@ public:
 
         for (int argumentIndex = 0; argumentIndex < NumArguments() - 1; argumentIndex++)
         {
-            uint64 nodeAddress = 0;
+            uintptr_t nodeAddress = 0;
 
-            if (!StringUtil::Parse(GetArgument(argumentIndex), &nodeAddress) || nodeAddress == NULL)
+            if (!StringUtil::Parse(GetArgument(argumentIndex), &nodeAddress) || nodeAddress == uintptr_t(NULL))
             {
                 HYP_LOG(Editor, Error, "EditorCommandReparentNode: invalid node address '{}'", GetArgument(argumentIndex));
                 return;
@@ -832,11 +832,13 @@ public:
     {
         AssertOnThread(g_simThread);
 
-        uint64 nodeAddress = 0;
-        uint64 targetSceneAddress = 0;
+        uintptr_t nodeAddress = 0;
+        uintptr_t targetSceneAddress = 0;
 
-        if (!StringUtil::Parse(GetArgument(0), &nodeAddress) || !StringUtil::Parse(GetArgument(1), &targetSceneAddress)
-            || nodeAddress == NULL || targetSceneAddress == NULL)
+        if (!StringUtil::Parse(GetArgument(0), &nodeAddress)
+            || !StringUtil::Parse(GetArgument(1), &targetSceneAddress)
+            || nodeAddress == uintptr_t(NULL)
+            || targetSceneAddress == uintptr_t(NULL))
         {
             HYP_LOG(Editor, Error, "EditorCommandMoveNodeToScene: invalid node or scene address");
             return;
@@ -971,9 +973,10 @@ public:
     {
         AssertOnThread(g_simThread);
 
-        uint64 nodeAddress = 0;
+        // NULL used for visual clarity, instead of just writing zero.
+        uintptr_t nodeAddress = uintptr_t(NULL);
 
-        if (!StringUtil::Parse(GetArgument(0), &nodeAddress) || nodeAddress == NULL)
+        if (!StringUtil::Parse(GetArgument(0), &nodeAddress) || nodeAddress == uintptr_t(NULL))
         {
             HYP_LOG(Editor, Error, "EditorCommandRenameNode: invalid node address");
             return;

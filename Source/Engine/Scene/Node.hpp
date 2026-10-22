@@ -363,9 +363,15 @@ class ENGINE_API Node : public ObjectBase
     HYP_OBJECT_BODY(Node);
 
 public:
-    class DescendantsIterator
+    class DescendantsIterator final
     {
     public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = Node*;
+        using difference_type = std::ptrdiff_t;
+        using pointer = value_type*;
+        using reference = value_type;
+
         DescendantsIterator()
             : m_current(nullptr)
         {
@@ -451,9 +457,15 @@ public:
         Array<StackEntry, ThreadAllocator> m_stack;
     };
 
-    class DescendantsView
+    class DescendantsView final
     {
     public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = Node*;
+        using difference_type = std::ptrdiff_t;
+        using pointer = value_type*;
+        using reference = value_type;
+
         explicit DescendantsView(const Node* node)
             : m_node(node)
         {
@@ -478,20 +490,20 @@ public:
             return End();
         }
 
-        /*! \brief Get the number of descendant nodes.
-         *  \note This method traverses the entire tree to count descendants, so it has O(n) complexity.
-         *  \returns The total count of descendant nodes. */
-        size_t Size() const
-        {
-            size_t count = 0;
+        // /*! \brief Get the number of descendant nodes.
+        //  *  \note This method traverses the entire tree to count descendants, so it has O(n) complexity.
+        //  *  \returns The total count of descendant nodes. */
+        // size_t Size() const
+        // {
+        //     size_t count = 0;
 
-            for (auto it = Begin(); it != End(); ++it)
-            {
-                ++count;
-            }
+        //     for (auto it = Begin(); it != End(); ++it)
+        //     {
+        //         ++count;
+        //     }
 
-            return count;
-        }
+        //     return count;
+        // }
 
         /*! \brief Get a descendant node by index.
          *  \param index The index of the descendant to retrieve (0-based).

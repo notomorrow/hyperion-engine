@@ -287,7 +287,10 @@ AssetLoadResult OgreXMLSkeletonLoader::LoadAsset(LoaderState& state) const
                 continue;
             }
 
-            auto parentBoneIt = std::find_if(rootBone->GetDescendants().begin(), rootBone->GetDescendants().end(), [parentName = item.parentName](Node* node)
+            auto parentBoneIt = std::find_if(
+                rootBone->GetDescendants().begin(),
+                rootBone->GetDescendants().end(),
+                [parentName = item.parentName](Node* node)
                 {
                     return node->IsA(Bone::StaticClass())
                         && static_cast<Bone*>(node)->GetBoneName() == parentName;

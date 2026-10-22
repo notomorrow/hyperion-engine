@@ -116,8 +116,8 @@ String UUID::ToString() const
         uint64 data[2];
         uint8 bytes[16];
     } u {
-        ByteUtil::IsLittleEndian() ? data0 : SwapEndian(data0),
-        ByteUtil::IsLittleEndian() ? data1 : SwapEndian(data1)
+        ByteUtil::IsLittleEndian() ? data0 : ByteUtil::SwapEndian(data0),
+        ByteUtil::IsLittleEndian() ? data1 : ByteUtil::SwapEndian(data1)
     };
 
     char buffer[37] = { '\0' };

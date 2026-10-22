@@ -6,6 +6,13 @@
 
 #pragma once
 
+// Fwd decls for X11
+// Needed to compile a TU with vulkan_x11 included.
+typedef struct _XDisplay Display;
+typedef unsigned long Window;
+typedef unsigned long VisualID;
+typedef unsigned long Atom;	
+
 namespace Hyperion {
 
 struct X11Atoms
