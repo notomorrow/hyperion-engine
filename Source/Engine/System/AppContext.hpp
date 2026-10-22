@@ -352,6 +352,8 @@ public:
     Win32ApplicationWindow(ANSIString title, Vec2i size);
     ~Win32ApplicationWindow() override;
 
+    static void DetachAllFromParents();
+
     void Initialize(WindowOptions windowOptions);
 
     HYP_METHOD()
