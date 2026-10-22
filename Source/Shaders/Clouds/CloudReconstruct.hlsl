@@ -1,7 +1,7 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../include/Scene.hlsli"
+#include "../Include/Scene.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 // Rebuilds the half resolution cloud image each frame. The trace covers one pixel of every 2x2 block, cycling through

@@ -1,11 +1,11 @@
-#include "include/Defines.hlsli"
+#include "Include/Defines.hlsli"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "include/Gbuffer.hlsli"
-#include "include/Scene.hlsli"
-#include "include/Entity.hlsli"
-#include "include/Packing.hlsli"
-#include "include/Material.hlsli"
+#include "Include/Gbuffer.hlsli"
+#include "Include/Scene.hlsli"
+#include "Include/Entity.hlsli"
+#include "Include/Packing.hlsli"
+#include "Include/Material.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 DECLARE_BUFFER_DYNAMIC(Default, CBuffer) cbuffer CBuffer
@@ -114,7 +114,7 @@ DECLARE_SRV(Default, DiffuseMap) TextureCube DiffuseMap;
 DECLARE_SRV(Default, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
 #define world_shader_data _worlds_buffer[0]
 
-#include "include/Atmosphere.hlsli"
+#include "Include/Atmosphere.hlsli"
 
 // a little bigger than the real sun (about 0.27 degrees) so it reads at game resolutions
 static const float SunDiskInnerCosAngle = 0.99997563; // cos(0.4 degrees)

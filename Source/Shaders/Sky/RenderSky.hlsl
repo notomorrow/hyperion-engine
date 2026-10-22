@@ -1,15 +1,15 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../include/Scene.hlsli"
-#include "../include/Shared.hlsli"
-#include "../include/Material.hlsli"
-#include "../include/Gbuffer.hlsli"
-#include "../include/EnvProbes.hlsli"
-#include "../include/Noise.hlsli"
-#include "../include/Entity.hlsli"
-#include "../include/Packing.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/Material.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/EnvProbes.hlsli"
+#include "../Include/Noise.hlsli"
+#include "../Include/Entity.hlsli"
+#include "../Include/Packing.hlsli"
 
 DECLARE_SRV_DYNAMIC(Default, CurrentEnvProbe) StructuredBuffer<EnvProbe> current_env_probe_buffer;
 #define current_env_probe current_env_probe_buffer[0]
@@ -45,7 +45,7 @@ DECLARE_BUFFER_DYNAMIC(Default, CBuffer) cbuffer CBuffer
 DECLARE_SAMPLER(Default, SamplerNearest) SamplerState sampler_nearest;
 DECLARE_SAMPLER(Default, SamplerLinear) SamplerState sampler_linear;
 
-#include "../include/Atmosphere.hlsli"
+#include "../Include/Atmosphere.hlsli"
 
 #define NUM_STEPS_X 16
 #define NUM_STEPS_Y 16

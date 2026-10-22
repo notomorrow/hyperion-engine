@@ -1,6 +1,6 @@
-#include "include/Defines.hlsli"
-#include "include/Shared.hlsli"
-#include "include/Scene.hlsli"
+#include "Include/Defines.hlsli"
+#include "Include/Shared.hlsli"
+#include "Include/Scene.hlsli"
 
 DECLARE_SRV(MergeHalfResTexture, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
 #define world_shader_data _worlds_buffer[0]

@@ -1,6 +1,6 @@
-#include "../include/Defines.hlsli"
-#include "../include/Clouds.hlsli"
-#include "../include/CloudNoise.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Clouds.hlsli"
+#include "../Include/CloudNoise.hlsli"
 
 DECLARE_UAV(Clouds, OutShadowMap) RWTexture2D<float> OutShadowMap;
 
@@ -17,7 +17,7 @@ DECLARE_BUFFER_DYNAMIC(Clouds, CloudShadowMapConstants) cbuffer CloudShadowMapCo
     CloudShadowMap cloudShadowMap;
 };
 
-#include "../include/CloudDensity.hlsli"
+#include "../Include/CloudDensity.hlsli"
 
 static const float ShadowMarchStepLength = 150.0;
 static const uint ShadowMarchMinSteps = 8;

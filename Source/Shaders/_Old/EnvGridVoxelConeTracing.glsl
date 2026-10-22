@@ -1,10 +1,10 @@
 #ifndef ENV_GRID_RADIANCE_GLSL
 #define ENV_GRID_RADIANCE_GLSL
 
-#include "../include/BRDF.hlsli"
-#include "../include/Noise.hlsli"
-#include "../include/BlueNoise.hlsli"
-#include "../include/Octahedron.hlsli"
+#include "../Include/BRDF.hlsli"
+#include "../Include/Noise.hlsli"
+#include "../Include/BlueNoise.hlsli"
+#include "../Include/Octahedron.hlsli"
 
 //#define HYP_VCT_USE_ROUGHNESS_SCATTERING
 

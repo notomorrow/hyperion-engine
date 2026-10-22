@@ -2,8 +2,8 @@ STATIC(MAX_LIGHTS, 4)
 
 #define DDGI
 
-#include "../../include/Defines.hlsli"
-#include "../../include/Shared.hlsli"
+#include "../../Include/Defines.hlsli"
+#include "../../Include/Shared.hlsli"
 
 #define HYP_NO_CUBEMAP
 
@@ -14,20 +14,20 @@ DECLARE_SAMPLER(DDGI, SamplerLinear) SamplerState sampler_linear;
 #define HYP_SAMPLER_NEAREST sampler_nearest
 #define HYP_SAMPLER_LINEAR sampler_linear
 
-#include "../../include/Vertex.hlsli"
+#include "../../Include/Vertex.hlsli"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../../include/Material.hlsli"
-#include "../../include/Entity.hlsli"
-#include "../../include/Scene.hlsli"
+#include "../../Include/Material.hlsli"
+#include "../../Include/Entity.hlsli"
+#include "../../Include/Scene.hlsli"
 
-#include "../../include/BRDF.hlsli"
+#include "../../Include/BRDF.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../../include/RayTracing/Mesh.hlsli"
-#include "../../include/RayTracing/Payload.hlsli"
+#include "../../Include/RayTracing/Mesh.hlsli"
+#include "../../Include/RayTracing/Payload.hlsli"
 
-#include "../../include/RayTracing/GlobalIllumination/ProbeUniforms.hlsli"
+#include "../../Include/RayTracing/GlobalIllumination/ProbeUniforms.hlsli"
 
 DECLARE_BUFFER_DYNAMIC(DDGI, CBuffer) cbuffer CBuffer
 {
@@ -37,7 +37,7 @@ DECLARE_BUFFER_DYNAMIC(DDGI, CBuffer) cbuffer CBuffer
 DECLARE_SRV(DDGI, ShadowMapsTextureArray) Texture2DArray<float> shadow_maps;
 DECLARE_SRV(DDGI, PointLightShadowMapsTextureArray) TextureCubeArray point_shadow_maps;
 
-#include "../../include/Shadows.hlsli"
+#include "../../Include/Shadows.hlsli"
 
 #undef HYP_NO_CUBEMAP
 
@@ -49,7 +49,7 @@ DECLARE_SRV(DDGI, MeshDescriptionsBuffer) StructuredBuffer<MeshDescription> mesh
 DECLARE_SRV(BindlessResources0, Textures) Texture2D textures[];
 DECLARE_SRV(BindlessResources1, Buffers) ByteAddressBuffer buffers[];
 
-#include "../../include/RayTracing/TerrainSurface.hlsli"
+#include "../../Include/RayTracing/TerrainSurface.hlsli"
 
 [shader("closesthit")]
 void ClosestHitMain(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attrib)

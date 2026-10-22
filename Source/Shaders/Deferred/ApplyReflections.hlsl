@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 #ifdef VERTEX_SHADER
 
@@ -53,8 +53,8 @@ DECLARE_SRV(ApplyReflections, GBufferDepthTexture) Texture2D GBufferDepthTexture
 DECLARE_SRV(ApplyReflections, SSAOResultTexture) Texture2D SSAOResultTexture;
 DECLARE_SRV(ApplyReflections, ReflectionsResultTexture) Texture2D ReflectionsResultTexture;
 
-#include "../include/Gbuffer.hlsli"
-#include "../include/Scene.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/Scene.hlsli"
 
 DECLARE_SRV_DYNAMIC(ApplyReflections, CamerasBuffer) StructuredBuffer<Camera> _cameras_buffer;
 #define camera _cameras_buffer[0]
@@ -62,7 +62,7 @@ DECLARE_SRV_DYNAMIC(ApplyReflections, CamerasBuffer) StructuredBuffer<Camera> _c
 DECLARE_SRV(ApplyReflections, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
 #define world_shader_data _worlds_buffer[0]
 
-#include "../include/BRDF.hlsli"
+#include "../Include/BRDF.hlsli"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 

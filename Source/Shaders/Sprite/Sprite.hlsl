@@ -1,8 +1,8 @@
-#include "../include/Defines.hlsli"
-#include "../include/Shared.hlsli"
-#include "../include/Entity.hlsli"
-#include "../include/GBuffer.hlsli"
-#include "../include/Scene.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/Entity.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/Scene.hlsli"
 #include "./Sprite.hlsli"
 
 struct SpriteInstanceData

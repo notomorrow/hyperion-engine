@@ -1,5 +1,5 @@
-#include "../include/Defines.hlsli"
-#include "../include/CloudNoise.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/CloudNoise.hlsli"
 
 PERMUTE(MODE, SHAPE, DETAIL)
 

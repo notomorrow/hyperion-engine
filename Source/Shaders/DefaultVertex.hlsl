@@ -1,6 +1,6 @@
-#include "./include/Shared.hlsli"
-#include "./include/Scene.hlsli"
-#include "./include/Material.hlsli"
+#include "./Include/Shared.hlsli"
+#include "./Include/Scene.hlsli"
+#include "./Include/Material.hlsli"
 
 struct VSInput
 {
@@ -35,10 +35,10 @@ struct VSOutput
     nointerpolation float3 ground_normal : TEXCOORD9;
 };
 
-#include "include/Entity.hlsli"
-#include "include/TerrainMorph.hlsli"
-#include "include/AlphaCutout.hlsli"
-#include "include/GroundCover.hlsli"
+#include "Include/Entity.hlsli"
+#include "Include/TerrainMorph.hlsli"
+#include "Include/AlphaCutout.hlsli"
+#include "Include/GroundCover.hlsli"
 
 #ifdef INSTANCING
 DECLARE_SRV(Default, EntitiesBuffer) StructuredBuffer<Entity> entities;
@@ -48,7 +48,7 @@ DECLARE_SRV(Default, InstanceDataBuffer) StructuredBuffer<InstanceTransform> Ins
 
 #ifdef SKINNING
 DECLARE_SRV_DYNAMIC(Default, SkeletonsBuffer) StructuredBuffer<float4x4> SkeletonsBuffer;
-#include "include/Skinning.hlsli"
+#include "Include/Skinning.hlsli"
 #endif // SKINNING
 
 #if defined(VT_Tree) || defined(VT_Foliage) || defined(TERRAIN_MORPH)
@@ -57,7 +57,7 @@ DECLARE_SRV(Default, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buf
 #endif // VT_Tree || VT_Foliage || TERRAIN_MORPH
 
 #if defined(VT_Tree) || defined(VT_Foliage)
-#include "include/Wind.hlsli"
+#include "Include/Wind.hlsli"
 #endif // VT_Tree || VT_Foliage
 
 DECLARE_BUFFER_DYNAMIC(Default, CBuffer) cbuffer CBuffer
@@ -71,7 +71,7 @@ DECLARE_BUFFER_DYNAMIC(Default, CBuffer) cbuffer CBuffer
     Material material;
 };
 
-#include "include/Instancing.hlsli"
+#include "Include/Instancing.hlsli"
 
 VSOutput VSMain(VSInput input, uint instanceId : SV_InstanceID, uint vertexId : SV_VertexID)
 {

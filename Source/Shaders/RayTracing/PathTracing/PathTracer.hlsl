@@ -2,10 +2,10 @@ STATIC(MAX_LIGHTS, 4)
 
 #define PATHTRACER
 
-#include "../../include/Defines.hlsli"
-#include "../../include/Shared.hlsli"
-#include "../../include/Noise.hlsli"
-#include "../../include/Packing.hlsli"
+#include "../../Include/Defines.hlsli"
+#include "../../Include/Shared.hlsli"
+#include "../../Include/Noise.hlsli"
+#include "../../Include/Packing.hlsli"
 
 DECLARE_SRV(PathTracer, GBufferAlbedoTexture) Texture2D GBufferAlbedoTexture;
 DECLARE_SRV(PathTracer, GBufferNormalsTexture) Texture2D GBufferNormalsTexture;
@@ -29,18 +29,18 @@ DECLARE_UAV(PathTracer, OutputImage) RWTexture2D<float4> image;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
-#include "../../include/Gbuffer.hlsli"
-#include "../../include/Scene.hlsli"
-#include "../../include/Packing.hlsli"
-#include "../../include/Noise.hlsli"
-#include "../../include/BRDF.hlsli"
+#include "../../Include/Gbuffer.hlsli"
+#include "../../Include/Scene.hlsli"
+#include "../../Include/Packing.hlsli"
+#include "../../Include/Noise.hlsli"
+#include "../../Include/BRDF.hlsli"
 
 /// Blue noise
 DECLARE_SRV(PathTracer, BlueNoiseBuffer) StructuredBuffer<int4> BlueNoiseBuffer;
 
-#include "../../include/BlueNoise.hlsli"
+#include "../../Include/BlueNoise.hlsli"
 
-#include "../../include/EnvProbes.hlsli"
+#include "../../Include/EnvProbes.hlsli"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
@@ -52,10 +52,10 @@ DECLARE_SRV_DYNAMIC(PathTracer, CurrentEnvProbe) StructuredBuffer<EnvProbe> EnvP
 
 DECLARE_SRV(PathTracer, EnvProbesColorTexture) TextureCubeArray envProbesColorTexture;
 
-#include "../../include/Octahedron.hlsli"
+#include "../../Include/Octahedron.hlsli"
 
-#include "../../include/RayTracing/RayTracingHelpers.hlsli"
-#include "../../include/RayTracing/Payload.hlsli"
+#include "../../Include/RayTracing/RayTracingHelpers.hlsli"
+#include "../../Include/RayTracing/Payload.hlsli"
 
 DECLARE_BUFFER_DYNAMIC(PathTracer, CBuffer) cbuffer CBuffer
 {

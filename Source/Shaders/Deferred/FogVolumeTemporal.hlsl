@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 struct FogVolumeTemporalConstants
 {

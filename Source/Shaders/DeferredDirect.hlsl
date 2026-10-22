@@ -1,4 +1,4 @@
-#include "include/Defines.hlsli"
+#include "Include/Defines.hlsli"
 
 PERMUTE(LIGHT_TYPE, CLUSTERED, DIRECTIONAL, POINT, SPOT, AREA_RECT);
 
@@ -71,15 +71,15 @@ DECLARE_SRV(DeferredPass, SSAOResultTexture) Texture2D SSAOResultTexture;
 
 // #define DEBUG_NORMALS
 
-#include "include/EnvProbes.hlsli"
-#include "include/Shared.hlsli"
-#include "include/Gbuffer.hlsli"
-#include "include/Entity.hlsli"
-#include "include/Scene.hlsli"
-#include "include/Clouds.hlsli"
+#include "Include/EnvProbes.hlsli"
+#include "Include/Shared.hlsli"
+#include "Include/Gbuffer.hlsli"
+#include "Include/Entity.hlsli"
+#include "Include/Scene.hlsli"
+#include "Include/Clouds.hlsli"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "include/Material.hlsli"
+#include "Include/Material.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 DECLARE_SRV(DeferredPass, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
@@ -148,11 +148,11 @@ DECLARE_SRV(DeferredPass, PointLightShadowMapsTextureArray) TextureCubeArray poi
 DECLARE_SRV(DeferredPass, EnvProbesColorTexture) TextureCubeArray envProbesColorTexture;
 DECLARE_SRV(DeferredPass, EnvProbesDepthTexture) TextureCubeArray<float2> envProbesDepthTexture;
 
-#include "./deferred/DeferredLighting.hlsli"
+#include "./Deferred/DeferredLighting.hlsli"
 
-#include "include/Shadows.hlsli"
+#include "Include/Shadows.hlsli"
 
-#include "include/LightSampling.hlsli"
+#include "Include/LightSampling.hlsli"
 
 #ifdef LIGHT_TYPE_DIRECTIONAL
 
@@ -189,7 +189,7 @@ DECLARE_SRV(DeferredPass, LightsBuffer) StructuredBuffer<Light> LightsBuffer;
 DECLARE_SRV(DeferredPass, ClusterGridBuffer) ByteAddressBuffer ClusterGridBuffer;
 DECLARE_SRV(DeferredPass, ClusterIndexBuffer) ByteAddressBuffer ClusterIndexBuffer;
 
-#include "deferred/ClusteredShading.hlsli"
+#include "Deferred/ClusteredShading.hlsli"
 
 DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
 {
@@ -211,7 +211,7 @@ uint GetShadowMapIndexForLight(uint lightIndex)
 
 #endif // LIGHT_TYPE_CLUSTERED
 
-#include "include/FoliageLighting.hlsli"
+#include "Include/FoliageLighting.hlsli"
 
 PSOutput PSMain(PSInput input)
 {

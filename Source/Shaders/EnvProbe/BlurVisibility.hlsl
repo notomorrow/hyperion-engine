@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 PERMUTE(KERNEL_SIZE, 3, 5, 7, 9);
 
@@ -9,7 +9,7 @@ PERMUTE(KERNEL_SIZE, 3, 5, 7, 9);
 #define HYP_SAMPLER_NEAREST sampler_nearest
 #define HYP_SAMPLER_LINEAR sampler_linear
 
-#include "../include/Shared.hlsli"
+#include "../Include/Shared.hlsli"
 
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 

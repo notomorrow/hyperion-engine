@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 PERMUTE(CONE_TRACING);
 PERMUTE(ROUGHNESS_SCATTERING);
@@ -40,9 +40,9 @@ VSOutput VSMain(VSInput input)
 #ifdef PIXEL_SHADER
 
 #include "SSRShared.hlsli"
-#include "../include/Defines.hlsli"
-#include "../include/Noise.hlsli"
-#include "../include/BRDF.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Noise.hlsli"
+#include "../Include/BRDF.hlsli"
 
 struct PSInput
 {
@@ -76,9 +76,9 @@ DECLARE_SAMPLER(RenderSSR, SamplerLinear) SamplerState sampler_linear;
 DECLARE_SRV(RenderSSR, BlueNoiseBuffer) StructuredBuffer<int4> BlueNoiseBuffer;
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../include/Gbuffer.hlsli"
-#include "../include/BlueNoise.hlsli"
-#include "../include/Temporal.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/BlueNoise.hlsli"
+#include "../Include/Temporal.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 #define MAX_ROUGHNESS 0.4

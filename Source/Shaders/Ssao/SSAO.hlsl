@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 #ifdef VERTEX_SHADER
 
@@ -34,9 +34,9 @@ VSOutput VSMain(VSInput input)
 
 #ifdef PIXEL_SHADER
 
-#include "../include/Defines.hlsli"
-#include "../include/Noise.hlsli"
-#include "../include/BRDF.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Noise.hlsli"
+#include "../Include/BRDF.hlsli"
 
 struct PSInput
 {
@@ -68,9 +68,9 @@ DECLARE_SRV_DYNAMIC(RenderSSAO, CamerasBuffer) StructuredBuffer<Camera> _cameras
 #define camera _cameras_buffer[0]
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../include/Gbuffer.hlsli"
-#include "../include/BlueNoise.hlsli"
-#include "../include/Temporal.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/BlueNoise.hlsli"
+#include "../Include/Temporal.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 

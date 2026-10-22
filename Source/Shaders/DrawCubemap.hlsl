@@ -1,6 +1,6 @@
-#include "include/Defines.hlsli"
-#include "include/Shared.hlsli"
-#include "include/Scene.hlsli"
+#include "Include/Defines.hlsli"
+#include "Include/Shared.hlsli"
+#include "Include/Scene.hlsli"
 
 STATIC(MAX_LIGHTS, 4)
 
@@ -49,9 +49,9 @@ struct VSOutput
     nointerpolation uint cutout_seed : TEXCOORD6;
 };
 
-#include "include/Entity.hlsli"
-#include "include/Material.hlsli"
-#include "include/AlphaCutout.hlsli"
+#include "Include/Entity.hlsli"
+#include "Include/Material.hlsli"
+#include "Include/AlphaCutout.hlsli"
 
 #ifdef INSTANCING
 DECLARE_SRV(Default, EntitiesBuffer) StructuredBuffer<Entity> entities;
@@ -72,10 +72,10 @@ DECLARE_BUFFER_DYNAMIC(Default, CBuffer) cbuffer CBuffer
 
 #ifdef SKINNING
 DECLARE_SRV_DYNAMIC(Default, SkeletonsBuffer) StructuredBuffer<float4x4> SkeletonsBuffer;
-#include "include/Skinning.hlsli"
+#include "Include/Skinning.hlsli"
 #endif // SKINNING
 
-#include "include/Instancing.hlsli"
+#include "Include/Instancing.hlsli"
 
 float4x4 LookAt(float3 pos, float3 target, float3 up)
 {
@@ -219,14 +219,14 @@ DECLARE_SAMPLER(Default, SamplerNearest) SamplerState sampler_nearest;
 
 #define texture_sampler sampler_linear
 
-#include "include/Material.hlsli"
-#include "include/AlphaCutout.hlsli"
-#include "include/Gbuffer.hlsli"
-#include "include/EnvProbes.hlsli"
-#include "include/Octahedron.hlsli"
-#include "include/Entity.hlsli"
-#include "include/Packing.hlsli"
-#include "include/BRDF.hlsli"
+#include "Include/Material.hlsli"
+#include "Include/AlphaCutout.hlsli"
+#include "Include/Gbuffer.hlsli"
+#include "Include/EnvProbes.hlsli"
+#include "Include/Octahedron.hlsli"
+#include "Include/Entity.hlsli"
+#include "Include/Packing.hlsli"
+#include "Include/BRDF.hlsli"
 
 #define HYP_CUBEMAP_AMBIENT 0.005
 
@@ -284,7 +284,7 @@ DECLARE_BUFFER_DYNAMIC(Default, ForwardShadingConstants) cbuffer ForwardShadingC
 DECLARE_SRV(Default, ShadowMapsTextureArray) Texture2DArray<float> shadow_maps;
 DECLARE_SRV(Default, PointLightShadowMapsTextureArray) TextureCubeArray point_shadow_maps;
 
-#include "include/Shadows.hlsli"
+#include "Include/Shadows.hlsli"
 
 // cascades follow the main camera, so a capture position can be outside all of them - treated as lit
 float GetDirectionalCSMShadow(float3 position, float3 N, float NdotL)

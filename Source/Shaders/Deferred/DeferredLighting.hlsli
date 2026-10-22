@@ -1,9 +1,9 @@
 #ifndef DEFERRED_LIGHTING_HLSLI
 #define DEFERRED_LIGHTING_HLSLI
 
-#include "../include/Shared.hlsli"
-#include "../include/BRDF.hlsli"
-#include "../include/Octahedron.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/BRDF.hlsli"
+#include "../Include/Octahedron.hlsli"
 
 // how much of the sky this pixel can see; DeferredIndirect sets it per pixel, everything else leaves it open
 static float g_skyVisibility = 1.0;
@@ -81,7 +81,7 @@ float3 CalculateRefraction(
 
 #ifndef HYP_DEFERRED_NO_ENV_PROBE
 
-#include "../include/EnvProbes.hlsli"
+#include "../Include/EnvProbes.hlsli"
 
 void ApplyReflectionProbe(uint probe_texture_index, float3 R, float lod, inout float4 ibl)
 {

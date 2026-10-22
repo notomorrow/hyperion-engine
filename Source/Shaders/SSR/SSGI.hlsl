@@ -1,13 +1,13 @@
 STATIC(MAX_LIGHTS, 4)
 STATIC(MAX_ENV_PROBES, 4)
 
-#include "../include/Defines.hlsli"
-#include "../include/Noise.hlsli"
-#include "../include/EnvProbes.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Noise.hlsli"
+#include "../Include/EnvProbes.hlsli"
 
 #include "./SSRShared.hlsli"
 
-#include "../include/BRDF.hlsli"
+#include "../Include/BRDF.hlsli"
 
 // OUTPUT isn't PERMUTE'd so nothing is usually defined; default to float (SSGI.cpp output is RGBA16F)
 #if defined(OUTPUT_RGBA8)
@@ -55,10 +55,10 @@ DECLARE_SRV_DYNAMIC(SSGI, CamerasBuffer) StructuredBuffer<Camera> _cameras_buffe
 #define camera _cameras_buffer[0]
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../include/Scene.hlsli"
-#include "../include/Gbuffer.hlsli"
-#include "../include/BlueNoise.hlsli"
-#include "../include/Octahedron.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/BlueNoise.hlsli"
+#include "../Include/Octahedron.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 DECLARE_SRV(SSGI, EnvProbesColorTexture) TextureCubeArray envProbesColorTexture;

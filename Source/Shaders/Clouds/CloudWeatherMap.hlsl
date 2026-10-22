@@ -1,6 +1,6 @@
-#include "../include/Defines.hlsli"
-#include "../include/Clouds.hlsli"
-#include "../include/CloudNoise.hlsli"
+#include "../Include/Defines.hlsli"
+#include "../Include/Clouds.hlsli"
+#include "../Include/CloudNoise.hlsli"
 
 DECLARE_UAV(Clouds, OutWeatherMap) RWTexture2DArray<float4> OutWeatherMap;
 

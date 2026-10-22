@@ -1,6 +1,6 @@
-#include "include/Defines.hlsli"
-#include "include/Shared.hlsli"
-#include "include/Scene.hlsli"
+#include "Include/Defines.hlsli"
+#include "Include/Shared.hlsli"
+#include "Include/Scene.hlsli"
 
 DECLARE_SRV(TAA, InColorTexture) Texture2D color_texture;
 DECLARE_SRV(TAA, InPrevColorTexture) Texture2D prev_color_texture;
@@ -28,7 +28,7 @@ DECLARE_BUFFER_DYNAMIC(TAA, TAAConstants) cbuffer TAAConstants
 
 #define TEMPORAL_BLENDING_REVERSE_TONEMAP
 
-#include "include/Temporal.hlsli"
+#include "Include/Temporal.hlsli"
 
 #define TAA_MAX_RADIANCE 16384.0
 #define VARIANCE_CLIP_GAMMA 1.0

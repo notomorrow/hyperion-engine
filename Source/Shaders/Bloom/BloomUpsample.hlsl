@@ -1,9 +1,9 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
-#include "../include/Shared.hlsli"
-#include "../include/Scene.hlsli"
-#include "../include/Gbuffer.hlsli"
-#include "../include/Packing.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/Packing.hlsli"
 
 #ifdef VERTEX_SHADER
 

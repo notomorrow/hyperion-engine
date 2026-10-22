@@ -1,9 +1,9 @@
 #define PATHTRACER
 #define LIGHTMAPPER
 
-#include "../../include/Defines.hlsli"
-#include "../../include/Shared.hlsli"
-#include "../../include/RayTracing/Payload.hlsli"
+#include "../../Include/Defines.hlsli"
+#include "../../Include/Shared.hlsli"
+#include "../../Include/RayTracing/Payload.hlsli"
 
 [shader("miss")]
 void MissMain(inout RayPayload payload)

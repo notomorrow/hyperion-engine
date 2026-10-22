@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 PERMUTE(GTAO_ENABLED);
 
@@ -20,8 +20,8 @@ struct VSOutput
 };
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "../include/Scene.hlsli"
-#include "../include/Shared.hlsli"
+#include "../Include/Scene.hlsli"
+#include "../Include/Shared.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 DECLARE_BUFFER_DYNAMIC(LightmapPass, CBuffer) cbuffer CBuffer
@@ -93,21 +93,21 @@ DECLARE_SAMPLER(LightmapPass, SamplerLinear)  SamplerState SamplerLinear;
 
 DECLARE_SRV(LightmapPass, SSAOResultTexture) Texture2D SSAOResultTexture;
 
-#include "../include/Shared.hlsli"
-#include "../include/Gbuffer.hlsli"
-#include "../include/Entity.hlsli"
-#include "../include/Scene.hlsli"
+#include "../Include/Shared.hlsli"
+#include "../Include/Gbuffer.hlsli"
+#include "../Include/Entity.hlsli"
+#include "../Include/Scene.hlsli"
 
-#include "../include/BRDF.hlsli"
+#include "../Include/BRDF.hlsli"
 
 DECLARE_SRV(LightmapPass, ShadowMapsTextureArray) Texture2DArray<float> shadow_maps;
 DECLARE_SRV(LightmapPass, PointLightShadowMapsTextureArray) TextureCubeArray point_shadow_maps;
 
-// #include "../include/Shadows.hlsli"
+// #include "../Include/Shadows.hlsli"
 
 DECLARE_SRV(LightmapPass, IrradianceTexture)  Texture2D IrradianceTexture;
 
-#include "../include/EnvProbes.hlsli"
+#include "../Include/EnvProbes.hlsli"
 
 DECLARE_SRV(LightmapPass, EnvProbesColorTexture)  TextureCubeArray envProbesColorTexture;
 

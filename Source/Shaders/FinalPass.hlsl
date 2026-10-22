@@ -1,8 +1,8 @@
-#include "include/Defines.hlsli"
-#include "include/Shared.hlsli"
+#include "Include/Defines.hlsli"
+#include "Include/Shared.hlsli"
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "include/Scene.hlsli"
+#include "Include/Scene.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 DECLARE_SAMPLER(FinalPass, SamplerLinear) SamplerState sampler_linear;

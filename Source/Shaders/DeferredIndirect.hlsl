@@ -1,4 +1,4 @@
-#include "./include/Defines.hlsli"
+#include "./Include/Defines.hlsli"
 
 PERMUTE(SSGI_ENABLED);
 PERMUTE(SSR_ENABLED);
@@ -80,33 +80,33 @@ DECLARE_SRV(DeferredPass, SSGIResultTexture) Texture2D SSGIResultTexture;
 DECLARE_SRV(DeferredPass, RTRadianceResultTexture) Texture2D RTRadianceResultTexture;
 #endif // RT_REFLECTIONS
 
-#include "./include/Gbuffer.hlsli"
-#include "./include/Material.hlsli"
+#include "./Include/Gbuffer.hlsli"
+#include "./Include/Material.hlsli"
 
-#include "./include/Scene.hlsli"
+#include "./Include/Scene.hlsli"
 
 DECLARE_SRV(DeferredPass, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
 #define world_shader_data _worlds_buffer[0]
 
-#include "./include/PhysicalCamera.hlsli"
+#include "./Include/PhysicalCamera.hlsli"
 
 #ifdef RT_GI
 DECLARE_SRV(DeferredPass, DDGIIrradianceTexture) Texture2D probe_irradiance;
 DECLARE_SRV(DeferredPass, DDGIDepthTexture) Texture2D probe_depth;
 
-#include "include/RayTracing/GlobalIllumination/ProbeUniforms.hlsli"
+#include "Include/RayTracing/GlobalIllumination/ProbeUniforms.hlsli"
 
 DECLARE_BUFFER(DeferredPass, DDGIConstants) cbuffer DDGI
 {
     DDGIConstants ddgiConstants;
 };
 
-#include "include/RayTracing/GlobalIllumination/SampleDDGI.hlsli"
+#include "Include/RayTracing/GlobalIllumination/SampleDDGI.hlsli"
 
 #endif // RT_GI
 
-#include "./include/EnvProbes.hlsli"
-#include "./include/Noise.hlsli"
+#include "./Include/EnvProbes.hlsli"
+#include "./Include/Noise.hlsli"
 
 DECLARE_SRV(DeferredPass, EnvProbesColorTexture) TextureCubeArray envProbesColorTexture;
 DECLARE_SRV(DeferredPass, EnvProbesDepthTexture) TextureCubeArray<float2> envProbesDepthTexture;
@@ -123,9 +123,9 @@ DECLARE_SRV(DeferredPass, ClusterIndexBuffer) ByteAddressBuffer ClusterIndexBuff
 DECLARE_SRV(DeferredPass, ShadowMapsTextureArray) Texture2DArray<float> shadow_maps;
 DECLARE_SRV(DeferredPass, PointLightShadowMapsTextureArray) TextureCubeArray point_shadow_maps;
 
-#include "./deferred/ClusteredShading.hlsli"
+#include "./Deferred/ClusteredShading.hlsli"
 
-#include "./include/SkyVisibility.hlsli"
+#include "./Include/SkyVisibility.hlsli"
 
 DECLARE_BUFFER_DYNAMIC(DeferredPass, CBuffer) cbuffer CBuffer
 {
@@ -151,7 +151,7 @@ DECLARE_SAMPLER(DeferredPass, SamplerShadow) SamplerComparisonState SamplerShado
 #endif
 
 #define DEFERRED_LIGHTING_HAS_SKY
-#include "./deferred/DeferredLighting.hlsli"
+#include "./Deferred/DeferredLighting.hlsli"
 #undef DEFERRED_LIGHTING_HAS_SKY
 
 #undef HYP_DEFERRED_NO_PROBE_IRRADIANCE

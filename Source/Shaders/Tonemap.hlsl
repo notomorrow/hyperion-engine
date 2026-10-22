@@ -1,6 +1,6 @@
-#include "include/Defines.hlsli"
-#include "include/Shared.hlsli"
-#include "include/Scene.hlsli"
+#include "Include/Defines.hlsli"
+#include "Include/Shared.hlsli"
+#include "Include/Scene.hlsli"
 
 #ifdef VERTEX_SHADER
 
@@ -57,7 +57,7 @@ DECLARE_SAMPLER(Tonemap, SamplerLinear) SamplerState sampler_linear;
 DECLARE_SRV(Tonemap, WorldsBuffer) StructuredBuffer<WorldShaderData> _worlds_buffer;
 #define world_shader_data _worlds_buffer[0]
 
-#include "include/Tonemap.hlsli"
+#include "Include/Tonemap.hlsli"
 
 float4 PSMain(PSInput input) : SV_Target0
 {

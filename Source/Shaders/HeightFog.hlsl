@@ -1,4 +1,4 @@
-#include "include/Defines.hlsli"
+#include "Include/Defines.hlsli"
 
 #ifdef VERTEX_SHADER
 
@@ -30,10 +30,10 @@ VSOutput VSMain(VSInput input)
 #ifdef PIXEL_SHADER
 
 #define HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
-#include "include/Scene.hlsli"
-#include "include/Shared.hlsli"
-#include "include/EnvProbes.hlsli"
-#include "include/Atmosphere.hlsli"
+#include "Include/Scene.hlsli"
+#include "Include/Shared.hlsli"
+#include "Include/EnvProbes.hlsli"
+#include "Include/Atmosphere.hlsli"
 #undef HYP_DO_NOT_DEFINE_DESCRIPTOR_SETS
 
 DECLARE_SAMPLER(HeightFog, SamplerLinear) SamplerState SamplerLinear;

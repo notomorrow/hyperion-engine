@@ -1,4 +1,4 @@
-#include "../include/Defines.hlsli"
+#include "../Include/Defines.hlsli"
 
 DECLARE_SRV(Clouds, InNoise) Texture3D<float4> InNoise;
 DECLARE_UAV(Clouds, OutNoise) RWTexture3D<float4> OutNoise;

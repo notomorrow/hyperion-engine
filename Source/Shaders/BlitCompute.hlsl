@@ -1,5 +1,5 @@
-#include "include/Defines.hlsli"
-#include "include/Shared.hlsli"
+#include "Include/Defines.hlsli"
+#include "Include/Shared.hlsli"
 
 DECLARE_SRV(BlitDescriptorSet, InputTexture) Texture2D<float4> src_image;
 DECLARE_UAV(BlitDescriptorSet, OutputTexture) RWTexture2D<float4> dst_image;
