@@ -20,6 +20,7 @@
 #include <Scene/Camera/Camera.hpp>
 
 #include <Rendering/Mesh.hpp>
+#include <Rendering/Vertex.hpp>
 #include <Rendering/InstancedMeshData.hpp>
 
 #include <Core/Utilities/Pair.hpp>
@@ -1164,15 +1165,23 @@ bool SceneOctree::TestRay(const Ray& ray, RayTestResults& outResults, EnumFlags<
 #ifdef HYP_EDITOR
                     if (pickCacheEntry)
                     {
+                        VertexArrayView vaView {};
+                        vaView.floatData = pickCacheEntry->positions.Data();
+                        vaView.vertexCount = pickCacheEntry->positions.Size() / 3;
+
+                        // Only positions
+                        vaView.layoutDesc = StaticVertexInputLayout<VT_Position>;
+
                         localBvhResults = bvh.TestRay(
                             localSpaceRay,
-                            pickCacheEntry->positions.ToSpan(),
+                            vaView,
                             pickCacheEntry->indices.ToSpan());
                     }
                     else
 #endif
                     {
                         auto resGuard = meshComponent->mesh->GetReadScope();
+
                         const VertexArrayView vertexData = meshComponent->mesh->GetVertexData(0);
                         const Span<const ubyte> indexData = meshComponent->mesh->GetIndexData(0);
 

@@ -2184,11 +2184,8 @@ void RenderInterface::CommitPipelineState(PSOType psoType, CommandBuffer* comman
             {
                 setsToBind[setIndex] = FetchDescriptorSet(tableDecl->elements[setIndex], dsStates[setIndex]);
 
-                if (!(dsStates[setIndex] & DSS_GlobalReference) && !setsToBind[setIndex]->IsCreated())
-                {
-                    // just create it here, we have nothing to bind for it
-                    Assert(setsToBind[setIndex]->Create());
-                }
+                // nothing to bind for it, but a recycled set still needs its reset elements written
+                dsStates[setIndex] |= DSS_Dirty;
             }
         }
     }

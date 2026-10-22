@@ -386,7 +386,10 @@ void GlimmerSystem::Process(float delta, Span<Handle<Scene>> scenes)
     }
 }
 
-void GlimmerSystem::CollectLocalLights(Span<Handle<Scene>> scenes, const Vec3f& nearPosition, GlimmerChannelState& outState)
+void GlimmerSystem::CollectLocalLights(
+    Span<Handle<Scene>> scenes,
+    const Vec3f& nearPosition,
+    GlimmerChannelState& outState)
 {
     HYP_SCOPE;
 

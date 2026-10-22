@@ -53,6 +53,11 @@ WebGPUDescriptorSet::WebGPUDescriptorSet(const DescriptorSetLayout& layout)
       m_pendingStateHashCode(0),
       m_isCreated(false)
 {
+    ResetElements();
+}
+
+void WebGPUDescriptorSet::ResetElements()
+{
     for (const ShaderInput& shaderInput : m_layout.GetElements())
     {
         switch (shaderInput.type)

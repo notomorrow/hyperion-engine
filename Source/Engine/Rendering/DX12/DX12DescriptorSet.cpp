@@ -70,6 +70,11 @@ DX12DescriptorSet::DX12DescriptorSet(const DescriptorSetLayout& layout)
       m_updateVersion(0),
       m_isCreated(false)
 {
+    ResetElements();
+}
+
+void DX12DescriptorSet::ResetElements()
+{
     for (const ShaderInput& shaderInput : m_layout.GetElements())
     {
         switch (shaderInput.type)

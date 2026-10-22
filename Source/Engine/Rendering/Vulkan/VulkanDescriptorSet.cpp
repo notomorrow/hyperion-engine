@@ -150,7 +150,11 @@ VulkanDescriptorSet::VulkanDescriptorSet(const DescriptorSetLayout& layout)
       m_vkDescriptorSetLayout(VK_NULL_HANDLE),
       m_vkDescriptorPool(VK_NULL_HANDLE)
 {
-    // Initial layout of elements
+    ResetElements();
+}
+
+void VulkanDescriptorSet::ResetElements()
+{
     for (const ShaderInput& shaderInput : m_layout.GetElements())
     {
         switch (shaderInput.type)

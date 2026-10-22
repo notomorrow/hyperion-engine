@@ -36,6 +36,7 @@ public:
     RendererResult Create() override;
     void UpdateDirtyState(bool* outIsDirty = nullptr) override;
     void Update(bool force = false) override;
+    void ResetElements() override;
 
     void Bind(WebGPUCommandBuffer* commandBuffer, const WebGPUGraphicsPipeline* pipeline, uint32 bindIndex) const override;
     void Bind(WebGPUCommandBuffer* commandBuffer, const WebGPUGraphicsPipeline* pipeline, const DescriptorSetOffsetMap& offsets, uint32 bindIndex) const override;

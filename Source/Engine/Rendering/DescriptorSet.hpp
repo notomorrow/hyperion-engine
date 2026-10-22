@@ -295,6 +295,9 @@ public:
     virtual void Update(bool force = false) = 0;
     virtual DescriptorSetRef Clone() const = 0;
 
+    /*! \brief Restores all non-bindless elements to their initial placeholder values */
+    virtual void ResetElements() = 0;
+
     bool HasElement(StringHash name) const;
 
     void SetElement(StringHash name, uint32 index, uint32 bufferSize, GpuBuffer* ref, uint32 bufferStride = ~0u);

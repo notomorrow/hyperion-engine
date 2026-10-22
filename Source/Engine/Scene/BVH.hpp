@@ -81,11 +81,6 @@ public:
         const VertexArrayView& vertices,
         Span<const uint32> indices) const;
 
-    HYP_NODISCARD RayTestResults TestRay(
-        const Ray& ray,
-        Span<const Vec3f> positions,
-        Span<const uint32> indices) const;
-
     /*! \brief Serializes the BVH tree rooted at \p node into a flat byte buffer. */
     static ByteBuffer Serialize(const BVHNode& node);
 

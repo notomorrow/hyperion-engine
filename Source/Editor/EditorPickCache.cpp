@@ -205,7 +205,7 @@ void EditorPickCache::PutEntry(const Mesh* mesh, bool invalidate)
 
     entry.residency = newResidency;
 
-    entry.positions.Resize(vertexData.vertexCount);
+    entry.positions.Resize(vertexData.vertexCount * 3);
 
     const size_t vertexSizeInFloats = vertexData.layoutDesc.VertexSize() / sizeof(float);
 
@@ -214,9 +214,9 @@ void EditorPickCache::PutEntry(const Mesh* mesh, bool invalidate)
         const float* floatDataOffset = vertexData.floatData + (i * vertexSizeInFloats);
         const TVertexPacket<VT_Position>* packet = reinterpret_cast<const TVertexPacket<VT_Position>*>(floatDataOffset);
 
-        entry.positions[i].x = packet->posX;
-        entry.positions[i].y = packet->posY;
-        entry.positions[i].z = packet->posZ;
+        entry.positions[i * 3 + 0] = packet->posX;
+        entry.positions[i * 3 + 1] = packet->posY;
+        entry.positions[i * 3 + 2] = packet->posZ;
     }
 
     // @TODO fix for non-uint32 indices

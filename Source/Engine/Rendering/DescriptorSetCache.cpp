@@ -142,6 +142,9 @@ DescriptorSet* DescriptorSetCache::GetOrCreate(const DescriptorSetLayout& layout
         AllocatedDescriptorSet& newAllocated = m_descriptorSetsInUse.EmplaceBack(std::move(allocated));
         newAllocated.frameCounter = m_frameIndex; // refresh frame counter
 
+        // drop resources bound by the previous user, they may have been destroyed since
+        newAllocated.descriptorSet->ResetElements();
+
         mapIt->second.Erase(it);
 
         return newAllocated.descriptorSet;

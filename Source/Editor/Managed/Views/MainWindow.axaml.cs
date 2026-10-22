@@ -2125,19 +2125,22 @@ namespace Hyperion.Editor
                 ? selectedItems.Cast<object>().ToList()
                 : new List<object> { candidate };
 
-            var data = new DataTransfer();
-            data.Add(DataTransferItem.Create(ContentBrowserDragFormat, new ContentBrowserDragPayload { Items = items }));
+            var dataItem = new DataTransferItem();
+            dataItem.Set(ContentBrowserDragFormat, new ContentBrowserDragPayload { Items = items });
 
             // viewport and hierarchy drops take one asset, the one the drag started on
             if ((candidate as AssetObjectViewModel ?? items.OfType<AssetObjectViewModel>().FirstOrDefault()) is { } asset)
             {
-                data.Add(DataTransferItem.Create(AssetDragFormat, $"{asset.Bucket?.BucketIndex ?? 0}|{asset.AssetDesc.Name}"));
+                dataItem.Set(AssetDragFormat, $"{asset.Bucket?.BucketIndex ?? 0}|{asset.AssetDesc.Name}");
 
                 if (asset.TypeName != null && EntityAssetTypeNames.Contains(asset.TypeName))
                 {
-                    data.Add(DataTransferItem.Create(EntityAssetDragFormat, asset.AssetDesc.Name.ToString()));
+                    dataItem.Set(EntityAssetDragFormat, asset.AssetDesc.Name.ToString());
                 }
             }
+
+            var data = new DataTransfer();
+            data.Add(dataItem);
 
             try
             {

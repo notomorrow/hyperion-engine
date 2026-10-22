@@ -65,6 +65,8 @@ public:
     void UpdateDirtyState(bool* outIsDirty = nullptr) override;
     void Update(bool force = false) override;
 
+    void ResetElements() override;
+
     void Bind(DX12CommandBuffer* commandBuffer, const DX12GraphicsPipeline* pipeline, uint32 bindIndex) const override;
     void Bind(DX12CommandBuffer* commandBuffer, const DX12GraphicsPipeline* pipeline, const DescriptorSetOffsetMap& offsets, uint32 bindIndex) const override;
 

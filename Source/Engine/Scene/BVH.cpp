@@ -70,61 +70,10 @@ HYP_NODISCARD RayTestResults BVHNode::TestRay(
     {
         for (const BVHNode& node : children)
         {
-            results.Merge(node.TestRay(ray, vertices, indices));
-        }
-    }
-
-    return results;
-}
-
-HYP_NODISCARD RayTestResults BVHNode::TestRay(
-    const Ray& ray,
-    Span<const Vec3f> positions,
-    Span<const uint32> indices) const
-{
-    RayTestResults results;
-
-    if (!ray.TestAABB(aabb))
-    {
-        return results;
-    }
-
-    if (IsLeafNode())
-    {
-        for (size_t t = 0; t < triangleIds.Size(); ++t)
-        {
-            const uint32 triangleId = triangleIds[t];
-
-            if (size_t(triangleId) * 3 + 2 >= indices.Size())
-            {
-                continue;
-            }
-
-            const uint32 i0 = indices[triangleId * 3 + 0];
-            const uint32 i1 = indices[triangleId * 3 + 1];
-            const uint32 i2 = indices[triangleId * 3 + 2];
-
-            if (i0 >= positions.Size() || i1 >= positions.Size() || i2 >= positions.Size())
-            {
-                continue;
-            }
-
-            const Triangle tri {
-                {
-                    positions[i0].x, positions[i0].y, positions[i0].z,
-                    positions[i1].x, positions[i1].y, positions[i1].z,
-                    positions[i2].x, positions[i2].y, positions[i2].z
-                }
-            };
-
-            ray.TestTriangle(tri, triangleId, results);
-        }
-    }
-    else
-    {
-        for (const BVHNode& node : children)
-        {
-            results.Merge(node.TestRay(ray, positions, indices));
+            results.Merge(node.TestRay(
+                ray,
+                vertices,
+                indices));
         }
     }
 

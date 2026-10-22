@@ -100,6 +100,8 @@ public:
     void UpdateDirtyState(bool* outIsDirty = nullptr) override;
     void Update(bool force = false) override;
 
+    void ResetElements() override;
+
     void Bind(VulkanCommandBuffer* commandBuffer, const VulkanGraphicsPipeline* pipeline, uint32 bindIndex) const override;
     void Bind(VulkanCommandBuffer* commandBuffer, const VulkanGraphicsPipeline* pipeline, const DescriptorSetOffsetMap& offsets, uint32 bindIndex) const override;
 

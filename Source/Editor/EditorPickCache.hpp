@@ -34,7 +34,10 @@ struct EditorPickCacheEntry
     WeakHandle<Mesh> mesh;
     int residency = 0;
     uint32 frameVisible = 0;
-    Array<Vec3f, EpcAllocator> positions;
+
+    /// in sets of 3's
+    Array<float, EpcAllocator> positions;
+    
     Array<uint32, EpcAllocator> indices;
 };
 
