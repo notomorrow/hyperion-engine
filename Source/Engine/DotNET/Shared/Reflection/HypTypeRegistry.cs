@@ -59,12 +59,42 @@ namespace Hyperion
         public readonly IntPtr Setter;
         public readonly Attribute[]? Attributes;
 
+        // Set for [HypField] fields and [HypProperty] properties
+        public readonly Type? MemberType;
+
+        // A value of MemberType (default, empty string or empty array) boxed to find its native type; generated so NativeAOT needs no runtime construction
+        public readonly object? SampleValue;
+
         public unsafe HypPropertyThunk(string name, delegate*<object?, BoxedValueInternal**, BoxedValueInternal*, void> getter, delegate*<object?, BoxedValueInternal**, BoxedValueInternal*, void> setter, Attribute[]? attributes)
+            : this(name, getter, setter, attributes, null, null)
+        {
+        }
+
+        public unsafe HypPropertyThunk(string name, delegate*<object?, BoxedValueInternal**, BoxedValueInternal*, void> getter, delegate*<object?, BoxedValueInternal**, BoxedValueInternal*, void> setter, Attribute[]? attributes, Type? memberType, object? sampleValue)
         {
             Name = name;
             Getter = (IntPtr)getter;
             Setter = (IntPtr)setter;
             Attributes = attributes;
+            MemberType = memberType;
+            SampleValue = sampleValue;
+        }
+
+        public HypMemberAttribute? MemberAttribute
+        {
+            get
+            {
+                if (MemberType == null || Attributes == null)
+                    return null;
+
+                foreach (Attribute attribute in Attributes)
+                {
+                    if (attribute is HypMemberAttribute memberAttribute)
+                        return memberAttribute;
+                }
+
+                return null;
+            }
         }
     }
 

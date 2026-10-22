@@ -11,6 +11,8 @@
 #include <Core/Reflection/Handle.hpp>
 #include <Core/Reflection/ObjectBase.hpp>
 
+#include <Core/Memory/SharedPtr.hpp>
+
 #include <Core/Functional/Delegate.hpp>
 
 #include <Core/Utilities/Result.hpp>
@@ -32,6 +34,10 @@
 #include <Editor/EditorPackagingSettings.hpp>
 
 namespace Hyperion {
+
+namespace dotnet {
+class Assembly;
+} // namespace dotnet
 
 class Scene;
 class World;
@@ -325,6 +331,9 @@ private:
 
     // Transient world set while in editor mode
     Handle<World> m_editWorld;
+
+    // The project's C# scripts, loaded with the project so their classes resolve while its scenes are read
+    SharedPtr<dotnet::Assembly> m_scriptAssembly;
 
     WeakHandle<EditorSubsystem> m_editorSubsystem;
 };

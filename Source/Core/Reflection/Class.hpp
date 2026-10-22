@@ -986,7 +986,7 @@ CORE_API extern const Name g_attrNoSwatchOverride; //!< this member may never be
 /// ===== Editor-specific attributes =====
 CORE_API extern const Name g_attrEditor;        //!< Indicates that a property is editable in the editor.
 CORE_API extern const Name g_attrEditorOnly;    //!< this field/method/property is only available in editor builds. Reflection will not be compiled into non HYP_EDITOR builds.
-CORE_API extern const Name g_attrEditOrder;     //!< order in which properties are displayed in the editor
+CORE_API extern const Name g_attrEditorOrder;     //!< order in which properties are displayed in the editor
 CORE_API extern const Name g_attrEditEnabled;   //!< is editable in editor -- Disabled/greyed out otherwise if set to false explicitly.
 CORE_API extern const Name g_attrLabel;         //!< The surfaced display name in editor. Otherwise will default to the property's Name.
 CORE_API extern const Name g_attrDescription;   //!< help text for a property in inspector.

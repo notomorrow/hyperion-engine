@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using System.Windows.Input;
+using Avalonia.Threading;
 using Hyperion.Editor.Services;
 using Hyperion.Editor.Commands;
 
@@ -15,7 +17,7 @@ namespace Hyperion.Editor.ViewModels
         // Invoked with (name, languageArg); called with empty strings on cancel.
         private readonly Action<string, string> _onCompleted;
 
-        private string _scriptName = "NewScript";
+        private string _scriptName = DefaultScriptName;
         private ScriptLanguageEntry _selectedLanguage;
 
         private static readonly ScriptLanguageEntry StrataLanguage = new ScriptLanguageEntry("Strata", "strata", ".strata");
@@ -25,10 +27,34 @@ namespace Hyperion.Editor.ViewModels
 
         public ScriptLanguageEntry[] Languages { get; }
 
+        private const string DefaultScriptName = "NewScript";
+
+        private bool _nameEdited;
+
         public string ScriptName
         {
             get => _scriptName;
-            set => SetProperty(ref _scriptName, value);
+            set
+            {
+                if (SetProperty(ref _scriptName, value))
+                {
+                    _nameEdited = true;
+                    CheckNameTaken();
+                }
+            }
+        }
+
+        private bool _isNameTaken;
+        public bool IsNameTaken
+        {
+            get => _isNameTaken;
+            private set
+            {
+                if (SetProperty(ref _isNameTaken, value))
+                {
+                    (ConfirmCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
         }
 
         public ScriptLanguageEntry SelectedLanguage
@@ -72,8 +98,54 @@ namespace Hyperion.Editor.ViewModels
 
             _selectedLanguage = Languages[0];
 
-            ConfirmCommand = new RelayCommand(OnConfirm);
+            ConfirmCommand = new RelayCommand(OnConfirm, () => !IsNameTaken);
             CancelCommand = new RelayCommand(OnCancel);
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                string uniqueName = AssetManager.Instance.AssetRegistry
+                    .GetUniqueAssetName(AssetBucket.Scripts.Value, DefaultScriptName).ToString();
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (!_nameEdited)
+                    {
+                        _scriptName = uniqueName;
+                        OnPropertyChanged(nameof(ScriptName));
+                    }
+
+                    CheckNameTaken();
+                });
+            });
+        }
+
+        private void CheckNameTaken()
+        {
+            string name = (_scriptName ?? string.Empty).Trim();
+
+            if (name.Length == 0)
+            {
+                IsNameTaken = false;
+                return;
+            }
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                AssetRegistry registry = AssetManager.Instance.AssetRegistry;
+                string scriptsDir = Path.Combine(registry.GetRootPath(), "Scripts");
+
+                bool taken = registry.GetUniqueAssetName(AssetBucket.Scripts.Value, name).ToString() != name
+                    || File.Exists(Path.Combine(scriptsDir, name + CSharpLanguage.Extension))
+                    || File.Exists(Path.Combine(scriptsDir, name + StrataLanguage.Extension));
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if ((_scriptName ?? string.Empty).Trim() == name)
+                    {
+                        IsNameTaken = taken;
+                    }
+                });
+            });
         }
 
         private void OnConfirm()
@@ -81,7 +153,7 @@ namespace Hyperion.Editor.ViewModels
             // Script names are identifiers; they must not contain spaces because the command parses args by splitting on spaces.
             string name = (ScriptName ?? string.Empty).Trim();
 
-            if (string.IsNullOrWhiteSpace(name) || name.Contains(' '))
+            if (string.IsNullOrWhiteSpace(name) || name.Contains(' ') || IsNameTaken)
             {
                 return;
             }

@@ -123,6 +123,16 @@ ENGINE_API Result BoxedToJSON(
         return {};
     }
 
+    if (value.Is<HMF::UnresolvedValue>())
+    {
+        HYP_LOG(Core, Warning, "Cannot write untyped HMF value '{}' to JSON; it is dropped from the JSON output",
+            value.Get<HMF::UnresolvedValue>().source);
+
+        outJson = JSON::JSNull();
+
+        return {};
+    }
+
     const TypeInfo& typeInfo = *value.GetTypeInfo();
 
     AssetReference assetReference;
@@ -2511,6 +2521,18 @@ Result BoxedToHMFImpl(
         return {};
     }
 
+    if (value.Is<HMF::UnresolvedValue>())
+    {
+        outText += value.Get<HMF::UnresolvedValue>().source;
+        return {};
+    }
+
+    // a generic (BoxedValue) slot is written as whatever it holds
+    if (declaredTypeInfo && declaredTypeInfo->id == TypeId::ForType<BoxedValue>())
+    {
+        declaredTypeInfo = nullptr;
+    }
+
     const TypeInfo& typeInfo = declaredTypeInfo ? *declaredTypeInfo : *value.GetTypeInfo();
 
     if (value.Is<Name>())
@@ -3444,6 +3466,31 @@ TResult<BoxedValue> FieldFromHMF(ByteReader& stream, StringHash fieldName)
     }
 
     return HYP_MAKE_ERROR(Error, "{} has no field {}", cls->GetName(), fieldName.hashCode);
+}
+
+TResult<BoxedValue> BoxedAsType(const BoxedValue& value, const TypeInfo& typeInfo)
+{
+    if (value.GetTypeId() == typeInfo.id)
+    {
+        return value;
+    }
+
+    String source;
+
+    if (value.Is<HMF::UnresolvedValue>())
+    {
+        source = value.Get<HMF::UnresolvedValue>().source;
+    }
+    else if (value.Is<HMF::UnresolvedObject>())
+    {
+        source = value.Get<HMF::UnresolvedObject>().source;
+    }
+    else if (Result result = BoxedToHMF(value, source); result.HasError())
+    {
+        return result.GetError();
+    }
+
+    return HMF::ParseValue(source, typeInfo);
 }
 
 bool ResolveAssetPath(const String& path, const TypeInfo& targetType, BoxedValue& out)

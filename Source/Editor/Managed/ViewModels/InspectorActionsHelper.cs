@@ -86,9 +86,9 @@ namespace Hyperion.Editor.ViewModels
                 .Where(m => EvaluateEditCondition(target, classes, m.GetAttribute("editcondition"), m.Name.ToString()))
                 .OrderBy(m =>
                 {
-                    ClassAttribute? attrEditOrder = m.GetAttribute("editororder");
+                    ClassAttribute? attrEditorOrder = m.GetAttribute("editororder");
 
-                    return attrEditOrder != null ? attrEditOrder.Value.GetInt() : int.MaxValue;
+                    return attrEditorOrder != null ? attrEditorOrder.Value.GetInt() : int.MaxValue;
                 });
 
             foreach (Method method in actions)

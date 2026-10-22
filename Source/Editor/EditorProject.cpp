@@ -28,6 +28,8 @@
 #include <Scene/Swatch.hpp>
 #include <Scene/EntityManager.hpp>
 #include <Scene/Systems/ScriptSystem.hpp>
+
+#include <DotNET/Assembly.hpp>
 #include <Scene/Systems/SwatchOverrideSystem.hpp>
 
 #include <Scene/Camera/Camera.hpp>
@@ -732,6 +734,9 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
     Assert(project->m_gameInstance != nullptr);
 
     project->m_gameInstance->SetAssetRegistry(registry);
+
+    // C# classes the scenes may contain (e.g Entity subclasses) must exist before any world is read
+    project->m_scriptAssembly = ScriptSystem::LoadProjectScriptAssembly(registryDir);
 
     if (Result loadFoldersResult = project->m_assetFolders->Load(dir / EditorAssetFolders::s_fileName); loadFoldersResult.HasError())
     {

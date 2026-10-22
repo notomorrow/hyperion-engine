@@ -35,6 +35,7 @@ namespace Hyperion
         public static readonly Class Invalid = new(IntPtr.Zero);
         private static readonly ConcurrentDictionary<string, Class> classTypeNameCache = new();
         private static readonly ConcurrentDictionary<Type, Class> classTypeObjectCache = new();
+        private static readonly ConcurrentDictionary<Type, Class> dynamicClassesByType = new();
 
         private IntPtr ptr;
 
@@ -399,6 +400,32 @@ namespace Hyperion
             return TryGetClass(typeof(T));
         }
 
+        public static void RegisterDynamicClass(Type type, Class cls)
+        {
+            dynamicClassesByType[type] = cls;
+            classTypeObjectCache.TryRemove(type, out _);
+        }
+
+        public static bool TryGetDynamicClass(Type type, out Class cls)
+        {
+            return dynamicClassesByType.TryGetValue(type, out cls);
+        }
+
+        public static void RemoveCachedForAssembly(Assembly assembly)
+        {
+            foreach (Type type in dynamicClassesByType.Keys)
+            {
+                if (type.Assembly == assembly)
+                    dynamicClassesByType.TryRemove(type, out _);
+            }
+
+            foreach (Type type in classTypeObjectCache.Keys)
+            {
+                if (type.Assembly == assembly)
+                    classTypeObjectCache.TryRemove(type, out _);
+            }
+        }
+
         public static Class? TryGetClass(Type type)
         {
             if (classTypeObjectCache.TryGetValue(type, out Class foundClass))
@@ -409,6 +436,13 @@ namespace Hyperion
             while (true)
             {
                 Debug.Assert(currentType != null);
+
+                if (dynamicClassesByType.TryGetValue(currentType, out Class dynamicClass))
+                {
+                    classTypeObjectCache[type] = dynamicClass;
+
+                    return dynamicClass;
+                }
 
                 Attribute? attribute = Attribute.GetCustomAttribute(currentType, typeof(ClassBinding));
 
@@ -487,7 +521,11 @@ namespace Hyperion
                 {
                     cls = new(ptr);
 
-                    classTypeNameCache[name] = cls.Value;
+                    // dynamic classes are superseded when their assembly reloads, so look them up every time
+                    if (!cls.Value.IsDynamic)
+                    {
+                        classTypeNameCache[name] = cls.Value;
+                    }
                 }
             }
 

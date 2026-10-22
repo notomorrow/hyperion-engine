@@ -23,15 +23,15 @@ namespace Hyperion
         {
             Logger.Log(logChannel, LogLevel.Info, "Building all projects in source directory: {0}", sourceDirectory);
 
-            string[] symLinks = System.IO.Directory.GetFiles(binaryOutputDirectory, "*.*.dll", System.IO.SearchOption.AllDirectories)
-                .Where(file => (System.IO.File.GetAttributes(file) & System.IO.FileAttributes.ReparsePoint) == System.IO.FileAttributes.ReparsePoint)
+            string[] symLinks = Directory.GetFiles(binaryOutputDirectory, "*.*.dll", SearchOption.AllDirectories)
+                .Where(file => (File.GetAttributes(file) & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
                 .ToArray();
 
             foreach (string symLink in symLinks)
             {
                 try
                 {
-                    System.IO.File.Delete(symLink);
+                    File.Delete(symLink);
                 }
                 catch (Exception e)
                 {
@@ -41,9 +41,9 @@ namespace Hyperion
 
             DeleteOldHotReloadVersions();
 
-            string[] directories = System.IO.Directory.GetDirectories(sourceDirectory, "*", System.IO.SearchOption.AllDirectories)
+            string[] directories = Directory.GetDirectories(sourceDirectory, "*", SearchOption.AllDirectories)
                 .Append(sourceDirectory)
-                .Where(directory => System.IO.Directory.GetFiles(directory, "*.cs").Length > 0)
+                .Where(directory => Directory.GetFiles(directory, "*.cs").Length > 0)
                 .ToArray();
 
             foreach (string directory in directories)
@@ -66,13 +66,13 @@ namespace Hyperion
         {
             // Get the max updated timestamp of all the files in the directory
 
-            string[] files = System.IO.Directory.GetFiles(scriptDirectory, "*.cs", System.IO.SearchOption.AllDirectories);
+            string[] files = Directory.GetFiles(scriptDirectory, "*.cs", SearchOption.AllDirectories);
 
             long maxTimestamp = 0;
 
             foreach (string file in files)
             {
-                long timestamp = System.IO.File.GetLastWriteTime(file).ToFileTime();
+                long timestamp = File.GetLastWriteTime(file).ToFileTime();
 
                 if (timestamp > maxTimestamp)
                 {
@@ -80,15 +80,29 @@ namespace Hyperion
                 }
             }
 
-            if (!System.IO.Directory.Exists(binaryOutputDirectory))
+            // a newer engine (e.g a generator that emits more of the type registry) also needs the scripts built again
+            string? dependenciesDirectory = GetDependenciesDirectory();
+
+            if (dependenciesDirectory != null)
+            {
+                foreach (string engineAssemblyName in EngineAssemblies.BuildDependencies)
+                {
+                    string engineAssemblyPath = Path.Combine(dependenciesDirectory, EngineAssemblies.FileName(engineAssemblyName));
+
+                    if (File.Exists(engineAssemblyPath))
+                    {
+                        maxTimestamp = Math.Max(maxTimestamp, File.GetLastWriteTime(engineAssemblyPath).ToFileTime());
+                    }
+                }
+            }
+
+            if (!Directory.Exists(binaryOutputDirectory))
             {
                 // Directory does not exist, needs rebuild
                 return true;
             }
 
-            Logger.Log(logChannel, LogLevel.Info, "binaryOutputDirectory: {0}", binaryOutputDirectory);
-
-            string[] dlls = System.IO.Directory.GetFiles(binaryOutputDirectory, $"{moduleName}.dll", System.IO.SearchOption.AllDirectories);
+            string[] dlls = Directory.GetFiles(binaryOutputDirectory, $"{moduleName}.dll", SearchOption.AllDirectories);
 
             if (dlls.Length == 0)
             {
@@ -98,8 +112,7 @@ namespace Hyperion
 
             foreach (string dll in dlls)
             {
-                Logger.Log(logChannel, LogLevel.Info, "Checking DLL: {0}", dll);
-                if (System.IO.File.GetLastWriteTime(dll).ToFileTime() < maxTimestamp)
+                if (File.GetLastWriteTime(dll).ToFileTime() < maxTimestamp)
                 {
                     return true;
                 }
@@ -111,7 +124,7 @@ namespace Hyperion
         private string GetModuleNameForScriptDirectory(string scriptDirectory)
         {
             // Get relative path to the source directory
-            string relativePath = System.IO.Path.GetRelativePath(sourceDirectory, scriptDirectory)
+            string relativePath = Path.GetRelativePath(sourceDirectory, scriptDirectory)
                 .Replace(" ", "")
                 .Replace(".", "");
 
@@ -145,11 +158,11 @@ namespace Hyperion
 
         private string GetProjectOutputDirectory(string moduleName, bool createDirectory = false)
         {
-            string path = System.IO.Path.Combine(intermediateDirectory, moduleName);
+            string path = Path.Combine(intermediateDirectory, moduleName);
 
-            if (createDirectory && !System.IO.Directory.Exists(path))
+            if (createDirectory && !Directory.Exists(path))
             {
-                System.IO.Directory.CreateDirectory(path);
+                Directory.CreateDirectory(path);
             }
 
             return path;
@@ -159,7 +172,7 @@ namespace Hyperion
         {
             string moduleBaseName = moduleName.Split(".").Last();
 
-            return System.IO.Path.Combine(projectOutputDirectory, $"{moduleBaseName}.csproj");
+            return Path.Combine(projectOutputDirectory, $"{moduleBaseName}.csproj");
         }
 
         private string GetAssemblyPath(string moduleName, bool relative = false)
@@ -170,7 +183,7 @@ namespace Hyperion
             }
             else
             {
-                return System.IO.Path.Combine(binaryOutputDirectory, $"{moduleName}.dll");
+                return Path.Combine(binaryOutputDirectory, $"{moduleName}.dll");
             }
         }
 
@@ -233,9 +246,27 @@ namespace Hyperion
             return path.Replace("\\x", "\\\\x");
         }
 
+        private static string? GetDependenciesDirectory()
+        {
+            string? dependenciesDirectory = Path.GetDirectoryName(System.Environment.ProcessPath);
+            if (dependenciesDirectory == null)
+            {
+                return null;
+            }
+
+            // single-file editor builds keep the engine assemblies in the bundle and ship reference copies here
+            string referenceDirectory = Path.Combine(dependenciesDirectory, "ref");
+            if (Directory.Exists(referenceDirectory))
+            {
+                return referenceDirectory;
+            }
+
+            return dependenciesDirectory;
+        }
+
         private bool GenerateCSharpProjectFile(string projectFilePath, string scriptDirectory, string moduleName)
         {
-            string? dependenciesDirectory = System.IO.Path.GetDirectoryName(System.Environment.ProcessPath);
+            string? dependenciesDirectory = GetDependenciesDirectory();
             if (dependenciesDirectory == null)
             {
                 Logger.Log(logChannel, LogLevel.Error, "Failed to get dependencies directory!");
@@ -243,25 +274,18 @@ namespace Hyperion
                 return false;
             }
 
-            // single-file editor builds keep the engine assemblies in the bundle and ship reference copies here
-            string referenceDirectory = System.IO.Path.Combine(dependenciesDirectory, "ref");
-            if (System.IO.Directory.Exists(referenceDirectory))
-            {
-                dependenciesDirectory = referenceDirectory;
-            }
-
-            string generatorPath = System.IO.Path.Combine(dependenciesDirectory, "Hyperion.NET.Generators.dll");
-            string generatorItem = System.IO.File.Exists(generatorPath)
+            string generatorPath = Path.Combine(dependenciesDirectory, EngineAssemblies.FileName(EngineAssemblies.Generators));
+            string generatorItem = File.Exists(generatorPath)
                 ? $"<Analyzer Include=\"{EscapePath(generatorPath)}\" />\n"
                 : string.Empty;
 
-            List<string> csFiles = System.IO.Directory.GetFiles(scriptDirectory, "*.cs")
+            List<string> csFiles = Directory.GetFiles(scriptDirectory, "*.cs")
                 .ToList();
 
             // iterate subdirectories recursively
-            foreach (string subDirectory in System.IO.Directory.GetDirectories(scriptDirectory, "*", System.IO.SearchOption.AllDirectories))
+            foreach (string subDirectory in Directory.GetDirectories(scriptDirectory, "*", SearchOption.AllDirectories))
             {
-                csFiles.AddRange(System.IO.Directory.GetFiles(subDirectory, "*.cs"));
+                csFiles.AddRange(Directory.GetFiles(subDirectory, "*.cs"));
             }
 
             string projectContent =
@@ -276,22 +300,22 @@ namespace Hyperion
                         + $"<AssemblyName>{moduleName}</AssemblyName>\n"
                     + "</PropertyGroup>\n"
                     + "<ItemGroup>\n"
-                    + $"<Reference Include=\"Hyperion.NET.Shared\">\n"
-                        + $"<HintPath>{EscapePath(System.IO.Path.Combine(dependenciesDirectory, "Hyperion.NET.Shared.dll"))}</HintPath>\n"
+                    + $"<Reference Include=\"{EngineAssemblies.Shared}\">\n"
+                        + $"<HintPath>{EscapePath(Path.Combine(dependenciesDirectory, EngineAssemblies.FileName(EngineAssemblies.Shared)))}</HintPath>\n"
                         + "<Private>false</Private>\n"
                     + "</Reference>\n"
-                    + $"<Reference Include=\"Hyperion.NET.Runtime\">\n"
-                        + $"<HintPath>{EscapePath(System.IO.Path.Combine(dependenciesDirectory, "Hyperion.NET.Runtime.dll"))}</HintPath>\n"
+                    + $"<Reference Include=\"{EngineAssemblies.Runtime}\">\n"
+                        + $"<HintPath>{EscapePath(Path.Combine(dependenciesDirectory, EngineAssemblies.FileName(EngineAssemblies.Runtime)))}</HintPath>\n"
                         + "<Private>false</Private>\n"
                     + "</Reference>\n"
                     + generatorItem
-                    + string.Join("", csFiles.Select(script => $"<Compile Include=\"{EscapePath(script)}\" />\n"))
+                    + string.Join("", csFiles.Select(script => $"<Compile Include=\"{EscapePath(Path.GetFullPath(script))}\" />\n"))
                     + "</ItemGroup>\n"
                 + "</Project>\n";
 
             try
             {
-                System.IO.File.WriteAllText(projectFilePath, projectContent);
+                File.WriteAllText(projectFilePath, projectContent);
             }
             catch (Exception e)
             {
@@ -310,12 +334,12 @@ namespace Hyperion
             hotReloadVersion = -1;
 
             // ensure the working dir exists
-            if (!System.IO.Directory.Exists(projectOutputDirectory))
+            if (!Directory.Exists(projectOutputDirectory))
             {
                 // make the directory (recursive)
                 try
                 {
-                    System.IO.Directory.CreateDirectory(projectOutputDirectory);
+                    Directory.CreateDirectory(projectOutputDirectory);
                 }
                 catch (Exception e)
                 {
@@ -396,13 +420,12 @@ namespace Hyperion
             {
                 Logger.Log(logChannel, LogLevel.Error, "Failed to compile script. Check the output log for more information.");
 
+                /// @TODO: Not a messagebox, something less intrusive.
                 MessageBox.Critical()
                     .Title("Script Compilation Error")
                     .Text("Failed to compile script. Check the output log for more information.")
                     .Button("OK", () => { Logger.Log(logChannel, LogLevel.Info, "OK clicked"); })
                     .Show();
-
-                Debugger.Break();
 
                 return false;
             }
@@ -410,7 +433,7 @@ namespace Hyperion
             Logger.Log(logChannel, LogLevel.Info, "Script compiled successfully");
 
             // Grep all DLLs in the output directory
-            string[] dlls = System.IO.Directory.GetFiles(System.IO.Path.Combine(projectOutputDirectory, "bin"), "*.dll", System.IO.SearchOption.AllDirectories);
+            string[] dlls = Directory.GetFiles(Path.Combine(projectOutputDirectory, "bin"), "*.dll", SearchOption.AllDirectories);
 
             return CopyOutputAssemblies(dlls, out hotReloadVersion);
         }
@@ -429,14 +452,14 @@ namespace Hyperion
 
             foreach (string dll in dlls)
             {
-                string moduleFileName = System.IO.Path.GetFileNameWithoutExtension(dll);
-                string versionedDllPath = System.IO.Path.Combine(binaryOutputDirectory, $"{moduleFileName}.{hotReloadVersion}.dll");
+                string moduleFileName = Path.GetFileNameWithoutExtension(dll);
+                string versionedDllPath = Path.Combine(binaryOutputDirectory, $"{moduleFileName}.{hotReloadVersion}.dll");
 
                 Logger.Log(logChannel, LogLevel.Info, "Copying output script assembly {0} to {1}", dll, versionedDllPath);
 
                 try
                 {
-                    System.IO.File.Copy(dll, versionedDllPath, true);
+                    File.Copy(dll, versionedDllPath, true);
                 }
                 catch (Exception e)
                 {
@@ -445,11 +468,11 @@ namespace Hyperion
                     return false;
                 }
 
-                string dllPath = System.IO.Path.Combine(binaryOutputDirectory, $"{moduleFileName}.dll");
+                string dllPath = Path.Combine(binaryOutputDirectory, $"{moduleFileName}.dll");
 
                 try
                 {
-                    System.IO.File.Copy(dll, dllPath, true);
+                    File.Copy(dll, dllPath, true);
                 }
                 catch (IOException)
                 {
@@ -465,9 +488,9 @@ namespace Hyperion
         {
             Dictionary<string, List<int>> versionsByDllPath = new(StringComparer.OrdinalIgnoreCase);
 
-            foreach (string file in System.IO.Directory.GetFiles(binaryOutputDirectory, "*.*.dll"))
+            foreach (string file in Directory.GetFiles(binaryOutputDirectory, "*.*.dll"))
             {
-                string fileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(file);
+                string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
                 int lastDotIndex = fileNameWithoutExtension.LastIndexOf('.');
 
                 if (lastDotIndex <= 0 || !int.TryParse(fileNameWithoutExtension.Substring(lastDotIndex + 1), out int version))
@@ -475,9 +498,9 @@ namespace Hyperion
                     continue;
                 }
 
-                string dllPath = System.IO.Path.Combine(binaryOutputDirectory, fileNameWithoutExtension.Substring(0, lastDotIndex) + ".dll");
+                string dllPath = Path.Combine(binaryOutputDirectory, fileNameWithoutExtension.Substring(0, lastDotIndex) + ".dll");
 
-                if (!System.IO.File.Exists(dllPath))
+                if (!File.Exists(dllPath))
                 {
                     continue;
                 }
@@ -510,7 +533,7 @@ namespace Hyperion
 
                     try
                     {
-                        System.IO.File.Delete($"{dllPathWithoutExtension}.{version}.dll");
+                        File.Delete($"{dllPathWithoutExtension}.{version}.dll");
                     }
                     catch (Exception)
                     {
@@ -523,7 +546,7 @@ namespace Hyperion
         // The newest Module.N.dll is always the freshest build, the unversioned Module.dll may be stale if it was in use when copying
         private void UseLatestHotReloadVersion(string moduleName, ref ScriptDesc scriptDesc)
         {
-            string dllPath = System.IO.Path.Combine(binaryOutputDirectory, $"{moduleName}.dll");
+            string dllPath = Path.Combine(binaryOutputDirectory, $"{moduleName}.dll");
 
             scriptDesc.HotReloadVersion = GetHotReloadVersions().TryGetValue(dllPath, out List<int>? versions)
                 ? versions.Max()
@@ -537,7 +560,7 @@ namespace Hyperion
 
         public bool ResolveAssembly(string scriptPath, ref ScriptDesc scriptDesc)
         {
-            string? scriptDirectory = System.IO.Path.GetDirectoryName(scriptPath);
+            string? scriptDirectory = Path.GetDirectoryName(scriptPath);
 
             if (scriptDirectory != null && resolvedModuleNames.TryGetValue(scriptDirectory, out string? moduleName))
             {
@@ -555,7 +578,7 @@ namespace Hyperion
             string moduleName;
             int hotReloadVersion;
 
-            string? scriptDirectory = System.IO.Path.GetDirectoryName(scriptPath);
+            string? scriptDirectory = Path.GetDirectoryName(scriptPath);
 
             if (scriptDirectory == null)
             {

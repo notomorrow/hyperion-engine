@@ -233,7 +233,7 @@ namespace Hyperion
                 }
 
                 // check if it has a dependency on the engine - if so, we need to verify the version is compatible
-                AssemblyName? hyperionSharedDependency = RuntimeFeature.IsDynamicCodeSupported ? Array.Find(assembly.GetReferencedAssemblies(), (assemblyName) => assemblyName.Name == "Hyperion.NET.Shared") : null;
+                AssemblyName? hyperionSharedDependency = RuntimeFeature.IsDynamicCodeSupported ? Array.Find(assembly.GetReferencedAssemblies(), (assemblyName) => assemblyName.Name == EngineAssemblies.Shared) : null;
                 if (hyperionSharedDependency != null)
                 {
                     // Verify the engine version (major, minor)
@@ -444,6 +444,7 @@ namespace Hyperion
 
             string? className = null;
             IntPtr classPtr = IntPtr.Zero;
+            bool isOwnDynamicClass = false;
 
             TypeId typeId = TypeId.ForType(type);
 
@@ -492,11 +493,12 @@ namespace Hyperion
                         if (parentClassPtr == IntPtr.Zero)
                             throw new Exception(string.Format("To create a dynamic Class, a parent class must exist with a valid ClassBinding attribute!"));
 
-                        // @FIXME: Allocated but never deleted. Need to implement deletion and removal from global array on assembly unload.
-                        classPtr = Class_CreateDynamicClass(ref typeId, className, parentClassPtr);
+                        classPtr = Class_CreateDynamicClass(ref typeId, className, parentClassPtr, type.IsAbstract);
 
                         if (classPtr == IntPtr.Zero)
                             throw new Exception(string.Format("Failed to create a dynamic Class for type \"{0}\" (TypeId: {1})", type.Name, typeId));
+
+                        isOwnDynamicClass = true;
                     }
                 }
                 else
@@ -506,6 +508,32 @@ namespace Hyperion
                     if (classPtr == IntPtr.Zero)
                         throw new Exception(string.Format("No Class found for \"{0}\"", className));
                 }
+            }
+            else if (type.IsClass && HasReflectedMembers(type))
+            {
+                // Script and ObjectBase subclasses with [HypField] / [HypProperty] members get a native class of their own, keyed by type name.
+                // A reloaded assembly creates a new one that supersedes the old, which lives on until its instances are gone.
+                IntPtr parentClassPtr = GetNativeParentClass(type);
+
+                if (parentClassPtr == IntPtr.Zero)
+                {
+                    Logger.Log(LogLevel.Warning, "{0} has reflected members but derives from neither Script nor a native class; they won't be saved or shown in the editor", type.FullName);
+                }
+                else
+                {
+                    classPtr = Class_CreateDynamicClass(ref typeId, typeName, parentClassPtr, type.IsAbstract);
+
+                    if (classPtr == IntPtr.Zero)
+                        throw new Exception(string.Format("Failed to create a dynamic Class for type \"{0}\" (TypeId: {1})", type.Name, typeId));
+
+                    isOwnDynamicClass = true;
+                }
+            }
+
+            if (isOwnDynamicClass)
+            {
+                assemblyInstance.AddDynamicClass(classPtr);
+                Class.RegisterDynamicClass(type, new Class(classPtr));
             }
 
             HypTypeEntry? typeEntry = HypTypeRegistry.Get(type);
@@ -553,6 +581,11 @@ namespace Hyperion
             RegisterMethods(type, typeEntry, assemblyGuid, assemblyPtr, ref managedClassDesc);
             RegisterProperties(type, typeEntry, assemblyGuid, assemblyPtr, ref managedClassDesc);
 
+            if (isOwnDynamicClass && typeEntry != null)
+            {
+                AddReflectedProperties(type, typeEntry, classPtr);
+            }
+
             if (typeEntry != null && typeEntry.NewObject != IntPtr.Zero)
             {
                 managedClassDesc.SetNewObjectFunction(ManagedInvokers.NewObjectGeneratedFptr, typeEntry.NewObject);
@@ -565,6 +598,151 @@ namespace Hyperion
             }
 
             return managedClassDesc.ClassObjectPtr;
+        }
+
+        private static bool HasReflectedMembers(Type type)
+        {
+            for (Type? currentType = type; currentType != null; currentType = currentType.BaseType)
+            {
+                HypTypeEntry? entry = HypTypeRegistry.Get(currentType);
+
+                if (entry != null && Array.Exists(entry.Properties, thunk => thunk.MemberType != null))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // The closest native class up the hierarchy: a reflected user base, a [ClassBinding] type, or ScriptInstance for scripts
+        private static IntPtr GetNativeParentClass(Type type)
+        {
+            for (Type? baseType = type.BaseType; baseType != null; baseType = baseType.BaseType)
+            {
+                if (Class.TryGetDynamicClass(baseType, out Class dynamicClass))
+                {
+                    return dynamicClass.Address;
+                }
+
+                ClassBinding? classBindingAttribute = baseType.GetCustomAttribute<ClassBinding>(inherit: false);
+
+                if (classBindingAttribute != null)
+                {
+                    return classBindingAttribute.GetClass(baseType).Address;
+                }
+
+                if (baseType.FullName == "Hyperion.Script")
+                {
+                    return Class_GetClassByName("ScriptInstance");
+                }
+            }
+
+            return IntPtr.Zero;
+        }
+
+        // Inherited members are reflected on the base type's own class
+        private static unsafe void AddReflectedProperties(Type type, HypTypeEntry typeEntry, IntPtr classPtr)
+        {
+            foreach (HypPropertyThunk thunk in typeEntry.Properties)
+            {
+                if (thunk.MemberType == null)
+                {
+                    continue;
+                }
+
+                TypeInfo typeInfo = GetNativeTypeInfo(thunk.MemberType, thunk.SampleValue);
+
+                if (typeInfo.IsNull)
+                {
+                    Logger.Log(LogLevel.Warning, "Member {0}.{1} of type {2} has no native equivalent; it won't be saved or shown in the editor", type.Name, thunk.Name, thunk.MemberType.Name);
+
+                    continue;
+                }
+
+                HypMemberAttribute? memberAttribute = thunk.MemberAttribute;
+                IReadOnlyDictionary<string, object> nativeAttributes = memberAttribute != null ? memberAttribute.NativeAttributes : new Dictionary<string, object>();
+
+                HypMemberAttributeDesc[] attributeDescs = new HypMemberAttributeDesc[nativeAttributes.Count];
+                List<IntPtr> allocatedStrings = new List<IntPtr>();
+
+                try
+                {
+                    int attributeIndex = 0;
+
+                    foreach (KeyValuePair<string, object> kv in nativeAttributes)
+                    {
+                        IntPtr namePtr = Marshal.StringToHGlobalAnsi(kv.Key);
+                        allocatedStrings.Add(namePtr);
+
+                        HypMemberAttributeDesc desc = new HypMemberAttributeDesc { Name = namePtr };
+
+                        switch (kv.Value)
+                        {
+                        case bool boolValue:
+                            desc.Kind = 0;
+                            desc.IntValue = boolValue ? 1 : 0;
+                            break;
+                        case int intValue:
+                            desc.Kind = 1;
+                            desc.IntValue = intValue;
+                            break;
+                        default:
+                            desc.Kind = 2;
+                            desc.StringValue = Marshal.StringToHGlobalAnsi(kv.Value.ToString());
+                            allocatedStrings.Add(desc.StringValue);
+                            break;
+                        }
+
+                        attributeDescs[attributeIndex++] = desc;
+                    }
+
+                    Class_AddManagedProperty(classPtr, thunk.Name, typeInfo.Address, attributeDescs, (uint)attributeDescs.Length, thunk.Setter != IntPtr.Zero);
+                }
+                finally
+                {
+                    foreach (IntPtr ptr in allocatedStrings)
+                    {
+                        Marshal.FreeHGlobal(ptr);
+                    }
+                }
+            }
+        }
+
+        // The type of a member's boxed value, found by boxing its generated sample value the same way dynamic struct fields are
+        private static TypeInfo GetNativeTypeInfo(Type memberType, object? sampleValue)
+        {
+            if (Nullable.GetUnderlyingType(memberType) != null)
+            {
+                return new TypeInfo();
+            }
+
+            // a null sample is only meaningful for ObjectBase types, which box as a null Handle<ObjectBase>
+            if (sampleValue == null && !typeof(ObjectBase).IsAssignableFrom(memberType))
+            {
+                return new TypeInfo();
+            }
+
+            try
+            {
+                using BoxedValue boxed = new BoxedValue(sampleValue);
+
+                return boxed.TypeInfo;
+            }
+            catch (Exception)
+            {
+                return new TypeInfo();
+            }
+        }
+
+        // matches ManagedPropertyAttributeDesc in ClassBindings.cpp
+        [StructLayout(LayoutKind.Sequential)]
+        private struct HypMemberAttributeDesc
+        {
+            public IntPtr Name;
+            public uint Kind;
+            public int IntValue;
+            public IntPtr StringValue;
         }
 
         private struct RegistrationStats
@@ -912,7 +1090,11 @@ namespace Hyperion
         private static extern IntPtr Class_GetClassForManagedClass([In] IntPtr pClass);
 
         [DllImport("hyperion", EntryPoint = "Class_CreateDynamicClass")]
-        private static extern IntPtr Class_CreateDynamicClass([In] ref TypeId typeId, [MarshalAs(UnmanagedType.LPStr)] string name, [In] IntPtr parentClassClassPtr);
+        private static extern IntPtr Class_CreateDynamicClass([In] ref TypeId typeId, [MarshalAs(UnmanagedType.LPStr)] string name, [In] IntPtr parentClassClassPtr, [MarshalAs(UnmanagedType.I1)] bool isAbstract);
+
+        [DllImport("hyperion", EntryPoint = "Class_AddManagedProperty")]
+        [return: MarshalAs(UnmanagedType.I1)]
+        private static extern bool Class_AddManagedProperty([In] IntPtr classPtr, [MarshalAs(UnmanagedType.LPStr)] string name, [In] IntPtr valueTypeInfo, [In] HypMemberAttributeDesc[] attributes, uint numAttributes, [MarshalAs(UnmanagedType.I1)] bool canSet);
 
         [DllImport("hyperion", EntryPoint = "NativeInterop_VerifyEngineVersion")]
         [return: MarshalAs(UnmanagedType.I1)]

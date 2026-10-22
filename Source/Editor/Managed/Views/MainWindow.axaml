@@ -2234,6 +2234,11 @@
                                                                     </Grid>
                                                                 </StackPanel>
                                                             </Grid>
+
+                                                            <inspector:InspectorPropertyItemsControl
+                                                                DataContext="{Binding Inspector.AttachedScript}"
+                                                                IsVisible="{Binding HasFields}"
+                                                                ItemsSource="{Binding Fields}" />
                                                         </StackPanel>
                                                     </Grid>
 

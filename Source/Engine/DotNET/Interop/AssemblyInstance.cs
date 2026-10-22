@@ -138,6 +138,7 @@ namespace Hyperion
         private Assembly? assembly;
         private bool isCoreAssembly;
         private List<AssemblyInstance> referencedAssemblies;
+        private List<IntPtr> dynamicClasses = new List<IntPtr>();
 
         public AssemblyInstance(string basePath, Guid guid, string path, IntPtr assemblyPtr, bool ownsAssemblyPtr, bool isCoreAssembly)
         {
@@ -261,6 +262,12 @@ namespace Hyperion
             {
                 return referencedAssemblies;
             }
+        }
+
+        // Released on unload; each stays alive natively while instances of it remain
+        public void AddDynamicClass(IntPtr classPtr)
+        {
+            dynamicClasses.Add(classPtr);
         }
 
         public void Load()
@@ -397,7 +404,16 @@ namespace Hyperion
                 referencedAssembly.Unload();
             }
 
-            /// \todo Remove DynamicStruct instances for the assembly
+            /// \todo Remove DynamicStruct instances for the assembly (their native Structs may be shared with the reloaded assembly's)
+
+            Class.RemoveCachedForAssembly(assembly);
+
+            foreach (IntPtr classPtr in dynamicClasses)
+            {
+                Class_DestroyDynamicClass(classPtr);
+            }
+
+            dynamicClasses.Clear();
 
             int numDelegatesRemoved = DelegateCache.Instance.RemoveForAssembly(guid);
 
@@ -434,6 +450,9 @@ namespace Hyperion
 
         [DllImport("hyperion")]
         private static extern void NativeInterop_FreeAssembly(IntPtr assemblyPtr);
+
+        [DllImport("hyperion")]
+        private static extern void Class_DestroyDynamicClass(IntPtr classPtr);
     }
 
     public class AssemblyCache

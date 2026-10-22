@@ -46,6 +46,9 @@ public:
     bool Parse();
     bool Parse(BoxedValue& out, bool moveResult = true);
 
+    /*! \brief Parses the whole token stream as one value of the given type */
+    bool ParseSingleValue(const TypeInfo& typeInfo, BoxedValue& out);
+
 private:
     bool ParseObjectBody(const Class* cls, BoxedValue& target, const UTF8StringView& objectName = UTF8StringView {});
     bool ParseValue(const TypeInfo& typeInfo, BoxedValue& out);
@@ -75,6 +78,11 @@ private:
 
     /*! \brief Consumes the rest of an object value (after its class name) and renders it back to HMF source text. */
     String CaptureObjectSource(const String& className);
+
+    /*! \brief Consumes the next value and renders it back to HMF source text. */
+    String CaptureValueSource();
+
+    bool IsClassNamedObject() const;
 
     bool ResolveEnumName(const Class* enumClass, const String& name, BoxedValue& outValue);
 

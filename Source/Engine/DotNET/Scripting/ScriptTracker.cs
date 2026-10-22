@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace Hyperion
@@ -22,6 +23,14 @@ namespace Hyperion
 
         private Dictionary<string, ScriptDescWrapper> processingScripts = [];
         private Dictionary<string, CompileScriptEditorTask> tasks = [];
+
+        // watchers raise events on thread pool threads. these changes are picked up on the sim thread in Update()
+        private ConcurrentQueue<KeyValuePair<string, ScriptLanguage>> changedFiles = new();
+
+        // events point at these, so they're kept until the next Update()
+        private List<ScriptDescWrapper> finishedScripts = [];
+
+        private Dictionary<string, DateTime> processedWriteTimes = [];
 
         private List<string> sourceDirectories = [];
         private string intermediateDirectory = string.Empty;
@@ -134,7 +143,20 @@ namespace Hyperion
 
             watchers.Clear();
 
+            foreach (ScriptDescWrapper wrapper in processingScripts.Values)
+            {
+                wrapper.Dispose();
+            }
+
+            foreach (ScriptDescWrapper wrapper in finishedScripts)
+            {
+                wrapper.Dispose();
+            }
+
             processingScripts.Clear();
+            finishedScripts.Clear();
+            changedFiles.Clear();
+            processedWriteTimes.Clear();
 
             callback = null;
             callbackSelfPtr = IntPtr.Zero;
@@ -149,11 +171,27 @@ namespace Hyperion
 
         public void Update()
         {
-            if (processingScripts.Count == 0)
+            foreach (ScriptDescWrapper wrapper in finishedScripts)
             {
-                return;
+                wrapper.Dispose();
             }
 
+            finishedScripts.Clear();
+
+            if (processingScripts.Count != 0)
+            {
+                ProcessScripts();
+            }
+
+            // compiled on the next Update(), so the compile task shows before the build blocks this thread
+            while (changedFiles.TryDequeue(out KeyValuePair<string, ScriptLanguage> changedFile))
+            {
+                ProcessScriptFile(changedFile.Key, changedFile.Value);
+            }
+        }
+
+        private void ProcessScripts()
+        {
             Logger.Log(logChannel, LogLevel.Info, "Processing {0} scripts...", processingScripts.Count);
 
             List<KeyValuePair<string, ScriptLanguage>> scriptsToRemove = [];
@@ -211,6 +249,16 @@ namespace Hyperion
 
                     scriptDesc.CompileStatus &= ~ScriptCompileStatus.Processing;
                     scriptDesc.CompileStatus &= ~ScriptCompileStatus.Dirty;
+
+                    // C# scripts reload once their assembly is built; Strata scripts already reloaded from source when they changed
+                    if (scriptDesc.Language == ScriptLanguage.CSharp)
+                    {
+                        TriggerCallback(new ScriptEvent
+                        {
+                            Type = ScriptEventType.StateChanged,
+                            ScriptPtr = entry.Value.Address
+                        });
+                    }
                 }
                 else
                 {
@@ -225,7 +273,12 @@ namespace Hyperion
                 string scriptPath = kvp.Key;
                 ScriptLanguage language = kvp.Value;
 
-                bool removedFromProcessing = processingScripts.Remove(scriptPath);
+                bool removedFromProcessing = processingScripts.Remove(scriptPath, out ScriptDescWrapper? finishedScript);
+
+                if (finishedScript != null)
+                {
+                    finishedScripts.Add(finishedScript);
+                }
 
                 if (language == ScriptLanguage.CSharp)
                 {
@@ -268,7 +321,7 @@ namespace Hyperion
         {
             Logger.Log(logChannel, LogLevel.Info, "ScriptTracker: C# file changed: {0} {1}", e.FullPath, e.ChangeType);
 
-            ProcessScriptFile(e.FullPath, ScriptLanguage.CSharp);
+            changedFiles.Enqueue(new(e.FullPath, ScriptLanguage.CSharp));
         }
 
 
@@ -276,7 +329,7 @@ namespace Hyperion
         {
             Logger.Log(logChannel, LogLevel.Info, "ScriptTracker: Strata file changed: {0} {1}", e.FullPath, e.ChangeType);
 
-            ProcessScriptFile(e.FullPath, ScriptLanguage.Strata);
+            changedFiles.Enqueue(new(e.FullPath, ScriptLanguage.Strata));
         }
 
         private void ProcessScriptFile(string filePath, ScriptLanguage language)
@@ -287,6 +340,16 @@ namespace Hyperion
 
                 return;
             }
+
+            // one save often raises several change events, some only after the build they triggered
+            DateTime writeTime = File.Exists(filePath) ? File.GetLastWriteTimeUtc(filePath) : DateTime.MinValue;
+
+            if (processedWriteTimes.TryGetValue(filePath, out DateTime processedWriteTime) && processedWriteTime == writeTime)
+            {
+                return;
+            }
+
+            processedWriteTimes[filePath] = writeTime;
 
             Logger.Log(logChannel, LogLevel.Info, "Adding script {0} to processing queue...", filePath);
 

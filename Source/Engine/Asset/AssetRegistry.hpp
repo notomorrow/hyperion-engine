@@ -115,6 +115,9 @@ public:
     ///true if an asset is registered under \p name, without loading it
     bool HasAsset(const AssetBucket& bucket, StringHash name) const;
 
+    HYP_METHOD()
+    Name GetUniqueAssetName(uint32 bucketIndex, const String& name) const;
+
     void MarkAssetDirty(const AssetObject& assetObject);
     void MarkAllDirty();
 

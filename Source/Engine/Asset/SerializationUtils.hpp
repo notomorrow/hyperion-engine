@@ -168,6 +168,8 @@ ENGINE_API TResult<BoxedValue> ObjectFieldsFromHMF(ByteReader& stream, Span<cons
 /*! \brief Reads one top-level field of the object in a HMF, from \p stream */
 ENGINE_API TResult<BoxedValue> FieldFromHMF(ByteReader& stream, StringHash fieldName);
 
+ENGINE_API TResult<BoxedValue> BoxedAsType(const BoxedValue& value, const TypeInfo& typeInfo);
+
 #pragma endregion Hyperion Manifest
 
 #pragma region Shared

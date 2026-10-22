@@ -8,6 +8,7 @@
 
 #include <Scene/World.hpp>
 #include <Scene/Scene.hpp>
+#include <Scene/Node.hpp>
 #include <Scene/EntityManager.hpp>
 
 #include <Scene/Systems/ScriptSystem.hpp>
@@ -31,6 +32,12 @@
 
 #include <Asset/AssetRegistry.hpp>
 #include <Asset/AssetBucket.hpp>
+#include <Asset/SerializationUtils.hpp>
+
+#include <Core/Reflection/Class.hpp>
+#include <Core/Reflection/Property.hpp>
+
+#include <Core/DataProcessing/HMF/HMF.hpp>
 
 #include <System/DirectoryInitializer.hpp>
 
@@ -178,6 +185,175 @@ public:
 };
 
 #pragma endregion ScriptTracker
+
+#pragma region Reloaded script classes
+
+#ifdef HYP_DOTNET
+static const Class* GetFirstStaticAncestor(const Class* cls)
+{
+    while (cls && cls->IsDynamic())
+    {
+        cls = cls->GetParent();
+    }
+
+    return cls;
+}
+
+static void RetargetDynamicObject(ObjectBase* object, const DynamicClassInstance* newClass)
+{
+    ObjectHeader* header = object->GetObjectHeader_Internal();
+    const DynamicClassInstance* oldClass = static_cast<const DynamicClassInstance*>(header->cls);
+
+    ScriptObjectResource* scriptObjectResource = object->GetScriptObjectResource();
+    ScriptObjectData_DotNet* dotNetData = scriptObjectResource ? scriptObjectResource->GetScriptObjectData_DotNet() : nullptr;
+
+    const SharedPtr<dotnet::ManagedClass> newManagedClass = newClass->GetManagedClass();
+
+    if (!dotNetData || !newManagedClass)
+    {
+        return;
+    }
+
+    Array<Pair<Name, String>> carriedValues;
+
+    {
+        const BoxedValue target { MakeStrongRef(object) };
+
+        for (const Class* cls = oldClass; cls && cls->IsDynamic(); cls = cls->GetParent())
+        {
+            for (const Property* property : cls->GetProperties())
+            {
+                if (!property->CanGet())
+                {
+                    continue;
+                }
+
+                String source;
+
+                if (BoxedToHMF(property->Get(target), source, &property->GetTypeInfo()).HasError())
+                {
+                    continue;
+                }
+
+                carriedValues.PushBack({ property->GetName(), std::move(source) });
+            }
+        }
+    }
+
+    dotnet::ManagedObject* oldManagedObject = dotNetData->objectPtr;
+
+    const_cast<DynamicClassInstance*>(newClass)->AddRef();
+    header->cls = newClass;
+
+    dotNetData->managedClass = newManagedClass;
+    dotNetData->objectPtr = newManagedClass->NewObject(newClass, object);
+
+    if (!dotNetData->objectPtr)
+    {
+        HYP_LOG(Scripting, Error, "Failed to create the reloaded managed object for {}", newClass->GetName());
+    }
+    else
+    {
+        int64 readers = 0;
+        int64 writers = 0;
+        scriptObjectResource->GetNumUsers(readers, writers);
+
+        if (readers > 0)
+        {
+            dotNetData->objectPtr->SetKeepAlive(true);
+        }
+    }
+
+    if (oldManagedObject)
+    {
+        // disposed now rather than finalized later, since the native object it refers to lives on
+        const dotnet::ManagedMethod* disposeMethod = oldManagedObject->GetMethod("Dispose");
+
+        if (!disposeMethod || !oldManagedObject->TryInvokeMethod<void>(disposeMethod, nullptr))
+        {
+            HYP_LOG(Scripting, Warning, "Couldn't dispose the managed object of {} replaced by a reload; it is left to the GC", oldClass->GetName());
+        }
+
+        oldManagedObject->SetKeepAlive(false);
+
+        delete oldManagedObject;
+    }
+
+    const_cast<DynamicClassInstance*>(oldClass)->Release();
+
+    BoxedValue target { MakeStrongRef(object) };
+
+    for (const Pair<Name, String>& carriedValue : carriedValues)
+    {
+        const Property* property = newClass->GetProperty(carriedValue.first);
+
+        if (!property || !property->CanSet())
+        {
+            continue;
+        }
+
+        TResult<BoxedValue> valueResult = BoxedAsType(BoxedValue(HMF::UnresolvedValue { carriedValue.second }), property->GetTypeInfo());
+
+        if (valueResult.HasError())
+        {
+            HYP_LOG(Scripting, Warning, "Value of {}.{} doesn't fit its new type {}; it's reset", newClass->GetName(), carriedValue.first, property->GetTypeInfo().name);
+
+            continue;
+        }
+
+        property->Set(target, valueResult.GetValue());
+    }
+}
+
+static void RetargetReloadedObjects(World& world)
+{
+    uint32 numRetargeted = 0;
+
+    for (Scene* scene : world.GetScenes())
+    {
+        if (!scene || !scene->GetRoot().IsValid())
+        {
+            continue;
+        }
+
+        for (Node* node : scene->GetRoot()->GetDescendantsArray())
+        {
+            const Class* cls = node ? node->InstanceClass() : nullptr;
+
+            if (!cls || !cls->IsDynamic())
+            {
+                continue;
+            }
+
+            const Class* newClass = GetClass(cls->GetTypeId());
+
+            if (!newClass || newClass == cls || !newClass->IsDynamic())
+            {
+                continue;
+            }
+
+            // the native object stays as it is, so the new class has to describe the same kind of native object
+            if (GetFirstStaticAncestor(newClass) != GetFirstStaticAncestor(cls))
+            {
+                HYP_LOG(Scripting, Warning, "{} now derives from a different native class; reopen the project to load {} with it", newClass->GetName(), node->GetName());
+
+                continue;
+            }
+
+            RetargetDynamicObject(node, static_cast<const DynamicClassInstance*>(newClass));
+
+            numRetargeted++;
+        }
+    }
+
+    if (numRetargeted != 0)
+    {
+        HYP_LOG(Scripting, Info, "Reloaded {} object(s) of C# classes", numRetargeted);
+    }
+}
+#endif // HYP_DOTNET
+
+#pragma endregion Reloaded script classes
 
 #pragma region ScriptSystem
 
@@ -355,6 +531,15 @@ void ScriptSystem::OnAddedToWorld(World* world)
                         }
                     }
 
+#ifdef HYP_DOTNET
+                    if (inScriptDesc.language == ScriptLanguage::CSharp)
+                    {
+                        DotNETHost::GetInstance().LoadAssembly(EntityScripting::GetCSharpAssemblyLoadPath(inScriptDesc).Data());
+
+                        RetargetReloadedObjects(*world);
+                    }
+#endif // HYP_DOTNET
+
                     OnScriptReloaded();
                 }));
 
@@ -393,6 +578,76 @@ Array<FilePath> ScriptSystem::CollectScriptSourceDirectories() const
 }
 
 Delegate<void> ScriptSystem::OnScriptReloaded;
+
+SharedPtr<dotnet::Assembly> ScriptSystem::LoadProjectScriptAssembly(const FilePath& contentDirectory)
+{
+#ifdef HYP_DOTNET
+    if (!EnableScriptReloading())
+    {
+        return nullptr;
+    }
+
+    const FilePath scriptsDirectory = contentDirectory / AssetBuckets::Scripts.GetName();
+
+    if (!scriptsDirectory.IsDirectory())
+    {
+        return nullptr;
+    }
+
+    bool hasCSharpScripts = false;
+
+    for (const FilePath& file : scriptsDirectory.GetAllFilesInDirectory())
+    {
+        if (file.EndsWith(".cs"))
+        {
+            hasCSharpScripts = true;
+
+            break;
+        }
+    }
+
+    if (!hasCSharpScripts)
+    {
+        return nullptr;
+    }
+
+    ScriptTracker scriptTracker;
+
+    // same source directory as the ScriptSystem's tracker, so the module (and its DLL) gets the same name
+    scriptTracker.InitializeCompiler(
+        GetScriptsSourceDirectory(),
+        EngineGlobals::GetTempDirectory() / "ScriptProjects",
+        CoreApi::GetExecutablePath());
+
+    ScriptDesc scriptDesc {};
+    scriptDesc.language = ScriptLanguage::CSharp;
+
+    // only the directory of the script path is used to find the module
+    if (!scriptTracker.ResolveAssembly(scriptsDirectory / "Module.cs", scriptDesc))
+    {
+        HYP_LOG(Scripting, Error, "Failed to build the C# scripts in {}; classes they declare won't load with the project's scenes", scriptsDirectory);
+
+        return nullptr;
+    }
+
+    const ANSIString assemblyPath = EntityScripting::GetCSharpAssemblyLoadPath(scriptDesc);
+
+    SharedPtr<dotnet::Assembly> assembly = DotNETHost::GetInstance().LoadAssembly(assemblyPath.Data());
+
+    if (!assembly)
+    {
+        HYP_LOG(Scripting, Error, "Failed to load C# script assembly {}", assemblyPath.Data());
+
+        return nullptr;
+    }
+
+    HYP_LOG(Scripting, Info, "Loaded C# script assembly {} for {}", assemblyPath.Data(), scriptsDirectory);
+
+    return assembly;
+#else
+    return nullptr;
+#endif
+}
 
 void ScriptSystem::RefreshScriptSourceDirectories()
 {
@@ -435,7 +690,8 @@ void ScriptSystem::OnEntityAdded(Entity* entity)
 
     const GameState& gameState = GetWorld()->GetGameState();
 
-    if (!gameState.IsStopped())
+    // the editor also creates (but doesn't activate) scripts while stopped, so their reflected fields can be edited
+    if (!gameState.IsStopped() || EnableScriptReloading())
     {
         ResolveScriptAssembly(scriptComponent);
 
@@ -470,6 +726,29 @@ void ScriptSystem::Process(float delta, Span<Handle<Scene>> scenes)
     }
 }
 
+void ScriptSystem::RecreateEntityScript(Entity* entity)
+{
+    AssertOnThread(g_simThread);
+
+    EntityManager* entityManager = entity->GetEntityManager();
+    ScriptComponent* scriptComponent = entityManager ? entityManager->TryGetComponent<ScriptComponent>(entity) : nullptr;
+
+    if (!scriptComponent)
+    {
+        return;
+    }
+
+    const GameState& gameState = GetWorld()->GetGameState();
+
+    EntityScripting::ShutdownEntityScript(entity, *scriptComponent, gameState);
+
+    scriptComponent->assembly.Reset();
+
+    ResolveScriptAssembly(*scriptComponent);
+
+    EntityScripting::InitializeEntityScript(entity, *scriptComponent, gameState);
+}
+
 void ScriptSystem::HandleGameStateChanged(GameStateMode gameStateMode, GameStateMode previousGameStateMode)
 {
     World* world = GetWorld();
@@ -483,9 +762,17 @@ void ScriptSystem::HandleGameStateChanged(GameStateMode gameStateMode, GameState
 
     if (gameStateMode == GameStateMode::STOPPED)
     {
-        EntityScripting::QueryScriptedEntities(*world, [&gameState](Entity* entity, ScriptComponent& scriptComponent)
+        EntityScripting::QueryScriptedEntities(*world, [this, &gameState](Entity* entity, ScriptComponent& scriptComponent)
                                                {
                                                    EntityScripting::ShutdownEntityScript(entity, scriptComponent, gameState);
+
+                                                   // back to an inactive editor instance
+                                                   if (EnableScriptReloading())
+                                                   {
+                                                       ResolveScriptAssembly(scriptComponent);
+
+                                                       EntityScripting::InitializeEntityScript(entity, scriptComponent, gameState);
+                                                   }
                                                });
 
         return;
@@ -495,6 +782,9 @@ void ScriptSystem::HandleGameStateChanged(GameStateMode gameStateMode, GameState
     {
         EntityScripting::QueryScriptedEntities(*world, [this, &gameState](Entity* entity, ScriptComponent& scriptComponent)
                                                {
+                                                   // play starts from a fresh object rather than the editor's inactive one
+                                                   EntityScripting::ShutdownEntityScript(entity, scriptComponent, gameState);
+
                                                    ResolveScriptAssembly(scriptComponent);
 
                                                    EntityScripting::InitializeEntityScript(entity, scriptComponent, gameState);
@@ -555,5 +845,22 @@ void ScriptSystem::ResolveScriptAssembly(ScriptComponent& scriptComponent)
 }
 
 #pragma endregion ScriptSystem
+
+extern "C"
+{
+    // Setting a ScriptComponent's script doesn't go through OnEntityAdded, so the editor asks for the script object after setting it
+    HYP_EXPORT void ScriptSystem_RecreateEntityScript(Entity* entity)
+    {
+        if (!entity || !entity->GetWorld())
+        {
+            return;
+        }
+
+        if (ScriptSystem* scriptSystem = entity->GetWorld()->GetSystem<ScriptSystem>())
+        {
+            scriptSystem->RecreateEntityScript(entity);
+        }
+    }
+}
 
 } // namespace Hyperion

@@ -822,6 +822,30 @@ bool AssetRegistry::HasAsset(const AssetBucket& bucket, StringHash name) const
     return m_assetBucketData[bucket.GetIndex()].GetAssetDesc(name, assetDesc);
 }
 
+Name AssetRegistry::GetUniqueAssetName(uint32 bucketIndex, const String& name) const
+{
+    const ANSIString assetName(name.Data(), name.Data() + name.Size());
+
+    if (bucketIndex >= MaxAssetBuckets || assetName.Empty())
+    {
+        return CreateNameFromDynamicString(assetName);
+    }
+
+    const AssetBucketData& data = m_assetBucketData[bucketIndex];
+
+    TSharedLock lock(data.mtx);
+
+    ANSIString candidateName = assetName;
+    uint32 suffix = 1;
+
+    while (data.FindAssetDescIgnoringCase(candidateName))
+    {
+        candidateName = HYP_FORMAT("{}_{}", assetName, suffix++);
+    }
+
+    return CreateNameFromDynamicString(candidateName);
+}
+
 void AssetRegistry::MarkAssetDirty(const AssetObject& assetObject)
 {
     if (assetObject.IsTransient())

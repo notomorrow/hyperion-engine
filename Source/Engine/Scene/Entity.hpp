@@ -256,10 +256,10 @@ private:
     HYP_METHOD(Property = "Components", NoScriptBindings, LoadOrder = 1000)
     void DeserializeComponents(const Array<BoxedValue, DynamicAllocator>& components);
 
-    HYP_METHOD(Property = "Layers", NoScriptBindings)
+    HYP_METHOD(Property = "Layers", NoScriptBindings, Editor = false)
     Array<Name> SerializeLayers() const;
 
-    HYP_METHOD(Property = "Layers", NoScriptBindings, LoadOrder = 1002)
+    HYP_METHOD(Property = "Layers", NoScriptBindings, LoadOrder = 1002, Editor = false)
     void DeserializeLayers(const Array<Name>& layerNames);
 
     ////////////////////

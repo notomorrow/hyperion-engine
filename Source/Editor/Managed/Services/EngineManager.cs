@@ -52,8 +52,8 @@ namespace Hyperion.Editor
         private static bool _editorViewportsEnabled = false;
 
         private static ReadOnlySpan<string> CoreAssemblyNames => new[] {
-            "Hyperion.NET.Shared.dll",
-            "Hyperion.NET.Runtime.dll",
+            EngineAssemblies.FileName(EngineAssemblies.Shared),
+            EngineAssemblies.FileName(EngineAssemblies.Runtime),
             "Hyperion.Editor.dll"
         };
 

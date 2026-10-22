@@ -154,11 +154,11 @@ namespace Hyperion.Editor.ViewModels
                 })
                 .OrderBy(p =>
                 {
-                    ClassAttribute? attrEditOrder = p.GetAttribute("editororder");
+                    ClassAttribute? attrEditorOrder = p.GetAttribute("editororder");
 
-                    if (attrEditOrder != null)
+                    if (attrEditorOrder != null)
                     {
-                        return attrEditOrder.Value.GetInt();
+                        return attrEditorOrder.Value.GetInt();
                     }
 
                     return int.MaxValue;
@@ -263,11 +263,11 @@ namespace Hyperion.Editor.ViewModels
                 .Where(m => EvaluateEditCondition(cls, m.GetAttribute("editcondition"), m.Name.ToString()))
                 .OrderBy(m =>
                 {
-                    ClassAttribute? attrEditOrder = m.GetAttribute("editororder");
+                    ClassAttribute? attrEditorOrder = m.GetAttribute("editororder");
 
-                    if (attrEditOrder != null)
+                    if (attrEditorOrder != null)
                     {
-                        return attrEditOrder.Value.GetInt();
+                        return attrEditorOrder.Value.GetInt();
                     }
 
                     return int.MaxValue;

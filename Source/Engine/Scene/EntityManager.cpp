@@ -680,6 +680,14 @@ Handle<Entity> EntityManager::AddTypedEntity(const Class* cls)
 
     while (cls != nullptr && cls != Entity::StaticClass())
     {
+        // type tags exist for static classes only; a runtime (e.g C#) subclass is tagged as its native ancestors
+        if (cls->IsDynamic())
+        {
+            cls = cls->GetParent();
+
+            continue;
+        }
+
         EntityTag entityTypeTag = MakeEntityTypeTag(cls->GetTypeId());
         AssertDebug((uint64(entityTypeTag) & uint64(EntityTag::EntityTypeSentinel)) != 0);
 
@@ -764,6 +772,14 @@ void EntityManager::AddExistingEntity_Internal(const Handle<Entity>& entity)
 
     while (cls != nullptr && cls != Entity::StaticClass())
     {
+        // type tags exist for static classes only; a runtime (e.g C#) subclass is tagged as its native ancestors
+        if (cls->IsDynamic())
+        {
+            cls = cls->GetParent();
+
+            continue;
+        }
+
         EntityTag entityTypeTag = MakeEntityTypeTag(cls->GetTypeId());
         AssertDebug((uint64(entityTypeTag) & uint64(EntityTag::EntityTypeSentinel)) != 0);
 

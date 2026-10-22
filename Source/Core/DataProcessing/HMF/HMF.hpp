@@ -60,6 +60,11 @@ struct UnresolvedObject
     String source;
 };
 
+struct UnresolvedValue
+{
+    String source;
+};
+
 using ParseSchemaSectionFn = bool (*)(BoxedValue& owner, Array<SchemaSectionEntry>&& entries);
 
 CORE_API void SetParseSchemaSectionFn(const ANSIStringView& sectionName, ParseSchemaSectionFn fn);
@@ -79,6 +84,9 @@ struct ParseOptions
 };
 
 CORE_API ParseResult Parse(const FilePath& filePath, ByteReader& reader, const ParseOptions& options, ErrorList* outErrors = nullptr);
+
+/*! \brief Reads a single value of the given type, e.g the source of an UnresolvedValue */
+CORE_API ParseResult ParseValue(const String& source, const TypeInfo& typeInfo, ErrorList* outErrors = nullptr);
 
 } // namespace Hyperion::DataProcessing::HMF
 

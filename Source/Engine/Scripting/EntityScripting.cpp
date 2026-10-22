@@ -26,6 +26,11 @@
 
 #include <Core/Reflection/ClassRegistry.hpp>
 #include <Core/Reflection/Method.hpp>
+#include <Core/Reflection/Property.hpp>
+
+#include <Core/DataProcessing/HMF/HMF.hpp>
+
+#include <Asset/SerializationUtils.hpp>
 
 #include <Core/IO/ByteReader.hpp>
 
@@ -621,6 +626,93 @@ static void MarkEntityScriptErrored(Entity* entity, ScriptComponent& scriptCompo
     scriptComponent.flags |= ScriptComponentFlags::ERRORED;
 }
 
+#ifdef HYP_DOTNET
+// The class reflecting the script's [HypField] / [HypProperty] members; null if it has none
+static const Class* GetScriptClass(const ScriptComponent& scriptComponent)
+{
+    if (!scriptComponent.scriptObjectResource)
+    {
+        return nullptr;
+    }
+
+    const SharedPtr<dotnet::ManagedClass> managedClass = scriptComponent.scriptObjectResource->GetManagedClass();
+
+    return managedClass ? managedClass->GetClass() : nullptr;
+}
+
+static void ApplyScriptFieldValues(ScriptComponent& scriptComponent)
+{
+    const Class* scriptClass = GetScriptClass(scriptComponent);
+
+    if (!scriptClass || scriptComponent.fieldValues.Empty())
+    {
+        return;
+    }
+
+    BoxedValue target { AnyRef(scriptClass->GetTypeInfo(), scriptComponent.scriptObjectResource) };
+
+    for (size_t index = 0; index < scriptComponent.fieldValues.Size();)
+    {
+        const ScriptFieldValue& fieldValue = scriptComponent.fieldValues[index];
+
+        // values of fields that were removed, made read-only or made transient etc are dropped, so they aren't saved again
+        const Property* property = scriptClass->GetProperty(fieldValue.name);
+
+        if (!property
+            || !property->CanSet()
+            || property->GetAttribute(Attributes::g_attrTransient).GetBool())
+        {
+            scriptComponent.fieldValues.EraseAt(index);
+
+            continue;
+        }
+
+        TResult<BoxedValue> valueResult = BoxedAsType(fieldValue.value, property->GetTypeInfo());
+
+        // kept, in case the field's type is changed back
+        if (valueResult.HasError())
+        {
+            HYP_LOG(Scripting, Warning, "Saved value of script field '{}' doesn't fit its type {}; keeping the script's default", fieldValue.name, property->GetTypeInfo().name);
+        }
+        else
+        {
+            property->Set(target, valueResult.GetValue());
+        }
+
+        index++;
+    }
+}
+
+// Kept as HMF source rather than the value itself, which may refer to memory that's only valid during the edit
+static bool StoreScriptFieldValue(ScriptComponent& scriptComponent, const Property* property, const BoxedValue& value)
+{
+    HMF::UnresolvedValue unresolvedValue;
+
+    if (BoxedToHMF(value, unresolvedValue.source, &property->GetTypeInfo()).HasError())
+    {
+        return false;
+    }
+
+    BoxedValue storedValue(std::move(unresolvedValue));
+
+    for (ScriptFieldValue& fieldValue : scriptComponent.fieldValues)
+    {
+        if (fieldValue.name == property->GetName())
+        {
+            fieldValue.value = std::move(storedValue);
+
+            return true;
+        }
+    }
+
+    ScriptFieldValue& fieldValue = scriptComponent.fieldValues.EmplaceBack();
+    fieldValue.name = property->GetName();
+    fieldValue.value = std::move(storedValue);
+
+    return true;
+}
+#endif
+
 static void ActivateEntityScript(Entity* entity, ScriptComponent& scriptComponent, World* world, Scene* scene)
 {
     if (scriptComponent.flags & ScriptComponentFlags::ACTIVATED)
@@ -758,6 +850,8 @@ void InitializeEntityScript(Entity* entity, ScriptComponent& scriptComponent, co
                     {
                         sor = new ScriptObjectResource(object, classPtr);
                         sor->AddReader();
+
+                        ApplyScriptFieldValues(scriptComponent);
 
                         if (!gameState.IsStopped())
                         {
@@ -947,5 +1041,55 @@ void UpdateScriptedEntities(World& world, float delta)
 }
 
 } // namespace EntityScripting
+
+extern "C"
+{
+#ifdef HYP_DOTNET
+    HYP_EXPORT const Class* ScriptComponent_GetScriptClass(ScriptComponent* scriptComponent)
+    {
+        if (!scriptComponent)
+        {
+            return nullptr;
+        }
+
+        return EntityScripting::GetScriptClass(*scriptComponent);
+    }
+
+    // Target for the script class's properties
+    HYP_EXPORT ScriptObjectResource* ScriptComponent_GetScriptObject(ScriptComponent* scriptComponent)
+    {
+        if (!scriptComponent)
+        {
+            return nullptr;
+        }
+
+        return scriptComponent->scriptObjectResource;
+    }
+
+    // Sets a reflected field on the live script and stores it in the component, so it is saved and reapplied whenever the script is recreated
+    HYP_EXPORT int8 ScriptComponent_SetFieldValue(ScriptComponent* scriptComponent, const Property* property, const BoxedValue* value)
+    {
+        if (!scriptComponent || !property || !value)
+        {
+            return 0;
+        }
+
+        if (const Class* scriptClass = EntityScripting::GetScriptClass(*scriptComponent); scriptClass && property->CanSet())
+        {
+            BoxedValue target { AnyRef(scriptClass->GetTypeInfo(), scriptComponent->scriptObjectResource) };
+
+            property->Set(target, *value);
+        }
+
+        // transient fields only change the live script
+        if (property->GetAttribute(Attributes::g_attrTransient).GetBool())
+        {
+            return 1;
+        }
+
+        return EntityScripting::StoreScriptFieldValue(*scriptComponent, property, *value) ? 1 : 0;
+    }
+#endif
+}
 
 } // namespace Hyperion

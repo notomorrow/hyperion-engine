@@ -20,6 +20,7 @@
                 <StackPanel Spacing="6">
                     <TextBlock Classes="section-label" Text="Name" />
                     <TextBox Text="{Binding ScriptName, Mode=TwoWay}" PlaceholderText="Script name" />
+                    <TextBlock Text="Name is already used" Foreground="{DynamicResource Brush.Danger}" IsVisible="{Binding IsNameTaken}" />
                 </StackPanel>
 
                 <Separator />

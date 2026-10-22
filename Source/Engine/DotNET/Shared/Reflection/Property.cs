@@ -14,6 +14,8 @@ namespace Hyperion
             _ptr = ptr;
         }
 
+        public IntPtr Address => _ptr;
+
         public Name Name
         {
             get

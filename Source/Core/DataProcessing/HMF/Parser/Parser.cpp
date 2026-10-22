@@ -159,6 +159,23 @@ bool Parser::Parse()
     return true;
 }
 
+bool Parser::ParseSingleValue(const TypeInfo& typeInfo, BoxedValue& out)
+{
+    if (!ParseValue(typeInfo, out))
+    {
+        return false;
+    }
+
+    if (Peek().GetTokenClass() != TK_EMPTY)
+    {
+        Error(MSG_UNEXPECTED_TOKEN, Peek().GetLocation(), Peek().GetValue());
+
+        return false;
+    }
+
+    return true;
+}
+
 bool Parser::ParseObjectBody(const Class* cls, BoxedValue& target, const UTF8StringView& objectName)
 {
     const SourceLocation currLocation = Peek().GetLocation();
@@ -521,6 +538,19 @@ bool Parser::ParseSchemaSection(const Class* cls, BoxedValue& target, const ANSI
 bool Parser::ParseValue(const TypeInfo& typeInfo, BoxedValue& out)
 {
     const Token next = Peek();
+
+    // a generic slot can't say what type a plain value is, so it stays as text for whoever reads it with a type
+    if (typeInfo.id == TypeId::ForType<BoxedValue>()
+        && !IsClassNamedObject()
+        && !IsIdentKeyword(next, "null"))
+    {
+        UnresolvedValue unresolvedValue;
+        unresolvedValue.source = CaptureValueSource();
+
+        out = BoxedValue(std::move(unresolvedValue));
+
+        return true;
+    }
 
     // '@' before string denotes AssetPath literal
     if (next.GetTokenClass() == TK_AT_STRING)
@@ -1336,8 +1366,7 @@ bool Parser::ParseObjectValue(const TypeInfo& typeInfo, BoxedValue& out)
     const Class* declaredClass = typeInfo.GetClass();
     const Class* actualClass = declaredClass;
 
-    if (Peek().GetTokenClass() == TK_IDENT
-        && (Peek(1).GetTokenClass() == TK_OPEN_BRACE || ((Peek(1).GetTokenClass() == TK_STRING || Peek(1).GetTokenClass() == TK_IDENT) && Peek(2).GetTokenClass() == TK_OPEN_BRACE)))
+    if (IsClassNamedObject())
     {
         Token classToken = Next(); // consume IDENT
         const String& runtimeClassName = classToken.GetValue();
@@ -1860,6 +1889,46 @@ String Parser::CaptureObjectSource(const String& className)
     }
 
     return source;
+}
+
+String Parser::CaptureValueSource()
+{
+    const size_t startPosition = m_tokenStream->GetPosition();
+
+    SkipValue();
+
+    const size_t endPosition = m_tokenStream->GetPosition();
+
+    m_tokenStream->SetPosition(startPosition);
+
+    String source;
+    TokenClass previousTokenClass = TK_EMPTY;
+
+    while (m_tokenStream->GetPosition() < endPosition)
+    {
+        const Token token = Next();
+        const TokenClass tokenClass = token.GetTokenClass();
+
+        String tokenSource;
+        AppendTokenSource(tokenSource, token);
+
+        const bool joined = source.Empty()
+            || previousTokenClass == TK_OPEN_PARENTH || previousTokenClass == TK_OPEN_BRACKET
+            || tokenClass == TK_CLOSE_PARENTH || tokenClass == TK_CLOSE_BRACKET || tokenClass == TK_COMMA;
+
+        source += joined ? String(tokenSource.Substr(1)) : tokenSource;
+
+        previousTokenClass = tokenClass;
+    }
+
+    return source;
+}
+
+// `ClassName {` or `ClassName "objectName" {`
+bool Parser::IsClassNamedObject() const
+{
+    return Peek().GetTokenClass() == TK_IDENT
+        && (Peek(1).GetTokenClass() == TK_OPEN_BRACE || ((Peek(1).GetTokenClass() == TK_STRING || Peek(1).GetTokenClass() == TK_IDENT) && Peek(2).GetTokenClass() == TK_OPEN_BRACE));
 }
 
 void Parser::SkipBracedBlock()

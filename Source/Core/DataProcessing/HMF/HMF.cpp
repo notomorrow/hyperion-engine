@@ -17,6 +17,8 @@
 
 #include <Core/IO/ByteReader.hpp>
 
+#include <Core/Reflection/TypeInfo.hpp>
+
 namespace Hyperion::DataProcessing::HMF {
 
 ResolveAssetPathFn g_resolveAssetPath = nullptr;
@@ -134,6 +136,36 @@ ParseResult Parse(const String& source, ErrorList* outErrors, BoxedValue* target
 ParseResult Parse(const FilePath& filePath, ByteReader& reader, const ParseOptions& options, ErrorList* outErrors)
 {
     return RunParse(filePath, reader, outErrors, nullptr, &options);
+}
+
+ParseResult ParseValue(const String& source, const TypeInfo& typeInfo, ErrorList* outErrors)
+{
+    ErrorList errorList;
+
+    MemoryByteReader sourceReader(ConstByteView(reinterpret_cast<const ubyte*>(source.Data()), source.Size()));
+
+    SourceStream sourceStream { &sourceReader, s_inMemoryFilePath };
+    TokenStream tokenStream { TokenStreamInfo(s_inMemoryFilePath) };
+
+    Lexer lexer(sourceStream, &tokenStream, &errorList);
+    lexer.Analyze();
+
+    Parser parser(&tokenStream, &errorList);
+
+    BoxedValue resultValue;
+    const bool parsed = parser.ParseSingleValue(typeInfo, resultValue);
+
+    if (outErrors)
+    {
+        outErrors->Concatenate(errorList);
+    }
+
+    if (!parsed || !resultValue.IsValid())
+    {
+        return HYP_MAKE_ERROR(Error, "Failed to read \"{}\" as {}", source, typeInfo.name);
+    }
+
+    return resultValue;
 }
 
 } // namespace Hyperion::DataProcessing::HMF

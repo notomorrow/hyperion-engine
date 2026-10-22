@@ -302,17 +302,11 @@ void ClassRegistry::Register(TypeId typeId, Class* cls, bool* outWasRegistered)
 
     if (cls->IsDynamic())
     {
-        if (m_dynamicClasses.Contains(typeId))
+        // a newer definition of the same type (e.g from a reloaded script assembly) supersedes the old one,
+        // which stays alive for its existing instances until they release it
+        if (auto it = m_dynamicClasses.Find(typeId); it != m_dynamicClasses.End() && it->second != cls)
         {
-            HYP_LOG(Object, Warning, "Attempted to register dynamic class with name {} but one already exists with that TypeId ({})!",
-                    cls->GetName(), typeId.Value());
-
-            if (outWasRegistered)
-            {
-                *outWasRegistered = false;
-            }
-
-            return;
+            HYP_LOG(Object, Verbose, "Dynamic class {} supersedes previous definition", cls->GetName());
         }
 
         HYP_LOG(Object, Verbose, "Registered dynamic class {}", cls->GetName());

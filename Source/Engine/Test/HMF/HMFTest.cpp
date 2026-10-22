@@ -48,6 +48,9 @@
 #include <Scene/Entity.hpp>
 #include <Scene/EntityManager.hpp>
 #include <Scene/Components/SwatchOverridesComponent.hpp>
+#include <Scene/Components/ScriptComponent.hpp>
+
+#include <Core/Math/Vector3.hpp>
 
 #include <Scene/Animation/Animation.hpp>
 
@@ -2370,6 +2373,55 @@ CameraOrthoRect {
         }
     }
 #endif
+
+    // A plain value in a BoxedValue slot stays HMF text until it's read with a type
+    {
+        const Class* cls = GetClass<ScriptFieldValue>();
+
+        if (cls && cls->CanCreateInstance())
+        {
+            BoxedValue obj;
+            cls->CreateInstance(obj);
+
+            SetFieldValue(obj, cls, "Name", BoxedValue(NAME("Offset")));
+            SetFieldValue(obj, cls, "Value", BoxedValue(Vec3f(1.5f, -2.0f, 3.0f)));
+
+            String text;
+            ObjectToHMF(cls, obj, text);
+
+            Check("BoxedValue slot: written as its runtime type", text.Contains("Value = (1.5, -2"), text);
+
+            HMF::ParseResult result = HMF::Parse(text);
+            Check("BoxedValue slot: round-trip parses", Success(result), text);
+
+            if (Success(result))
+            {
+                const IMember* valueMember = cls->GetMember(StringHash("Value"));
+                const BoxedValue value = valueMember && valueMember->GetMemberType() == MemberType::Field
+                    ? static_cast<const Field*>(valueMember)->Get(result.GetValue())
+                    : BoxedValue();
+
+                Check("BoxedValue slot: read back as text", value.Is<HMF::UnresolvedValue>());
+
+                if (value.Is<HMF::UnresolvedValue>())
+                {
+                    const String& source = value.Get<HMF::UnresolvedValue>().source;
+
+                    String rewritten;
+                    ObjectToHMF(cls, result.GetValue(), rewritten);
+                    Check("BoxedValue slot: text written back unchanged", rewritten == text, rewritten);
+
+                    HMF::ParseResult typed = HMF::ParseValue(source, TypeOf<Vec3f>());
+                    Check("BoxedValue slot: text reads as Vec3f", Success(typed) && typed.GetValue().Get<Vec3f>() == Vec3f(1.5f, -2.0f, 3.0f), source);
+
+                    Check("BoxedValue slot: text doesn't read as String", !Success(HMF::ParseValue(source, TypeOf<String>())), source);
+                }
+            }
+        }
+
+        Check("ParseValue: int", Success(HMF::ParseValue("42", TypeOf<int32>())) && HMF::ParseValue("42", TypeOf<int32>()).GetValue().Get<int32>() == 42);
+        Check("ParseValue: trailing tokens fail", !Success(HMF::ParseValue("42 43", TypeOf<int32>())));
+    }
 
     HYP_LOG(Engine, Info, "========== HMF Test Results: {} passed, {} failed ==========",
             g_passCount, g_failCount);

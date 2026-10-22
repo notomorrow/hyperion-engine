@@ -107,6 +107,8 @@ namespace Hyperion.Generators
         private readonly INamedTypeSymbol? _experimentalAttributeType;
         private readonly INamedTypeSymbol? _marshalAsAttributeType;
         private readonly INamedTypeSymbol? _structLayoutAttributeType;
+        private readonly INamedTypeSymbol? _hypFieldAttributeType;
+        private readonly INamedTypeSymbol? _hypPropertyAttributeType;
 
         private readonly StringBuilder _members = new StringBuilder();
         private readonly StringBuilder _register = new StringBuilder();
@@ -124,6 +126,8 @@ namespace Hyperion.Generators
             _experimentalAttributeType = compilation.GetTypeByMetadataName("System.Diagnostics.CodeAnalysis.ExperimentalAttribute");
             _marshalAsAttributeType = compilation.GetTypeByMetadataName("System.Runtime.InteropServices.MarshalAsAttribute");
             _structLayoutAttributeType = compilation.GetTypeByMetadataName("System.Runtime.InteropServices.StructLayoutAttribute");
+            _hypFieldAttributeType = compilation.GetTypeByMetadataName("Hyperion.HypField");
+            _hypPropertyAttributeType = compilation.GetTypeByMetadataName("Hyperion.HypProperty");
         }
 
         public void AddType(INamedTypeSymbol type)
@@ -157,10 +161,10 @@ namespace Hyperion.Generators
             int typeIndex = _typeIndex++;
             string typeName = Format(type);
 
-            List<string> methodEntries = new List<string>();
-            List<string> propertyEntries = new List<string>();
-            HashSet<string> methodNames = new HashSet<string>();
-            HashSet<string> propertyNames = new HashSet<string>();
+            List<string> methodEntries = [];
+            List<string> propertyEntries = [];
+            HashSet<string> methodNames = [];
+            HashSet<string> propertyNames = [];
 
             int memberIndex = 0;
 
@@ -197,6 +201,20 @@ namespace Hyperion.Generators
                     if (reason != null)
                     {
                         _skipped.Add(type.Name + "." + property.Name + ": " + reason);
+                    }
+                }
+                else if (member is IFieldSymbol field && type.TypeKind == TypeKind.Class && !field.IsStatic && !field.IsConst && HasAttribute(field, _hypFieldAttributeType))
+                {
+                    if (!propertyNames.Add(field.Name))
+                    {
+                        continue;
+                    }
+
+                    string? reason = EmitField(typeName, field, typeIndex, memberIndex++, propertyEntries);
+
+                    if (reason != null)
+                    {
+                        _skipped.Add(type.Name + "." + field.Name + ": " + reason);
                     }
                 }
             }
@@ -566,9 +584,97 @@ namespace Hyperion.Generators
                 return "no usable accessor";
             }
 
-            entries.Add("new global::Hyperion.HypPropertyThunk(" + Literal(property.Name) + ", " + getter + ", " + setter + ", " + Attributes(property) + ")");
+            // reflected properties carry their type so the native side can describe the value
+            string memberType = HasAttribute(property, _hypPropertyAttributeType) ? ", typeof(" + propertyType + "), " + SampleValue(property.Type) : "";
+
+            entries.Add("new global::Hyperion.HypPropertyThunk(" + Literal(property.Name) + ", " + getter + ", " + setter + ", " + Attributes(property) + memberType + ")");
 
             return null;
+        }
+
+        private string? EmitField(string typeName, IFieldSymbol field, int typeIndex, int memberIndex, List<string> entries)
+        {
+            if (field.IsFixedSizeBuffer)
+            {
+                return "fixed size buffer";
+            }
+
+            if (IsUnusable(field))
+            {
+                return "not usable from generated code";
+            }
+
+            if (!IsNameable(field.Type))
+            {
+                return "field type " + field.Type.ToDisplayString();
+            }
+
+            string fieldType = Format(field.Type);
+            string fieldRef;
+
+            if (IsAccessible(field.DeclaredAccessibility))
+            {
+                fieldRef = "((" + typeName + ")__self)." + EscapeIdentifier(field.Name);
+            }
+            else
+            {
+                string accessorName = "FA" + typeIndex + "_" + memberIndex;
+
+                _members.Append("        [global::System.Runtime.CompilerServices.UnsafeAccessor(global::System.Runtime.CompilerServices.UnsafeAccessorKind.Field, Name = ")
+                    .Append(Literal(field.Name)).AppendLine(")]");
+                _members.Append("        private static extern ref ").Append(fieldType).Append(' ').Append(accessorName).Append('(').Append(typeName).AppendLine(" __target);");
+                _members.AppendLine();
+
+                fieldRef = accessorName + "((" + typeName + ")__self)";
+            }
+
+            string getterName = "FG" + typeIndex + "_" + memberIndex;
+
+            _members.Append("        private static void ").Append(getterName).Append("(object __self, global::Hyperion.BoxedValueInternal** __args, ").Append(BoxedValuePtr).AppendLine(" __ret)");
+            _members.AppendLine("        {");
+            _members.Append("            ").Append(Helpers).Append(".Return<").Append(fieldType).Append(">(__ret, ").Append(fieldRef).AppendLine(");");
+            _members.AppendLine("        }");
+            _members.AppendLine();
+
+            string setter = "null";
+
+            if (!field.IsReadOnly)
+            {
+                string setterName = "FS" + typeIndex + "_" + memberIndex;
+
+                _members.Append("        private static void ").Append(setterName).Append("(object __self, global::Hyperion.BoxedValueInternal** __args, ").Append(BoxedValuePtr).AppendLine(" __ret)");
+                _members.AppendLine("        {");
+                _members.Append("            ").Append(fieldRef).Append(" = ").Append(Helpers).Append(".Arg<").Append(fieldType).AppendLine(">(__args, 0);");
+                _members.AppendLine("        }");
+                _members.AppendLine();
+
+                setter = "&" + setterName;
+            }
+
+            entries.Add("new global::Hyperion.HypPropertyThunk(" + Literal(field.Name) + ", &" + getterName + ", " + setter + ", " + Attributes(field) + ", typeof(" + fieldType + "), " + SampleValue(field.Type) + ")");
+
+            return null;
+        }
+
+        // A value of the member's type, boxed at runtime to find its native type without constructing anything through reflection (NativeAOT)
+        private static string SampleValue(ITypeSymbol type)
+        {
+            if (type.SpecialType == SpecialType.System_String)
+            {
+                return "\"\"";
+            }
+
+            if (type is IArrayTypeSymbol arrayType)
+            {
+                return "global::System.Array.Empty<" + Format(arrayType.ElementType) + ">()";
+            }
+
+            if (type.IsValueType)
+            {
+                return "(object)default(" + Format(type) + ")";
+            }
+
+            return "null";
         }
 
         private string? EmitNewObject(INamedTypeSymbol type, string typeName, int typeIndex)

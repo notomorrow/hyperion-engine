@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -47,6 +51,16 @@ namespace Hyperion.Editor.ViewModels
         }
 
         public bool CanCopy => GetCopyText() != null;
+
+        // The script's [HypField] / [HypProperty] members
+        public ObservableCollection<InspectorPropertyViewModelBase> Fields { get; } = new();
+
+        private bool _hasFields;
+        public bool HasFields
+        {
+            get => _hasFields;
+            private set => SetProperty(ref _hasFields, value);
+        }
 
         private bool _canSelectFromContentBrowser;
         public bool CanSelectFromContentBrowser
@@ -202,6 +216,7 @@ namespace Hyperion.Editor.ViewModels
                     string displayName = "(None)";
                     string assetPath = "(None)";
                     bool hasScript = false;
+                    List<InspectorPropertyViewModelBase> fields = new();
 
                     if (componentPtr != IntPtr.Zero)
                     {
@@ -221,6 +236,8 @@ namespace Hyperion.Editor.ViewModels
                             {
                                 assetPath = "(Unregistered)";
                             }
+
+                            fields = capturedSelf.CreateFieldViewModels(componentPtr);
                         }
                     }
 
@@ -230,6 +247,15 @@ namespace Hyperion.Editor.ViewModels
                         capturedSelf.ScriptDisplay = displayName;
                         capturedSelf.AssetPathDisplay = assetPath;
                         capturedSelf.HasScript = hasScript;
+
+                        capturedSelf.Fields.Clear();
+
+                        foreach (InspectorPropertyViewModelBase field in fields)
+                        {
+                            capturedSelf.Fields.Add(field);
+                        }
+
+                        capturedSelf.HasFields = capturedSelf.Fields.Count > 0;
                     });
                 }
                 catch (Exception ex)
@@ -239,6 +265,104 @@ namespace Hyperion.Editor.ViewModels
                     Logger.Log(LogLevel.Warning, $"AttachedScript: Failed to refresh: {ex.Message}");
                 }
             });
+        }
+
+        // Sim thread. Values are read from the live script object; edits also go into the ScriptComponent so they're saved
+        private List<InspectorPropertyViewModelBase> CreateFieldViewModels(IntPtr componentPtr)
+        {
+            List<InspectorPropertyViewModelBase> vms = new();
+
+            IntPtr scriptClassPtr = ScriptComponent_GetScriptClass(componentPtr);
+
+            if (scriptClassPtr == IntPtr.Zero)
+            {
+                return vms;
+            }
+
+            Class scriptClass = new(scriptClassPtr);
+            Entity capturedEntity = _entity;
+            TypeId scriptComponentTypeId = _scriptComponentTypeId;
+
+            IntPtr ResolveComponentPtr()
+            {
+                EntityManager? mgr = capturedEntity.EntityManager;
+
+                return mgr != null ? mgr.GetComponentPtr(capturedEntity, scriptComponentTypeId) : IntPtr.Zero;
+            }
+
+            IEnumerable<Property> fieldProperties = scriptClass.Properties
+                .Where(p =>
+                {
+                    ClassAttribute? attrEditor = p.GetAttribute("editor");
+
+                    return attrEditor == null || attrEditor.Value.GetBool();
+                })
+                .OrderBy(p =>
+                {
+                    ClassAttribute? attrEditorOrder = p.GetAttribute("editororder");
+
+                    return attrEditorOrder != null ? attrEditorOrder.Value.GetInt() : int.MaxValue;
+                })
+                .ThenBy(p => p.Name.ToString());
+
+            foreach (Property property in fieldProperties)
+            {
+                try
+                {
+                    ClassAttribute? attrLabel = property.GetAttribute("label");
+                    ClassAttribute? attrEditEnabled = property.GetAttribute("editenabled");
+
+                    string label = attrLabel != null ? attrLabel.Value.GetString() : property.Name.ToString();
+                    bool isReadOnly = attrEditEnabled != null && attrEditEnabled.Value.GetBool() == false;
+
+                    Name propertyName = property.Name;
+
+                    // the script's class is replaced when its assembly reloads, so it's looked up again on every access
+                    Property? ResolveProperty(IntPtr ptr, out IntPtr classAddress)
+                    {
+                        classAddress = ptr != IntPtr.Zero ? ScriptComponent_GetScriptClass(ptr) : IntPtr.Zero;
+
+                        return classAddress != IntPtr.Zero ? new Class(classAddress).GetProperty(propertyName) : null;
+                    }
+
+                    InspectorPropertyViewModelBase vm = InspectorViewModelFactory.CreateForValue(
+                        label,
+                        property.TypeInfo,
+                        getter: () =>
+                        {
+                            IntPtr ptr = ResolveComponentPtr();
+                            Property? current = ResolveProperty(ptr, out IntPtr classAddress);
+                            IntPtr scriptObjectPtr = ScriptComponent_GetScriptObject(ptr);
+
+                            return current.HasValue && scriptObjectPtr != IntPtr.Zero
+                                ? current.Value.Get(classAddress, scriptObjectPtr)
+                                : new BoxedValue(null);
+                        },
+                        setter: value =>
+                        {
+                            IntPtr ptr = ResolveComponentPtr();
+                            Property? current = ResolveProperty(ptr, out _);
+
+                            if (current.HasValue)
+                            {
+                                ScriptComponent_SetFieldValue(ptr, current.Value.Address, ref value.Buffer);
+                            }
+                        },
+                        isReadOnly: isReadOnly,
+                        initialize: false,
+                        postWriteCallback: () => capturedEntity.MarkDirty());
+
+                    vm.RefreshValue();
+
+                    vms.Add(vm);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Debug, $"Inspector skipping script field '{property.Name}': {ex.Message}");
+                }
+            }
+
+            return vms;
         }
 
         private void OnSelect()
@@ -299,6 +423,12 @@ namespace Hyperion.Editor.ViewModels
 
                     try
                     {
+                        if (AssetManager.Instance.AssetRegistry.GetUniqueAssetName(AssetBucket.Scripts.Value, name).ToString() != name)
+                        {
+                            Logger.Log(LogLevel.Warning, $"AttachedScript: A script named '{name}' already exists.");
+                            return;
+                        }
+
                         EngineManager.EditorGame?.EditorSubsystem?.ExecuteCommandByName(
                             new Name("EditorCommandNewScript"), $"{languageArg} {name}");
 
@@ -417,6 +547,8 @@ namespace Hyperion.Editor.ViewModels
                     _assetRefProperty.Set(s_scriptComponentClass!.Value.Address, componentPtr, nullBoxed);
                 }
 
+                ScriptSystem_RecreateEntityScript(_entity.NativeAddress);
+
                 // Push undo action
                 ScriptAsset? capturedOldValue = oldValue;
                 ScriptAsset? capturedNewValue = scriptAsset;
@@ -456,6 +588,10 @@ namespace Hyperion.Editor.ViewModels
 
                     using BoxedValue bv = new BoxedValue(valueObj);
                     capturedProperty.Set(capturedClass.Address, ptr, bv);
+
+                    ScriptSystem_RecreateEntityScript(capturedEntity.NativeAddress);
+
+                    capturedSelf.Refresh();
                 }
 
                 EditorProject? project = EngineManager.CurrentProject;
@@ -466,17 +602,7 @@ namespace Hyperion.Editor.ViewModels
                     execute: (_, _) => ApplyValue(capturedNewValue),
                     revert: (_, _) => ApplyValue(capturedOldValue)));
 
-                string displayName = scriptAsset != null ? scriptAsset.Name.ToString() : "(None)";
-                string pathDisplay = scriptAsset == null
-                    ? "(None)"
-                    : scriptAsset.IsRegistered() ? scriptAsset.Path.ToString() : "(Unregistered)";
-
-                Dispatcher.UIThread.Post(() =>
-                {
-                    capturedSelf.ScriptDisplay = displayName;
-                    capturedSelf.AssetPathDisplay = pathDisplay;
-                    capturedSelf.HasScript = scriptAsset != null;
-                });
+                Refresh();
             }
             catch (Exception ex)
             {
@@ -632,5 +758,21 @@ namespace Hyperion.Editor.ViewModels
 
             return null;
         }
+
+
+        ////////////////////
+
+        [DllImport("hyperion", EntryPoint = "ScriptComponent_GetScriptClass")]
+        private static extern IntPtr ScriptComponent_GetScriptClass(IntPtr scriptComponent);
+
+        [DllImport("hyperion", EntryPoint = "ScriptComponent_GetScriptObject")]
+        private static extern IntPtr ScriptComponent_GetScriptObject(IntPtr scriptComponent);
+
+        [DllImport("hyperion", EntryPoint = "ScriptComponent_SetFieldValue")]
+        [return: MarshalAs(UnmanagedType.I1)]
+        private static extern bool ScriptComponent_SetFieldValue(IntPtr scriptComponent, IntPtr property, [In] ref BoxedValueInternal value);
+
+        [DllImport("hyperion", EntryPoint = "ScriptSystem_RecreateEntityScript")]
+        private static extern void ScriptSystem_RecreateEntityScript(IntPtr entity);
     }
 }

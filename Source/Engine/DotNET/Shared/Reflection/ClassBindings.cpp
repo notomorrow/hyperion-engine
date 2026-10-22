@@ -10,6 +10,7 @@
 #include <Core/Reflection/ClassRegistry.hpp>
 #include <Core/Reflection/Object.hpp>
 #include <Core/Reflection/Method.hpp>
+#include <Core/Reflection/Property.hpp>
 
 #include <Core/Logging/LogChannels.hpp>
 
@@ -22,6 +23,7 @@
 #include <DotNET/Interop/ManagedGuid.hpp>
 #include <DotNET/ManagedObject.hpp>
 #include <DotNET/ManagedClass.hpp>
+#include <DotNET/ManagedProperty.hpp>
 
 #if defined(HYP_DOTNET)
 #include <Scripting/ScriptObjectResource.hpp>
@@ -57,6 +59,67 @@ uint32 Class_GetMembersGeneric(const Class* cls, const MemberType** outMembers)
 
     return (uint32)allMembers.Size();
 }
+
+#ifdef HYP_DOTNET
+
+struct ManagedPropertyAttributeDesc
+{
+    const char* name;
+    uint32 kind; // 0 = bool, 1 = int, 2 = string
+    int32 intValue;
+    const char* stringValue;
+};
+
+static ScriptObjectResource* GetScriptObjectResourceForTarget(const BoxedValue& target)
+{
+    const AnyRef targetRef = target.ToRef();
+    void* targetPtr = targetRef.GetPointer();
+
+    if (!targetPtr)
+    {
+        return nullptr;
+    }
+
+    const Class* targetClass = targetRef.GetClass();
+
+    if (targetClass && targetClass->UseHandles())
+    {
+        return static_cast<ObjectBase*>(targetPtr)->GetScriptObjectResource();
+    }
+
+    return static_cast<ScriptObjectResource*>(targetPtr);
+}
+
+template <class Func>
+static bool WithManagedProperty(const BoxedValue& target, const ANSIString& propertyName, Func&& func)
+{
+    ScriptObjectResource* scriptObjectResource = GetScriptObjectResourceForTarget(target);
+
+    if (!scriptObjectResource)
+    {
+        return false;
+    }
+
+    ResourceGuard resourceScope = scriptObjectResource->GetReadScope();
+
+    dotnet::ManagedObject* managedObject = scriptObjectResource->GetManagedObject();
+
+    if (!managedObject || !managedObject->IsValid() || !managedObject->GetClass())
+    {
+        return false;
+    }
+
+    dotnet::ManagedProperty* managedProperty = managedObject->GetClass()->GetProperty(propertyName.Data());
+
+    if (!managedProperty)
+    {
+        return false;
+    }
+
+    return func(managedObject, managedProperty);
+}
+
+#endif
 
 extern "C"
 {
@@ -273,14 +336,23 @@ extern "C"
         return cls->GetStaticField(*name);
     }
 
-    HYP_EXPORT Class* Class_CreateDynamicClass(const TypeId* typeId, const char* name, const Class* parentClass)
+    HYP_EXPORT Class* Class_CreateDynamicClass(const TypeId* typeId, const char* name, const Class* parentClass, int8 isAbstract)
     {
         Assert(typeId != nullptr);
         Assert(name != nullptr);
         Assert(parentClass != nullptr);
 
 #ifdef HYP_DOTNET
-        auto* dynamicClass = new DynamicClassInstance(*typeId, CreateNameFromDynamicString(name), parentClass, nullptr, Span<const ClassAttribute>(), ClassFlags::CLASS_TYPE, Span<MemberVariant>());
+        const ClassAttribute abstractAttribute(NAME("abstract"), ClassAttributeValue(true));
+
+        auto* dynamicClass = new DynamicClassInstance(
+            *typeId,
+            CreateNameFromDynamicString(name),
+            parentClass,
+            nullptr,
+            isAbstract ? Span<const ClassAttribute>(&abstractAttribute, 1) : Span<const ClassAttribute>(),
+            ClassFlags::CLASS_TYPE,
+            Span<MemberVariant>());
 
         // hold a reference for the .NET wrapper; released in Class_DestroyDynamicClass
         dynamicClass->AddRef();
@@ -288,6 +360,89 @@ extern "C"
         return dynamicClass;
 #else
         return nullptr;
+#endif
+    }
+
+    // Reflects a [HypField] / [HypProperty] member of a managed type as a native Property, so it is saved and shown in the editor
+    HYP_EXPORT int8 Class_AddManagedProperty(DynamicClassInstance* cls, const char* name, const TypeInfo* valueTypeInfo, const ManagedPropertyAttributeDesc* attributeDescs, uint32 numAttributes, int8 canSet)
+    {
+        Assert(cls != nullptr);
+        Assert(name != nullptr);
+
+#ifdef HYP_DOTNET
+        if (!valueTypeInfo)
+        {
+            return 0;
+        }
+
+        const Name propertyName = CreateNameFromDynamicString(name);
+
+        if (cls->GetProperty(propertyName) != nullptr)
+        {
+            HYP_LOG(DotNET, Warning, "Class {} already has a property named {}", cls->GetName(), propertyName);
+
+            return 0;
+        }
+
+        Array<ClassAttribute> attributes;
+        attributes.Reserve(numAttributes);
+
+        for (uint32 attributeIndex = 0; attributeIndex < numAttributes; attributeIndex++)
+        {
+            const ManagedPropertyAttributeDesc& desc = attributeDescs[attributeIndex];
+
+            switch (desc.kind)
+            {
+            case 0:
+                attributes.PushBack(ClassAttribute(CreateNameFromDynamicString(desc.name), ClassAttributeValue(desc.intValue != 0)));
+                break;
+            case 1:
+                attributes.PushBack(ClassAttribute(CreateNameFromDynamicString(desc.name), ClassAttributeValue(int(desc.intValue))));
+                break;
+            case 2:
+                attributes.PushBack(ClassAttribute(CreateNameFromDynamicString(desc.name), ClassAttributeValue(desc.stringValue)));
+                break;
+            default:
+                break;
+            }
+        }
+
+        const ANSIString managedPropertyName(name);
+
+        PropertyGetter getter;
+        getter.getProc = Proc<BoxedValue(const BoxedValue&)>([managedPropertyName](const BoxedValue& target) -> BoxedValue
+            {
+                BoxedValue value;
+
+                WithManagedProperty(target, managedPropertyName, [&value](dotnet::ManagedObject* managedObject, dotnet::ManagedProperty* managedProperty)
+                    {
+                        return managedProperty->CanGet() && managedProperty->InvokeGetterBoxed(managedObject, value);
+                    });
+
+                return value;
+            });
+        getter.typeInfo.valueTypeInfo = valueTypeInfo;
+
+        PropertySetter setter;
+
+        if (canSet)
+        {
+            setter.setProc = Proc<void(BoxedValue&, const BoxedValue&)>([managedPropertyName](BoxedValue& target, const BoxedValue& value) -> void
+                {
+                    WithManagedProperty(target, managedPropertyName, [&value](dotnet::ManagedObject* managedObject, dotnet::ManagedProperty* managedProperty)
+                        {
+                            return managedProperty->CanSet() && managedProperty->InvokeSetterBoxed(managedObject, value);
+                        });
+                });
+        }
+
+        setter.typeInfo.valueTypeInfo = valueTypeInfo;
+
+        cls->AddProperty(new Property(propertyName, std::move(getter), std::move(setter), attributes.ToSpan()));
+
+        return 1;
+#else
+        return 0;
 #endif
     }
 

@@ -14,6 +14,11 @@
 
 #include <Core/HashCode.hpp>
 
+#include <Core/Containers/Array.hpp>
+#include <Core/Name/Name.hpp>
+
+#include <Core/Reflection/BoxedValue.hpp>
+
 namespace Hyperion {
 
 namespace dotnet {
@@ -34,6 +39,20 @@ enum class ScriptComponentFlags : uint32
 
 HYP_MAKE_ENUM_FLAGS(ScriptComponentFlags);
 
+// Saved value of one of a script's reflected ([HypField] / [HypProperty]) members.
+// Held as HMF source via HMF::UnresolvedValue, so it's read with the member's own type, even after the script changes.
+HYP_STRUCT(NoScriptBindings)
+struct ScriptFieldValue
+{
+    HYP_STRUCT_BODY(ScriptFieldValue);
+
+    HYP_FIELD(Property = "Name", Serialize)
+    Name name;
+
+    HYP_FIELD(Property = "Value", Serialize)
+    BoxedValue value;
+};
+
 HYP_STRUCT(
     Component,
     NoScriptBindings,
@@ -45,6 +64,10 @@ struct ScriptComponent
 
     HYP_FIELD(Property = "Script")
     Handle<ScriptAsset> script;
+
+    // Applied whenever the script object is created
+    HYP_FIELD(Property = "FieldValues", Serialize, Editor = false)
+    Array<ScriptFieldValue> fieldValues;
 
     HYP_FIELD(NoScriptBindings, Transient)
     SharedPtr<dotnet::Assembly> assembly;

@@ -128,4 +128,12 @@ struct ScriptDesc
 static_assert(std::is_standard_layout_v<ScriptDesc>, "ScriptDesc struct must be standard layout");
 static_assert(std::is_trivially_copyable_v<ScriptDesc>, "ScriptDesc struct must be a trivial type");
 
+// Native parent of the dynamic classes created for C# Script subclasses.
+// Their reflected fields are read and written through the script's ScriptObjectResource rather than an ObjectBase.
+HYP_STRUCT(NoScriptBindings)
+struct ScriptInstance
+{
+    HYP_STRUCT_BODY(ScriptInstance);
+};
+
 } // namespace Hyperion

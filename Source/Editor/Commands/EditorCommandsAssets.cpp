@@ -216,6 +216,21 @@ public:
         return true;
     }
 
+    static bool IsScriptNameTaken(const ANSIString& name)
+    {
+        const Handle<AssetRegistry> registry = GetCurrentAssetRegistry();
+
+        if (registry->GetUniqueAssetName(AssetBuckets::Scripts.GetIndex(), HYP_FORMAT("{}", name)) != Name(name))
+        {
+            return true;
+        }
+
+        const FilePath scriptsDir = registry->GetRootPath() / "Scripts";
+
+        return (scriptsDir / HYP_FORMAT("{}.cs", name)).Exists()
+            || (scriptsDir / HYP_FORMAT("{}.strata", name)).Exists();
+    }
+
     static void CreateScriptFile(EditorProject& project, ScriptAsset& scriptAsset, const String& extension, const String& templateCode)
     {
         ScriptDesc& desc = scriptAsset.GetScriptDesc();
@@ -316,9 +331,18 @@ public:
             return;
         }
 
+        if (IsScriptNameTaken(assetName))
+        {
+            HYP_LOG(Editor, Error, "A script named '{}' already exists", assetName);
+
+            return;
+        }
+
         ScriptDesc scriptDesc;
         String extension;
         String templateCode;
+
+        // @TODO Move this to Templates/ ?
 
         if (languageArg == "strata")
         {
@@ -348,9 +372,10 @@ public:
 
             templateCode = String("using Hyperion;\n\npublic class ") + assetName + " : Script\n";
             templateCode += "{\n";
-            templateCode += "    public override void OnAdded(Entity entity)\n    {\n    }\n\n";
-            templateCode += "    public override void Update(float deltaTime)\n    {\n    }\n\n";
-            templateCode += "    public override void Destroy()\n    {\n    }\n";
+            templateCode += "    [HypField(Editor = true, Serialize = true)] public int DummyValue = 0; /* Value that can be edited in the editor and saved/loaded */\n\n";
+            templateCode += "    public override void OnAdded(Entity entity)\n    {\n  /* Called on entity added */  }\n\n";
+            templateCode += "    public override void Update(float deltaTime)\n    {\n  /* Called every tick */  }\n\n";
+            templateCode += "    public override void Destroy()\n    {\n  /* Called on entity removed or world shutdown */  }\n";
             templateCode += "}\n";
         }
 
@@ -364,15 +389,17 @@ public:
                 {
                     return EditorActionFunctions {
                         .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [scriptAsset, extension, templateCode](EditorSubsystem*, EditorProject* project)
+                            [scriptAsset, extension, templateCode](EditorSubsystem* editorSubsystem, EditorProject* project)
                             {
                                 CreateScriptFile(*project, *scriptAsset, extension, templateCode);
                                 GetCurrentAssetRegistry()->PutAssetUnique(scriptAsset);
+                                editorSubsystem->OnAssetsChanged(AssetBuckets::Scripts.GetIndex());
                             }),
                         .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [scriptAsset](EditorSubsystem*, EditorProject*)
+                            [scriptAsset](EditorSubsystem* editorSubsystem, EditorProject*)
                             {
                                 GetCurrentAssetRegistry()->RemoveAsset(scriptAsset);
+                                editorSubsystem->OnAssetsChanged(AssetBuckets::Scripts.GetIndex());
 
                                 // @TODO: Move to trash/recycling bin? And move back out of there when redo?
                             })

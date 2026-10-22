@@ -71,7 +71,7 @@ CORE_API extern const Name g_attrNoSwatchOverride = NAME("noswatchoverride");
 
 CORE_API extern const Name g_attrEditor = NAME("editor");
 CORE_API extern const Name g_attrEditorOnly = NAME("editoronly");
-CORE_API extern const Name g_attrEditOrder = NAME("editororder");
+CORE_API extern const Name g_attrEditorOrder = NAME("editororder");
 CORE_API extern const Name g_attrEditEnabled = NAME("editenabled");
 CORE_API extern const Name g_attrLabel = NAME("label");
 CORE_API extern const Name g_attrDescription = NAME("description");
@@ -195,6 +195,12 @@ CORE_API int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId)
     }
 
     const Class* subclass = GetClass(subclassTypeId);
+
+    // runtime classes (e.g a C# subclass of Entity) share the slot of their closest static ancestor
+    while (subclass && subclass->IsDynamic())
+    {
+        subclass = subclass->GetParent();
+    }
 
     if (!subclass)
     {
@@ -1109,6 +1115,10 @@ void Class::AddProperty(Property* property)
     AssertDebug(m_propertiesByName.Find(property->GetName()) == m_propertiesByName.End(),
                 "Property with name {} already exists in Class {}", property->GetName(), GetName());
 
+    property->m_ownerClass = this;
+    property->m_getter.typeInfo.targetTypeInfo = m_typeInfo;
+    property->m_setter.typeInfo.targetTypeInfo = m_typeInfo;
+
     m_properties.PushBack(property);
     m_propertiesByName[property->GetName()] = property;
 }
@@ -1374,7 +1384,8 @@ bool DynamicClassInstance::CanCreateInstance() const
     {
         Assert(m_parent != nullptr);
 
-        if (m_parent->CanCreateInstance() && !(managedClass->GetFlags() & ManagedClassFlags::ABSTRACT))
+        // only ObjectBase-derived dynamic classes own their instances; others (e.g script classes) just describe a managed object
+        if (m_parent->UseHandles() && m_parent->CanCreateInstance() && !(managedClass->GetFlags() & ManagedClassFlags::ABSTRACT))
         {
             return true;
         }
@@ -1554,9 +1565,10 @@ void DynamicClassInstance::Release()
 {
     if (AtomicDecrement(&m_refCount) <= 0)
     {
-        if (!(GetFlags() & ClassFlags::ANONYMOUS) && !ClassRegistry::GetInstance().Unregister(this))
+        // not registered anymore when a newer definition (e.g from a reloaded assembly) superseded it
+        if (!(GetFlags() & ClassFlags::ANONYMOUS))
         {
-            HYP_LOG(Object, Warning, "Failed to unregister dynamic Class \"{}\"", GetName());
+            ClassRegistry::GetInstance().Unregister(this);
         }
 
         delete this;

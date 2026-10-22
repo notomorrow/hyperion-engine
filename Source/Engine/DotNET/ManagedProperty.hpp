@@ -83,6 +83,28 @@ public:
         return InvokeSetter_Internal(pManagedObject, &returnValuePtr);
     }
 
+    HYP_FORCE_INLINE bool CanGet() const
+    {
+        return m_getter.IsValid();
+    }
+
+    HYP_FORCE_INLINE bool CanSet() const
+    {
+        return m_setter.IsValid();
+    }
+
+    bool InvokeGetterBoxed(const ManagedObject* pManagedObject, BoxedValue& outValue)
+    {
+        return InvokeGetter_Internal(pManagedObject, &outValue);
+    }
+
+    bool InvokeSetterBoxed(const ManagedObject* pManagedObject, const BoxedValue& value)
+    {
+        const BoxedValue* valuePtr = &value;
+
+        return InvokeSetter_Internal(pManagedObject, &valuePtr);
+    }
+
 private:
     bool InvokeGetter_Internal(const ManagedObject* pManagedObject, BoxedValue* outBoxed);
     bool InvokeSetter_Internal(const ManagedObject* pManagedObject, const BoxedValue** boxedValue);

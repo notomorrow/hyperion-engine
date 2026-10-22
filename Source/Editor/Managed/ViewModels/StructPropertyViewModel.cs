@@ -236,8 +236,8 @@ namespace Hyperion.Editor.ViewModels
                     })
                     .OrderBy(p =>
                     {
-                        ClassAttribute? attrEditOrder = p.GetAttribute("editororder");
-                        return attrEditOrder != null ? attrEditOrder.Value.GetInt() : int.MaxValue;
+                        ClassAttribute? attrEditorOrder = p.GetAttribute("editororder");
+                        return attrEditorOrder != null ? attrEditorOrder.Value.GetInt() : int.MaxValue;
                     })
                     .ThenBy(p => p.Name.ToString())
                     .ToList();
