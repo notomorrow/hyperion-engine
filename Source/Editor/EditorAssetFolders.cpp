@@ -386,7 +386,7 @@ bool EditorAssetFolders::CreateFolder(const String& path)
 
     if (created)
     {
-        NotifyChanged();
+        NotifyChanged(/* saveNow */ true);
     }
 
     return created;
@@ -440,7 +440,7 @@ bool EditorAssetFolders::RemoveFolder(const String& path)
         }
     }
 
-    NotifyChanged();
+    NotifyChanged(/* saveNow */ true);
 
     return true;
 }
@@ -512,7 +512,7 @@ String EditorAssetFolders::MoveFolder(const String& path, const String& newParen
         MoveFolderEntries_Internal(normalized, newPath);
     }
 
-    NotifyChanged();
+    NotifyChanged(/* saveNow */ true);
 
     return newPath;
 }
@@ -554,7 +554,7 @@ String EditorAssetFolders::RenameFolder(const String& path, const String& newNam
         MoveFolderEntries_Internal(normalized, newPath);
     }
 
-    NotifyChanged();
+    NotifyChanged(/* saveNow */ true);
 
     return newPath;
 }
@@ -778,6 +778,7 @@ Result EditorAssetFolders::Load(const FilePath& filepath)
 
         m_folders.Clear();
         m_assetFolders.Clear();
+        m_filepath = filepath;
         m_isDirty = false;
         m_hasUnsavedDefaults = false;
     }
@@ -926,6 +927,7 @@ Result EditorAssetFolders::Save(const FilePath& filepath)
 
     Mutex::Guard guard(m_mutex);
 
+    m_filepath = filepath;
     m_isDirty = false;
     m_hasUnsavedDefaults = false;
 
@@ -939,12 +941,27 @@ bool EditorAssetFolders::IsDirty() const
     return m_isDirty;
 }
 
-void EditorAssetFolders::NotifyChanged()
+void EditorAssetFolders::NotifyChanged(bool saveNow)
 {
+    FilePath filepath;
+
     {
         Mutex::Guard guard(m_mutex);
 
         m_isDirty = true;
+
+        if (saveNow)
+        {
+            filepath = m_filepath;
+        }
+    }
+
+    if (filepath.Any())
+    {
+        if (Result saveResult = Save(filepath); saveResult.HasError())
+        {
+            HYP_LOG(Editor, Warning, "Failed to save asset folders: {}", saveResult.GetError().GetMessage());
+        }
     }
 
     OnFoldersChanged();

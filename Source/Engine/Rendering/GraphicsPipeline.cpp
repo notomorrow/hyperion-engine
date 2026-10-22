@@ -26,8 +26,8 @@ PSOCacheKey::PSOCacheKey(
     const RenderableAttributeSet& attributes,
     const FramebufferDesc& framebufferDesc)
 {
-    hashCode = HashCode::GetHashCode(attributes.GetHashCode())
-                   .Combine(framebufferDesc.GetHashCode());
+    hashCode = attributes.GetHashCode();
+    framebufferDesc.ComputePSOCompatibilityHash(hashCode);
 
     shaderName = attributes.GetMaterialAttributes().shaderName;
     shaderProperties = attributes.GetMaterialAttributes().shaderProperties;
@@ -84,7 +84,7 @@ bool GraphicsPipelineBase::MatchesSignature(
     uint8 stencilWriteMask,
     uint8 stencilCompareMask) const
 {
-    if (m_framebufferDesc != framebufferDesc)
+    if (!m_framebufferDesc.IsPSOCompatible(framebufferDesc))
     {
         return false;
     }

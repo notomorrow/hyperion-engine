@@ -249,6 +249,7 @@ public:
 
         RenderableAttributeSet attributes;
         Viewport viewport;
+        Viewport boundViewport;
 
         ShaderUniform shaderUniforms[MaxShaderUniforms] {};
         uint32 validUniforms = 0;

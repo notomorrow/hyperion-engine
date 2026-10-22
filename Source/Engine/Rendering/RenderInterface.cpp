@@ -1606,6 +1606,7 @@ void RenderInterface::CommitPipelineState(PSOType psoType, CommandBuffer* comman
         GraphicsPipeline* pipeline = nullptr;
 
         if (!state.boundGraphicsPipeline || state.boundShaderDesc.properties != state.attributes.GetShaderProperties()
+            || state.boundViewport != state.viewport
             || !state.boundGraphicsPipeline->MatchesSignature(
                 state.attributes,
                 state.framebuffer->GetFramebufferDesc(),
@@ -1655,10 +1656,11 @@ void RenderInterface::CommitPipelineState(PSOType psoType, CommandBuffer* comman
             }
             else
             {
-                pipeline->Bind(commandBuffer);
+                pipeline->Bind(commandBuffer, Vec2i::Zero(), state.framebuffer->GetExtent());
             }
 
             state.boundGraphicsPipeline = pipeline;
+            state.boundViewport = state.viewport;
 
             pipelineChanged = true;
         }

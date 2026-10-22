@@ -121,6 +121,8 @@ private:
 
     bool TryFinishAsyncCreate(const PSOCacheKey& key, GraphicsPipelineCacheHandle& outCacheHandle);
 
+    GraphicsPipelineCacheHandle AddFinishedPipeline_Internal(const PSOCacheKey& key, Task<GraphicsPipelineRef>&& task);
+
     void EnsureAsyncCreateStarted(
         const PSOCacheKey& key,
         const ShaderInstanceRef& shader,

@@ -1513,6 +1513,14 @@ struct FramebufferDesc
             && renderPassMode == other.renderPassMode;
     }
 
+    void ComputePSOCompatibilityHash(HashCode& inOutHash) const
+    {
+        inOutHash = inOutHash.Combine(HashCode::GetHashCode(numAttachments)
+            .Combine(HashCode::GetHashCode(attachments, attachments + numAttachments))
+            .Combine(numLayers)
+            .Combine(renderPassMode));
+    }
+
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
         return HashCode::GetHashCode(extent)

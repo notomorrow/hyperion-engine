@@ -124,7 +124,7 @@ public:
     ScriptableDelegate<void> OnFoldersChanged;
 
 private:
-    void NotifyChanged();
+    void NotifyChanged(bool saveNow = false);
 
     bool CreateFolder_Internal(const String& normalizedPath);
     void MoveFolderEntries_Internal(const String& fromPath, const String& toPath);
@@ -134,6 +134,8 @@ private:
 
     Set<String> m_folders;
     Map<AssetPath, String> m_assetFolders;
+
+    FilePath m_filepath;
 
     WeakHandle<AssetRegistry> m_registry;
     DelegateHandler m_onAssetRenamed;

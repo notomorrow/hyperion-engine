@@ -530,14 +530,30 @@ bool GraphicsPipelineCache::TryFinishAsyncCreate(const PSOCacheKey& key, Graphic
         return false;
     }
 
-    GraphicsPipelineRef graphicsPipeline = std::move(it->second).Await();
+    Task<GraphicsPipelineRef> task = std::move(it->second);
 
     m_pendingPipelines.Erase(it);
+
+    GraphicsPipelineCacheHandle newHandle = AddFinishedPipeline_Internal(key, std::move(task));
+
+    if (!newHandle.IsAlive())
+    {
+        return false;
+    }
+
+    outCacheHandle = std::move(newHandle);
+
+    return true;
+}
+
+GraphicsPipelineCacheHandle GraphicsPipelineCache::AddFinishedPipeline_Internal(const PSOCacheKey& key, Task<GraphicsPipelineRef>&& task)
+{
+    GraphicsPipelineRef graphicsPipeline = std::move(task).Await();
 
     if (!graphicsPipeline.IsValid())
     {
         // background creation failed
-        return false;
+        return {};
     }
 
     if (graphicsPipeline->GetShader()->GetShader()->expired)
@@ -545,7 +561,7 @@ bool GraphicsPipelineCache::TryFinishAsyncCreate(const PSOCacheKey& key, Graphic
         // shader was replaced while we compiled, caller will kick off a new create with the new shader
         EnqueueDeletion(std::move(graphicsPipeline));
 
-        return false;
+        return {};
     }
 
     graphicsPipeline->lastFrame = GetFrameCounter();
@@ -557,9 +573,7 @@ bool GraphicsPipelineCache::TryFinishAsyncCreate(const PSOCacheKey& key, Graphic
     *newHandle.m_ptr = std::move(graphicsPipeline);
     m_cachedPipelines->Add(key, slot);
 
-    outCacheHandle = std::move(newHandle);
-
-    return true;
+    return newHandle;
 }
 
 void GraphicsPipelineCache::EnsureAsyncCreateStarted(
@@ -737,6 +751,27 @@ void GraphicsPipelineCache::OnFrameEnd(uint32 prevFrameIndex)
         }
 
         m_expiredPendingPipelines.EraseAt(taskIndex - 1);
+    }
+
+    for (auto it = m_pendingPipelines.Begin(); it != m_pendingPipelines.End();)
+    {
+        if (!it->second.IsCompleted())
+        {
+            ++it;
+
+            continue;
+        }
+
+        GraphicsPipelineCacheHandle cacheHandle = AddFinishedPipeline_Internal(it->first, std::move(it->second));
+
+        // the handle's destructor takes the lock we already hold
+        if (cacheHandle.m_ptr != nullptr)
+        {
+            GraphicsPipelineCacheHandle::UpdateRefCount(cacheHandle, -1, /* lock */ false);
+            cacheHandle.m_ptr = nullptr;
+        }
+
+        it = m_pendingPipelines.Erase(it);
     }
 
     m_cachedPipelines->cleanupIterator = typename CachedPipelinesMap::Iterator(
