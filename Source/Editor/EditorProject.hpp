@@ -32,6 +32,7 @@
 
 #include <Editor/EditorMemory.hpp>
 #include <Editor/EditorPackagingSettings.hpp>
+#include <Editor/EditorProjectSettings.hpp>
 
 namespace Hyperion {
 
@@ -47,63 +48,6 @@ class EditorSubsystem;
 class EditorAssetFolders;
 
 using Baking::BakeLayer;
-
-HYP_STRUCT()
-struct EditorWebSettings
-{
-    HYP_STRUCT_BODY(EditorWebSettings);
-
-    HYP_FIELD(Property = "Worlds", Serialize)
-    String worlds;
-
-    HYP_FORCE_INLINE HashCode GetHashCode() const
-    {
-        HashCode hashCode;
-        hashCode.Add(worlds);
-
-        return hashCode;
-    }
-};
-
-HYP_STRUCT()
-struct EditorCookSettings
-{
-    HYP_STRUCT_BODY(EditorCookSettings);
-
-    HYP_FIELD(Property = "AdditionalAssets", Serialize)
-    Array<AssetPath> additionalAssets;
-
-    HYP_FIELD(Property = "RuntimeMaterials", Serialize)
-    Array<MaterialAttributes> runtimeMaterials;
-
-    HYP_FORCE_INLINE HashCode GetHashCode() const
-    {
-        HashCode hashCode = additionalAssets.GetHashCode();
-        hashCode.Add(runtimeMaterials.GetHashCode());
-
-        return hashCode;
-    }
-};
-
-HYP_STRUCT()
-struct EditorPlatformSettings
-{
-    HYP_STRUCT_BODY(EditorPlatformSettings);
-
-    HYP_FIELD(Property = "Web", Serialize)
-    EditorWebSettings web;
-
-    HYP_FIELD(Property = "Cook", Serialize)
-    EditorCookSettings cook;
-
-    HYP_FORCE_INLINE HashCode GetHashCode() const
-    {
-        HashCode hashCode = web.GetHashCode();
-        hashCode.Add(cook.GetHashCode());
-
-        return hashCode;
-    }
-};
 
 HYP_CLASS()
 class EDITOR_API EditorProject final : public ObjectBase
@@ -154,10 +98,31 @@ public:
     HYP_METHOD()
     Name GetEditWorldName() const;
 
+    HYP_METHOD()
+    HYP_FORCE_INLINE const Handle<EditorProjectSettings>& GetProjectSettings() const
+    {
+        return m_projectSettings;
+    }
+
     HYP_FORCE_INLINE const EditorPlatformSettings& GetPlatformSettings() const
     {
-        return m_platformSettings;
+        return m_projectSettings->platformSettings;
     }
+
+    HYP_METHOD()
+    String GetGameTitle() const;
+
+    HYP_METHOD()
+    String GetModuleName() const;
+
+    HYP_METHOD()
+    String GetModuleNameFromTitle() const;
+
+    HYP_METHOD()
+    bool HasGameCode() const;
+
+    HYP_METHOD()
+    Result RenameGameCode(const String& newModuleName);
 
     HYP_METHOD()
     HYP_FORCE_INLINE const Handle<PackagingSettings>& GetPackagingSettings() const
@@ -315,8 +280,12 @@ private:
     HYP_FIELD(Property = "EditWorldName", Serialize)
     Name m_editWorldName;
 
-    HYP_FIELD(Property = "PlatformSettings", Serialize)
-    EditorPlatformSettings m_platformSettings;
+    HYP_FIELD(Property = "ProjectSettings", Serialize)
+    Handle<EditorProjectSettings> m_projectSettings;
+
+    // read from files saved before ProjectSettings held it, never written
+    HYP_FIELD(Property = "PlatformSettings", Transient)
+    EditorPlatformSettings m_legacyPlatformSettings;
 
     HYP_FIELD(Property = "PackagingSettings", Serialize)
     Handle<PackagingSettings> m_packagingSettings;

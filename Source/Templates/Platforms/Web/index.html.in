@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Hyperion</title>
+<title>@HYP_WEB_PAGE_TITLE@</title>
 <style>
     html, body { margin: 0; height: 100%; background: #101014; color: #c8c8d0; font: 13px/1.4 Consolas, monospace; }
     body { display: flex; flex-direction: column; align-items: center; }

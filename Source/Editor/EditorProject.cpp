@@ -38,6 +38,7 @@
 
 #include <Core/Utilities/DeferredScope.hpp>
 #include <Core/Utilities/GlobalContext.hpp>
+#include <Core/Utilities/StringUtil.hpp>
 
 #include <Core/Reflection/Class.hpp>
 
@@ -173,6 +174,7 @@ EditorProject::EditorProject(Name name, const Handle<Game>& gameInstance)
 
     // replaced by the project file's own settings when it has them
     m_packagingSettings = PackagingSettings::CreateDefault();
+    m_projectSettings = MakeHandle<EditorProjectSettings>();
 }
 
 EditorProject::~EditorProject()
@@ -566,6 +568,75 @@ bool EditorProject::IsDirty() const
     return !IsSaved() || m_hasUnsavedSettings || m_assetFolders->IsDirty() || registry->HasDirtyAssets();
 }
 
+String EditorProject::GetGameTitle() const
+{
+    const String title = m_projectSettings->gameTitle.Trimmed();
+
+    if (title.Any())
+    {
+        return title;
+    }
+
+    return m_name.IsValid() ? String(*m_name) : String::empty;
+}
+
+String EditorProject::GetModuleName() const
+{
+    if (!IsSaved())
+    {
+        const String name = StringUtil::ToIdentifier(GetGameTitle());
+
+        return name.Any() ? name : String("MyGame");
+    }
+
+    return ResolveModuleName(m_projectSettings->moduleName, m_projectSettings->gameTitle, m_filepath);
+}
+
+String EditorProject::GetModuleNameFromTitle() const
+{
+    return StringUtil::ToIdentifier(GetGameTitle());
+}
+
+bool EditorProject::HasGameCode() const
+{
+    return IsSaved() && GetGameProjectLanguage(m_filepath) != GameProjectLanguage::None;
+}
+
+Result EditorProject::RenameGameCode(const String& newModuleName)
+{
+    if (!HasGameCode())
+    {
+        return HYP_MAKE_ERROR(Error, "The project has no game code to rename");
+    }
+
+    const String oldName = GetModuleName();
+    const String newName = StringUtil::ToIdentifier(newModuleName);
+
+    if (newName.Empty())
+    {
+        return HYP_MAKE_ERROR(Error, "'{}' has no characters a class name can use", newModuleName);
+    }
+
+    if (newName == oldName)
+    {
+        return {};
+    }
+
+    if (Result renameResult = RenameGameProjectFiles(m_filepath, oldName, newName); renameResult.HasError())
+    {
+        HYP_LOG(Editor, Error, "Failed to rename game code from {} to {}: {}", oldName, newName, renameResult.GetError().GetMessage());
+
+        return renameResult;
+    }
+
+    HYP_LOG(Editor, Info, "Renamed game code from {} to {}", oldName, newName);
+
+    // the module name is read back from the project file
+    m_projectSettings->moduleName = newName;
+
+    return Save();
+}
+
 BakeLayer& EditorProject::GetActiveBakeLayer()
 {
     const Handle<World>& world = GetWorld();
@@ -755,6 +826,17 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
 
     project->m_assetFolders->BindRegistry(registry);
     project->m_assetFolders->SyncWithRegistry();
+
+    if (!project->m_projectSettings.IsValid())
+    {
+        project->m_projectSettings = MakeHandle<EditorProjectSettings>();
+    }
+
+    if (project->m_legacyPlatformSettings.GetHashCode() != EditorPlatformSettings().GetHashCode())
+    {
+        project->m_projectSettings->platformSettings = std::move(project->m_legacyPlatformSettings);
+        project->m_legacyPlatformSettings = EditorPlatformSettings();
+    }
 
     // files saved before overrides recorded their fields have none listed
     if (project->m_packagingSettings.IsValid())

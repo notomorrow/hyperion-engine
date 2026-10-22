@@ -343,7 +343,7 @@ namespace Hyperion.Editor.Services
 
                 if (isScriptsLibrary && (!File.Exists(cmakeListsFile) || !File.ReadAllText(cmakeListsFile).Contains("hyperion_link_scripts")))
                 {
-                    string message = $"Source/CMakeLists.txt must call hyperion_link_scripts({Path.GetFileNameWithoutExtension(projectFilePath)}) after the launcher's target_link_libraries to link the scripts.";
+                    string message = $"Source/CMakeLists.txt must call hyperion_link_scripts({ProjectLayout.GetModuleName(projectFilePath)}) after the launcher's target_link_libraries to link the scripts.";
 
                     Logger.Log(BuildLogChannel, LogLevel.Error, "{0}", message);
 
@@ -352,7 +352,7 @@ namespace Hyperion.Editor.Services
                     return false;
                 }
 
-                string projectName = Path.GetFileNameWithoutExtension(projectFilePath);
+                string projectName = ProjectLayout.GetModuleName(projectFilePath);
                 string scriptsProjectDirectory = Path.GetFullPath(Path.Combine(binariesDirectory, "..", "AotIntermediate", "ScriptsProject"));
                 Directory.CreateDirectory(scriptsProjectDirectory);
 
