@@ -133,15 +133,15 @@ if(RENDERING_BACKEND STREQUAL "Vulkan")
   message(STATUS "Using Vulkan rendering backend")
 
   # find all Vulkan sources and headers
-  file(GLOB_RECURSE VULKAN_SOURCES RELATIVE ${CMAKE_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.hpp")
-  file(GLOB_RECURSE VULKAN_HEADERS RELATIVE ${CMAKE_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/*.hpp")
-  # source_group(TREE ${CMAKE_SOURCE_DIR}/rendering/vulkan PREFIX "Vulkan Backend" FILES ${VULKAN_SOURCES} ${VULKAN_HEADERS})
+  file(GLOB_RECURSE VULKAN_SOURCES RELATIVE ${CMAKE_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan/*.hpp")
+  file(GLOB_RECURSE VULKAN_HEADERS RELATIVE ${CMAKE_SOURCE_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/Vulkan/*.hpp")
+  # source_group(TREE ${CMAKE_SOURCE_DIR}/rendering/Vulkan PREFIX "Vulkan Backend" FILES ${VULKAN_SOURCES} ${VULKAN_HEADERS})
 
   set(hyperion-vulkan_SOURCES ${VULKAN_SOURCES})
   set(hyperion-vulkan_HEADERS ${VULKAN_HEADERS})
   set(hyperion-vulkan_PCH ${CMAKE_CURRENT_SOURCE_DIR}/Vulkan/VulkanPch.hpp)
 
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vulkan)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Vulkan)
   set(RENDERER_LIBRARIES hyperion-vulkan)
 elseif(RENDERING_BACKEND STREQUAL "DX12")
   message(STATUS "Using DirectX 12 rendering backend")
