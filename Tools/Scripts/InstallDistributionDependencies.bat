@@ -6,4 +6,4 @@ IF NOT DEFINED VCPKG_ROOT (
     exit /b 1
 )
 
-"%VCPKG_ROOT%\vcpkg.exe" install zlib:x64-windows-hyp-static openal-soft:x64-windows-hyp-static freetype:x64-windows-hyp-static "curl[ssl,sspi,non-http]:x64-windows-hyp-static" --overlay-triplets="%~dp0..\vcpkg\triplets"
+"%VCPKG_ROOT%\vcpkg.exe" install zlib:x64-windows-hyp-static openal-soft:x64-windows-hyp-static freetype:x64-windows-hyp-static --overlay-triplets="%~dp0..\vcpkg\triplets"

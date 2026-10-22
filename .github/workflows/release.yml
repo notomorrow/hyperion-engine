@@ -165,7 +165,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install ninja molten-vk vulkan-headers vulkan-loader curl freetype
+          brew install ninja molten-vk vulkan-headers vulkan-loader freetype
           echo "VULKAN_SDK=$(brew --prefix)" >> "$GITHUB_ENV"
 
       # the runner has 7 GB of memory, which 8 parallel compiles of the engine can exhaust

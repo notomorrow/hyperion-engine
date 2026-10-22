@@ -48,24 +48,6 @@ elseif(HYP_ANDROID)
   set(COMMON_LIBRARIES ${COMMON_LIBRARIES} android log)
 endif()
 
-if(NOT IOS)
-  if(APPLE)
-    set(CURL_LIBRARY /opt/homebrew/opt/curl/lib/libcurl.dylib)
-    set(CURL_INCLUDE_DIR /opt/homebrew/opt/curl/include)
-  endif()
-
-  find_package(CURL)
-endif()
-
-if(CURL_FOUND)
-  message(STATUS "CURL found at ${CURL_INCLUDE_DIRS}")
-
-  add_definitions(-DHYP_CURL=1)
-
-  include_directories(SYSTEM ${CURL_INCLUDE_DIRS})
-  set(COMMON_LIBRARIES ${COMMON_LIBRARIES} ${CURL_LIBRARIES})
-endif()
-
 if(ZLIB_FOUND)
   message(STATUS "Zlib found at ${ZLIB_INCLUDE_DIRS}")
 
