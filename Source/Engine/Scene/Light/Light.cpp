@@ -659,7 +659,7 @@ DirectionalLight::DirectionalLight(const Vec3f& direction, const Color& color, f
 #pragma region PointLight
 
 PointLight::PointLight()
-    : PointLight(Vec3f(0.0f), Color::White(), 5.0f, 25.0f)
+    : PointLight(Vec3f(0.0f), Color::White(), 10.0f, 25.0f)
 {
 }
 
@@ -674,7 +674,7 @@ PointLight::PointLight(const Vec3f& position, const Color& color, float intensit
 #pragma region SpotLight
 
 SpotLight::SpotLight()
-    : SpotLight(Vec3f(0.0f), -Vec3f::UnitY(), Vec2f(30.0f, 15.0f), Color::White(), 1.0f, 10.0f)
+    : SpotLight(Vec3f(0.0f), -Vec3f::UnitY(), Vec2f(30.0f, 15.0f), Color::White(), 10.0f, 25.0f)
 {
 }
 
@@ -696,7 +696,7 @@ SpotLight::SpotLight(const Vec3f& position, const Vec3f& direction, const Vec2f&
 #pragma region AreaRectLight
 
 AreaRectLight::AreaRectLight()
-    : Light(LightType::AreaRect, Vec3f(0.0f), Vec3f(0.0f, 0.0f, -1.0f), Vec2f(1.0f, 1.0f), Color::White(), 1.0f, 10.0f)
+    : Light(LightType::AreaRect, Vec3f(0.0f), Vec3f(0.0f, 0.0f, -1.0f), Vec2f(1.0f, 1.0f), Color::White(), 10.0f, 25.0f)
 {
 }
 
