@@ -59,7 +59,7 @@ Click a section header below to expand it:
 - PBR materials with parallax mapping, transmission, emissives, and foliage shading.
 - Post: TAA, GTAO, bloom, AgX / ACES / PBR Neutral tonemapping, color grading.
 - GPU particles, simulated in compute with depth-buffer collision.
-- Backends: DirectX 12 (the default on Windows) and Vulkan (macOS via MoltenVK, Android, and Linux in future). DirectX 12 is a fully supported, mainline backend.
+- Backends: DirectX 12 (the default on Windows) and Vulkan (Linux, Android, macOS, iOS via MoltenVK). DirectX 12 is a fully supported, mainline backend.
 - Shader compiler system with built in permutations support, and live reload in editor to see changes as you make them.
 
 </details>
@@ -168,7 +168,7 @@ Click a section header below to expand it:
 </details>
 
 ## Platforms
-Currently, we are focusing our efforts on developing the engine for *Windows*, *macOS*, *Android*, *iOS*, and Steam Deck via Proton. Editor support is available on Windows and macOS. Linux support is planned.
+Currently, we are focusing our efforts on developing the engine for *Windows*,  *Linux*, *macOS*, *Android*, *iOS*, *Web* (WebAssembly + WebGPU), and Steam Deck (via Proton). The editor is supported on all desktop platforms. (Windows, Linux, macOS)
 
 ## Status
 Hyperion is in active development. APIs, editor workflows, and asset formats can still change between versions.
