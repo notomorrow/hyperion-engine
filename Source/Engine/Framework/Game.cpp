@@ -195,6 +195,8 @@ void Game::Initialize()
         && !CoreApi::GetCommandLineArguments()["singleplayer"].ToBool()
         && m_connectionState.state != ServerConnectionState::Connected)
     {
+        HYP_LOG(Game, Info, "Waiting to connect to a game server; run with --singleplayer to play without one");
+
         BeforeConnectingToServer();
 
         if (CoreApi::GetCommandLineArguments()["autoconnect"].ToBool())
@@ -1074,6 +1076,8 @@ void Game::OnUpdate(float delta)
 
             if (res.HasError())
             {
+                HYP_LOG(Game, Error, "Failed to sync content: {}", res.GetError().GetMessage());
+
                 m_syncState.currentTask = {};
                 m_syncState.progress.Set(0, MemoryOrder::RELAXED);
                 m_syncState.SetState(ContentSyncState::Failed);

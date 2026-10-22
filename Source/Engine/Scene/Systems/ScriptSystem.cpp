@@ -461,7 +461,12 @@ void ScriptSystem::OnAddedToWorld(World* world)
                         for (auto [entity, scriptComponent] : scene->GetEntityManager()->GetEntitySet<ScriptComponent>().GetScopedView(GetComponentInfos()))
                         {
                             const Handle<ScriptAsset>& scriptAsset = scriptComponent.script;
-                            Assert(scriptAsset != nullptr);
+
+                            // e.g its script was deleted
+                            if (!scriptAsset.IsValid())
+                            {
+                                continue;
+                            }
 
                             auto writeScope = scriptAsset->GetWriteScope();
 

@@ -985,7 +985,12 @@ namespace Hyperion
         [UnmanagedCallersOnly]
         public static unsafe void CleanupOnShutdown()
         {
-            AssemblyInstance.CoreAssemblyLoadContext.Unload();
+            // NativeAOT can't create the load context, and never loaded anything into it
+            if (RuntimeFeature.IsDynamicCodeSupported)
+            {
+                AssemblyInstance.CoreAssemblyLoadContext.Unload();
+            }
+
             AssemblyCache.Instance.Clear();
 
             GC.Collect(0, GCCollectionMode.Forced, blocking: true, compacting: true);
