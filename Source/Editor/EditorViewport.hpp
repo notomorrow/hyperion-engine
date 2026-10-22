@@ -20,6 +20,7 @@
 #include <Input/Mouse.hpp>
 
 #include <Editor/EditorCamera.hpp>
+#include <Editor/EditorMemory.hpp>
 
 namespace Hyperion {
 
@@ -138,9 +139,7 @@ protected:
 
     EditorViewportInputState m_inputState;
 
-    Array<WeakHandle<Scene>> m_isolatedScenes;
+    Array<WeakHandle<Scene>, EditorAllocator> m_isolatedScenes;
 };
-
-void CaptureViewToPng(const Handle<View>& view, const FilePath& path, Vec2u wireframeExtent, Vec2u outputExtent = Vec2u::Zero());
 
 } // namespace Hyperion

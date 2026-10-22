@@ -87,7 +87,7 @@ class EDITOR_API EditorProjectSettings final : public ObjectBase
 public:
     EditorProjectSettings() = default;
 
-    HYP_FIELD(Property = "GameTitle", Serialize, Editor, Title = "Game Title", Description = "Name of the game, used to name its packaged builds")
+    HYP_FIELD(Property = "GameTitle", Serialize, Editor, Title = "Game Title")
     String gameTitle;
 
     HYP_FIELD(Property = "ModuleName", Serialize)

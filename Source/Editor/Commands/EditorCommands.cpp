@@ -1,4 +1,12 @@
+/*!
+ *  @author: The Hyperion Contributors
+ *  @date 2016-2026
+ *  @licence MIT
+*/
+
 #include <Editor/Commands/EditorCommandsCommon.hpp>
+
+#include <Editor/EditorHelpers.hpp>
 
 #include <Framework/View.hpp>
 #include <Framework/Game.hpp>
@@ -812,7 +820,7 @@ public:
             ? FilePath(GetArgument(0))
             : EngineGlobals::GetUserDataDirectory() / "Screenshots" / "Viewport.png";
 
-        CaptureViewToPng(captureView, path, wireframeExtent);
+        (void)EditorHelpers::CaptureViewToPNGAsync(captureView, path, wireframeExtent);
     }
 
 private:

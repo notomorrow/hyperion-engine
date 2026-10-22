@@ -25,6 +25,7 @@
 #include <Editor/EditorNativeModule.hpp>
 #include <Editor/EditorProjectLayout.hpp>
 #include <Editor/EditorProjectSettings.hpp>
+#include <Editor/EditorHelpers.hpp>
 
 #include <Editor/Tasks/EditorTasks.hpp>
 
@@ -5620,7 +5621,11 @@ void EditorSubsystem::OpenProject(const Handle<EditorProject>& project)
 
             if (viewport != nullptr)
             {
-                CaptureViewToPng(viewport->GetView(), savedProject->GetFilePath().BasePath() / "Saved" / "Thumbnail.png", Vec2u::One(), Vec2u(256, 144));
+                (void)EditorHelpers::CaptureViewToPNGAsync(
+                    viewport->GetView(),
+                    savedProject->GetFilePath().BasePath() / "Saved" / "Thumbnail.png",
+                    Vec2u::One(),
+                    Vec2u(256, 144));
             }
         }));
 

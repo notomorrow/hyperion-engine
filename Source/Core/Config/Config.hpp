@@ -18,7 +18,6 @@
 
 #include <Core/FileSystem/FilePath.hpp>
 
-#include <Core/Memory/NotNullPtr.hpp>
 #include <Core/Memory/SharedPtr.hpp>
 
 #include <Core/Threading/SharedMutex.hpp>

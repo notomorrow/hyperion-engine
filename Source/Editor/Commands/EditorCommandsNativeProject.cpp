@@ -5,6 +5,12 @@
 
 #include <Editor/EditorNativeModule.hpp>
 #include <Editor/EditorProjectLayout.hpp>
+/*!
+ *  @author: The Hyperion Contributors
+ *  @date 2016-2026
+ *  @licence MIT
+*/
+
 #include <Editor/EditorProjectSettings.hpp>
 
 #include <Core/DataProcessing/JSON/JSON.hpp>

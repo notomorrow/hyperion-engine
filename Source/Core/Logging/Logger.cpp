@@ -20,7 +20,6 @@
 #include <Core/Functional/Proc.hpp>
 
 #include <Core/Memory/ByteBuffer.hpp>
-#include <Core/Memory/NotNullPtr.hpp>
 
 #include <Core/Memory/Allocator/Allocator.hpp>
 #include <Core/Memory/Allocator/ThreadAllocator.hpp>

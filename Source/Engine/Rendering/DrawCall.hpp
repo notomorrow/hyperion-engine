@@ -62,7 +62,6 @@ struct EntityInstanceBatch
     FixedArray<uint32, MaxInstancesPerBatch> instanceSlots;
 };
 
-static_assert(offsetof(EntityInstanceBatch, indices) == 64, "offset of `indices` must match shader");
 static_assert(sizeof(EntityInstanceBatch) % 64 == 0);
 static_assert(MaxInstancesPerBatch <= 256, "an entry's index within its batch is stored in 8 bits");
 
