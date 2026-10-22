@@ -272,7 +272,7 @@ EOF
 plutil -lint "$APP_DIR/Contents/Info.plist" >/dev/null
 
 ICONSET_DIR="$OUTPUT_DIR/AppIcon.iconset"
-ICON_SOURCE="$ROOT_DIR/Source/Editor/managed/Assets/Branding/hyperion-icon.ico"
+ICON_SOURCE="$ROOT_DIR/Source/Editor/Managed/Assets/Branding/hyperion-icon.ico"
 rm -rf "$ICONSET_DIR"
 mkdir -p "$ICONSET_DIR"
 for size in 16 32 128 256; do
