@@ -21,22 +21,21 @@
 namespace Hyperion {
 namespace PlatformUtils {
 
-ENGINE_API PlatformString GetExecutableAbsolutePath()
+namespace {
+
+// cached battery state.
+struct BatteryState
 {
-    char buffer[PATH_MAX];
-    const ssize_t length = readlink("/proc/self/exe", buffer, sizeof(buffer));
+    bool hasBattery;
+    
+    bool isDischarging;
+    bool hasExternalPower;
+};
 
-    // readlink doesn't null terminate, and a full buffer means the path may have been truncated
-    if (length <= 0 || length >= ssize_t(sizeof(buffer)))
-    {
-        return PlatformString();
-    }
-
-    return PlatformString(buffer, buffer + length);
-}
+BatteryState g_batteryState;
 
 // Reads the first line of a small sysfs attribute file, without the trailing newline
-static bool ReadSysfsValue(const char* directory, const char* attribute, char* outValue, size_t outValueSize)
+bool ReadSysfsValue(const char* directory, const char* attribute, char* outValue, size_t outValueSize)
 {
     char path[PATH_MAX];
     std::snprintf(path, sizeof(path), "/sys/class/power_supply/%s/%s", directory, attribute);
@@ -59,17 +58,16 @@ static bool ReadSysfsValue(const char* directory, const char* attribute, char* o
     return success;
 }
 
-static bool QueryIsOnBatteryPower()
+void QueryBattery(BatteryState& outBatteryState)
 {
+    outBatteryState = {};
+
     DIR* powerSupplies = opendir("/sys/class/power_supply");
 
     if (!powerSupplies)
     {
-        return false;
+        return;
     }
-
-    bool hasExternalPower = false;
-    bool hasDischargingBattery = false;
 
     while (dirent* entry = readdir(powerSupplies))
     {
@@ -95,11 +93,13 @@ static bool QueryIsOnBatteryPower()
                 continue;
             }
 
+            outBatteryState.hasBattery = true;
+
             char status[64];
 
             if (ReadSysfsValue(entry->d_name, "status", status, sizeof(status)) && std::strcmp(status, "Discharging") == 0)
             {
-                hasDischargingBattery = true;
+                outBatteryState.isDischarging = true;
             }
         }
         else
@@ -109,14 +109,53 @@ static bool QueryIsOnBatteryPower()
 
             if (ReadSysfsValue(entry->d_name, "online", online, sizeof(online)) && std::strcmp(online, "1") == 0)
             {
-                hasExternalPower = true;
+                outBatteryState.hasExternalPower = true;
             }
         }
     }
 
     closedir(powerSupplies);
+}
 
-    return hasDischargingBattery && !hasExternalPower;
+void InitBatteryState()
+{
+    static std::once_flag s_onceFlag;
+
+    std::call_once(s_onceFlag, []()
+    {
+        QueryBattery(g_batteryState);
+    });
+}
+
+} // namespace
+
+ENGINE_API PlatformString GetExecutableAbsolutePath()
+{
+    char buffer[PATH_MAX];
+    const ssize_t length = readlink("/proc/self/exe", buffer, sizeof(buffer));
+
+    // readlink doesn't null terminate, and a full buffer means the path may have been truncated
+    if (length <= 0 || length >= ssize_t(sizeof(buffer)))
+    {
+        return PlatformString();
+    }
+
+    return PlatformString(buffer, buffer + length);
+}
+
+ENGINE_API bool IsInsideAppBundle()
+{
+    return false;
+}
+
+ENGINE_API PlatformString GetUserApplicationDataDirectory()
+{
+    return PlatformString();
+}
+
+ENGINE_API PlatformString GetUserDocumentsDirectory()
+{
+    return PlatformString();
 }
 
 ENGINE_API bool IsOnBatteryPower()
@@ -127,6 +166,13 @@ ENGINE_API bool IsOnBatteryPower()
     static AtomicVar<int64> s_nextRefreshTimeMs { 0 };
     static AtomicVar<bool> s_isOnBatteryPower { false };
 
+    InitBatteryState();
+
+    if (!g_batteryState.hasBattery)
+    {
+        return false;
+    }
+
     const int64 nowMs = int64(std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch())
             .count());
@@ -134,10 +180,20 @@ ENGINE_API bool IsOnBatteryPower()
     if (nowMs >= s_nextRefreshTimeMs.Get(MemoryOrder::ACQUIRE))
     {
         s_nextRefreshTimeMs.Set(nowMs + RefreshIntervalMs, MemoryOrder::RELEASE);
-        s_isOnBatteryPower.Set(QueryIsOnBatteryPower(), MemoryOrder::RELAXED);
+
+        QueryBattery(g_batteryState);
+        
+        s_isOnBatteryPower.Set(g_batteryState.isDischarging && !g_batteryState.hasExternalPower, MemoryOrder::RELAXED);
     }
 
     return s_isOnBatteryPower.Get(MemoryOrder::RELAXED);
+}
+
+ENGINE_API bool HasBattery()
+{
+    InitBatteryState();
+
+    return g_batteryState.hasBattery;
 }
 
 ENGINE_API void InitializeNetwork()

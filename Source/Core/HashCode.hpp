@@ -319,7 +319,7 @@ struct HashCode
         return HashCode(FNV1::DoHashString(_begin, _end));
     }
 
-    static inline HashCode GetHashCode(const ubyte* _begin, const ubyte* _end)
+    static inline constexpr HashCode GetHashCode(const ubyte* _begin, const ubyte* _end)
     {
         return HashCode(FNV1::DoHashBytes(_begin, _end));
     }

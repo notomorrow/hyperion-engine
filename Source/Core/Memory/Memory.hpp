@@ -31,37 +31,37 @@ class Memory
 {
 public:
     template <class T, class U, typename = std::enable_if_t<BitwiseComparable<T> && BitwiseComparable<U>>>
-    HYP_FORCE_INLINE static int Compare(const T* a, const U* b, size_t count)
+    HYP_FORCE_INLINE static int Compare(const T* HYP_NOTNULL a, const U* HYP_NOTNULL b, size_t count)
     {
         return std::memcmp(a, b, count);
     }
 
     template <class T, class U, typename = std::enable_if_t<BitwiseCopyable<T> && BitwiseCopyable<U>>>
-    HYP_FORCE_INLINE static void* Copy(T* dest, const U* src, size_t count)
+    HYP_FORCE_INLINE static void* Copy(T* HYP_NOTNULL dest, const U* HYP_NOTNULL src, size_t count)
     {
         return std::memcpy(dest, src, count);
     }
 
     template <class T, class U, typename = std::enable_if_t<BitwiseCopyable<T> && BitwiseCopyable<U>>>
-    HYP_FORCE_INLINE static void* Move(T* dest, const U* src, size_t size)
+    HYP_FORCE_INLINE static void* Move(T* HYP_NOTNULL dest, const U* HYP_NOTNULL src, size_t size)
     {
         return std::memmove(dest, src, size);
     }
 
     template <class T>
-    HYP_FORCE_INLINE static void* Fill(T* dest, ubyte ch, size_t size)
+    HYP_FORCE_INLINE static void* Fill(T* HYP_NOTNULL dest, ubyte ch, size_t size)
     {
         return std::memset(dest, ch, size);
     }
 
     template <class T>
-    HYP_FORCE_INLINE static void* Zero(T* dest, size_t size)
+    HYP_FORCE_INLINE static void* Zero(T* HYP_NOTNULL dest, size_t size)
     {
         return std::memset(dest, 0, size);
     }
 
 #if HYP_DEBUG_MODE
-    HYP_FORCE_INLINE static void Garble(void* dest, size_t length)
+    HYP_FORCE_INLINE static void Garble(void* HYP_NOTNULL dest, size_t length)
     {
         if (length == 0)
         {
@@ -71,12 +71,12 @@ public:
         std::memset(dest, 0xDEAD, length);
     }
 #else
-    HYP_FORCE_INLINE static void Garble(void* dest, size_t length)
+    HYP_FORCE_INLINE static void Garble(void* HYP_NOTNULL dest, size_t length)
     {
     }
 #endif
 
-    HYP_FORCE_INLINE static int StrCmp(const char* lhs, const char* rhs, size_t length = 0)
+    HYP_FORCE_INLINE static int StrCmp(const char* HYP_NOTNULL lhs, const char* HYP_NOTNULL rhs, size_t length = 0)
     {
         if (length)
         {
@@ -87,7 +87,7 @@ public:
     }
 
     template <class T>
-    static constexpr bool StrEqual(const T* lhs, const T* rhs, size_t length, size_t index = 0)
+    static constexpr bool StrEqual(const T* HYP_NOTNULL lhs, const T* HYP_NOTNULL rhs, size_t length, size_t index = 0)
     {
         if (HYP_CONSTEVAL_CONTEXT)
         {
@@ -214,7 +214,7 @@ public:
     }
 
     template <class T, class... Args>
-    static void Construct(void* where, Args&&... args)
+    static void Construct(void* HYP_NOTNULL where, Args&&... args)
     {
         new (where) T(std::forward<Args>(args)...);
     }

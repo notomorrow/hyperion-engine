@@ -2379,9 +2379,7 @@ struct ShaderPropertySet
 
     HYP_FORCE_INLINE constexpr HashCode GetHashCode() const
     {
-        return HashCode::GetHashCode(
-            reinterpret_cast<const ubyte*>(this),
-            reinterpret_cast<const ubyte*>(this) + sizeof(ShaderPropertySet));
+        return HashCode::GetHashCode(std::begin(chunks), std::end(chunks));
     }
 };
 
