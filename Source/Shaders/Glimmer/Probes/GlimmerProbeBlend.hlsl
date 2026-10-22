@@ -587,14 +587,21 @@ void CSMain(uint3 groupId : SV_GroupID, uint groupIndex : SV_GroupIndex)
         sums += float3(depth, depth * depth, 1.0) * weight;
     }
 
-    if (sums.z > 1e-4)
+    const uint visibilityIndex = probeIndex * GLIMMER_PROBE_VISIBILITY_TEXELS + texel;
+
+    if (gsVisibilityBlend >= 1.0)
     {
-        const uint visibilityIndex = probeIndex * GLIMMER_PROBE_VISIBILITY_TEXELS + texel;
+        const float2 estimate = sums.z > 1e-4
+            ? sums.xy / sums.z
+            : float2(GLIMMER_PROBE_DEPTH_RANGE, GLIMMER_PROBE_DEPTH_RANGE * GLIMMER_PROBE_DEPTH_RANGE);
 
+        OutVisibility[visibilityIndex] = GlimmerPackHalf2(estimate);
+    }
+    else if (sums.z > 1e-4)
+    {
         const float2 estimate = sums.xy / sums.z;
-        const float texelBlend = gsVisibilityBlend < 1.0 ? gsVisibilityBlend * saturate(sums.z) : 1.0;
 
-        OutVisibility[visibilityIndex] = GlimmerPackHalf2(lerp(GlimmerUnpackHalf2(OutVisibility[visibilityIndex]), estimate, texelBlend));
+        OutVisibility[visibilityIndex] = GlimmerPackHalf2(lerp(GlimmerUnpackHalf2(OutVisibility[visibilityIndex]), estimate, gsVisibilityBlend * saturate(sums.z)));
     }
 }
 
