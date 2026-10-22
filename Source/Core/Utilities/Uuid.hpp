@@ -103,7 +103,7 @@ struct Formatter<StringType, UUID>
 } // namespace utilities
 
 namespace ByteUtil {
-static constexpr inline UUID SwapEndian(UUID value)
+static inline constexpr UUID SwapEndian(UUID value)
 {
     UUID result = UUID::Invalid();
     result.data0 = SwapEndian(value.data0);

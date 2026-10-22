@@ -72,7 +72,7 @@ enum class NetMessageId : uint16
     Reserved_GameStart = 1000
 };
 
-static constexpr inline bool IsServerRequest(NetMessageId id)
+static inline constexpr bool IsServerRequest(NetMessageId id)
 {
     return uint16(id) >= uint16(NetMessageId::ServerRequestsBegin)
         && uint16(id) < uint16(NetMessageId::Reserved_GameStart);

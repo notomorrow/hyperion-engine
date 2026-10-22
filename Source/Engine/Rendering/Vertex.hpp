@@ -503,7 +503,7 @@ static inline const char* ToString(VertexType vt)
     return "";
 }
 
-static constexpr inline size_t PacketSize(VertexType vt)
+static inline constexpr size_t PacketSize(VertexType vt)
 {
     //AssertDebug(ByteUtil::BitCount(vt) == 1);
 

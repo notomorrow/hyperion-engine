@@ -196,7 +196,7 @@ struct HashCode
     }
 
     template <class T, class DecayedType = std::decay_t<T>>
-    static constexpr inline
+    static inline constexpr
         typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && HYP_HAS_METHOD(DecayedType, GetHashCode), HashCode>
         GetHashCode(const T& value)
     {
@@ -204,7 +204,7 @@ struct HashCode
     }
 
     template <class T, class DecayedType = std::decay_t<T>>
-    static constexpr inline typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HYP_HAS_METHOD(DecayedType, GetHashCode)
+    static inline constexpr typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HYP_HAS_METHOD(DecayedType, GetHashCode)
             && !std::is_pointer_v<DecayedType> && std::is_arithmetic_v<DecayedType>,
         HashCode>
     GetHashCode(T&& value)
@@ -233,7 +233,7 @@ struct HashCode
     }
 
     template <class T, class DecayedType = std::decay_t<T>>
-    static constexpr inline typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HYP_HAS_METHOD(DecayedType, GetHashCode)
+    static inline constexpr typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HYP_HAS_METHOD(DecayedType, GetHashCode)
             && !std::is_pointer_v<DecayedType> && std::is_fundamental_v<DecayedType> && !std::is_integral_v<DecayedType>,
         HashCode>
     GetHashCode(const T& value)
@@ -242,7 +242,7 @@ struct HashCode
     }
 
     template <class T, class DecayedType = std::decay_t<T>>
-    static constexpr inline typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HYP_HAS_METHOD(DecayedType, GetHashCode)
+    static inline constexpr typename std::enable_if_t<!(std::is_same_v<T, HashCode> || std::is_base_of_v<HashCode, T>) && !HYP_HAS_METHOD(DecayedType, GetHashCode)
             && !std::is_pointer_v<DecayedType> && std::is_enum_v<DecayedType>,
         HashCode>
     GetHashCode(const T& value)
@@ -256,65 +256,65 @@ struct HashCode
     }
 
     template <size_t Size>
-    static constexpr inline HashCode GetHashCode(const char (&str)[Size])
+    static inline constexpr HashCode GetHashCode(const char (&str)[Size])
     {
         return HashCode(FNV1::DoHashString<char, Size>(str));
     }
 
-    static constexpr inline HashCode GetHashCode(const char* str)
+    static inline constexpr HashCode GetHashCode(const char* str)
     {
         return HashCode(FNV1::DoHashString(str));
     }
 
-    static constexpr inline HashCode GetHashCode(const char* _begin, const char* _end)
+    static inline constexpr HashCode GetHashCode(const char* _begin, const char* _end)
     {
         return HashCode(FNV1::DoHashString(_begin, _end));
     }
 
     template <size_t Size>
-    static constexpr inline HashCode GetHashCode(const char16_t (&str)[Size])
+    static inline constexpr HashCode GetHashCode(const char16_t (&str)[Size])
     {
         return HashCode(FNV1::DoHashString<char16_t, Size>(str));
     }
 
-    static constexpr inline HashCode GetHashCode(const char16_t* str)
+    static inline constexpr HashCode GetHashCode(const char16_t* str)
     {
         return HashCode(FNV1::DoHashString(str));
     }
 
-    static constexpr inline HashCode GetHashCode(const char16_t* _begin, const char16_t* _end)
+    static inline constexpr HashCode GetHashCode(const char16_t* _begin, const char16_t* _end)
     {
         return HashCode(FNV1::DoHashString(_begin, _end));
     }
 
     template <size_t Size>
-    static constexpr inline HashCode GetHashCode(const char32_t (&str)[Size])
+    static inline constexpr HashCode GetHashCode(const char32_t (&str)[Size])
     {
         return HashCode(FNV1::DoHashString<char32_t, Size>(str));
     }
 
-    static constexpr inline HashCode GetHashCode(const char32_t* str)
+    static inline constexpr HashCode GetHashCode(const char32_t* str)
     {
         return HashCode(FNV1::DoHashString(str));
     }
 
-    static constexpr inline HashCode GetHashCode(const char32_t* _begin, const char32_t* _end)
+    static inline constexpr HashCode GetHashCode(const char32_t* _begin, const char32_t* _end)
     {
         return HashCode(FNV1::DoHashString(_begin, _end));
     }
 
     template <size_t Size>
-    static constexpr inline HashCode GetHashCode(const wchar_t (&bytes)[Size])
+    static inline constexpr HashCode GetHashCode(const wchar_t (&bytes)[Size])
     {
         return HashCode(FNV1::DoHashString<wchar_t, Size>(bytes));
     }
 
-    static constexpr inline HashCode GetHashCode(const wchar_t* str)
+    static inline constexpr HashCode GetHashCode(const wchar_t* str)
     {
         return HashCode(FNV1::DoHashString(str));
     }
 
-    static constexpr inline HashCode GetHashCode(const wchar_t* _begin, const wchar_t* _end)
+    static inline constexpr HashCode GetHashCode(const wchar_t* _begin, const wchar_t* _end)
     {
         return HashCode(FNV1::DoHashString(_begin, _end));
     }
@@ -325,7 +325,7 @@ struct HashCode
     }
 
     template <class T, size_t Size>
-    static constexpr inline HashCode GetHashCode(const T (&elems)[Size])
+    static inline constexpr HashCode GetHashCode(const T (&elems)[Size])
     {
         HashCode hc;
         for (size_t i = 0; i < Size; i++)
@@ -337,7 +337,7 @@ struct HashCode
     }
 
     template <class T>
-    static constexpr inline HashCode GetHashCode(const T* _begin, const T* _end)
+    static inline constexpr HashCode GetHashCode(const T* _begin, const T* _end)
     {
         HashCode hc;
         while (_begin && _begin != _end)
@@ -349,7 +349,7 @@ struct HashCode
         return hc;
     }
 
-    static constexpr inline HashCode GetHashCode(const HashCode& hashCode)
+    static inline constexpr HashCode GetHashCode(const HashCode& hashCode)
     {
         return hashCode;
     }

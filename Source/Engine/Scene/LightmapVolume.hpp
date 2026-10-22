@@ -75,13 +75,13 @@ struct LightmapElement
         return uint16(uint32(id) & 0xFFFFu);
     }
 
-    static constexpr inline void GetAtlasAndElementIndex(LightmapElementId elementId, uint16& outAtlasIndex, uint16& outElementIndex)
+    static inline constexpr void GetAtlasAndElementIndex(LightmapElementId elementId, uint16& outAtlasIndex, uint16& outElementIndex)
     {
         outAtlasIndex = uint16((uint32(elementId) >> 16) & 0xFFFFu);
         outElementIndex = uint16(uint32(elementId) & 0xFFFFu);
     }
 
-    static constexpr inline LightmapElementId MakeId(uint16 atlasIndex, uint16 elementIndex)
+    static inline constexpr LightmapElementId MakeId(uint16 atlasIndex, uint16 elementIndex)
     {
         return LightmapElementId((uint32(atlasIndex) << 16) | uint32(elementIndex));
     }

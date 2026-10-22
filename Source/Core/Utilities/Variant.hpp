@@ -762,7 +762,7 @@ template <class... Types>
 struct Variant;
 
 template <class VariantType, class FunctionType>
-static constexpr inline void Visit(VariantType&& variant, FunctionType&& fn);
+static inline constexpr void Visit(VariantType&& variant, FunctionType&& fn);
 
 template <class... Types>
 struct Variant : private ConstructAssignmentTraits<true, utilities::VariantHelper<Types...>::copyConstructible, utilities::VariantHelper<Types...>::moveConstructible, Variant<Types...>>
@@ -1186,7 +1186,7 @@ struct VisitHelper<utilities::Variant<Types...>>
 #pragma endregion VisitHelper
 
 template <class VariantType, class FunctionType>
-static constexpr inline void Visit(VariantType&& variant, FunctionType&& fn)
+static inline constexpr void Visit(VariantType&& variant, FunctionType&& fn)
 {
     VisitHelper<NormalizedType<VariantType>> {}.Invoke(std::forward<VariantType>(variant), std::forward<FunctionType>(fn));
 }

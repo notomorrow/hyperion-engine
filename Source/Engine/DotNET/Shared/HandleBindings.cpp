@@ -39,7 +39,8 @@ extern "C"
             {
                 *pOutObject = handle.ptr;
 
-                (void)handle.Release();
+                [[maybe_unused]] ObjectBase* foo = handle.Release();
+                (void)foo;
 
                 return;
             }

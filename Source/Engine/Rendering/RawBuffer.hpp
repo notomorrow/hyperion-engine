@@ -116,7 +116,7 @@ public:
     size_t dirtyRangeEnd;
 
 protected:
-    static constexpr inline size_t GetAlignedBufferSize(size_t numElements, size_t elementSize, size_t alignment)
+    static inline constexpr size_t GetAlignedBufferSize(size_t numElements, size_t elementSize, size_t alignment)
     {
         size_t totalSize = elementSize != 0 ? numElements * elementSize : numElements;
         return alignment != 0 ? ByteUtil::AlignAs(totalSize, alignment) : totalSize;

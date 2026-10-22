@@ -291,7 +291,7 @@ static constexpr int ScrollAxisIndices[4] = {
     -1, 0, 1, -1
 };
 
-static constexpr inline int ScrollAxisToIndex(ScrollAxis axis)
+static inline constexpr int ScrollAxisToIndex(ScrollAxis axis)
 {
     return ScrollAxisIndices[uint8(axis)];
 }
