@@ -182,6 +182,8 @@ static constexpr ANSIStringView ImportFileFilter[] = {
 
 struct SuppressIdleThrottlingContext {};
 
+bool SaveProjectWithPromptOrAlert(EditorProject* project, const String& abortText);
+
 #pragma region Helpers
 
 static RenderableAttributeSet PhysicsWireframeAttributes()
@@ -3812,6 +3814,27 @@ bool EditorSubsystem::StartSimulation()
     }
 
     HYP_LOG(Editor, Info, "Action: StartSimulation");
+
+    // The snapshot simulated against is the project on disk, so an untitled project needs a location first
+    if (!IsSimulating() && !m_currentProject->IsSaved())
+    {
+        bool shouldSave = false;
+
+        SystemMessageBox(MessageBoxType::INFO)
+            .Title("Save project?")
+            .Text("The project has to be saved before it can be simulated.")
+            .Button("Save", [&shouldSave]
+                    {
+                        shouldSave = true;
+                    })
+            .Button("Cancel", NoOpFunction<void> {})
+            .Show();
+
+        if (!shouldSave || !SaveProjectWithPromptOrAlert(m_currentProject, "Simulation will not be started"))
+        {
+            return false;
+        }
+    }
 
     // Pending prefab edits go into the snapshot too
     if (m_prefabEditState.IsValid())

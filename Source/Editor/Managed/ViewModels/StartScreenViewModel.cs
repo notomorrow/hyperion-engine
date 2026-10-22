@@ -23,6 +23,7 @@ namespace Hyperion.Editor.ViewModels
         private bool _isBusy;
         private string _busyText = string.Empty;
         private bool _awaitingProjectOpen;
+        private bool _awaitingNewProject;
         private bool _isFinished;
 
         public ObservableCollection<RecentProjectItemViewModel> RecentProjects { get; } = new();
@@ -126,6 +127,13 @@ namespace Hyperion.Editor.ViewModels
 
         private void RefreshRecentProjects()
         {
+            if (_awaitingNewProject && EngineManager.CurrentProject?.IsSaved == true)
+            {
+                Finish();
+
+                return;
+            }
+
             string? selectedFilePath = SelectedProject?.FilePath;
 
             _allRecentProjects.Clear();
@@ -160,13 +168,9 @@ namespace Hyperion.Editor.ViewModels
 
         private void NewProject()
         {
-            // The engine starts up with a fresh untitled project, so there is normally nothing to create
-            if (EngineManager.CurrentProject?.IsSaved == true)
-            {
-                RecentProjectsService.Instance.NewProject();
-            }
+            _awaitingNewProject = true;
 
-            Finish();
+            RecentProjectsService.Instance.NewProject();
         }
 
         private void Browse()
@@ -236,6 +240,7 @@ namespace Hyperion.Editor.ViewModels
 
             _isFinished = true;
             _awaitingProjectOpen = false;
+            _awaitingNewProject = false;
 
             Finished?.Invoke();
         }

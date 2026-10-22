@@ -13,12 +13,12 @@
 
 namespace Hyperion {
 
-TResult<bool> SaveProjectAsWithPrompt(EditorProject* project)
+static FilePath PromptForProjectFilePath(UTF8StringView title, const EditorProject* project)
 {
     FilePath dir = EngineGlobals::GetProjectsDirectory();
     String currentFileName;
 
-    if (project->IsSaved())
+    if (project != nullptr && project->IsSaved())
     {
         dir = project->GetFilePath().BasePath().BasePath();
         currentFileName = String(project->GetFilePath().Basename());
@@ -30,7 +30,7 @@ TResult<bool> SaveProjectAsWithPrompt(EditorProject* project)
     Semaphore<int32> semaphore;
 
     ShowSaveFileDialog(
-        "Save project as",
+        title,
         dir,
         { "hypproject" },
         [&selectedPath, &semaphore](TResult<FilePath>&& result)
@@ -52,7 +52,7 @@ TResult<bool> SaveProjectAsWithPrompt(EditorProject* project)
 
     if (selectedPath.Empty())
     {
-        return false;
+        return FilePath();
     }
 
     // the file name picked is the new project name
@@ -60,7 +60,7 @@ TResult<bool> SaveProjectAsWithPrompt(EditorProject* project)
     if (projectName.Empty())
     {
         HYP_LOG(Editor, Warning, "No project name given.");
-        return false;
+        return FilePath();
     }
 
     const FilePath selectedDir = selectedPath.BasePath();
@@ -68,7 +68,17 @@ TResult<bool> SaveProjectAsWithPrompt(EditorProject* project)
     const bool isProjectDir = String(selectedDir.Basename()) == projectName
         || (currentFileName.Any() && (selectedDir / currentFileName).Exists());
 
-    selectedPath = (isProjectDir ? selectedDir : selectedDir / projectName) / (projectName + ".hypproject");
+    return (isProjectDir ? selectedDir : selectedDir / projectName) / (projectName + ".hypproject");
+}
+
+TResult<bool> SaveProjectAsWithPrompt(EditorProject* project)
+{
+    const FilePath selectedPath = PromptForProjectFilePath("Save project as", project);
+
+    if (selectedPath.Empty())
+    {
+        return false;
+    }
 
     if (Result saveResult = project->SaveAs(selectedPath); saveResult.HasError())
     {
@@ -267,7 +277,32 @@ public:
             return;
         }
 
+        const FilePath projectFilepath = PromptForProjectFilePath("Create new project", nullptr);
+
+        if (projectFilepath.Empty())
+        {
+            return;
+        }
+
         subsystem->NewProject();
+
+        Handle<EditorProject> project = subsystem->GetCurrentProject();
+
+        if (!project.IsValid())
+        {
+            return;
+        }
+
+        if (Result saveResult = project->SaveAs(projectFilepath); saveResult.HasError())
+        {
+            HYP_LOG(Editor, Error, "Failed to save new project to '{}': {}", projectFilepath, saveResult.GetError().GetMessage());
+
+            SystemMessageBox(MessageBoxType::CRITICAL)
+                .Title("Project could not be saved")
+                .Text(String("The new project could not be saved to ") + projectFilepath + ": " + saveResult.GetError().GetMessage())
+                .Button("OK", NoOpFunction<void> {})
+                .Show();
+        }
     }
 };
 

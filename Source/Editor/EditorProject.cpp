@@ -531,10 +531,10 @@ Result EditorProject::SaveAs(FilePath filepath)
         m_tempDirectory = FilePath();
     }
 
-    OnProjectSaved(MakeStrongRef(this));
-
     m_lastSavedTime = Time::Now();
     m_hasUnsavedSettings = false;
+
+    OnProjectSaved(MakeStrongRef(this));
 
     return {};
 }
