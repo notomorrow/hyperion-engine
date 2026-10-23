@@ -1357,8 +1357,8 @@
                             </StackPanel>
                             <DropDownButton.ContextMenu>
                                 <ContextMenu Placement="Bottom" Opened="OnToolSettingsMenuOpened">
-                                    <MenuItem Header="Project Settings"
-                                              Click="OnProjectSettingsClick. . ."
+                                    <MenuItem Header="Project Settings. . ."
+                                              Click="OnProjectSettingsClick"
                                               ToolTip.Tip="Manage settings for the project" />
 
                                     <MenuItem Header="World Settings. . ."
