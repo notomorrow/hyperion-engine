@@ -30,6 +30,9 @@ EDITOR_API String GetNativeProjectName(const FilePath& projectFilepath);
 
 EDITOR_API FilePath GetNativeModulePath(const FilePath& projectFilepath);
 
+// written by the editor's game build, for rebuilding the module outside the editor
+EDITOR_API FilePath GetNativeBuildScriptPath(const FilePath& projectFilepath);
+
 EDITOR_API TResult<Handle<Game>> CreateGameFromNativeModule(const FilePath& projectFilepath);
 
 EDITOR_API Result ReloadGameModule(EditorSubsystem* subsystem);

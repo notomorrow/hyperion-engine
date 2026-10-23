@@ -1088,6 +1088,7 @@ namespace Hyperion.Editor
             {
                 nodeViewModel.RefreshActions();
                 nodeViewModel.RefreshMoveToSceneTargets();
+                nodeViewModel.RefreshConvertToEntityTypeTargets();
                 nodeViewModel.RefreshCollisionState();
                 nodeViewModel.RefreshSourcePrefab();
 

@@ -231,7 +231,7 @@ namespace Hyperion.Editor.Services
             Action onExited)
         {
             string binariesDirectory = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
-            string executablePath = Path.Combine(binariesDirectory, OperatingSystem.IsWindows() ? executableName + ".exe" : executableName);
+            string executablePath = Path.Combine(binariesDirectory, GameBuildPlatform.Current.GetExecutableFileName(executableName));
 
             if (!File.Exists(executablePath))
             {

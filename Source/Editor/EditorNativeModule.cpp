@@ -97,6 +97,19 @@ struct RetiredNativeModule
     bool warned = false;
 };
 
+#ifdef HYP_DOTNET
+struct LoadedManagedModule
+{
+    FilePath modulePath;
+    SharedPtr<dotnet::Assembly> assembly;
+    SharedPtr<dotnet::ManagedClass> gameClass;
+    String error;
+    Time loadedTimestamp;
+};
+
+static Array<LoadedManagedModule> s_loadedManagedModules;
+#endif
+
 static Array<LoadedNativeModule> s_loadedModules;
 static Array<RetiredNativeModule> s_retiredModules;
 static Mutex s_loadedModulesMutex;
@@ -520,6 +533,25 @@ static TResult<LoadedNativeModule*> LoadLatestModule(const FilePath& modulePath)
     return &loadedModule;
 }
 
+static void ReplaceProjectGame(EditorProject* project, Handle<Game> oldGame, Handle<Game> newGame)
+{
+    newGame->SetIsServerGame(oldGame->IsServerGame());
+    newGame->SetStartupWorldName(oldGame->GetStartupWorldName());
+    newGame->SetAssetRegistry(oldGame->DetachAssetRegistry());
+
+    if (const Handle<World>& world = project->GetWorld(); world.IsValid() && world->GetGame() == oldGame.Get())
+    {
+        world->SetGame(newGame.Get());
+    }
+
+    project->SetGame(newGame);
+
+    oldGame->ReleaseManagedObject();
+    oldGame.Reset();
+
+    CollectManagedGarbage();
+}
+
 static void ReplaceRetiredProjectGame(EditorProject* project, const LoadedNativeModule& loadedModule)
 {
     Handle<Game> oldGame = project->GetGame();
@@ -543,21 +575,109 @@ static void ReplaceRetiredProjectGame(EditorProject* project, const LoadedNative
         return;
     }
 
-    newGame->SetIsServerGame(oldGame->IsServerGame());
-    newGame->SetStartupWorldName(oldGame->GetStartupWorldName());
-    newGame->SetAssetRegistry(oldGame->DetachAssetRegistry());
+    ReplaceProjectGame(project, std::move(oldGame), std::move(newGame));
+}
 
-    if (const Handle<World>& world = project->GetWorld(); world.IsValid() && world->GetGame() == oldGame.Get())
+static Result ReloadNativeGameModule(EditorProject* project)
+{
+    const FilePath modulePath = GetNativeModulePath(project->GetFilePath());
+
+    if (!modulePath.Exists())
     {
-        world->SetGame(newGame.Get());
+        return HYP_MAKE_ERROR(Error, "Cannot reload the game module: {} isn't built", modulePath);
     }
 
-    project->SetGame(newGame);
+    Mutex::Guard guard(s_loadedModulesMutex);
 
-    oldGame->ReleaseManagedObject();
-    oldGame.Reset();
+    if (const LoadedNativeModule* currentModule = FindLoadedModule(modulePath);
+        currentModule != nullptr && currentModule->isLoaded && modulePath.LastModifiedTimestamp() <= currentModule->loadedTimestamp)
+    {
+        HYP_LOG(Editor, Info, "Game module {} is up to date", modulePath);
+    }
 
-    CollectManagedGarbage();
+    TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath);
+
+    if (moduleResult.HasError())
+    {
+        return moduleResult.GetError();
+    }
+
+    if (moduleResult.GetValue()->error.Any())
+    {
+        return HYP_MAKE_ERROR(Error, "{}", moduleResult.GetValue()->error);
+    }
+
+    ReplaceRetiredProjectGame(project, *moduleResult.GetValue());
+
+    return {};
+}
+
+static Result ReloadManagedGameModule(EditorProject* project)
+{
+    const FilePath modulePath = GetManagedModulePath(project->GetFilePath());
+
+    if (!modulePath.Exists())
+    {
+        return HYP_MAKE_ERROR(Error, "Cannot reload the game module: {} isn't built", modulePath);
+    }
+
+#ifdef HYP_DOTNET
+    {
+        Mutex::Guard guard(s_loadedModulesMutex);
+
+        for (const LoadedManagedModule& loadedModule : s_loadedManagedModules)
+        {
+            if (loadedModule.modulePath != modulePath)
+            {
+                continue;
+            }
+
+            if (loadedModule.error.Any())
+            {
+                return HYP_MAKE_ERROR(Error, "{}", loadedModule.error);
+            }
+
+            if (modulePath.LastModifiedTimestamp() > loadedModule.loadedTimestamp)
+            {
+                return HYP_MAKE_ERROR(Error, "Game assembly {} was rebuilt since it was loaded, restart the editor to use the new build", modulePath);
+            }
+
+            HYP_LOG(Editor, Info, "Game assembly {} is up to date", modulePath);
+
+            return {};
+        }
+    }
+#endif
+
+    Handle<Game> oldGame = project->GetGame();
+
+    if (oldGame.IsValid() && oldGame->GetWorld().IsValid())
+    {
+        return HYP_MAKE_ERROR(Error, "Cannot reload the game module while the game is running");
+    }
+
+    TResult<Handle<Game>> gameResult = CreateGameFromManagedModule(project->GetFilePath());
+
+    if (gameResult.HasError())
+    {
+        return gameResult.GetError();
+    }
+
+    if (!gameResult.GetValue().IsValid())
+    {
+        return HYP_MAKE_ERROR(Error, "Cannot reload the game module: {} needs the .NET runtime", modulePath);
+    }
+
+    if (!oldGame.IsValid())
+    {
+        project->SetGame(gameResult.GetValue());
+
+        return {};
+    }
+
+    ReplaceProjectGame(project, std::move(oldGame), gameResult.GetValue());
+
+    return {};
 }
 
 } // namespace
@@ -578,6 +698,17 @@ EDITOR_API FilePath GetNativeModulePath(const FilePath& projectFilepath)
 #endif
 
     return projectFilepath.BasePath() / "Binaries" / GetModulePlatformDirectory() / fileName;
+}
+
+EDITOR_API FilePath GetNativeBuildScriptPath(const FilePath& projectFilepath)
+{
+#ifdef HYP_WINDOWS
+    static constexpr const char* BuildScriptName = "Build.bat";
+#else
+    static constexpr const char* BuildScriptName = "Build.sh";
+#endif
+
+    return projectFilepath.BasePath() / "Build" / GetModulePlatformDirectory() / BuildScriptName;
 }
 
 EDITOR_API TResult<Handle<Game>> CreateGameFromNativeModule(const FilePath& projectFilepath)
@@ -629,36 +760,9 @@ EDITOR_API Result ReloadGameModule(EditorSubsystem* subsystem)
         return HYP_MAKE_ERROR(Error, "Cannot reload the game module while simulating, it's reloaded when play starts");
     }
 
-    const FilePath modulePath = GetNativeModulePath(project->GetFilePath());
-
-    if (!modulePath.Exists())
-    {
-        return HYP_MAKE_ERROR(Error, "Cannot reload the game module: {} isn't built", modulePath);
-    }
-
-    Mutex::Guard guard(s_loadedModulesMutex);
-
-    if (const LoadedNativeModule* currentModule = FindLoadedModule(modulePath);
-        currentModule != nullptr && currentModule->isLoaded && modulePath.LastModifiedTimestamp() <= currentModule->loadedTimestamp)
-    {
-        HYP_LOG(Editor, Info, "Game module {} is up to date", modulePath);
-    }
-
-    TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath);
-
-    if (moduleResult.HasError())
-    {
-        return moduleResult.GetError();
-    }
-
-    if (moduleResult.GetValue()->error.Any())
-    {
-        return HYP_MAKE_ERROR(Error, "{}", moduleResult.GetValue()->error);
-    }
-
-    ReplaceRetiredProjectGame(project.Get(), *moduleResult.GetValue());
-
-    return {};
+    return IsManagedProject(project->GetFilePath())
+        ? ReloadManagedGameModule(project.Get())
+        : ReloadNativeGameModule(project.Get());
 }
 
 EDITOR_API void UpdateGameModules(EditorSubsystem* subsystem)
@@ -725,23 +829,6 @@ EDITOR_API void UpdateGameModules(EditorSubsystem* subsystem)
 
     UpdateRetiredModules();
 }
-
-namespace {
-
-#ifdef HYP_DOTNET
-struct LoadedManagedModule
-{
-    FilePath modulePath;
-    SharedPtr<dotnet::Assembly> assembly;
-    SharedPtr<dotnet::ManagedClass> gameClass;
-    String error;
-    Time loadedTimestamp;
-};
-
-static Array<LoadedManagedModule> s_loadedManagedModules;
-#endif
-
-} // namespace
 
 EDITOR_API FilePath GetManagedProjectFilePath(const FilePath& projectFilepath)
 {

@@ -10,6 +10,14 @@ namespace Hyperion.Editor.ViewModels
         private readonly string _typeName;
         private string _editableValue = string.Empty;
 
+        public override bool IsNumericEditable => true;
+
+        public string EditableValue
+        {
+            get => _editableValue;
+            set => SetProperty(ref _editableValue, value);
+        }
+
         public NumericPropertyViewModel(ObjectBase target, Property property, bool isReadOnly)
             : base(target, property, isReadOnly)
         {
@@ -26,14 +34,6 @@ namespace Hyperion.Editor.ViewModels
             : base(label, typeInfo, getter, setter, isReadOnly)
         {
             _typeName = typeInfo.Name.ToString();
-        }
-
-        public override bool IsNumericEditable => true;
-
-        public string EditableValue
-        {
-            get => _editableValue;
-            set => SetProperty(ref _editableValue, value);
         }
 
         public override void RefreshValue()
@@ -142,38 +142,46 @@ namespace Hyperion.Editor.ViewModels
             switch (typeName)
             {
                 case "float":
-                    return float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float fVal) ? fVal : (object?)null;
+                    return float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float fVal) ? fVal : null;
                 case "double":
-                    return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double dVal) ? dVal : (object?)null;
+                    return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double dVal) ? dVal : null;
                 case "bool":
                     if (bool.TryParse(text, out bool bVal)) return bVal;
                     if (text == "1") return true;
                     if (text == "0") return false;
                     return null;
                 case "int8":
-                    return sbyte.TryParse(text, out sbyte i8) ? i8 : (object?)null;
+                    return sbyte.TryParse(text, out sbyte i8) ? i8 : null;
                 case "uint8":
-                    return byte.TryParse(text, out byte u8) ? u8 : (object?)null;
+                    return byte.TryParse(text, out byte u8) ? u8 : null;
                 case "int16":
-                    return short.TryParse(text, out short i16) ? i16 : (object?)null;
+                    return short.TryParse(text, out short i16) ? i16 : null;
                 case "uint16":
-                    return ushort.TryParse(text, out ushort u16) ? u16 : (object?)null;
+                    return ushort.TryParse(text, out ushort u16) ? u16 : null;
                 case "int32":
                 case "int":
-                    return int.TryParse(text, out int i32) ? i32 : (object?)null;
+                    return int.TryParse(text, out int i32) ? i32 : null;
                 case "uint32":
                 case "uint":
-                    return uint.TryParse(text, out uint u32) ? u32 : (object?)null;
+                    return uint.TryParse(text, out uint u32) ? u32 : null;
                 case "int64":
                 case "long":
-                    return long.TryParse(text, out long i64) ? i64 : (object?)null;
+                    return long.TryParse(text, out long i64) ? i64 : null;
                 case "uint64":
                 case "ulong":
-                    return ulong.TryParse(text, out ulong u64) ? u64 : (object?)null;
+                    return ulong.TryParse(text, out ulong u64) ? u64 : null;
                 default:
                     // Fallback: try int then double
-                    if (long.TryParse(text, out long fallbackInt)) return fallbackInt;
-                    if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double fallbackFloat)) return fallbackFloat;
+                    if (long.TryParse(text, out long fallbackInt))
+                    {
+                        return fallbackInt;
+                    }
+
+                    if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double fallbackFloat))
+                    {
+                        return fallbackFloat;
+                    }
+
                     return null;
             }
         }

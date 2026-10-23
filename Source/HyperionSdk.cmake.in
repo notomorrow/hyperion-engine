@@ -6,6 +6,9 @@ set(HYPERION_SDK_SHADER_COMPILER_LIBRARIES "@HYP_SDK_SHADER_COMPILER_LIBRARIES@"
 
 set(HYPERION_PACKAGE OFF CACHE BOOL "Build for a specific package")
 
+# runtime layout, link flags and script linking for the platform the engine was built for
+include("${CMAKE_CURRENT_LIST_DIR}/HyperionSdkPlatform.cmake")
+
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../RuntimeLibraries.txt")
   file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/../RuntimeLibraries.txt" HYPERION_SDK_RUNTIME_LIBRARIES)
 endif()
@@ -25,15 +28,11 @@ if(NOT DEFINED HYPERION_SDK_INCLUDE_DIRS)
     list(APPEND HYPERION_SDK_INCLUDE_DIRS "${HYPERION_SDK_ROOT}/ThirdParty/${third_party_dir}")
   endforeach()
 
-  set(HYPERION_SDK_LIBRARIES "${HYPERION_SDK_ROOT}/Lib/hyperion.lib")
   get_filename_component(HYPERION_SDK_RUNTIME_DIR "${HYPERION_SDK_ROOT}/.." ABSOLUTE)
+  hyperion_sdk_packaged_libraries("${HYPERION_SDK_ROOT}" "${HYPERION_SDK_RUNTIME_DIR}" HYPERION_SDK_LIBRARIES)
   set(HYPERION_SDK_BASE_DIR "${HYPERION_SDK_RUNTIME_DIR}")
   set(HYPERION_SDK_PCH "${HYPERION_SDK_ROOT}/Include/Engine/HyperionPch.hpp")
 endif()
-
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
-
-string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 if(NOT TARGET Hyperion::Engine)
   add_library(Hyperion::Engine INTERFACE IMPORTED)
@@ -61,7 +60,7 @@ function(hyperion_copy_runtime target content_dir)
       list(APPEND runtime_files "${HYPERION_SDK_RUNTIME_DIR}/${runtime_library}")
     endforeach()
   else()
-    file(GLOB runtime_files "${HYPERION_SDK_RUNTIME_DIR}/*.dll")
+    file(GLOB runtime_files "${HYPERION_SDK_RUNTIME_DIR}/${HYPERION_SDK_RUNTIME_LIBRARY_PATTERN}")
   endif()
 
   file(GLOB config_files "${HYPERION_SDK_RUNTIME_DIR}/Config/*")
@@ -93,17 +92,13 @@ endfunction()
 
 set(HYPERION_SCRIPTS_LINK_INPUTS "" CACHE FILEPATH "Link inputs of the game's NativeAOT scripts library, written by Package Game")
 
-# the NativeAOT runtime is built against the static VC runtime with the dynamic UCRT, so the executable linking it is as well.
 function(hyperion_link_scripts target)
   if(NOT HYPERION_SCRIPTS_LINK_INPUTS)
     return()
   endif()
 
   file(STRINGS "${HYPERION_SCRIPTS_LINK_INPUTS}" scripts_link_inputs)
-  file(TO_CMAKE_PATH "${scripts_link_inputs}" scripts_link_inputs)
 
-  set_property(TARGET ${target} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
-  target_link_libraries(${target} PRIVATE ${scripts_link_inputs})
-  target_link_options(${target} PRIVATE /NODEFAULTLIB:libucrt.lib /DEFAULTLIB:ucrt.lib)
+  hyperion_platform_link_scripts(${target} "${scripts_link_inputs}")
   target_compile_definitions(${target} PRIVATE HYP_GAME_SCRIPTS=1)
 endfunction()

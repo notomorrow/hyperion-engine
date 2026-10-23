@@ -378,10 +378,10 @@ public:
 
             templateCode = String("using Hyperion;\n\npublic class ") + assetName + " : Script\n";
             templateCode += "{\n";
-            templateCode += "    [HypField(Editor = true, Serialize = true)] public int DummyValue = 0; /* Value that can be edited in the editor and saved/loaded */\n\n";
-            templateCode += "    public override void OnAdded(Entity entity)\n    {\n  /* Called on entity added */  }\n\n";
-            templateCode += "    public override void Update(float deltaTime)\n    {\n  /* Called every tick */  }\n\n";
-            templateCode += "    public override void Destroy()\n    {\n  /* Called on entity removed or world shutdown */  }\n";
+            templateCode += "    [HypField(Editor = true, Serialize = true)]\n    public int DummyValue = 0; /* Value that can be edited in the editor and saved/loaded */\n\n";
+            templateCode += "    public override void OnAdded(Entity entity)\n    {\n    /* Called on entity added */\n    }\n\n";
+            templateCode += "    public override void Update(float deltaTime)\n    {\n        /* Called every tick */\n     }\n\n";
+            templateCode += "    public override void Destroy()\n    {\n    /* Called on entity removed or world shutdown */\n    }\n";
             templateCode += "}\n";
         }
 

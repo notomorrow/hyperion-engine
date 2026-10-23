@@ -1,7 +1,7 @@
 get_filename_component(runtime_dir "${LIBRARY}" DIRECTORY)
 get_filename_component(library_name "${LIBRARY}" NAME)
 
-set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM "windows+pe")
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM "${PLATFORM}")
 set(CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL "${TOOL}")
 set(CMAKE_GET_RUNTIME_DEPENDENCIES_COMMAND "${TOOL_COMMAND}")
 
@@ -15,13 +15,11 @@ file(GET_RUNTIME_DEPENDENCIES
 
 set(runtime_libraries "${library_name}")
 
+# a dependency ships with the game when the build output has its own copy, wherever the linker resolved it from
 foreach(dependency ${resolved_dependencies})
-  get_filename_component(dependency_dir "${dependency}" DIRECTORY)
   get_filename_component(dependency_name "${dependency}" NAME)
-  string(TOLOWER "${dependency_dir}" dependency_dir_lower)
-  string(TOLOWER "${runtime_dir}" runtime_dir_lower)
 
-  if(dependency_dir_lower STREQUAL runtime_dir_lower)
+  if(EXISTS "${runtime_dir}/${dependency_name}")
     list(APPEND runtime_libraries "${dependency_name}")
   endif()
 endforeach()

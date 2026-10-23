@@ -804,7 +804,7 @@ TResult<Handle<EditorProject>> EditorProject::Load(const FilePath& filepath)
     if (!project->m_gameInstance.IsValid())
     {
         return HYP_MAKE_ERROR(Error, "{} uses an overridden Game class, but game module {} isn't built. Build the game ({}) and open the project again.",
-            projectFilepath, GetNativeModulePath(projectFilepath), dir / "Build" / "Windows" / "Build.bat");
+            projectFilepath, GetNativeModulePath(projectFilepath), GetNativeBuildScriptPath(projectFilepath));
     }
 
     // hand registry over to the game instance on the project
