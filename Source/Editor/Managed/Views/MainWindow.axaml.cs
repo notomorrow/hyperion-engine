@@ -1478,7 +1478,7 @@ namespace Hyperion.Editor
         {
             CancelRenameClick();
 
-            TimeSpan doubleTapTime = TopLevel.GetTopLevel(this)?.PlatformSettings?.GetDoubleTapTime(PointerType.Mouse) ?? TimeSpan.FromMilliseconds(500);
+            TimeSpan doubleTapTime = this.GetPlatformSettings()?.GetDoubleTapTime(PointerType.Mouse) ?? TimeSpan.FromMilliseconds(500);
 
             _renameClickTimer = new DispatcherTimer { Interval = doubleTapTime };
             _renameClickTimer.Tick += (_, _) =>
