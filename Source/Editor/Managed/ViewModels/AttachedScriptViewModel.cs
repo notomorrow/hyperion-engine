@@ -361,6 +361,12 @@ namespace Hyperion.Editor.ViewModels
                             }
 
                             capturedEntity.MarkDirty();
+                        },
+                        declaredTypeResolver: () =>
+                        {
+                            Property? current = ResolveProperty(ResolveComponentPtr(), out IntPtr classAddress);
+
+                            return current.HasValue ? DeclaredObjectClass.FindMemberType(new Class(classAddress), propertyName) : null;
                         });
 
                     vm.RefreshValue();

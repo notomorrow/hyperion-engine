@@ -6,10 +6,12 @@ namespace Hyperion.Editor
 {
     /// <summary>
     /// Editor-facing API for per-swatch property overrides on entities
-    /// (the <c>$SwatchOverrides</c> HMF schema section).
-    /// Non-value operations route through <see cref="EditorSubsystem"/> reflection methods;
+    /// (the <c>$Swatches</c> HMF schema section).
+    /// 
+    /// Non-value operations route through <see cref="EditorSubsystem"/> reflection methods.
     /// BoxedValue-carrying operations use dedicated P/Invoke exports (BoxedValue is not
     /// supported by the code generator's parameter/return mapping).
+    /// 
     /// All methods must be called on the sim thread.
     /// </summary>
     public static class EntitySwatchOverrides

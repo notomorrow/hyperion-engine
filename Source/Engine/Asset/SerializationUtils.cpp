@@ -3000,7 +3000,7 @@ Result BoxedToHMFImpl(
         }
 
         // polymorphism
-        if (typeInfo.IsHandleType() && value.Is<Handle<ObjectBase>>())
+        if (value.Is<Handle<ObjectBase>>())
         {
             const Handle<ObjectBase>& handle = value.Get<Handle<ObjectBase>>();
 
@@ -3008,7 +3008,7 @@ Result BoxedToHMFImpl(
             {
                 const Class* actualClass = GetClass(handle.GetTypeId());
 
-                if (actualClass)
+                if (actualClass && (typeInfo.IsHandleType() || actualClass->IsDerivedFrom(valueClass)))
                 {
                     valueClass = actualClass;
                 }
@@ -3341,7 +3341,7 @@ Result ObjectToHMFImpl(
         cls = cls->GetParent();
     }
 
-    // $-prefixed schema sections (e.g. an Entity's $SwatchOverrides)
+    // $-prefixed schema sections (e.g. an Entity's $Swatches)
     if (originalClass != nullptr && originalClass->IsDerivedFrom(Entity::StaticClass()))
     {
         if (Entity* entity = ExtractEntityFromBoxed(target))
