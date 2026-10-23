@@ -1131,6 +1131,25 @@ extern "C"
 
         return EntityScripting::StoreScriptFieldValue(*scriptComponent, property, *value) ? 1 : 0;
     }
+
+    HYP_EXPORT int8 ScriptComponent_StoreFieldValue(ScriptComponent* scriptComponent, const Property* property)
+    {
+        if (!scriptComponent || !property || !property->CanGet() || property->GetAttribute(Attributes::g_attrTransient).GetBool())
+        {
+            return 0;
+        }
+
+        const Class* scriptClass = EntityScripting::GetScriptClass(*scriptComponent);
+
+        if (!scriptClass)
+        {
+            return 0;
+        }
+
+        BoxedValue target { AnyRef(scriptClass->GetTypeInfo(), scriptComponent->scriptObjectResource) };
+
+        return EntityScripting::StoreScriptFieldValue(*scriptComponent, property, property->Get(target)) ? 1 : 0;
+    }
 #endif
 }
 

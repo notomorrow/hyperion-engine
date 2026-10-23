@@ -350,7 +350,18 @@ namespace Hyperion.Editor.ViewModels
                         },
                         isReadOnly: isReadOnly,
                         initialize: false,
-                        postWriteCallback: () => capturedEntity.MarkDirty());
+                        postWriteCallback: () =>
+                        {
+                            IntPtr ptr = ResolveComponentPtr();
+                            Property? current = ResolveProperty(ptr, out _);
+
+                            if (current.HasValue)
+                            {
+                                ScriptComponent_StoreFieldValue(ptr, current.Value.Address);
+                            }
+
+                            capturedEntity.MarkDirty();
+                        });
 
                     vm.RefreshValue();
 
@@ -771,6 +782,10 @@ namespace Hyperion.Editor.ViewModels
         [DllImport("hyperion", EntryPoint = "ScriptComponent_SetFieldValue")]
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ScriptComponent_SetFieldValue(IntPtr scriptComponent, IntPtr property, [In] ref BoxedValueInternal value);
+
+        [DllImport("hyperion", EntryPoint = "ScriptComponent_StoreFieldValue")]
+        [return: MarshalAs(UnmanagedType.I1)]
+        private static extern bool ScriptComponent_StoreFieldValue(IntPtr scriptComponent, IntPtr property);
 
         [DllImport("hyperion", EntryPoint = "ScriptSystem_RecreateEntityScript")]
         private static extern void ScriptSystem_RecreateEntityScript(IntPtr entity);

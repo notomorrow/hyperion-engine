@@ -562,22 +562,53 @@ static HYP_FORCE_INLINE constexpr HYP_ENABLE_IF(!isMathVectorV<T>, bool) ApproxE
 }
 
 template <class T, class U = T>
-static HYP_FORCE_INLINE HYP_ENABLE_IF(!isMathVectorV<T>, U) Round(T a)
+static HYP_FORCE_INLINE constexpr HYP_ENABLE_IF(!isMathVectorV<T>, U) Round(T a, int decimalPlaces)
 {
-    return U(std::round(a));
+    double factor = 1.0;
+    for (int i = Abs(decimalPlaces); i > 0; i--)
+    {
+        factor *= 10.0;
+    }
+
+    const double scaled = decimalPlaces >= 0 ? double(a) * factor : double(a) / factor;
+
+    if (!(Abs(scaled) < 4503599627370496.0))
+    {
+        return U(a);
+    }
+
+    double rounded = double(int64(scaled));
+    const double frac = scaled - rounded;
+
+    if (frac >= 0.5)
+    {
+        rounded += 1.0;
+    }
+    else if (frac <= -0.5)
+    {
+        rounded -= 1.0;
+    }
+
+    return U(decimalPlaces >= 0 ? rounded / factor : rounded * factor);
+}
+
+template <class T, class U = T>
+static HYP_FORCE_INLINE constexpr HYP_ENABLE_IF(!isMathVectorV<T>, U) Round(T a)
+{
+    if constexpr (std::is_integral_v<T>)
+    {
+        return U(a);
+    }
+    else
+    {
+        return Round<T, U>(a, 0);
+    }
 }
 
 template <class T>
 static HYP_FORCE_INLINE HYP_ENABLE_IF(isMathVectorV<T>, T) Round(const T& a)
 {
     return T::Round(a);
-}
-
-template <class T, class U = T>
-static HYP_FORCE_INLINE HYP_ENABLE_IF(!isMathVectorV<T>, U) Round(T a, int decimalPlaces)
-{
-    const double factor = std::pow(10.0, double(decimalPlaces));
-    return U(std::round(double(a) * factor) / factor);
 }
 
 static HYP_FORCE_INLINE float Sin(float x)

@@ -3015,7 +3015,8 @@ Result BoxedToHMFImpl(
             }
         }
 
-        const bool needClassPrefix = opts.writeClassNamesForPolymorphic;
+        const bool needClassPrefix = opts.writeClassNamesForPolymorphic
+            || (ForceWriteClassNamesWhenTypesDiffer && valueClass != typeInfo.GetClass());
 
         bool hasNameProperty = false;
 
@@ -3027,11 +3028,12 @@ Result BoxedToHMFImpl(
             // E.g `Object "Foo"`
             if (Property* nameProp = valueClass->GetProperty("Name"_sh))
             {
-                hasNameProperty = true;
-
                 BoxedValue nameValue = nameProp->Get(value);
 
-                if (nameValue.Is<Name>())
+                // a Name property of another type (eg. a String) is written as a field instead
+                hasNameProperty = nameValue.Is<Name>();
+
+                if (hasNameProperty)
                 {
                     Name name = nameValue.Get<Name>();
 
@@ -3391,11 +3393,11 @@ Result ObjectToHMF(
 
     if (Property* nameProp = cls->GetProperty("Name"_sh))
     {
-        hasNameProperty = true;
-
         BoxedValue nameValue = nameProp->Get(target);
 
-        if (nameValue.Is<Name>())
+        hasNameProperty = nameValue.Is<Name>();
+
+        if (hasNameProperty)
         {
             Name name = nameValue.Get<Name>();
 
