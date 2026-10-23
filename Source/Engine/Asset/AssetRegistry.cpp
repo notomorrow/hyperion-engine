@@ -322,7 +322,7 @@ static const AssetBucket& GetBucketForAsset(const AssetObject& assetObject)
         return bucket;
     }
 
-    return AssetBuckets::None;
+    return AssetBuckets::Misc;
 }
 
 class AssetBucketData

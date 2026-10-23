@@ -472,7 +472,7 @@ namespace Hyperion
                     if (parentClassPtr == IntPtr.Zero)
                         throw new Exception(string.Format("To create a dynamic Class for {0}, it must derive from ObjectBase, Script or a class with a valid ClassBinding attribute!", type.FullName));
 
-                    classPtr = Class_CreateDynamicClass(ref typeId, className, parentClassPtr, type.IsAbstract);
+                    classPtr = Class_CreateDynamicClass(ref typeId, className, parentClassPtr, type.IsAbstract, type.GetCustomAttribute<AssetBucketAttribute>(inherit: false)?.Name);
 
                     if (classPtr == IntPtr.Zero)
                         throw new Exception(string.Format("Failed to create a dynamic Class for type \"{0}\" (TypeId: {1})", type.Name, typeId));
@@ -499,7 +499,7 @@ namespace Hyperion
                 }
                 else
                 {
-                    classPtr = Class_CreateDynamicClass(ref typeId, typeName, parentClassPtr, type.IsAbstract);
+                    classPtr = Class_CreateDynamicClass(ref typeId, typeName, parentClassPtr, type.IsAbstract, type.GetCustomAttribute<AssetBucketAttribute>(inherit: false)?.Name);
 
                     if (classPtr == IntPtr.Zero)
                         throw new Exception(string.Format("Failed to create a dynamic Class for type \"{0}\" (TypeId: {1})", type.Name, typeId));
@@ -1077,7 +1077,7 @@ namespace Hyperion
         private static extern IntPtr Class_GetClassForManagedClass([In] IntPtr pClass);
 
         [DllImport("hyperion", EntryPoint = "Class_CreateDynamicClass")]
-        private static extern IntPtr Class_CreateDynamicClass([In] ref TypeId typeId, [MarshalAs(UnmanagedType.LPStr)] string name, [In] IntPtr parentClassClassPtr, [MarshalAs(UnmanagedType.I1)] bool isAbstract);
+        private static extern IntPtr Class_CreateDynamicClass([In] ref TypeId typeId, [MarshalAs(UnmanagedType.LPStr)] string name, [In] IntPtr parentClassClassPtr, [MarshalAs(UnmanagedType.I1)] bool isAbstract, [MarshalAs(UnmanagedType.LPStr)] string? assetBucket);
 
         [DllImport("hyperion", EntryPoint = "Class_AddManagedProperty")]
         [return: MarshalAs(UnmanagedType.I1)]

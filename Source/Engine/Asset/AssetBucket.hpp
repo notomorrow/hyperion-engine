@@ -37,7 +37,8 @@ class Class;
     X(Sounds, 17)                    \
     X(Terrain, 18)                   \
     X(Weapons, 19)                   \
-    X(Decals, 20)
+    X(Decals, 20)                    \
+    X(Misc, 21)
 
 // clang-format on
 

@@ -50,4 +50,15 @@ namespace Hyperion
             return null;
         }
     }
+
+    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    public class AssetBucketAttribute : Attribute
+    {
+        public string Name { get; }
+
+        public AssetBucketAttribute(string name)
+        {
+            Name = name;
+        }
+    }
 }

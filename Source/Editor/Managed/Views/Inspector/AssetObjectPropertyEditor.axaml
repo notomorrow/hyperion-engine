@@ -101,7 +101,7 @@
                     <ToggleButton
                         Classes="gizmo"
                         IsChecked="{Binding IsEditorExpanded, Mode=TwoWay}"
-                        IsEnabled="{Binding HasSubObject}"
+                        IsVisible="{Binding HasSubObject}"
                         ToolTip.Tip="Edit this object">
                         <controls:Codicon Kind="Edit" Size="14" />
                     </ToggleButton>
@@ -137,7 +137,8 @@
                             <MenuItem
                                 Command="{Binding CloneCommand}"
                                 Header="Clone and Assign"
-                                IsEnabled="{Binding CanClone}">
+                                IsEnabled="{Binding CanClone}"
+                                IsVisible="{Binding HasSubObject}">
                                 <MenuItem.Icon>
                                     <controls:Codicon Kind="Copy" Size="14" />
                                 </MenuItem.Icon>

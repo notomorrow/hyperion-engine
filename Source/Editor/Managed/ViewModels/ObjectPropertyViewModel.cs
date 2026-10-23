@@ -633,6 +633,8 @@ namespace Hyperion.Editor.ViewModels
                 return;
             }
 
+            string? folderPath = ContentBrowserViewModel.Instance?.CurrentFolder?.Path;
+
             _ = EngineManager.PostToSimThread(() =>
             {
                 if (!EngineManager.CanCreateAssets)
@@ -644,18 +646,29 @@ namespace Hyperion.Editor.ViewModels
 
                 try
                 {
-                    BoxedValueInternal result;
+                    BoxedValue boxed;
 
-                    unsafe
+                    if (DeclaredObjectClass.CreateManagedInstance(_declaredTypeResolver?.Invoke(), className) is object managedInstance)
                     {
-                        if (!Hyp_CreateInstanceOfClass(className, &result))
+                        boxed = new BoxedValue(managedInstance);
+                    }
+                    else
+                    {
+                        BoxedValueInternal result;
+
+                        unsafe
                         {
-                            Logger.Log(LogLevel.Warning, $"Failed to create instance of class '{className}'");
-                            return;
+                            if (!Hyp_CreateInstanceOfClass(className, &result))
+                            {
+                                Logger.Log(LogLevel.Warning, $"Failed to create instance of class '{className}'");
+                                return;
+                            }
                         }
+
+                        boxed = BoxedValue.FromBuffer(result);
                     }
 
-                    using BoxedValue boxed = BoxedValue.FromBuffer(result);
+                    using BoxedValue ownedBoxed = boxed;
 
                     if (boxed.GetValue() is AssetObject assetObj && assetObj.IsValid)
                     {
@@ -668,6 +681,19 @@ namespace Hyperion.Editor.ViewModels
                             Logger.Log(LogLevel.Warning, $"Failed to register new asset '{className}': {ex.Message}");
                             return;
                         }
+
+                        if (!assetObj.IsRegistered())
+                        {
+                            Logger.Log(LogLevel.Warning, $"New '{className}' for '{Label}' could not be added to the asset registry");
+                            return;
+                        }
+
+                        if (folderPath != null)
+                        {
+                            EngineManager.CurrentProject?.AssetFolders?.SetAssetFolderOf(assetObj.Path.BucketIndex, assetObj.Name, folderPath);
+                        }
+
+                        ContentBrowserViewModel.Instance?.NotifyAssetsChanged();
                     }
 
                     CommitPropertyChange($"Create {Label}", boxed);

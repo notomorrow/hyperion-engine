@@ -459,22 +459,7 @@ namespace Hyperion.Editor.ViewModels
         {
             Dispatcher.UIThread.VerifyAccess();
 
-            _onAssetsChangedHandler = _editorSubsystem.GetOnAssetsChangedDelegate().Bind((uint bucketIndex) =>
-            {
-                // on the sim thread, so a command that just created an asset has filed it before unfiled ones get their default folder
-                _ = EngineManager.PostToSimThread(() =>
-                {
-                    _assetFolders?.SyncWithRegistry();
-
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        // An asset was added, removed or edited - the decoded images we are holding may no longer match what is on disk.
-                        _thumbnailService.Clear();
-
-                        QueueReload();
-                    });
-                });
-            });
+            _onAssetsChangedHandler = _editorSubsystem.GetOnAssetsChangedDelegate().Bind((uint bucketIndex) => NotifyAssetsChanged());
 
             _onProjectOpenedHandler = _editorSubsystem.GetOnProjectOpenedDelegate().Bind((EditorProject project) =>
             {
@@ -1230,6 +1215,23 @@ namespace Hyperion.Editor.ViewModels
             _onProjectOpenedHandler?.Dispose();
             _onProjectClosingHandler?.Remove();
             _onProjectClosingHandler?.Dispose();
+        }
+
+        public void NotifyAssetsChanged()
+        {
+            // on the sim thread, so a command that just created an asset has filed it before unfiled ones get their default folder
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                _assetFolders?.SyncWithRegistry();
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    // An asset was added, removed or edited - the decoded images we are holding may no longer match what is on disk.
+                    _thumbnailService.Clear();
+
+                    QueueReload();
+                });
+            });
         }
 
         public void FocusAsset(uint bucketIndex, string name, bool openEditor = false)

@@ -336,21 +336,31 @@ extern "C"
         return cls->GetStaticField(*name);
     }
 
-    HYP_EXPORT Class* Class_CreateDynamicClass(const TypeId* typeId, const char* name, const Class* parentClass, int8 isAbstract)
+    HYP_EXPORT Class* Class_CreateDynamicClass(const TypeId* typeId, const char* name, const Class* parentClass, int8 isAbstract, const char* assetBucket)
     {
         Assert(typeId != nullptr);
         Assert(name != nullptr);
         Assert(parentClass != nullptr);
 
 #ifdef HYP_DOTNET
-        const ClassAttribute abstractAttribute(NAME("abstract"), ClassAttributeValue(true));
+        Array<ClassAttribute> attributes;
+
+        if (isAbstract)
+        {
+            attributes.PushBack(ClassAttribute(NAME("abstract"), ClassAttributeValue(true)));
+        }
+
+        if (assetBucket != nullptr && assetBucket[0] != '\0')
+        {
+            attributes.PushBack(ClassAttribute(NAME("assetbucket"), ClassAttributeValue(assetBucket)));
+        }
 
         auto* dynamicClass = new DynamicClassInstance(
             *typeId,
             CreateNameFromDynamicString(name),
             parentClass,
             nullptr,
-            isAbstract ? Span<const ClassAttribute>(&abstractAttribute, 1) : Span<const ClassAttribute>(),
+            attributes.ToSpan(),
             ClassFlags::CLASS_TYPE,
             Span<MemberVariant>());
 
