@@ -450,56 +450,51 @@ namespace Hyperion
 
             ClassBinding? classBindingAttribute = type.GetCustomAttribute<ClassBinding>(inherit: false);
 
-            if (classBindingAttribute != null)
+            if (classBindingAttribute?.Condition is string condition && !IsOperatingSystemConditionMet(condition))
             {
-                string? condition = classBindingAttribute.Condition;
-                if (condition != null && !IsOperatingSystemConditionMet(condition))
-                {
-                    return IntPtr.Zero;
-                }
+                return IntPtr.Zero;
+            }
 
+            bool isScriptAssemblyType = !assemblyInstance.IsCoreAssembly;
+
+            // a dynamic [ClassBinding] in a script assembly gets a reloadable class below, like any other script ObjectBase type
+            if (classBindingAttribute != null && !(classBindingAttribute.IsDynamic && isScriptAssemblyType))
+            {
                 className = classBindingAttribute.Name;
 
                 if (className == null || className.Length == 0)
                     className = typeName;
 
-                bool isDynamic = classBindingAttribute.IsDynamic;
-
-                if (isDynamic)
+                if (classBindingAttribute.IsDynamic)
                 {
-                    // We only register dynamic classes in core assemblies, otherwise they would be constantly invalidated on assembly reload.
-                    // No need to use GetClass() in C++ to fetch non-core assembly classes, as it would be totally context dependent, anyway.
-                    if (isCoreAssembly)
+                    // Find closest parent class with ClassBinding attribute
+                    Type? parentType = type.BaseType;
+                    IntPtr parentClassPtr = IntPtr.Zero;
+
+                    while (parentType != null)
                     {
-                        // Find closest parent class with ClassBinding attribute
-                        Type? parentType = type.BaseType;
-                        IntPtr parentClassPtr = IntPtr.Zero;
+                        ClassBinding? parentClassBindingAttribute = parentType.GetCustomAttribute<ClassBinding>(inherit: false);
 
-                        while (parentType != null)
+                        if (parentClassBindingAttribute != null)
                         {
-                            ClassBinding? parentClassBindingAttribute = parentType.GetCustomAttribute<ClassBinding>(inherit: false);
+                            parentClassPtr = parentClassBindingAttribute.GetClass(parentType).Address;
 
-                            if (parentClassBindingAttribute != null)
-                            {
-                                parentClassPtr = parentClassBindingAttribute.GetClass(parentType).Address;
-
-                                if (parentClassPtr != IntPtr.Zero)
-                                    break;
-                            }
-
-                            parentType = parentType.BaseType;
+                            if (parentClassPtr != IntPtr.Zero)
+                                break;
                         }
 
-                        if (parentClassPtr == IntPtr.Zero)
-                            throw new Exception(string.Format("To create a dynamic Class, a parent class must exist with a valid ClassBinding attribute!"));
-
-                        classPtr = Class_CreateDynamicClass(ref typeId, className, parentClassPtr, type.IsAbstract);
-
-                        if (classPtr == IntPtr.Zero)
-                            throw new Exception(string.Format("Failed to create a dynamic Class for type \"{0}\" (TypeId: {1})", type.Name, typeId));
-
-                        isOwnDynamicClass = true;
+                        parentType = parentType.BaseType;
                     }
+
+                    if (parentClassPtr == IntPtr.Zero)
+                        throw new Exception(string.Format("To create a dynamic Class, a parent class must exist with a valid ClassBinding attribute!"));
+
+                    classPtr = Class_CreateDynamicClass(ref typeId, className, parentClassPtr, type.IsAbstract);
+
+                    if (classPtr == IntPtr.Zero)
+                        throw new Exception(string.Format("Failed to create a dynamic Class for type \"{0}\" (TypeId: {1})", type.Name, typeId));
+
+                    isOwnDynamicClass = true;
                 }
                 else
                 {
@@ -509,9 +504,9 @@ namespace Hyperion
                         throw new Exception(string.Format("No Class found for \"{0}\"", className));
                 }
             }
-            else if (type.IsClass && HasReflectedMembers(type))
+            else if (type.IsClass && (HasReflectedMembers(type) || (isScriptAssemblyType && typeof(ObjectBase).IsAssignableFrom(type))))
             {
-                // Script and ObjectBase subclasses with [HypField] / [HypProperty] members get a native class of their own, keyed by type name.
+                // Script subclasses with [HypField] / [HypProperty] members, and every ObjectBase subclass in a script assembly, get a native class of their own, keyed by type name.
                 // A reloaded assembly creates a new one that supersedes the old, which lives on until its instances are gone.
                 IntPtr parentClassPtr = GetNativeParentClass(type);
 
@@ -615,7 +610,6 @@ namespace Hyperion
             return false;
         }
 
-        // The closest native class up the hierarchy: a reflected user base, a [ClassBinding] type, or ScriptInstance for scripts
         private static IntPtr GetNativeParentClass(Type type)
         {
             for (Type? baseType = type.BaseType; baseType != null; baseType = baseType.BaseType)
@@ -635,6 +629,11 @@ namespace Hyperion
                 if (baseType.FullName == "Hyperion.Script")
                 {
                     return Class_GetClassByName("ScriptInstance");
+                }
+
+                if (baseType == typeof(ObjectBase))
+                {
+                    return Class_GetClassByName("ObjectBase");
                 }
             }
 

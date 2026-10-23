@@ -92,36 +92,17 @@ namespace Hyperion
         {
             get
             {
-                TypeId typeId;
-                BoxedValue_GetTypeId(ref this, out typeId);
+                BoxedValue_GetTypeId(ref this, out TypeId typeId);
+
                 return typeId;
             }
         }
 
-        public TypeInfo TypeInfo
-        {
-            get
-            {
-                IntPtr pTypeInfo = BoxedValue_GetTypeInfo(ref this);
-                return new TypeInfo(pTypeInfo);
-            }
-        }
+        public TypeInfo TypeInfo => new(BoxedValue_GetTypeInfo(ref this));
 
-        public IntPtr Pointer
-        {
-            get
-            {
-                return BoxedValue_GetPointer(ref this);
-            }
-        }
+        public IntPtr Pointer => BoxedValue_GetPointer(ref this);
 
-        public bool IsNull
-        {
-            get
-            {
-                return BoxedValue_IsNull(ref this);
-            }
-        }
+        public bool IsNull => BoxedValue_IsNull(ref this);
 
         public void SetValue(object? value)
         {
@@ -333,13 +314,8 @@ namespace Hyperion
                 Array array = (Array)value;
                 Type elementType = type.GetElementType() ?? throw new("Not an array");
 
-                Class? cls = Class.TryGetClass(elementType);
-
-                if (cls == null)
-                {
-                    throw new InvalidOperationException("Failed to get Class for type: " + elementType.FullName);
-                }
-
+                Class? cls = Class.TryGetClass(elementType) ?? throw new InvalidOperationException("Failed to get Class for type: " + elementType.FullName);
+                
                 unsafe
                 {
                     // Create array of BoxedValue
@@ -1201,10 +1177,10 @@ namespace Hyperion
 
         public static BoxedValue FromBuffer(BoxedValueInternal data)
         {
-            BoxedValue boxed = new BoxedValue();
-            boxed._data = data;
-
-            return boxed;
+            return new BoxedValue
+            {
+                _data = data
+            };
         }
 
         public void Dispose()
@@ -1213,6 +1189,8 @@ namespace Hyperion
             {
                 _data.Dispose();
                 _disposed = true;
+
+                GC.SuppressFinalize(this);
             }
         }
 
@@ -1221,45 +1199,19 @@ namespace Hyperion
             Dispose();
         }
 
-        public TypeId TypeId
-        {
-            get
-            {
-                return _data.TypeId;
-            }
-        }
+        public TypeId TypeId => _data.TypeId;
+        public TypeInfo TypeInfo => _data.TypeInfo;
 
-        public TypeInfo TypeInfo
-        {
-            get
-            {
-                return _data.TypeInfo;
-            }
-        }
+        public IntPtr Pointer => _data.Pointer;
 
-        public IntPtr Pointer
-        {
-            get
-            {
-                return _data.Pointer;
-            }
-        }
+        public bool IsNull => _data.IsNull;
 
-        public bool IsNull
-        {
-            get
-            {
-                return _data.IsNull;
-            }
-        }
+        public bool IsArray => BoxedValueInternal.BoxedValue_IsArray(ref _data);
 
-        public ref BoxedValueInternal Buffer
-        {
-            get
-            {
-                return ref _data;
-            }
-        }
+        public bool CanResizeArray => BoxedValueInternal.BoxedValue_CanResizeArray(ref _data);
+        public bool CanPushBackArray => BoxedValueInternal.BoxedValue_CanPushBackArray(ref _data);
+
+        public ref BoxedValueInternal Buffer => ref _data;
 
         public object? GetValue()
         {
@@ -1291,18 +1243,17 @@ namespace Hyperion
             return GetValue()?.ToString() ?? "null";
         }
 
-        public bool IsArray => BoxedValueInternal.BoxedValue_IsArray(ref _data);
-
-        public bool CanResizeArray => BoxedValueInternal.BoxedValue_CanResizeArray(ref _data);
-        public bool CanPushBackArray => BoxedValueInternal.BoxedValue_CanPushBackArray(ref _data);
-
         public int GetArraySize()
         {
             if (_disposed)
+            {
                 throw new ObjectDisposedException(nameof(BoxedValue));
+            }
 
             if (!BoxedValueInternal.BoxedValue_GetArraySize(ref _data, out int size))
+            {
                 throw new InvalidOperationException("BoxedValue is not an array");
+            }
 
             return size;
         }
@@ -1310,20 +1261,26 @@ namespace Hyperion
         public TypeInfo GetArrayElementTypeInfo()
         {
             if (_disposed)
+            {
                 throw new ObjectDisposedException(nameof(BoxedValue));
+            }
 
             IntPtr pTypeInfo = BoxedValueInternal.BoxedValue_GetArrayElemTypeInfo(ref _data);
-            return new TypeInfo(pTypeInfo);
+            return new(pTypeInfo);
         }
 
         public unsafe BoxedValue GetArrayElement(int index)
         {
             if (_disposed)
+            {
                 throw new ObjectDisposedException(nameof(BoxedValue));
+            }
 
             BoxedValueInternal elem;
             if (!BoxedValueInternal.BoxedValue_GetArrayElem(ref _data, index, &elem))
+            {
                 throw new InvalidOperationException($"Failed to get array element at index {index}");
+            }
 
             return FromBuffer(elem);
         }
@@ -1331,43 +1288,63 @@ namespace Hyperion
         public void SetArrayElement(int index, BoxedValue value)
         {
             if (_disposed)
+            {
                 throw new ObjectDisposedException(nameof(BoxedValue));
+            }
 
             if (value == null)
+            {
                 throw new ArgumentNullException(nameof(value));
+            }
 
             if (!BoxedValueInternal.BoxedValue_SetArrayElem(ref _data, index, ref value._data))
+            {
                 throw new InvalidOperationException($"Failed to set array element at index {index}");
+            }
         }
 
         public void PushBackArrayElement(BoxedValue value)
         {
             if (_disposed)
+            {
                 throw new ObjectDisposedException(nameof(BoxedValue));
+            }
 
             if (value == null)
+            {
                 throw new ArgumentNullException(nameof(value));
+            }
 
             if (!BoxedValueInternal.BoxedValue_PushBackArrayElem(ref _data, ref value._data))
+            {
                 throw new InvalidOperationException("Failed to push back array element");
+            }
         }
 
         public void ResizeArray(int newSize)
         {
             if (_disposed)
+            {
                 throw new ObjectDisposedException(nameof(BoxedValue));
+            }
 
             if (!BoxedValueInternal.BoxedValue_ResizeArray(ref _data, newSize))
+            {
                 throw new InvalidOperationException($"Failed to resize array to {newSize}");
+            }
         }
 
         public void RemoveArrayElement(int index)
         {
             if (_disposed)
+            {
                 throw new ObjectDisposedException(nameof(BoxedValue));
+            }
 
             if (!BoxedValueInternal.BoxedValue_RemoveArrayElement(ref _data, index))
+            {
                 throw new InvalidOperationException($"Failed to remove array element at index {index}");
+            }
         }
     }
 }

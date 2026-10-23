@@ -56,8 +56,7 @@ namespace Hyperion
         {
             get
             {
-                Name name;
-                Class_GetName(ptr, out name);
+                Class_GetName(ptr, out Name name);
                 return name;
             }
         }
@@ -66,8 +65,7 @@ namespace Hyperion
         {
             get
             {
-                TypeId typeId;
-                Class_GetTypeId(ptr, out typeId);
+                Class_GetTypeId(ptr, out TypeId typeId);
                 return typeId;
             }
         }
@@ -76,8 +74,7 @@ namespace Hyperion
         {
             get
             {
-                TypeInfo typeInfo;
-                Class_GetTypeInfo(ptr, out typeInfo);
+                Class_GetTypeInfo(ptr, out TypeInfo typeInfo);
                 return typeInfo;
             }
         }

@@ -32,6 +32,9 @@ namespace Hyperion
 
         private Dictionary<string, DateTime> processedWriteTimes = [];
 
+        private HashSet<string> missingSourceDirectories = [];
+        private ConcurrentQueue<string> createdSourceDirectories = new();
+
         private List<string> sourceDirectories = [];
         private string intermediateDirectory = string.Empty;
         private string binaryOutputDirectory = string.Empty;
@@ -78,6 +81,15 @@ namespace Hyperion
         {
             Logger.Log(logChannel, LogLevel.Info, "Updating script source directories...");
 
+            DisposeWatchers();
+
+            sourceDirectories = sourceDirectoriesArray.Cast<string>().Select(System.IO.Path.GetFullPath).ToList();
+
+            CreateWatchers();
+        }
+
+        private void DisposeWatchers()
+        {
             foreach (FileSystemWatcher watcher in watchers)
             {
                 watcher.EnableRaisingEvents = false;
@@ -85,20 +97,21 @@ namespace Hyperion
             }
 
             watchers.Clear();
-
-            sourceDirectories = sourceDirectoriesArray.Cast<string>().Select(System.IO.Path.GetFullPath).ToList();
-
-            CreateWatchers();
         }
 
         private void CreateWatchers()
         {
+            missingSourceDirectories.Clear();
+
             // Set up file system watchers for all source directories
             foreach (string sourceDir in sourceDirectories)
             {
                 if (!System.IO.Directory.Exists(sourceDir))
                 {
-                    Logger.Log(logChannel, LogLevel.Warning, "Source directory does not exist: {0}", sourceDir);
+                    Logger.Log(logChannel, LogLevel.Info, "Source directory does not exist yet, waiting for it to be created: {0}", sourceDir);
+
+                    WatchForDirectoryCreation(sourceDir);
+
                     continue;
                 }
 
@@ -131,17 +144,87 @@ namespace Hyperion
             }
         }
 
+        private void WatchForDirectoryCreation(string directory)
+        {
+            string? existingAncestor = System.IO.Path.GetDirectoryName(directory);
+
+            while (existingAncestor != null && !System.IO.Directory.Exists(existingAncestor))
+            {
+                existingAncestor = System.IO.Path.GetDirectoryName(existingAncestor);
+            }
+
+            if (existingAncestor == null)
+            {
+                Logger.Log(logChannel, LogLevel.Warning, "No existing parent directory to watch for the creation of {0}", directory);
+
+                return;
+            }
+
+            missingSourceDirectories.Add(directory);
+
+            var directoryWatcher = new FileSystemWatcher(existingAncestor)
+            {
+                NotifyFilter = NotifyFilters.DirectoryName,
+                IncludeSubdirectories = true
+            };
+            directoryWatcher.Created += (_, _) => OnWatchedDirectoryChanged(directory);
+            directoryWatcher.Renamed += (_, _) => OnWatchedDirectoryChanged(directory);
+            directoryWatcher.EnableRaisingEvents = true;
+            watchers.Add(directoryWatcher);
+        }
+
+        private void OnWatchedDirectoryChanged(string directory)
+        {
+            if (System.IO.Directory.Exists(directory))
+            {
+                createdSourceDirectories.Enqueue(directory);
+            }
+        }
+
+        private void WatchCreatedSourceDirectories()
+        {
+            bool anyCreated = false;
+
+            while (createdSourceDirectories.TryDequeue(out string? createdDirectory))
+            {
+                anyCreated |= missingSourceDirectories.Contains(createdDirectory);
+            }
+
+            if (!anyCreated)
+            {
+                return;
+            }
+
+            List<string> createdDirectories = missingSourceDirectories.Where(System.IO.Directory.Exists).ToList();
+
+            DisposeWatchers();
+            CreateWatchers();
+
+            // files written along with the directory came before its watchers
+            foreach (string directory in createdDirectories)
+            {
+                Logger.Log(logChannel, LogLevel.Info, "Source directory created: {0}", directory);
+
+                foreach (string file in System.IO.Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
+                {
+                    changedFiles.Enqueue(new(file, ScriptLanguage.CSharp));
+                }
+
+                foreach (string file in System.IO.Directory.EnumerateFiles(directory, "*.strata", SearchOption.AllDirectories))
+                {
+                    changedFiles.Enqueue(new(file, ScriptLanguage.Strata));
+                }
+            }
+        }
+
         public void Shutdown()
         {
             Logger.Log(logChannel, LogLevel.Info, "Shutting down script tracker...");
 
-            foreach (FileSystemWatcher watcher in watchers)
-            {
-                watcher.EnableRaisingEvents = false;
-                watcher.Dispose();
-            }
+            DisposeWatchers();
 
-            watchers.Clear();
+            missingSourceDirectories.Clear();
+            createdSourceDirectories.Clear();
 
             foreach (ScriptDescWrapper wrapper in processingScripts.Values)
             {
@@ -182,6 +265,8 @@ namespace Hyperion
             {
                 ProcessScripts();
             }
+
+            WatchCreatedSourceDirectories();
 
             // compiled on the next Update(), so the compile task shows before the build blocks this thread
             while (changedFiles.TryDequeue(out KeyValuePair<string, ScriptLanguage> changedFile))
