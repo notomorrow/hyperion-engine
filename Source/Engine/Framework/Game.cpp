@@ -288,7 +288,11 @@ void Game::Shutdown(bool shutdownWorld)
         PopAssetRegistry(m_assetRegistry);
 
         m_assetRegistryActive = false;
-        m_assetRegistry->Shutdown();
+
+        if (shutdownWorld)
+        {
+            m_assetRegistry->Shutdown();
+        }
     }
 
     m_isInitialized = false;

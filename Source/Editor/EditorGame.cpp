@@ -191,6 +191,7 @@ void EditorGame::HandleProjectOpened(const Handle<EditorProject>& project)
     Assert(project.IsValid() && project->GetGame().IsValid());
     Assert(project->GetGame()->GetAssetRegistry().IsValid());
 
+    DetachAssetRegistry();
     SetAssetRegistry(project->GetGame()->GetAssetRegistry());
 
     HYP_LOG(Editor, Info, "Project opened: {}", project->GetName());
