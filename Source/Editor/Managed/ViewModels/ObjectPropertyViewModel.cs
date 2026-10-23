@@ -689,7 +689,6 @@ namespace Hyperion.Editor.ViewModels
 
                 using BoxedValue boxed = new BoxedValue(assetObj);
                 CommitPropertyChange($"Create {Label}", boxed);
-                Dispatcher.UIThread.Post(() => IsEditorExpanded = true);
             }
             catch (Exception ex)
             {
