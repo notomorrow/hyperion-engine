@@ -45,6 +45,31 @@ namespace Hyperion.Editor.ViewModels
 
         public bool HasManifest => _hasManifest;
 
+        private bool _isEditingName;
+        public bool IsEditingName
+        {
+            get => _isEditingName;
+            set => SetProperty(ref _isEditingName, value);
+        }
+
+        private string _editingName = string.Empty;
+        public string EditingName
+        {
+            get => _editingName;
+            set => SetProperty(ref _editingName, value);
+        }
+
+        public void BeginRename()
+        {
+            EditingName = DisplayName;
+            IsEditingName = true;
+        }
+
+        public void CancelRename()
+        {
+            IsEditingName = false;
+        }
+
         // @TODO also, dont just switch on typename -- switch on class -- we dont want to add a new entry for EVERY subclass !
         public string IconKind => _typeName != null
             ? AssetIconHelper.FromTypeName(_typeName)

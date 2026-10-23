@@ -2889,6 +2889,126 @@ DEFINE_EDITOR_COMMAND(DeleteAsset);
 
 #pragma endregion DeleteAsset
 
+#pragma region RenameAsset
+
+class EditorCommandRenameAsset final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandRenameAsset);
+
+public:
+    virtual ~EditorCommandRenameAsset() override = default;
+
+    virtual String GetText() const override
+    {
+        return m_text.Length() ? m_text : EditorCommandBase::GetText();
+    }
+
+    /// Arguments are "<bucketIndex> <assetName> <newName>"
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        if (NumArguments() < 3)
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandRenameAsset requires bucket index, asset name and new name");
+            return;
+        }
+
+        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Error, "no project loaded");
+            return;
+        }
+
+        uint32 bucketIndex = 0;
+        if (!StringUtil::Parse(GetArgument(0), &bucketIndex) || bucketIndex == AssetBuckets::None.GetIndex() || bucketIndex >= MaxAssetBuckets)
+        {
+            HYP_LOG(Editor, Warning, "invalid bucket index '{}'", GetArgument(0));
+            return;
+        }
+
+        const AssetBucket& bucket = *AssetBuckets::AllBuckets[bucketIndex];
+
+        const ANSIString assetName = GetArgument(1);
+
+        Handle<AssetObject> asset = GetCurrentAssetRegistry()->GetAsset(bucket, Name(assetName));
+        if (!asset.IsValid())
+        {
+            HYP_LOG(Editor, Warning, "asset '{}' in bucket {} is not valid", assetName, GetAssetBucketName(bucketIndex));
+            return;
+        }
+
+        const Name previousName = asset->GetName();
+        const Name newName = GetCurrentAssetRegistry()->SanitizeAssetName(GetArgument(2));
+
+        if (newName == previousName)
+        {
+            return;
+        }
+
+        if (GetCurrentAssetRegistry()->HasAsset(bucket, newName))
+        {
+            HYP_LOG(Editor, Warning, "an asset named '{}' already exists in bucket {}", newName, GetAssetBucketName(bucketIndex));
+            return;
+        }
+
+        m_text = HYP_FORMAT("Rename {} to {}", previousName, newName);
+
+        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+            GetText(),
+            Proc<EditorActionFunctions()>(
+                [asset, previousName, newName]() -> EditorActionFunctions
+                {
+                    return EditorActionFunctions {
+                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [asset, previousName, newName](EditorSubsystem* editorSubsystem, EditorProject*)
+                            {
+                                ApplyRename(editorSubsystem, asset, previousName, newName);
+                            }),
+                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [asset, previousName, newName](EditorSubsystem* editorSubsystem, EditorProject*)
+                            {
+                                ApplyRename(editorSubsystem, asset, newName, previousName);
+                            })
+                    };
+                }));
+
+        InitObject(action);
+
+        currentProject->GetActionStack()->PushAction(action);
+    }
+
+private:
+    static void ApplyRename(EditorSubsystem* editorSubsystem, const Handle<AssetObject>& asset, Name fromName, Name toName)
+    {
+        const AssetBucket& bucket = asset->GetPath().GetBucket();
+
+        if (GetCurrentAssetRegistry()->HasAsset(bucket, toName))
+        {
+            HYP_LOG(Editor, Warning, "Cannot rename asset '{}': an asset named '{}' already exists in bucket {}", fromName, toName, bucket.GetName());
+            return;
+        }
+
+        if (Result renameResult = asset->Rename(toName); renameResult.HasError())
+        {
+            HYP_LOG(Editor, Error, "Failed to rename asset '{}' to '{}': {}", fromName, toName, renameResult.GetError().GetMessage());
+            return;
+        }
+
+        // the registry keeps the old name until the next save otherwise, and the content browser lists from the registry
+        GetCurrentAssetRegistry()->SyncAssetName(bucket, fromName, asset->GetName());
+
+        editorSubsystem->OnAssetsChanged(bucket.GetIndex());
+    }
+
+    String m_text;
+};
+
+DEFINE_EDITOR_COMMAND(RenameAsset);
+
+#pragma endregion RenameAsset
+
 #pragma region DeleteAssetFolder
 
 class EditorCommandDeleteAssetFolder final : public EditorCommandBase

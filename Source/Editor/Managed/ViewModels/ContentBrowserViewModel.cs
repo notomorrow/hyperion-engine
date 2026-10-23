@@ -959,6 +959,46 @@ namespace Hyperion.Editor.ViewModels
                 revert: () => assetFolders.RenameFolder(newPath, oldName));
         }
 
+        public void RenameAsset(AssetObjectViewModel asset, string newName)
+        {
+            asset.CancelRename();
+
+            newName = newName.Trim();
+
+            if (asset.Bucket == null || newName.Length == 0)
+            {
+                return;
+            }
+
+            AssetRegistry registry = AssetManager.Instance.AssetRegistry;
+
+            newName = registry.SanitizeAssetName(newName).ToString();
+
+            if (newName == asset.DisplayName)
+            {
+                return;
+            }
+
+            uint bucketIndex = asset.Bucket.BucketIndex;
+            string oldName = asset.DisplayName;
+
+            // ignoring case, as the manifests would collide on a case-insensitive file system.
+            bool isNameTaken = registry.GetBucketAssetDescs(bucketIndex)
+                .Select(assetDesc => assetDesc.Name.ToString())
+                .Any(existingName => existingName != oldName && string.Equals(existingName, newName, StringComparison.OrdinalIgnoreCase));
+
+            if (isNameTaken)
+            {
+                Logger.Log(LogLevel.Warning, $"Cannot rename {oldName}: an asset named {newName} already exists in {asset.Bucket.Name}.");
+                return;
+            }
+
+            _pendingFocusBucket = bucketIndex;
+            _pendingFocusName = newName;
+
+            _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandRenameAsset"), $"{bucketIndex} {oldName} {newName}");
+        }
+
         public void MoveItems(IReadOnlyList<object> items, AssetFolderViewModel target)
         {
             EditorAssetFolders? assetFolders = _assetFolders;

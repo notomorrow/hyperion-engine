@@ -1358,11 +1358,12 @@
                             <DropDownButton.ContextMenu>
                                 <ContextMenu Placement="Bottom" Opened="OnToolSettingsMenuOpened">
                                     <MenuItem Header="Project Settings"
-                                              Click="OnProjectSettingsClick"
-                                              ToolTip.Tip="Manage settings for the game's project" />
-                                    <MenuItem Header="World Settings"
+                                              Click="OnProjectSettingsClick. . ."
+                                              ToolTip.Tip="Manage settings for the project" />
+
+                                    <MenuItem Header="World Settings. . ."
                                               Click="OnWorldSettingsClick"
-                                              ToolTip.Tip="Manage settings for the game's world" />
+                                              ToolTip.Tip="Manage settings for currently opened world" />
                                   
                                     <Separator />
                                     <MenuItem Header="{Binding ViewportLodText}" ToolTip.Tip="Mesh LOD shown in the viewport">
@@ -2956,6 +2957,7 @@
                                                                                     Opacity="0.85"
                                                                                     Size="34" />
                                                                                 <TextBlock
+                                                                                    Name="BrowserItemNameText"
                                                                                     Grid.Row="1"
                                                                                     MaxWidth="76"
                                                                                     HorizontalAlignment="Center"
@@ -3031,14 +3033,26 @@
                                                                                         Stretch="Uniform" />
                                                                                 </Panel>
                                                                                 <TextBlock
+                                                                                    Name="BrowserItemNameText"
                                                                                     Grid.Row="1"
                                                                                     MaxWidth="76"
                                                                                     HorizontalAlignment="Center"
                                                                                     FontSize="10"
+                                                                                    IsVisible="{Binding !IsEditingName}"
                                                                                     Text="{Binding DisplayName}"
                                                                                     TextAlignment="Center"
                                                                                     TextTrimming="CharacterEllipsis"
                                                                                     TextWrapping="NoWrap" />
+                                                                                <TextBox
+                                                                                    Name="AssetRenameTextBox"
+                                                                                    Grid.Row="1"
+                                                                                    MaxWidth="76"
+                                                                                    Padding="2,0"
+                                                                                    FontSize="10"
+                                                                                    IsVisible="{Binding IsEditingName}"
+                                                                                    KeyDown="OnAssetRenameTextBoxKeyDown"
+                                                                                    LostFocus="OnAssetRenameTextBoxLostFocus"
+                                                                                    Text="{Binding EditingName, Mode=TwoWay}" />
                                                                             </Grid>
                                                                             <Border.ContextMenu>
                                                                                 <ContextMenu Opened="OnAssetContextMenuOpened">
@@ -3112,6 +3126,10 @@
                                                                                         Click="OnCopyAssetPathClick"
                                                                                         Header="Copy Path" />
                                                                                     <Separator />
+                                                                                    <MenuItem
+                                                                                        Click="OnRenameAssetMenuItemClick"
+                                                                                        Header="Rename"
+                                                                                        IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}" />
                                                                                     <MenuItem
                                                                                         Command="{Binding ContentBrowser.DeleteSelectionCommand, Source={x:Static vm:MainWindowViewModel.Instance}}"
                                                                                         CommandParameter="{Binding}"

@@ -1,0 +1,14 @@
+<Project>
+  <!-- Compiles Content/Scripts into the game the way Package Game does, so the standalone game can run them,
+       and references the editor's script compiler so the tests can also build them as a separate module -->
+  <PropertyGroup>
+    <HyperionIncludeScripts>true</HyperionIncludeScripts>
+    <HyperionProjectContentDir>$(MSBuildThisFileDirectory)../Content/</HyperionProjectContentDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Hyperion.NET.Scripting">
+      <HintPath>$(HyperionManagedDir)Hyperion.NET.Scripting.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

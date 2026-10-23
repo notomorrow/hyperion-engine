@@ -33,6 +33,7 @@
 #include <Scripting/StrataTypes.hpp>
 
 #include <Asset/AssetRegistry.hpp>
+#include <Asset/AssetObject.hpp>
 #include <Asset/AssetBucket.hpp>
 #include <Asset/SerializationUtils.hpp>
 
@@ -332,6 +333,34 @@ static void RetargetDynamicObject(ObjectBase* object, const DynamicClassInstance
     }
 }
 
+static bool TryRetargetDynamicObject(ObjectBase* object, Name objectName)
+{
+    const Class* cls = object ? object->InstanceClass() : nullptr;
+
+    if (!cls || !cls->IsDynamic())
+    {
+        return false;
+    }
+
+    const Class* newClass = GetClass(cls->GetTypeId());
+
+    if (!newClass || newClass == cls || !newClass->IsDynamic())
+    {
+        return false;
+    }
+
+    if (GetFirstStaticAncestor(newClass) != GetFirstStaticAncestor(cls))
+    {
+        HYP_LOG(Scripting, Warning, "{} now derives from a different native class; reopen the project to load {} with it", newClass->GetName(), objectName);
+
+        return false;
+    }
+
+    RetargetDynamicObject(object, static_cast<const DynamicClassInstance*>(newClass));
+
+    return true;
+}
+
 #endif // HYP_DOTNET
 
 void ScriptSystem::RetargetReloadedObjects(World& world)
@@ -348,31 +377,26 @@ void ScriptSystem::RetargetReloadedObjects(World& world)
 
         for (Node* node : scene->GetRoot()->GetDescendantsArray())
         {
-            const Class* cls = node ? node->InstanceClass() : nullptr;
-
-            if (!cls || !cls->IsDynamic())
+            if (node && TryRetargetDynamicObject(node, node->GetName()))
             {
-                continue;
+                numRetargeted++;
             }
+        }
+    }
 
-            const Class* newClass = GetClass(cls->GetTypeId());
+    if (Handle<AssetRegistry> assetRegistry = GetCurrentAssetRegistry(); assetRegistry.IsValid())
+    {
+        Array<Handle<AssetObject>> cachedAssets;
+        assetRegistry->GetCachedAssets(cachedAssets);
 
-            if (!newClass || newClass == cls || !newClass->IsDynamic())
+        GlobalContextScope loadingContextScope { AssetLoadingContext {} };
+
+        for (const Handle<AssetObject>& assetObject : cachedAssets)
+        {
+            if (TryRetargetDynamicObject(assetObject.Get(), assetObject->GetName()))
             {
-                continue;
+                numRetargeted++;
             }
-
-            // the native object stays as it is, so the new class has to describe the same kind of native object
-            if (GetFirstStaticAncestor(newClass) != GetFirstStaticAncestor(cls))
-            {
-                HYP_LOG(Scripting, Warning, "{} now derives from a different native class; reopen the project to load {} with it", newClass->GetName(), node->GetName());
-
-                continue;
-            }
-
-            RetargetDynamicObject(node, static_cast<const DynamicClassInstance*>(newClass));
-
-            numRetargeted++;
         }
     }
 

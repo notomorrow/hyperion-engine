@@ -1,0 +1,201 @@
+#include <Game/NativeTests.hpp>
+#include <Game/NativeTestTypes.hpp>
+
+#include <Asset/AssetRegistry.hpp>
+#include <Asset/AssetBucket.hpp>
+
+#include <Core/Reflection/Class.hpp>
+
+#include <Core/Utilities/Format.hpp>
+
+namespace Hyperion::tests {
+
+namespace {
+
+static constexpr const char* g_weaponName = "NativeBlaster";
+static constexpr const char* g_noteName = "NativeNote";
+
+Handle<NativeTestWeaponAsset> CreateWeapon(const char* name)
+{
+    Handle<NativeTestWeaponAsset> weapon = MakeHandle<NativeTestWeaponAsset>();
+    weapon->SetName(CreateNameFromDynamicString(name));
+    weapon->damage = 42;
+    weapon->fireRate = 2.5f;
+    weapon->displayName = "Native Blaster";
+    weapon->isAutomatic = true;
+    weapon->muzzleOffset = Vec3f(1.0f, 2.0f, 3.0f);
+
+    weapon->ammo = MakeHandle<NativeTestPickup>();
+    weapon->ammo->pickupName = "Energy Cell";
+    weapon->ammo->quantity = 30;
+
+    return weapon;
+}
+
+Handle<NativeTestNoteAsset> CreateNote(const char* name)
+{
+    Handle<NativeTestNoteAsset> note = MakeHandle<NativeTestNoteAsset>();
+    note->SetName(CreateNameFromDynamicString(name));
+    note->text = "Remember the harness";
+
+    return note;
+}
+
+void CheckClass(GameTestContext& context, const Class* cls, const Class* expectedParent, const char* className)
+{
+    if (!context.Check(cls != nullptr, HYP_FORMAT("{} has no Class", className)))
+    {
+        return;
+    }
+
+    if (!context.Check(GetClass(StringHash(className)) == cls, HYP_FORMAT("{} is not in the class registry by name", className)))
+    {
+        return;
+    }
+
+    context.Check(cls->IsDerivedFrom(expectedParent), HYP_FORMAT("{} does not derive from {}", className, expectedParent->GetName()));
+}
+
+void CheckBucket(GameTestContext& context, const Handle<AssetObject>& asset, const AssetBucket& expectedBucket)
+{
+    context.GetAssetRegistry()->PutAsset(asset);
+
+    if (!context.Check(asset->IsRegistered(), HYP_FORMAT("{} was not registered", asset->GetName())))
+    {
+        return;
+    }
+
+    context.Check(asset->GetPath().GetBucket() == expectedBucket,
+        HYP_FORMAT("{} went in bucket {}, expected {}", asset->GetName(), asset->GetPath().GetBucket().GetName(), expectedBucket.GetName()));
+}
+
+void SaveAsset(GameTestContext& context, const Handle<AssetObject>& asset, const AssetBucket& expectedBucket)
+{
+    // a project made in the editor starts out with its bucket folders; this one starts with none
+    const FilePath bucketDirectory = context.GetContentDirectory() / expectedBucket.GetName();
+
+    if (!bucketDirectory.Exists())
+    {
+        bucketDirectory.MkDir();
+    }
+
+    CheckBucket(context, asset, expectedBucket);
+
+    if (context.HasFailed())
+    {
+        return;
+    }
+
+    if (Result saveResult = asset->Save(); !context.Check(!saveResult.HasError(), HYP_FORMAT("Saving {} failed: {}", asset->GetName(), saveResult.HasError() ? saveResult.GetError().GetMessage() : String::empty)))
+    {
+        return;
+    }
+
+    const FilePath manifestPath = bucketDirectory / (asset->GetName().ToString() + ".hmf");
+
+    context.Check(manifestPath.Exists(), HYP_FORMAT("{} was not written", manifestPath));
+}
+
+#pragma region Write phase
+
+void TypesAreRegistered(GameTestContext& context)
+{
+    CheckClass(context, NativeTestPickup::StaticClass(), ObjectBase::StaticClass(), "NativeTestPickup");
+    CheckClass(context, NativeTestWeaponAsset::StaticClass(), AssetObject::StaticClass(), "NativeTestWeaponAsset");
+    CheckClass(context, NativeTestNoteAsset::StaticClass(), AssetObject::StaticClass(), "NativeTestNoteAsset");
+}
+
+void WeaponAsset_GoesInAttributeBucket(GameTestContext& context)
+{
+    CheckBucket(context, CreateWeapon("BucketProbeWeapon"), AssetBuckets::Weapons);
+}
+
+void NoteAsset_GoesInMiscBucket(GameTestContext& context)
+{
+    CheckBucket(context, CreateNote("BucketProbeNote"), AssetBuckets::Misc);
+}
+
+void WeaponAsset_SavesManifest(GameTestContext& context)
+{
+    SaveAsset(context, CreateWeapon(g_weaponName), AssetBuckets::Weapons);
+}
+
+void NoteAsset_SavesManifest(GameTestContext& context)
+{
+    SaveAsset(context, CreateNote(g_noteName), AssetBuckets::Misc);
+}
+
+#pragma endregion Write phase
+
+#pragma region Read phase
+
+void WeaponAsset_LoadsSavedFields(GameTestContext& context)
+{
+    Handle<AssetObject> asset = context.GetAssetRegistry()->GetAsset(AssetBuckets::Weapons, StringHash(g_weaponName));
+
+    if (!context.Check(asset.IsValid(), HYP_FORMAT("Weapons/{} did not load", g_weaponName)))
+    {
+        return;
+    }
+
+    if (!context.Check(asset->IsA<NativeTestWeaponAsset>(), HYP_FORMAT("Weapons/{} loaded as {}", g_weaponName, asset->InstanceClass()->GetName())))
+    {
+        return;
+    }
+
+    const NativeTestWeaponAsset& weapon = *static_cast<NativeTestWeaponAsset*>(asset.Get());
+
+    context.Check(weapon.damage == 42, HYP_FORMAT("damage: expected 42, got {}", weapon.damage));
+    context.Check(weapon.fireRate == 2.5f, HYP_FORMAT("fireRate: expected 2.5, got {}", weapon.fireRate));
+    context.Check(weapon.displayName == "Native Blaster", HYP_FORMAT("displayName: expected 'Native Blaster', got '{}'", weapon.displayName));
+    context.Check(weapon.isAutomatic, "isAutomatic: expected true");
+    context.Check(weapon.muzzleOffset == Vec3f(1.0f, 2.0f, 3.0f), HYP_FORMAT("muzzleOffset: expected (1, 2, 3), got {}", weapon.muzzleOffset));
+
+    if (!context.Check(weapon.ammo.IsValid(), "ammo did not load"))
+    {
+        return;
+    }
+
+    context.Check(weapon.ammo->pickupName == "Energy Cell", HYP_FORMAT("ammo.pickupName: expected 'Energy Cell', got '{}'", weapon.ammo->pickupName));
+    context.Check(weapon.ammo->quantity == 30, HYP_FORMAT("ammo.quantity: expected 30, got {}", weapon.ammo->quantity));
+}
+
+void NoteAsset_LoadsSavedFields(GameTestContext& context)
+{
+    Handle<AssetObject> asset = context.GetAssetRegistry()->GetAsset(AssetBuckets::Misc, StringHash(g_noteName));
+
+    if (!context.Check(asset.IsValid(), HYP_FORMAT("Misc/{} did not load", g_noteName)))
+    {
+        return;
+    }
+
+    if (!context.Check(asset->IsA<NativeTestNoteAsset>(), HYP_FORMAT("Misc/{} loaded as {}", g_noteName, asset->InstanceClass()->GetName())))
+    {
+        return;
+    }
+
+    const NativeTestNoteAsset& note = *static_cast<NativeTestNoteAsset*>(asset.Get());
+
+    context.Check(note.text == "Remember the harness", HYP_FORMAT("text: expected 'Remember the harness', got '{}'", note.text));
+}
+
+#pragma endregion Read phase
+
+} // namespace
+
+const Array<GameTestDefinition>& GetNativeGameTests()
+{
+    static const Array<GameTestDefinition> s_tests {
+        { "TypesAreRegistered", g_writePhase, &TypesAreRegistered },
+        { "WeaponAsset_GoesInAttributeBucket", g_writePhase, &WeaponAsset_GoesInAttributeBucket },
+        { "NoteAsset_GoesInMiscBucket", g_writePhase, &NoteAsset_GoesInMiscBucket },
+        { "WeaponAsset_SavesManifest", g_writePhase, &WeaponAsset_SavesManifest },
+        { "NoteAsset_SavesManifest", g_writePhase, &NoteAsset_SavesManifest },
+        { "WeaponAsset_LoadsSavedFields", g_readPhase, &WeaponAsset_LoadsSavedFields },
+        { "NoteAsset_LoadsSavedFields", g_readPhase, &NoteAsset_LoadsSavedFields }
+    };
+
+    return s_tests;
+}
+
+} // namespace Hyperion::tests

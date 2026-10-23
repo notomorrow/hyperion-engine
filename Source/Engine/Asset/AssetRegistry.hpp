@@ -118,6 +118,9 @@ public:
     HYP_METHOD()
     Name GetUniqueAssetName(uint32 bucketIndex, const String& name) const;
 
+    HYP_METHOD()
+    Name SanitizeAssetName(const String& name) const;
+
     void MarkAssetDirty(const AssetObject& assetObject);
     void MarkAllDirty();
 
@@ -134,6 +137,9 @@ public:
     bool IsAssetDirty(const AssetObject& assetObject) const;
 
     uint32 GetBucketAssetDescs(uint32 bucketIndex, Array<AssetDesc>& outDescs) const;
+
+    ///every asset object currently loaded in the registry, across all buckets
+    uint32 GetCachedAssets(Array<Handle<AssetObject>>& outAssets) const;
 
     void PutAsset(const Handle<AssetObject>& asset);
     void PutAsset(const AssetBucket& bucket, const Handle<AssetObject>& asset);

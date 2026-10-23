@@ -1,0 +1,77 @@
+name: Game Project Tests
+
+# Builds the engine, then generates, builds and runs C# and C++ game projects against it (Tests/GameProjects)
+on:
+  push:
+    branches: [dev]
+    paths-ignore: ['Documentation/**', '**.md']
+  pull_request:
+    branches: [dev]
+    paths-ignore: ['Documentation/**', '**.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game-project-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  game-project-tests:
+    name: game project tests (linux-x64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      CC: gcc
+      CXX: g++
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build zlib1g-dev libx11-dev libopenal-dev libvulkan-dev
+
+      # the Linux SDK tarball ships headers and tools but no prebuilt loader, so libvulkan.so comes from libvulkan-dev
+      - name: Install Vulkan SDK
+        run: |
+          curl -fsSL https://sdk.lunarg.com/sdk/download/latest/linux/vulkan_sdk.tar.xz -o "$RUNNER_TEMP/vulkan_sdk.tar.xz"
+          mkdir -p "$RUNNER_TEMP/VulkanSDK"
+          tar -xJf "$RUNNER_TEMP/vulkan_sdk.tar.xz" -C "$RUNNER_TEMP/VulkanSDK"
+          sdk="$(find "$RUNNER_TEMP/VulkanSDK" -mindepth 2 -maxdepth 2 -type d -name x86_64 | sort -r | head -n 1)"
+          if [ -z "$sdk" ]; then echo "Vulkan SDK was not extracted under $RUNNER_TEMP/VulkanSDK"; exit 1; fi
+          echo "VULKAN_SDK=$sdk" >> "$GITHUB_ENV"
+
+      - name: Build engine
+        env:
+          HYP_BUILD_JOBS: 4
+        run: |
+          bash Tools/Scripts/BuildHyperion.sh Release ninja regenerate
+          test -f Binaries/Linux/Release/libhyperion.so
+          test -f Binaries/Linux/Release/Sdk/CMake/HyperionSdk.cmake
+
+      # the game projects run headless, so no GPU or display is needed
+      - name: Run game project tests
+        env:
+          HYPERION_BIN_DIR: ${{ github.workspace }}/Binaries/Linux/Release
+        run: >
+          dotnet test Tests/GameProjects/Runner/GameProjectTests.csproj
+          --logger "console;verbosity=normal"
+          --logger "trx;LogFileName=game-project-tests.trx"
+          --results-directory Build/GameProjectTests/TestResults
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: game-project-tests
+          path: |
+            Build/GameProjectTests/TestResults
+            Build/GameProjectTests/*/Logs
+          if-no-files-found: ignore

@@ -34,18 +34,21 @@ namespace Hyperion.Editor
 {
     public partial class MainWindow : Window
     {
-        private const bool CappedFrameRate = true;
         private const bool IsRenderingOnMainThread = true;
 
         private static readonly DataFormat<NodeViewModel> NodeViewModelDragFormat =
             DataFormat.CreateInProcessFormat<NodeViewModel>("hyperion-nodeviewmodel");
+
         private static readonly DataFormat<string> AssetDragFormat =
             DataFormat.CreateStringApplicationFormat("hyperion-asset");
-        // Only a drag-over hint for assets applied to an entity (scripts, materials, textures); the drop itself
-        // checks the asset's real class on the sim thread.
+
         private static readonly DataFormat<string> EntityAssetDragFormat =
             DataFormat.CreateStringApplicationFormat("hyperion-entity-asset");
-        private static readonly HashSet<string> EntityAssetTypeNames = new HashSet<string> { "Script", "ScriptAsset", "Material", "Texture" };
+
+        // what can be applied to an Entity via D&D
+        private static readonly HashSet<string> EntityAssetTypeNames
+            = ["Script", "ScriptAsset", "Material", "Texture"];
+        
         private NodeViewModel? _dragCandidate;
         private PointerPressedEventArgs? _dragPressedArgs;
         private Point _dragStartPoint;
@@ -63,6 +66,8 @@ namespace Hyperion.Editor
         private PointerPressedEventArgs? _browserDragPressedArgs;
         private Point _browserDragStartPoint;
         private bool _isDraggingBrowserItems;
+        private object? _renameClickCandidate;
+        private DispatcherTimer? _renameClickTimer;
         private AssetFolderViewModel? _browserDropTarget;
         private DateTime _browserDropHoverStart;
 
@@ -248,14 +253,6 @@ namespace Hyperion.Editor
                 topLevel?.RequestAnimationFrame(OnFrame);
             }
 
-            // The dock layout hosts the panel content inside its own template namescope, so the
-            // named controls are not reachable via FindControl from the window. Locate them by
-            // walking the visual tree once the dock has rendered and laid out.
-            //
-            // The dock realizes its content during the first layout pass, which runs at Render
-            // priority - after any dispatcher priority we could post at - so a single posted
-            // callback races the layout and misses the controls. Drive the setup off
-            // LayoutUpdated until every control has been located.
             Dispatcher.UIThread.Post(OnWindowLoaded, DispatcherPriority.Loaded);
             DockControl.LayoutUpdated += OnDockControlLayoutUpdated;
         }
@@ -1254,6 +1251,8 @@ namespace Hyperion.Editor
 
         private void OnContentBrowserAssetDoubleTapped(object? sender, TappedEventArgs e)
         {
+            CancelRenameClick();
+
             object? item = (e.Source as StyledElement)?.DataContext;
 
             if (item is not AssetFolderViewModel and not AssetObjectViewModel)
@@ -1305,6 +1304,10 @@ namespace Hyperion.Editor
                     break;
                 case Key.F2 when !isSimulating && GetFolderForRename(e.Source, contentBrowser) is { } folder:
                     BeginFolderRename(folder);
+                    e.Handled = true;
+                    break;
+                case Key.F2 when !isSimulating && contentBrowser.SelectedItem is AssetObjectViewModel { Bucket: not null } asset:
+                    BeginAssetRename(asset);
                     e.Handled = true;
                     break;
             }
@@ -1379,9 +1382,14 @@ namespace Hyperion.Editor
 
         private void FocusFolderRenameTextBox(AssetFolderViewModel folder)
         {
+            FocusRenameTextBox("FolderRenameTextBox", folder);
+        }
+
+        private void FocusRenameTextBox(string textBoxName, object item)
+        {
             foreach (TextBox textBox in this.GetVisualDescendants().OfType<TextBox>())
             {
-                if (textBox.Name == "FolderRenameTextBox" && ReferenceEquals(textBox.DataContext, folder) && textBox.IsEffectivelyVisible)
+                if (textBox.Name == textBoxName && ReferenceEquals(textBox.DataContext, item) && textBox.IsEffectivelyVisible)
                 {
                     textBox.Focus();
                     textBox.SelectAll();
@@ -1416,6 +1424,91 @@ namespace Hyperion.Editor
             {
                 MainWindowViewModel.Instance?.ContentBrowser.RenameFolder(folder, folder.EditingName);
             }
+        }
+
+        private void OnRenameAssetMenuItemClick(object? sender, RoutedEventArgs e)
+        {
+            if ((sender as MenuItem)?.DataContext is AssetObjectViewModel { Bucket: not null } asset)
+            {
+                BeginAssetRename(asset);
+            }
+        }
+
+        private void BeginAssetRename(AssetObjectViewModel asset)
+        {
+            asset.BeginRename();
+
+            Dispatcher.UIThread.Post(() => FocusRenameTextBox("AssetRenameTextBox", asset), DispatcherPriority.Loaded);
+        }
+
+        private void OnAssetRenameTextBoxKeyDown(object? sender, KeyEventArgs e)
+        {
+            if ((sender as TextBox)?.DataContext is not AssetObjectViewModel asset || !asset.IsEditingName)
+            {
+                return;
+            }
+
+            if (e.Key == Key.Enter)
+            {
+                MainWindowViewModel.Instance?.ContentBrowser.RenameAsset(asset, asset.EditingName);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                asset.CancelRename();
+                e.Handled = true;
+            }
+        }
+
+        private void OnAssetRenameTextBoxLostFocus(object? sender, RoutedEventArgs e)
+        {
+            if ((sender as TextBox)?.DataContext is AssetObjectViewModel { IsEditingName: true } asset)
+            {
+                MainWindowViewModel.Instance?.ContentBrowser.RenameAsset(asset, asset.EditingName);
+            }
+        }
+
+        private static bool IsBrowserItemNameText(object? source)
+        {
+            return source is Visual visual && visual.GetSelfAndVisualAncestors().OfType<TextBlock>().Any(textBlock => textBlock.Name == "BrowserItemNameText");
+        }
+
+        /// <summary>A second click on the name of the selected item renames it, once it's clear the click wasn't the start of a double click</summary>
+        private void StartRenameClickTimer(object item)
+        {
+            CancelRenameClick();
+
+            TimeSpan doubleTapTime = TopLevel.GetTopLevel(this)?.PlatformSettings?.GetDoubleTapTime(PointerType.Mouse) ?? TimeSpan.FromMilliseconds(500);
+
+            _renameClickTimer = new DispatcherTimer { Interval = doubleTapTime };
+            _renameClickTimer.Tick += (_, _) =>
+            {
+                CancelRenameClick();
+
+                if (MainWindowViewModel.Instance is not { IsSimulating: false } viewModel
+                    || viewModel.ContentBrowser.SelectedItems.Count != 1
+                    || !ReferenceEquals(viewModel.ContentBrowser.SelectedItem, item))
+                {
+                    return;
+                }
+
+                switch (item)
+                {
+                    case AssetFolderViewModel { IsRoot: false } folder:
+                        BeginFolderRename(folder);
+                        break;
+                    case AssetObjectViewModel { Bucket: not null } asset:
+                        BeginAssetRename(asset);
+                        break;
+                }
+            };
+            _renameClickTimer.Start();
+        }
+
+        private void CancelRenameClick()
+        {
+            _renameClickTimer?.Stop();
+            _renameClickTimer = null;
         }
 
         private async void OnCopyAssetPathClick(object? sender, RoutedEventArgs e)
@@ -2081,6 +2174,8 @@ namespace Hyperion.Editor
 
         private void OnContentBrowserPointerPressed(object? sender, PointerPressedEventArgs e)
         {
+            CancelRenameClick();
+
             if (sender is TreeView)
             {
                 MarkFolderTreeUserSelecting();
@@ -2101,6 +2196,16 @@ namespace Hyperion.Editor
             _isDraggingBrowserItems = false;
             _pendingBrowserSingleSelect = null;
 
+            // the tunnel handler runs before the list updates its selection, so this is what was selected before the click
+            _renameClickCandidate = sender is ListBox { SelectedItems: { Count: 1 } previousSelection }
+                && item != null
+                && e.ClickCount == 1
+                && e.KeyModifiers == KeyModifiers.None
+                && previousSelection.Contains(item)
+                && IsBrowserItemNameText(e.Source)
+                    ? item
+                    : null;
+
             if (sender is ListBox listBox
                 && item != null
                 && e.KeyModifiers == KeyModifiers.None
@@ -2114,6 +2219,13 @@ namespace Hyperion.Editor
 
         private void OnContentBrowserDragSourcePointerReleased(object? sender, PointerReleasedEventArgs e)
         {
+            if (_renameClickCandidate != null && !_isDraggingBrowserItems)
+            {
+                StartRenameClickTimer(_renameClickCandidate);
+            }
+
+            _renameClickCandidate = null;
+
             if (_pendingBrowserSingleSelect != null && !_isDraggingBrowserItems && sender is ListBox listBox)
             {
                 listBox.SelectedItems?.Clear();

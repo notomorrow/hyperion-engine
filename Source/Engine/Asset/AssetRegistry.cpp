@@ -846,6 +846,11 @@ Name AssetRegistry::GetUniqueAssetName(uint32 bucketIndex, const String& name) c
     return CreateNameFromDynamicString(candidateName);
 }
 
+Name AssetRegistry::SanitizeAssetName(const String& name) const
+{
+    return SanitizeName(CreateNameFromDynamicString(ANSIString(name.Data(), name.Data() + name.Size())));
+}
+
 void AssetRegistry::MarkAssetDirty(const AssetObject& assetObject)
 {
     if (assetObject.IsTransient())
@@ -990,6 +995,28 @@ uint32 AssetRegistry::GetBucketAssetDescs(uint32 bucketIndex, Array<AssetDesc>& 
     }
 
     return uint32(outDescs.Size());
+}
+
+uint32 AssetRegistry::GetCachedAssets(Array<Handle<AssetObject>>& outAssets) const
+{
+    for (uint32 bucketIndex = 1; bucketIndex < MaxAssetBuckets; ++bucketIndex)
+    {
+        const AssetBucketData& data = m_assetBucketData[bucketIndex];
+
+        TSharedLock lock(data.mtx);
+
+        for (const AssetDesc& desc : data.assetDescs)
+        {
+            const Handle<AssetObject>* pAssetObject = data.assetObjectCache.TryGet(desc.index);
+
+            if (pAssetObject && pAssetObject->IsValid())
+            {
+                outAssets.PushBack(*pAssetObject);
+            }
+        }
+    }
+
+    return uint32(outAssets.Size());
 }
 
 void AssetRegistry::PutAsset(const Handle<AssetObject>& assetObject)
@@ -1564,16 +1591,31 @@ void AssetRegistry::SyncAssetName(const AssetBucket& bucket, Name oldName, Name 
     newDesc.index = index;
     data.assetDescs.Add(std::move(newDesc));
 
-    // Remove old file, leave new file to be written by SaveDirtyAssets
-    const FilePath oldFilePath = GetBucketDirectory(bucket) / (oldName.ToString() + ".hmf");
-
-    if (oldFilePath.Exists())
+    if (const Handle<AssetObject>* pAssetObject = data.assetObjectCache.TryGet(index); pAssetObject && pAssetObject->IsValid())
     {
-        if (!oldFilePath.Remove())
-        {
-            HYP_LOG(Assets, Error, "Failed to remove file {}", oldFilePath);
+        (*pAssetObject)->m_assetPath = AssetPath(m_registryId, bucket, newName);
+    }
 
-            return;
+    const FilePath bucketDir = GetBucketDirectory(bucket);
+    const String oldPrefix = oldName.ToString() + ".";
+
+    if (bucketDir.IsDirectory())
+    {
+        for (const FilePath& oldFilePath : bucketDir.GetAllFilesInDirectory())
+        {
+            const String fileName = oldFilePath.Basename();
+
+            if (!fileName.StartsWith(oldPrefix))
+            {
+                continue;
+            }
+
+            const FilePath newFilePath = bucketDir / (newName.ToString() + "." + String(fileName.Substr(oldPrefix.Length())));
+
+            if (!oldFilePath.Rename(newFilePath))
+            {
+                HYP_LOG(Assets, Error, "Failed to rename file {} to {}", oldFilePath, newFilePath);
+            }
         }
     }
 

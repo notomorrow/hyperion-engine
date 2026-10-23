@@ -99,7 +99,8 @@
   <Target Name="HyperionWriteGlobalConfig" AfterTargets="HyperionCopyEngineRuntime" Condition="'$(HyperionWriteGlobalConfig)' == 'true' And '$(HyperionOutputToBinDir)' != 'true'">
     <PropertyGroup>
       <_HyperionConfigBaseDir>$([System.String]::Copy('$(HyperionBaseDir)').Replace('\', '/').TrimEnd('/'))</_HyperionConfigBaseDir>
-      <_HyperionConfigArgs>--basedir=\&quot;$(_HyperionConfigBaseDir)\&quot; --cooked=false --singleplayer</_HyperionConfigArgs>
+      <!-- %5C rather than a literal backslash, which MSBuild turns into / on Linux and macOS, leaving invalid JSON -->
+      <_HyperionConfigArgs>--basedir=%5C&quot;$(_HyperionConfigBaseDir)%5C&quot; --cooked=false --singleplayer</_HyperionConfigArgs>
       <_HyperionConfigArgs Condition="'$(HyperionContentDir)' != ''">$(_HyperionConfigArgs) --contentdir=$(HyperionContentDir)</_HyperionConfigArgs>
     </PropertyGroup>
 
