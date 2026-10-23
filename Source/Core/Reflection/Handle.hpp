@@ -436,7 +436,7 @@ struct WeakHandle final
     {
         if (id.IsValid())
         {
-            ObjectContainerBase* container = GetObjectContainerForClass(GetClass(id.GetTypeId()));
+            ObjectContainerBase* container = GetObjectContainerForClass(::Hyperion::GetClass(id.GetTypeId()));
 
             // This really shouldn't happen unless we're doing something wrong.
             // We shouldn't have an Id for a type that doesn't have a container.
