@@ -42,6 +42,11 @@ public:
     {
     }
 
+    /*! \brief Reads back the completed profiler GPU zones, after the frame's command buffer begins. */
+    virtual void CollectProfilerZones(CommandBuffer* cmd)
+    {
+    }
+
     virtual void WriteStartTimestamp(CommandBuffer* cmd, EngineStatGpuTimer* timer) = 0;
     virtual void WriteStopTimestamp(CommandBuffer* cmd, EngineStatGpuTimer* timer) = 0;
 

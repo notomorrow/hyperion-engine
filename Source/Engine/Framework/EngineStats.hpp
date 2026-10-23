@@ -12,6 +12,7 @@
 #include <Core/Threading/Util/ThreadId.hpp>
 
 #include <Core/Profiling/PerformanceClock.hpp>
+#include <Core/Profiling/ProfileScope.hpp>
 
 #include <Core/Utilities/ClockTimer.hpp>
 
@@ -392,7 +393,23 @@ private:
     struct EngineStatsRecorderImpl* m_impl;
 };
 
+#ifdef HYP_TRACY
+HYP_FORCE_INLINE void SetZoneNameFromStat(tracy::ScopedZone& zone, const EngineStatBase* stat)
+{
+    if (stat)
+    {
+        profiling::SetZoneName(zone, stat->name.LookupString());
+    }
+}
+
+#define ENGINE_STAT_SCOPE(timer)                                                     \
+    ZoneNamed(HYP_CONCAT(engineStatZone, __LINE__), true);                           \
+    SetZoneNameFromStat(HYP_CONCAT(engineStatZone, __LINE__), (timer));              \
+    EngineStatScope HYP_CONCAT(engineStatScope, __LINE__)(timer)
+#else
 #define ENGINE_STAT_SCOPE(timer) EngineStatScope HYP_CONCAT(engineStatScope, __LINE__)(timer)
+#endif
+
 #define ENGINE_STAT_GPU_SCOPE(timer, ...) EngineStatGpuScope HYP_CONCAT(engineStatGpuScope, __LINE__)(timer, ##__VA_ARGS__)
 
 } // namespace Hyperion

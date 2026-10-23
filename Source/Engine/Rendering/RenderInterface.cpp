@@ -1424,6 +1424,7 @@ void RenderInterface::UpdateResources(AtomicFlag* pCancelFlag)
     if (m_gpuTimerBackend != nullptr)
     {
         m_gpuTimerBackend->OnFrameStart();
+        m_gpuTimerBackend->CollectProfilerZones(GetCurrentCommandBuffer());
         m_gpuTimerBackend->WriteStartTimestamp(GetCurrentCommandBuffer(), &g_statGpuFrameTime);
     }
 }

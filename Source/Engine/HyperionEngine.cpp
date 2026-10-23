@@ -456,8 +456,14 @@ void LoadShaderPropertyDictionary()
 
 } // namespace
 
-static CommandLineArgumentRegistration g_argExec { "exec", "", "Execute the commandlet with the given name immediately following --exec. The program will end immediately after running the commandlet and return 0 upon success or otherwise on failure", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING };
-static CommandLineArgumentRegistration g_argTraceServer { "traceserver", {}, "The endpoint url that profiling data will be submitted to (this url will have /start appended to it to start the session and /results to add results)", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING };
+static CommandLineArgumentRegistration g_argExec {
+    "exec",
+    "",
+    "Execute the commandlet with the given name immediately following --exec. " \
+    "The program will end immediately after running the commandlet and return 0 upon success or otherwise on failure",
+    CommandLineArgumentFlags::NONE,
+    CommandLineArgumentType::STRING
+};
 
 extern "C"
 {
@@ -734,15 +740,6 @@ extern "C"
 #endif // HYP_STEAM_SDK
         }
 
-        // must start after net request thread
-        if (CoreApi::IsProfilingEnabled())
-        {
-            StartProfilerConnectionThread(ProfilerConnectionParams {
-                /* endpointUrl */ CoreApi::GetCommandLineArguments()["traceserver"].ToString(),
-                /* enabled */ true
-            });
-        }
-
         g_engineDriver->Initialize();
 
         return true;
@@ -838,9 +835,6 @@ extern "C"
         {
             TaskSystem::GetInstance().Stop();
         }
-
-        // must stop before net request thread
-        StopProfilerConnectionThread();
 
         if (SharedPtr<NetRequestThread> netRequestThread = GetGlobalNetRequestThread())
         {

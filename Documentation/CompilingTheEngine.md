@@ -48,6 +48,7 @@ The engine supports C# scripting and the editor UI is built with Avalonia UI on 
 * **JoltPhysics** - Physics simulation (required; the configure step fails if the submodule is missing).
 * **zlib** - Compression/decompression of serialized data.
 * **xatlas** - Lightmap UV generation (can be disabled if not needed).
+* **tracy** - Tracy profiler client - see [Profiling with Tracy](#profiling-with-tracy).
 
 ### Manually Installed Dependencies
 
@@ -131,6 +132,18 @@ For this setup, we support using Clang for Windows as well as Android.
 - Requires Android NDK (tested with NDK 29). Set `ANDROID_NDK` or `ANDROID_NDK_HOME` environment variable, or the script defaults to `%LOCALAPPDATA%\Android\Sdk\ndk\29.0.14206865`. (@TODO: Fix default path)
 - Uses Ninja as the build system — ensure `ninja` is on PATH or installed via Visual Studio or Android SDK CMake tools.
 - Builds for `arm64-v8a` with `android-28` as the minimum API level.
+
+## Profiling with Tracy
+
+Pass `tracy` to the build script when regenerating CMake (sets `HYP_TRACY=ON`, ignored for shipping and web builds):
+
+```bash
+./Tools/Scripts/BuildHyperion.sh Linux Release regenerate tracy
+```
+
+`HYP_SCOPE`, `HYP_NAMED_SCOPE`, `ENGINE_STAT_SCOPE` and `HYP_PROFILE_BEGIN` become Tracy CPU zones, and `ENGINE_STAT_GPU_SCOPE` becomes a Tracy GPU zone (Vulkan only for now). The render thread marks the main frame and the sim thread marks a separate `Simulation` frame.
+
+The client only collects data while a profiler is connected. Run the engine, open `tracy-profiler` and connect to it. The profiler must be built from the same version as `External/Submodules/tracy` (see `External/Submodules/tracy/profiler`), otherwise it will refuse the connection.
 
 ## Shader Compilation
 

@@ -11,6 +11,7 @@ HYP_NOWAIT=0
 HYP_SHIPPING=0
 HYP_RUNTIME=0
 HYP_DISTRIBUTION=0
+HYP_TRACY=0
 
 USE_NINJA=0
 
@@ -56,6 +57,8 @@ for arg in "$@"; do
     elif [[ "$arg" == "Distribution" || "$arg" == "distribution" ]]; then
         HYP_DISTRIBUTION=1
         CONFIG="Release"
+    elif [[ "$arg" == "Tracy" || "$arg" == "tracy" ]]; then
+        HYP_TRACY=1
     fi
 done
 
@@ -115,6 +118,12 @@ if [[ $DO_CMAKE -eq 1 ]]; then
 
     if [[ $HYP_RUNTIME -eq 1 ]]; then
         HYP_CMAKE_PARAMS="$HYP_CMAKE_PARAMS -DHYP_RUNTIME_ONLY=1"
+    fi
+
+    if [[ $HYP_TRACY -eq 1 ]]; then
+        HYP_CMAKE_PARAMS="$HYP_CMAKE_PARAMS -DHYP_TRACY=ON"
+    else
+        HYP_CMAKE_PARAMS="$HYP_CMAKE_PARAMS -DHYP_TRACY=OFF"
     fi
 
     # distribution: binaries that are safe to redistribute (no source tree path baked in, Strata without its LLVM JIT),

@@ -62,10 +62,6 @@ private:
     Handle<UIListView> m_panel;
     Handle<UIDataSource> m_dataSource;
     Map<EngineStatBase*, UUID> m_statUuids;
-
-    ClockTimer m_hotFunctionsUpdateTimer; // updates at a slower rate
-    Handle<UIListView> m_hotFunctionsPanel;
-    Handle<UIText> m_hotFunctionsText;
 };
 
 } // namespace Hyperion

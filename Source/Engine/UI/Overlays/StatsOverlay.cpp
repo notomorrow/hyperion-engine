@@ -18,7 +18,6 @@
 #include <Framework/EngineStats.hpp>
 #include <Framework/CVarManager.hpp>
 
-#include <Core/Profiling/ProfileScope.hpp>
 #include <Core/Core.hpp>
 
 #include <StatsOverlay.generated.inl>
@@ -27,7 +26,7 @@ namespace Hyperion {
 
 #pragma region StatsOverlay
 
-static CVar<bool> g_cvShowStatsOverlay { "Editor.ShowStats", false };
+CVar<bool> g_cvShowStatsOverlay { "Editor.ShowStats", false };
 
 bool StatsOverlay::IsStatsOverlayEnabled()
 {
@@ -43,7 +42,6 @@ StatsOverlay::StatsOverlay()
     : OverlayBase()
 {
     m_timer = ClockTimer { 0.0333f }; // update max. 30hz/s
-    m_hotFunctionsUpdateTimer = ClockTimer { 1.0f };
 }
 
 StatsOverlay::~StatsOverlay() = default;
@@ -120,60 +118,12 @@ Handle<UIObject> StatsOverlay::CreateUIObject(UIObject* spawnParent)
 
     panelBackdrop->AddChildUIObject(m_panel);
 
-#if HYP_ENABLE_PROFILE
-    if (CoreApi::IsProfilingEnabled())
-    {
-        // if profiling is enabled, also set up a panel for hot functions.
-        // make the main panel smaller to make room for the hot functions panel.
-        m_panel->SetSize(UIObjectSize({ 50, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
-        panelBackdrop->SetSize(UIObjectSize({ 500, UIObjectSize::PIXEL }, { 300, UIObjectSize::PIXEL }));
-
-        // set up panel showing hot functions.
-        m_hotFunctionsPanel = spawnParent->CreateUIObject<UIListView>(
-            NAME("StatsOverlay_HotFunctionsPanel"),
-            Vec2i(250, 0),
-            UIObjectSize({ 50, UIObjectSize::PERCENT }, { 100, UIObjectSize::PERCENT }));
-
-        m_hotFunctionsPanel->SetTextSize(14.0f);
-        m_hotFunctionsPanel->SetTextColor(Color(0.7f, 0.7f, 0.7f, 1.0f));
-        m_hotFunctionsPanel->SetBackgroundColor(Color::Transparent());
-        m_hotFunctionsPanel->SetPadding(Vec2i(2, 2));
-
-        m_hotFunctionsText = m_hotFunctionsPanel->CreateUIObject<UIText>();
-        m_hotFunctionsPanel->AddChildUIObject(m_hotFunctionsText);
-
-        panelBackdrop->AddChildUIObject(m_hotFunctionsPanel);
-    }
-#endif
-
     return panelBackdrop;
 }
 
 void StatsOverlay::Update(float delta)
 {
     HYP_SCOPE;
-
-#if HYP_ENABLE_PROFILE
-    if (CoreApi::IsProfilingEnabled())
-    {
-        if (!m_hotFunctionsUpdateTimer.Waiting())
-        {
-            m_hotFunctionsUpdateTimer.NextTick();
-
-            Array<Pair<ANSIString, double>> hotFunctions;
-            CollectAllHotFunctions(hotFunctions);
-
-            String allHotFunctionsText;
-
-            for (const Pair<ANSIString, double>& pair : hotFunctions)
-            {
-                allHotFunctionsText += HYP_FORMAT("{} : {}ms", pair.first, pair.second) + "\n";
-            }
-
-            m_hotFunctionsText->SetText(allHotFunctionsText);
-        }
-    }
-#endif
 
     const Handle<EngineStats>& engineStats = EngineStats::GetInstance();
     const EngineStatsSnapshot& snapshot = engineStats->GetCurrentSnapshot();

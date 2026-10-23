@@ -156,6 +156,7 @@ void SimThread::SetGameInstance(Game* gameInstance)
 
 void SimThread::Update()
 {
+    HYP_PROFILE_FRAME_MARK_NAMED("Simulation");
     ENGINE_STAT_SCOPE(&g_statSimUpdate);
 
     m_counter.NextTick();

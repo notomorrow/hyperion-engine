@@ -71,6 +71,10 @@ option(HYP_ENABLE_AFTERMATH "Link NVIDIA Aftermath on Windows when the SDK is pr
 # sample and commandlet executables, so a redistributed editor only carries hyperion.dll and Hyperion.Editor.exe.
 option(HYP_MONOLITHIC "Build a single hyperion shared library" OFF)
 
+# Feeds HYP_SCOPE, ENGINE_STAT_SCOPE and ENGINE_STAT_GPU_SCOPE into the Tracy profiler (External/Submodules/tracy).
+# Connect with a tracy-profiler built from the same submodule version. BuildHyperion.bat/.sh pass this for the `tracy` argument.
+option(HYP_TRACY "Enable Tracy profiler instrumentation" OFF)
+
 set(HYP_RUNTIME_DIRECTORY_SUFFIX "")
 if(HYP_RUNTIME_ONLY)
   set(HYP_RUNTIME_DIRECTORY_SUFFIX "-Runtime")
@@ -607,6 +611,34 @@ if(HYP_MONOLITHIC AND NOT HYP_BUILD_STATIC)
   set(HYP_BUILD_NET_LIBRARY_STATIC 1)
 
   add_definitions(-DHYP_MONOLITHIC=1)
+endif()
+
+if(HYP_TRACY AND (HYP_SHIPPING OR HYP_WEB))
+  message(WARNING "Tracy is not supported in shipping or web builds, disabling HYP_TRACY")
+  set(HYP_TRACY OFF)
+endif()
+
+if(HYP_TRACY)
+  set(TRACY_SUBMODULE_DIR "${SUBMODULES_DIR}/tracy")
+
+  if(NOT EXISTS "${TRACY_SUBMODULE_DIR}/public/TracyClient.cpp")
+    message(FATAL_ERROR "Tracy submodule not found at ${TRACY_SUBMODULE_DIR}. Run: git submodule update --init External/Submodules/tracy")
+  endif()
+
+  # the client is compiled into hyperion-core (see Core/CMakeLists.txt) and only collects while a profiler is connected
+  add_definitions(-DHYP_TRACY=1 -DTRACY_ENABLE -DTRACY_ON_DEMAND)
+  include_directories(SYSTEM "${TRACY_SUBMODULE_DIR}/public")
+
+  if(WIN32 AND NOT HYP_BUILD_STATIC AND NOT HYP_MONOLITHIC)
+    add_definitions(-DTRACY_IMPORTS)
+  endif()
+
+  # rpmalloc's initial-exec TLS would stop hyperion-core from being dlopen'd (see TracyPlatform.hpp)
+  if(NOT WIN32 AND NOT APPLE)
+    add_compile_definitions(TRACY_PLATFORM_HEADER="${CMAKE_SOURCE_DIR}/Core/Profiling/TracyPlatform.hpp")
+  endif()
+
+  message(STATUS "Tracy profiler instrumentation enabled")
 endif()
 
 # managed code always starts the engine and registers through InitFromManaged.

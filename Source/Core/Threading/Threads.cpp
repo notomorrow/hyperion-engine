@@ -14,6 +14,8 @@
 
 #include <Core/Logging/Logger.hpp>
 
+#include <Core/Profiling/ProfileScope.hpp>
+
 #if HYP_WEB
 #include <emscripten/threading.h>
 #endif
@@ -143,6 +145,10 @@ void SetCurrentThreadId(const ThreadId& id)
     emscripten_set_thread_name(pthread_self(), id.GetName().LookupString());
 #elif HYP_UNIX
     pthread_setname_np(pthread_self(), id.GetName().LookupString());
+#endif
+
+#ifdef HYP_TRACY
+    tracy::SetThreadName(id.GetName().LookupString());
 #endif
 }
 

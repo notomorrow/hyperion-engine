@@ -25,9 +25,34 @@ using threading::Task_DeleteAllDeferredTasks;
 
 namespace CoreApi {
 
-static Mutex s_globalsMutex;
-static FilePath s_executablePath;
-static Array<void (*)()> s_onShutdownFuncs;
+namespace {
+
+Mutex g_globalsMutex;
+FilePath g_executablePath;
+Array<void (*)()> g_onShutdownFuncs;
+
+List<GlobalConfig> g_globalConfigChain;
+Mutex g_globalConfigMutex;
+
+CommandLineArguments g_commandLineArguments;
+
+CommandLineArgumentRegistration g_argBaseDir {
+    "basedir",
+    {},
+    "Base directory",
+    CommandLineArgumentFlags::NONE,
+    CommandLineArgumentType::STRING
+};
+
+CommandLineArgumentRegistration g_argConfigVariant {
+    "configvariant",
+    {},
+    "Read and save Config/<Name>.<variant>.json in place of Config/<Name>.json, where there is one",
+    CommandLineArgumentFlags::NONE,
+    CommandLineArgumentType::STRING
+};
+
+} // namespace
 
 extern "C"
 {
@@ -41,7 +66,7 @@ extern "C"
 
 CORE_API const FilePath& GetExecutablePath()
 {
-    return s_executablePath;
+    return g_executablePath;
 }
 
 CORE_API void SetExecutablePath(const FilePath& path)
@@ -49,7 +74,7 @@ CORE_API void SetExecutablePath(const FilePath& path)
     // set once at the beginning of the application lifecycle,
     // so we don't guard it under a mutex
 
-    s_executablePath = path;
+    g_executablePath = path;
 }
 
 CORE_API const FilePath& GetBaseDirectory()
@@ -103,15 +128,6 @@ CORE_API const FilePath& GetBaseDirectory()
     return s_initializer.baseDir;
 }
 
-static List<GlobalConfig> s_globalConfigChain;
-static Mutex s_globalConfigMutex;
-
-static CommandLineArguments s_commandLineArguments;
-
-static CommandLineArgumentRegistration g_argProfile { "profile", {}, "Enable collection of profiling data for functions that opt in using HYP_SCOPE.", CommandLineArgumentFlags::NONE, CommandLineArgumentType::BOOLEAN, false };
-static CommandLineArgumentRegistration g_argBaseDir { "basedir", {}, "Base directory", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING };
-static CommandLineArgumentRegistration g_argConfigVariant { "configvariant", {}, "Read and save Config/<Name>.<variant>.json in place of Config/<Name>.json, where there is one", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING };
-
 CORE_API const CommandLineArgumentDefinitions& DefaultCommandLineArgumentDefinitions()
 {
     static const CommandLineArgumentDefinitions definitions(GetRegisteredCommandLineArgumentDefinitions());
@@ -125,7 +141,7 @@ CORE_API bool Initialize(int argc, char** argv)
 
     TypeInfo_Initialize();
 
-    s_commandLineArguments = CommandLineArguments(argv[0]);
+    g_commandLineArguments = CommandLineArguments(argv[0]);
 
     CommandLineParser argParse { &DefaultCommandLineArgumentDefinitions() };
 
@@ -142,7 +158,7 @@ CORE_API bool Initialize(int argc, char** argv)
         return false;
     }
 
-    s_commandLineArguments = CommandLineArguments::Merge(*argParse.GetDefinitions(), s_commandLineArguments, *parseResult);
+    g_commandLineArguments = CommandLineArguments::Merge(*argParse.GetDefinitions(), g_commandLineArguments, *parseResult);
 
     GlobalConfig config { "GlobalConfig" };
     config.Load();
@@ -152,37 +168,37 @@ CORE_API bool Initialize(int argc, char** argv)
     {
         JSON::JString configArgsString = configArgs.ToString();
 
-        parseResult = argParse.Parse(s_commandLineArguments.GetCommand(), CommandLineParser::SplitArguments(configArgsString.ToUtf8()), false);
+        parseResult = argParse.Parse(g_commandLineArguments.GetCommand(), CommandLineParser::SplitArguments(configArgsString.ToUtf8()), false);
 
         if (!parseResult.HasError())
         {
             // merge argv last so that they may override what's in the config.
-            s_commandLineArguments = CommandLineArguments::Merge(*argParse.GetDefinitions(), *parseResult, s_commandLineArguments);
+            g_commandLineArguments = CommandLineArguments::Merge(*argParse.GetDefinitions(), *parseResult, g_commandLineArguments);
         }
     }
 
-    argParse.ApplyDefaults(s_commandLineArguments);
+    argParse.ApplyDefaults(g_commandLineArguments);
 
     return true;
 }
 
 CORE_API const CommandLineArguments& GetCommandLineArguments()
 {
-    return s_commandLineArguments;
+    return g_commandLineArguments;
 }
 
 CORE_API void UpdateGlobalConfig(const ConfigBase& mergeValues)
 {
-    Mutex::Guard guard(s_globalConfigMutex);
+    Mutex::Guard guard(g_globalConfigMutex);
 
     GlobalConfig* prevGlobalConfig = nullptr;
 
-    if (s_globalConfigChain.Any())
+    if (g_globalConfigChain.Any())
     {
-        prevGlobalConfig = &s_globalConfigChain.Back();
+        prevGlobalConfig = &g_globalConfigChain.Back();
     }
 
-    GlobalConfig& newGlobalConfig = s_globalConfigChain.EmplaceBack("GlobalConfig");
+    GlobalConfig& newGlobalConfig = g_globalConfigChain.EmplaceBack("GlobalConfig");
 
     if (prevGlobalConfig != nullptr)
     {
@@ -192,7 +208,7 @@ CORE_API void UpdateGlobalConfig(const ConfigBase& mergeValues)
     newGlobalConfig.Merge(mergeValues);
     newGlobalConfig.Save();
 
-    for (GlobalConfig& curr : s_globalConfigChain)
+    for (GlobalConfig& curr : g_globalConfigChain)
     {
         curr.SetNewRevision(&newGlobalConfig);
     }
@@ -200,31 +216,21 @@ CORE_API void UpdateGlobalConfig(const ConfigBase& mergeValues)
 
 CORE_API const GlobalConfig& GetGlobalConfig()
 {
-    Mutex::Guard guard(s_globalConfigMutex);
+    Mutex::Guard guard(g_globalConfigMutex);
 
-    if (s_globalConfigChain.Empty())
+    if (g_globalConfigChain.Empty())
     {
-        GlobalConfig& cfg = s_globalConfigChain.EmplaceBack("GlobalConfig");
+        GlobalConfig& cfg = g_globalConfigChain.EmplaceBack("GlobalConfig");
         cfg.Load();
     }
 
-    return s_globalConfigChain.Back();
+    return g_globalConfigChain.Back();
 }
-
-#if HYP_ENABLE_PROFILE
-CORE_API bool IsProfilingEnabled()
-{
-    // only check once since it won't change and we call from some hot paths
-    static const bool s_isProfilingEnabled = GetCommandLineArguments()["profile"].ToBool();
-
-    return s_isProfilingEnabled;
-}
-#endif
 
 CORE_API void OnShutdown(void (*func)())
 {
-    Mutex::Guard guard(s_globalsMutex);
-    s_onShutdownFuncs.PushBack(func);
+    Mutex::Guard guard(g_globalsMutex);
+    g_onShutdownFuncs.PushBack(func);
 }
 
 CORE_API void Shutdown()
@@ -232,16 +238,14 @@ CORE_API void Shutdown()
     TypeInfo_Shutdown();
     Task_DeleteAllDeferredTasks();
 
+    Mutex::Guard guard(g_globalsMutex);
+
+    for (size_t i = g_onShutdownFuncs.Size(); i > 0; --i)
     {
-        Mutex::Guard guard(s_globalsMutex);
-
-        for (size_t i = s_onShutdownFuncs.Size(); i > 0; --i)
-        {
-            s_onShutdownFuncs[i - 1]();
-        }
-
-        s_onShutdownFuncs.Clear();
+        g_onShutdownFuncs[i - 1]();
     }
+
+    g_onShutdownFuncs.Clear();
 }
 
 } // namespace CoreApi

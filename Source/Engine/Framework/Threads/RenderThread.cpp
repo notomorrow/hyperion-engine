@@ -360,6 +360,8 @@ void RenderThread::Update()
     RI.PresentToSwapchains(swapchains.ToSpan());
     RI.EndFrame();
 
+    HYP_PROFILE_FRAME_MARK;
+
     g_renderArena->Reset();
     g_glimmerArena->Reset();
 

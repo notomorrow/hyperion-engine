@@ -391,8 +391,6 @@
 
 #pragma region Engine Static Configuration
 
-// #define HYP_ENABLE_PROFILE 1
-
 // Disabling compile time Name hashing saves on executable size at the cost of runtime performance
 #define HYP_COMPILE_TIME_NAME_HASHING 1
 

@@ -23,12 +23,6 @@ CORE_API bool Initialize(int argc, char** argv);
 CORE_API const CommandLineArguments& GetCommandLineArguments();
 CORE_API const CommandLineArgumentDefinitions& DefaultCommandLineArgumentDefinitions();
 
-#if HYP_ENABLE_PROFILE
-CORE_API bool IsProfilingEnabled();
-#else
-static constexpr std::false_type IsProfilingEnabled;
-#endif
-
 CORE_API const GlobalConfig& GetGlobalConfig();
 CORE_API void UpdateGlobalConfig(const ConfigBase& mergeValues);
 

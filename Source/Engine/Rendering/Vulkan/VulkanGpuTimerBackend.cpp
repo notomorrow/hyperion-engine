@@ -10,15 +10,35 @@
 #include "VulkanDevice.hpp"
 #include "VulkanCommandBuffer.hpp"
 #include "VulkanFeatures.hpp"
+#include "VulkanDeviceQueue.hpp"
 
 #include <Rendering/RenderInterface.hpp>
 
 #include <Framework/EngineStats.hpp>
 #include <Framework/CVarManager.hpp>
 
+#ifdef HYP_TRACY
+#include <tracy/TracyVulkan.hpp>
+
+#include <new>
+#endif
+
 namespace Hyperion {
 
 extern CVar<bool> g_cvEnableGpuStats;
+
+#ifdef HYP_TRACY
+static constexpr uint32 MaxProfilerZoneDepth = 64;
+
+struct ProfilerZoneStack
+{
+    alignas(tracy::VkCtxScope) ubyte zones[MaxProfilerZoneDepth][sizeof(tracy::VkCtxScope)];
+    uint32 depth = 0;
+    uint32 numOverflowed = 0;
+};
+
+static thread_local ProfilerZoneStack t_profilerZoneStack;
+#endif
 
 VulkanGpuTimerBackend::VulkanGpuTimerBackend()
     : GpuTimerBackendBase(),
@@ -83,7 +103,114 @@ bool VulkanGpuTimerBackend::Initialize(DeviceBase* device)
     }
 
     m_isSupported = true;
+
+    CreateProfilerContext();
+
     return true;
+}
+
+void VulkanGpuTimerBackend::CreateProfilerContext()
+{
+#ifdef HYP_TRACY
+    VulkanDeviceQueue* graphicsQueue = m_device->GetGraphicsQueue();
+
+    if (!graphicsQueue || graphicsQueue->queue == VK_NULL_HANDLE)
+    {
+        return;
+    }
+
+    VkCommandBufferAllocateInfo allocInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    allocInfo.commandPool = graphicsQueue->commandPools[0];
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer calibrationCommandBuffer = VK_NULL_HANDLE;
+
+    if (vkAllocateCommandBuffers(m_device->GetDevice(), &allocInfo, &calibrationCommandBuffer) != VK_SUCCESS)
+    {
+        return;
+    }
+
+    {
+        // tracy submits to the queue and waits on it to calibrate CPU and GPU timestamps
+        Mutex::Guard guard(graphicsQueue->mutex);
+
+        m_profilerContext = TracyVkContext(m_device->GetPhysicalDevice(), m_device->GetDevice(), graphicsQueue->queue, calibrationCommandBuffer);
+    }
+
+    vkFreeCommandBuffers(m_device->GetDevice(), graphicsQueue->commandPools[0], 1, &calibrationCommandBuffer);
+
+    static constexpr char contextName[] = "Vulkan Graphics Queue";
+    TracyVkContextName(m_profilerContext, contextName, uint16(sizeof(contextName) - 1));
+#endif
+}
+
+void VulkanGpuTimerBackend::CollectProfilerZones(VulkanCommandBuffer* cmd)
+{
+#ifdef HYP_TRACY
+    if (m_profilerContext && cmd)
+    {
+        TracyVkCollect(m_profilerContext, cmd->GetVulkanHandle());
+    }
+#endif
+}
+
+void VulkanGpuTimerBackend::BeginProfilerZone(VulkanCommandBuffer* cmd, EngineStatGpuTimer* timer)
+{
+#ifdef HYP_TRACY
+    if (!m_profilerContext || !cmd || !timer)
+    {
+        return;
+    }
+
+    ProfilerZoneStack& stack = t_profilerZoneStack;
+
+    if (stack.depth >= MaxProfilerZoneDepth)
+    {
+        ++stack.numOverflowed;
+        return;
+    }
+
+    const ANSIStringView zoneName = timer->name.LookupString();
+
+    new (stack.zones[stack.depth]) tracy::VkCtxScope(
+        m_profilerContext,
+        0, "", 0,
+        zoneName.Data(), zoneName.Size(),
+        zoneName.Data(), zoneName.Size(),
+        cmd->GetVulkanHandle(),
+        true);
+
+    ++stack.depth;
+#endif
+}
+
+void VulkanGpuTimerBackend::EndProfilerZone()
+{
+#ifdef HYP_TRACY
+    if (!m_profilerContext)
+    {
+        return;
+    }
+
+    ProfilerZoneStack& stack = t_profilerZoneStack;
+
+    if (stack.numOverflowed > 0)
+    {
+        --stack.numOverflowed;
+        return;
+    }
+
+    if (stack.depth == 0)
+    {
+        return;
+    }
+
+    --stack.depth;
+
+    // writes the end timestamp into the command buffer the zone was opened with
+    std::launder(reinterpret_cast<tracy::VkCtxScope*>(stack.zones[stack.depth]))->~VkCtxScope();
+#endif
 }
 
 void VulkanGpuTimerBackend::OnFrameStart()
@@ -105,6 +232,14 @@ void VulkanGpuTimerBackend::Shutdown()
     {
         return;
     }
+
+#ifdef HYP_TRACY
+    if (m_profilerContext)
+    {
+        TracyVkDestroy(m_profilerContext);
+        m_profilerContext = nullptr;
+    }
+#endif
 
     for (uint32 i = 0; i < NumFramesInFlight; i++)
     {
@@ -154,6 +289,8 @@ uint32 VulkanGpuTimerBackend::GetOrCreateQuerySlot(EngineStatGpuTimer* timer)
 
 void VulkanGpuTimerBackend::WriteStartTimestamp(VulkanCommandBuffer* cmd, EngineStatGpuTimer* timer)
 {
+    BeginProfilerZone(cmd, timer);
+
     if (!m_isSupported || !m_isEnabled || !cmd || !timer)
     {
         return;
@@ -183,6 +320,11 @@ void VulkanGpuTimerBackend::WriteStartTimestamp(VulkanCommandBuffer* cmd, Engine
 
 void VulkanGpuTimerBackend::WriteStopTimestamp(VulkanCommandBuffer* cmd, EngineStatGpuTimer* timer)
 {
+    if (cmd && timer)
+    {
+        EndProfilerZone();
+    }
+
     if (!m_isSupported || !m_isEnabled || !cmd || !timer)
     {
         return;

@@ -13,3 +13,6 @@
 [submodule "External/Submodules/meshoptimizer"]
 	path = External/Submodules/meshoptimizer
 	url = https://github.com/zeux/meshoptimizer
+[submodule "External/Submodules/tracy"]
+	path = External/Submodules/tracy
+	url = https://github.com/wolfpld/tracy.git

@@ -119,6 +119,12 @@ if(NOT HYP_MONOLITHIC)
   set(SOURCES ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/../../External/ThirdParty/Source/tlsf/tlsf.c)
 endif()
 
+if(HYP_TRACY)
+  set(TRACY_CLIENT_SOURCE ${TRACY_SUBMODULE_DIR}/public/TracyClient.cpp)
+  set(SOURCES ${SOURCES} ${TRACY_CLIENT_SOURCE})
+  set(COMMON_LIBRARIES ${COMMON_LIBRARIES} ${CMAKE_DL_LIBS})
+endif()
+
 if(HYP_BUILD_STATIC)
   set(HYP_BUILD_CORE_LIBRARY_STATIC 1)
 endif()
@@ -143,6 +149,15 @@ target_compile_definitions(${CORE_OBJECTS_NAME} PRIVATE HYP_BUILD_CORE=1)
 if(NOT HYP_ANDROID)
   target_precompile_headers(${CORE_OBJECTS_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/CorePch.hpp")
   set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/../../External/ThirdParty/Source/tlsf/tlsf.c PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+endif()
+
+if(HYP_TRACY)
+  set_source_files_properties(${TRACY_CLIENT_SOURCE} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+
+  # whichever library core ends up in exports the client, like CORE_API
+  if(NOT HYP_BUILD_STATIC)
+    target_compile_definitions(${CORE_OBJECTS_NAME} PRIVATE TRACY_EXPORTS)
+  endif()
 endif()
 
 target_link_libraries(${BUILD_NAME} PRIVATE ${COMMON_LIBRARIES})
