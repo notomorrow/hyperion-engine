@@ -178,13 +178,13 @@ jobs:
       - name: Package
         run: bash Tools/Scripts/PackageEditorMacOS.sh "$GITHUB_WORKSPACE/Packaged"
 
-      # the tarball keeps the executable bits, which a plain artifact upload would drop
+      # the tarball keeps the executable bits, which a plain artifact upload would drop; archive: false
+      # stores it as-is rather than inside a zip, with the file name as the artifact name
       - uses: actions/upload-artifact@v7
         with:
-          name: Hyperion-Editor-${{ steps.version.outputs.version }}-macos-arm64
-          path: Packaged/*.tar.gz
+          path: Packaged/Hyperion-Editor-${{ steps.version.outputs.version }}-macos-arm64.tar.gz
           if-no-files-found: error
-          compression-level: 0
+          archive: false
 
   build-linux:
     name: build (linux-x64)
@@ -241,13 +241,13 @@ jobs:
       - name: Package
         run: bash Tools/Scripts/PackageEditorLinux.sh "$GITHUB_WORKSPACE/Packaged"
 
-      # the tarball keeps the executable bits, which a plain artifact upload would drop
+      # the tarball keeps the executable bits, which a plain artifact upload would drop; archive: false
+      # stores it as-is rather than inside a zip, with the file name as the artifact name
       - uses: actions/upload-artifact@v7
         with:
-          name: Hyperion-Editor-${{ steps.version.outputs.version }}-linux-x64
-          path: Packaged/*.tar.gz
+          path: Packaged/Hyperion-Editor-${{ steps.version.outputs.version }}-linux-x64.tar.gz
           if-no-files-found: error
-          compression-level: 0
+          archive: false
 
   release:
     needs: [build, build-macos, build-linux]
@@ -258,7 +258,8 @@ jobs:
     env:
       VERSION: ${{ needs.build.outputs.version }}
     steps:
-      - uses: actions/download-artifact@v5
+      # v8 leaves the unarchived tarballs as they are instead of trying to unzip them
+      - uses: actions/download-artifact@v8
         with:
           pattern: Hyperion-Editor-*
           merge-multiple: true

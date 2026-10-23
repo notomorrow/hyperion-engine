@@ -149,6 +149,53 @@ else
     warn "Data/Scripts/Strata not found; Strata scripts won't resolve engine modules"
 fi
 
+SDK_CMAKE_FILE="$BIN_DIR/Sdk/CMake/HyperionSdk.cmake"
+SDK_STAGE_DIR="$STAGE_DIR/Sdk"
+
+if [[ -f "$SDK_CMAKE_FILE" ]]; then
+    step "Staging SDK"
+
+    header_count=0
+    while IFS= read -r -d '' relative_path; do
+        case "$relative_path" in *.hpp|*.h|*.inl|*.inc) ;; *) continue ;; esac
+        [[ -f "$ROOT_DIR/$relative_path" ]] || continue
+        destination="$SDK_STAGE_DIR/Include/${relative_path#Source/}"
+        mkdir -p "$(dirname "$destination")"
+        cp "$ROOT_DIR/$relative_path" "$destination"
+        header_count=$((header_count + 1))
+    done < <(cd "$ROOT_DIR" && git -c core.quotepath=off ls-files -z -- Source/Core Source/Engine)
+
+    # CodeGen output isn't tracked
+    mkdir -p "$SDK_STAGE_DIR/Include/Generated"
+    for generated_file in "$ROOT_DIR"/Source/Generated/*.hpp "$ROOT_DIR"/Source/Generated/*.h "$ROOT_DIR"/Source/Generated/*.inl "$ROOT_DIR"/Source/Generated/*.inc; do
+        cp "$generated_file" "$SDK_STAGE_DIR/Include/Generated/"
+        header_count=$((header_count + 1))
+    done
+    echo "    $header_count headers"
+
+    third_party_dirs="$(sed -nE 's/^set\(HYPERION_SDK_THIRD_PARTY_DIRS "([^"]*)"\)/\1/p' "$SDK_CMAKE_FILE")"
+    for third_party_dir in ${third_party_dirs//;/ }; do
+        mkdir -p "$SDK_STAGE_DIR/ThirdParty/$third_party_dir"
+        cp -R "$ROOT_DIR/External/ThirdParty/Source/$third_party_dir/." "$SDK_STAGE_DIR/ThirdParty/$third_party_dir/"
+    done
+
+    mkdir -p "$SDK_STAGE_DIR/CMake"
+    cp "$SDK_CMAKE_FILE" "$SDK_STAGE_DIR/CMake/HyperionSdk.cmake"
+    cp "$BIN_DIR/Sdk/CMake/HyperionSdkPlatform.cmake" "$SDK_STAGE_DIR/CMake/HyperionSdkPlatform.cmake"
+
+    if [[ -f "$BIN_DIR/Sdk/RuntimeLibraries.txt" ]]; then
+        cp "$BIN_DIR/Sdk/RuntimeLibraries.txt" "$SDK_STAGE_DIR/RuntimeLibraries.txt"
+    else
+        warn "Sdk/RuntimeLibraries.txt is missing so all .so files will be copied without whitelist!"
+    fi
+
+    if grep -q -F "$ROOT_DIR" "$SDK_STAGE_DIR/CMake/HyperionSdk.cmake"; then
+        warn "Sdk/CMake/HyperionSdk.cmake has the source tree path ($ROOT_DIR) in it"
+    fi
+else
+    warn "SDK not staged ($SDK_CMAKE_FILE not found); game projects can't be built from this package"
+fi
+
 # --- Legal ------------------------------------------------------------------------------------------------------------
 
 cp "$ROOT_DIR/LICENSE" "$STAGE_DIR/LICENSE"
