@@ -595,8 +595,8 @@ static HYP_FORCE_INLINE constexpr HYP_ENABLE_IF(!isMathVectorV<T>, U) Round(T a,
     }
     else
     {
-        const auto multiplier = std::pow(a, decimalPlaces);
-        return U(std::round(a * multiplier) / multiplier);
+        const double multiplier = std::pow(10.0, decimalPlaces);
+        return U(std::round(double(a) * multiplier) / multiplier);
     }
 }
 

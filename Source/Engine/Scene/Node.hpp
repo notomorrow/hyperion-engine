@@ -551,6 +551,9 @@ public:
     HYP_METHOD()
     virtual Handle<Node> Clone() const;
 
+    /*!\brief Clone this node as another class, members are copied by name. */
+    virtual Handle<Node> CloneAs(const Class* cls, bool cloneChildren) const;
+
     HYP_METHOD(Property = "UUID")
     const UUID& GetUUID() const
     {
@@ -655,6 +658,8 @@ public:
      *  \param node The Node to be added as a child of this Node
      *  \returns The added Node */
     Handle<Node> AddChildKeepWorldTransform(const Handle<Node>& node);
+
+    Handle<Node> InsertChild(const Handle<Node>& node, uint32 index);
 
     /*! \brief Remove a child from this Node's child list.
      *  \param node The child Node to remove from this Node's child list.
@@ -977,7 +982,7 @@ protected:
 
     virtual void ConvertLegacyRotations();
 
-    Handle<Node> AddChild_Internal(const Handle<Node>& node, bool keepWorldTransform);
+    Handle<Node> AddChild_Internal(const Handle<Node>& node, bool keepWorldTransform, uint32 index = ~0u);
 
     ///Serialization
 

@@ -11,6 +11,7 @@
 
 #include <Core/Utilities/Result.hpp>
 #include <Core/Utilities/Span.hpp>
+#include <Core/Utilities/EnumFlags.hpp>
 
 #include <Core/IO/ByteReader.hpp>
 
@@ -169,6 +170,24 @@ ENGINE_API TResult<BoxedValue> ObjectFieldsFromHMF(ByteReader& stream, Span<cons
 ENGINE_API TResult<BoxedValue> FieldFromHMF(ByteReader& stream, StringHash fieldName);
 
 ENGINE_API TResult<BoxedValue> BoxedAsType(const BoxedValue& value, const TypeInfo& typeInfo);
+
+enum class CopyMembersFlags : uint32
+{
+    None = 0x0,
+    IncludeTransient = 0x1
+};
+
+HYP_MAKE_ENUM_FLAGS(CopyMembersFlags);
+
+/*! \brief Copies the fields and properties of \p source onto \p target, matched by name.
+ *  \param stopAtClass The first base class whose members aren't copied, or null to copy them all */
+ENGINE_API void CopyMembersByName(
+    const Class* sourceClass,
+    const BoxedValue& source,
+    const Class* targetClass,
+    BoxedValue& target,
+    const Class* stopAtClass = nullptr,
+    EnumFlags<CopyMembersFlags> flags = CopyMembersFlags::None);
 
 #pragma endregion Hyperion Manifest
 

@@ -15,11 +15,6 @@
 
 #include <Core/Utilities/ByteUtil.hpp>
 
-#include <Core/DataProcessing/HMF/HMF.hpp>
-
-#include <Core/Logging/Logger.hpp>
-#include <Core/Logging/LogChannels.hpp>
-
 #include <Asset/SerializationUtils.hpp>
 
 #include <ComponentContainer.generated.inl>
@@ -44,46 +39,6 @@ size_t CalculateComponentBlocksPerSlab(
     return blocksPerSlab != 0 ? blocksPerSlab : 1;
 }
 
-/// a field whose type changed keeps its value if it still parses as the new type
-void CopyRetypedProperties(
-    const Struct& sourceStruct,
-    const BoxedValue& source,
-    const Struct& targetStruct,
-    BoxedValue& target)
-{
-    for (const Property* sourceProperty : sourceStruct.GetProperties())
-    {
-        if (!sourceProperty->CanGet())
-        {
-            continue;
-        }
-
-        const Property* targetProperty = targetStruct.GetProperty(sourceProperty->GetName(), /* deep */ false);
-
-        if (!targetProperty || !targetProperty->CanSet() || targetProperty->GetTypeInfo().id == sourceProperty->GetTypeInfo().id)
-        {
-            continue;
-        }
-
-        String text;
-
-        if (BoxedToHMF(sourceProperty->Get(source), text, &sourceProperty->GetTypeInfo()).HasError())
-        {
-            continue;
-        }
-
-        TResult<BoxedValue> valueResult = BoxedAsType(BoxedValue(HMF::UnresolvedValue { text }), targetProperty->GetTypeInfo());
-
-        if (valueResult.HasError())
-        {
-            HYP_LOG(Entity, Warning, "Value of {}.{} doesn't fit new type {}", targetStruct.GetName(), sourceProperty->GetName(), targetProperty->GetTypeInfo().name);
-
-            continue;
-        }
-
-        targetProperty->Set(target, valueResult.GetValue());
-    }
-}
 } // namespace
 
 #pragma region ComponentContainer
@@ -295,9 +250,22 @@ void ComponentContainer::MigrateTo(const ComponentInterface& componentInterface)
 
         m_componentInterface->ConstructComponent(component);
 
+        // a tag holds nothing but the value its interface sets on construction
+        if (componentInterface.IsEntityTag())
+        {
+            continue;
+        }
+
         BoxedValue target(AnyRef(m_typeInfo, component));
-        CopyMatchingProperties(*previousStruct, previousComponent.second, *currentStruct, target);
-        CopyRetypedProperties(*previousStruct, previousComponent.second, *currentStruct, target);
+
+        if (previousInterface->IsModuleComponent())
+        {
+            CopyMembersByName(previousStruct, previousComponent.second, currentStruct, target, /* stopAtClass */ nullptr, CopyMembersFlags::IncludeTransient);
+        }
+        else
+        {
+            CopyMatchingProperties(*previousStruct, previousComponent.second, *currentStruct, target);
+        }
     }
 
     // after the old values are copied, since the old interface's module may unload once its count is zero
