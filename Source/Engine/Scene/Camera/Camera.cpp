@@ -667,9 +667,9 @@ void Camera::UpdateMatchWindowSize()
                         }
                     };
 
-                    matchWindowSize(window->GetSize());
-
                     strongCamera->m_onWindowResizedHandle = window->OnWindowSizeChanged.BindThreaded(window, matchWindowSize, g_simThread);
+
+                    matchWindowSize(window->GetSize());
                 }
             };
 
