@@ -151,6 +151,41 @@
             <Setter Property="Foreground" Value="{DynamicResource Brush.AccentHover}" />
         </Style>
 
+        <Style Selector="Button.script-tile">
+            <Setter Property="Width" Value="64" />
+            <Setter Property="Height" Value="64" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource Brush.PanelRaised}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.BorderLight}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Transitions">
+                <Transitions />
+            </Setter>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{DynamicResource Radius.Medium}">
+                        <ContentPresenter
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <Style Selector="Button.script-tile:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Brush.MenuHover}" />
+        </Style>
+
+        <Style Selector="Button.script-tile:pressed">
+            <Setter Property="Background" Value="{DynamicResource Brush.AccentSubtle}" />
+        </Style>
+
         <Style Selector="Button.nav-back:disabled">
             <Setter Property="Opacity" Value="0.35" />
         </Style>
@@ -2160,23 +2195,18 @@
                                                                 Margin="12,6,12,4"
                                                                 ColumnDefinitions="72,*"
                                                                 DataContext="{Binding Inspector.AttachedScript}">
-                                                                <Border
-                                                                    Width="64"
-                                                                    Height="64"
+                                                                <Button
                                                                     Margin="0,0,8,0"
                                                                     VerticalAlignment="Top"
-                                                                    Background="{DynamicResource Brush.PanelRaised}"
-                                                                    BorderBrush="{DynamicResource Brush.BorderLight}"
-                                                                    BorderThickness="1"
-                                                                    CornerRadius="{DynamicResource Radius.Medium}">
+                                                                    Classes="script-tile"
+                                                                    Command="{Binding IconCommand}"
+                                                                    ToolTip.Tip="{Binding IconToolTip}">
                                                                     <controls:Codicon
-                                                                        HorizontalAlignment="Center"
-                                                                        VerticalAlignment="Center"
                                                                         Foreground="{DynamicResource Brush.AccentHover}"
                                                                         Kind="AssetScript"
                                                                         Opacity="0.85"
                                                                         Size="28" />
-                                                                </Border>
+                                                                </Button>
 
                                                                 <StackPanel Grid.Column="1" Spacing="4">
                                                                     <TextBlock

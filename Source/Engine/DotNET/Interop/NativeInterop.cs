@@ -467,27 +467,10 @@ namespace Hyperion
 
                 if (classBindingAttribute.IsDynamic)
                 {
-                    // Find closest parent class with ClassBinding attribute
-                    Type? parentType = type.BaseType;
-                    IntPtr parentClassPtr = IntPtr.Zero;
-
-                    while (parentType != null)
-                    {
-                        ClassBinding? parentClassBindingAttribute = parentType.GetCustomAttribute<ClassBinding>(inherit: false);
-
-                        if (parentClassBindingAttribute != null)
-                        {
-                            parentClassPtr = parentClassBindingAttribute.GetClass(parentType).Address;
-
-                            if (parentClassPtr != IntPtr.Zero)
-                                break;
-                        }
-
-                        parentType = parentType.BaseType;
-                    }
+                    IntPtr parentClassPtr = GetNativeParentClass(type);
 
                     if (parentClassPtr == IntPtr.Zero)
-                        throw new Exception(string.Format("To create a dynamic Class, a parent class must exist with a valid ClassBinding attribute!"));
+                        throw new Exception(string.Format("To create a dynamic Class for {0}, it must derive from ObjectBase, Script or a class with a valid ClassBinding attribute!", type.FullName));
 
                     classPtr = Class_CreateDynamicClass(ref typeId, className, parentClassPtr, type.IsAbstract);
 

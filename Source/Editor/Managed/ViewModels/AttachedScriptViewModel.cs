@@ -46,11 +46,14 @@ namespace Hyperion.Editor.ViewModels
                 if (SetProperty(ref _hasScript, value))
                 {
                     OnPropertyChanged(nameof(CanCopy));
+                    OnPropertyChanged(nameof(IconToolTip));
                 }
             }
         }
 
         public bool CanCopy => GetCopyText() != null;
+
+        public string IconToolTip => HasScript ? "Open in code editor" : "Create new script";
 
         // The script's [HypField] / [HypProperty] members
         public ObservableCollection<InspectorPropertyViewModelBase> Fields { get; } = new();
@@ -73,6 +76,7 @@ namespace Hyperion.Editor.ViewModels
         public ICommand ClearCommand { get; }
         public ICommand NewCommand { get; }
         public ICommand EditCommand { get; }
+        public ICommand IconCommand { get; }
         public ICommand CopyCommand { get; }
         public ICommand PasteCommand { get; }
 
@@ -90,6 +94,7 @@ namespace Hyperion.Editor.ViewModels
             ClearCommand = new RelayCommand(OnClear);
             NewCommand = new RelayCommand(OnNew, () => EngineManager.CanCreateAssets);
             EditCommand = new RelayCommand(OnEdit);
+            IconCommand = new RelayCommand(OnIcon);
             CopyCommand = new AsyncRelayCommand(OnCopyAsync);
             PasteCommand = new AsyncRelayCommand(OnPasteAsync);
 
@@ -504,6 +509,18 @@ namespace Hyperion.Editor.ViewModels
                     Logger.Log(LogLevel.Warning, $"AttachedScript: Failed to open script: {ex.Message}");
                 }
             });
+        }
+
+        private void OnIcon()
+        {
+            if (HasScript)
+            {
+                OnEdit();
+            }
+            else if (EngineManager.CanCreateAssets)
+            {
+                OnNew();
+            }
         }
 
         private void AssignScriptAsset(ScriptAsset? scriptAsset)
