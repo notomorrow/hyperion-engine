@@ -195,6 +195,9 @@ elseif(HYP_PLATFORM_NAME STREQUAL "Linux")
 
   set(HYP_LINUX 1)
   set(HYP_UNIX 1)
+
+  # editor, commandlets and packaged games find the engine libraries beside them
+  list(APPEND CMAKE_BUILD_RPATH "$ORIGIN")
 endif()
 
 if (HYP_CLANG AND HYP_WINDOWS)
@@ -1499,6 +1502,7 @@ if(NOT HYP_BUILD_STATIC AND NOT HYP_ANDROID AND NOT HYP_IOS)
   set(HYP_SDK_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Sdk/CMake")
 
   configure_file(${CMAKE_SOURCE_DIR}/HyperionSdk.cmake.in "${HYP_SDK_OUTPUT_DIR}/HyperionSdk.cmake" @ONLY)
+  configure_file(${CMAKE_SOURCE_DIR}/Sdk/Platforms/${HYP_PLATFORM_NAME}.cmake "${HYP_SDK_OUTPUT_DIR}/HyperionSdkPlatform.cmake" COPYONLY)
 
   set(HYP_SDK_DEV_PATHS_CONDITION "1")
   get_property(HYP_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -1523,6 +1527,8 @@ set(HYPERION_SDK_PCH \"${CMAKE_SOURCE_DIR}/Engine/HyperionPch.hpp\")
   if(WIN32)
     get_filename_component(HYP_LINKER_DIR "${CMAKE_LINKER}" DIRECTORY)
 
+    set(HYP_DEPENDENCY_PLATFORM "windows+pe")
+
     if(EXISTS "${HYP_LINKER_DIR}/dumpbin.exe")
       set(HYP_DEPENDENCY_TOOL "dumpbin")
       set(HYP_DEPENDENCY_TOOL_COMMAND "${HYP_LINKER_DIR}/dumpbin.exe")
@@ -1530,17 +1536,22 @@ set(HYPERION_SDK_PCH \"${CMAKE_SOURCE_DIR}/Engine/HyperionPch.hpp\")
       set(HYP_DEPENDENCY_TOOL "objdump")
       set(HYP_DEPENDENCY_TOOL_COMMAND "${CMAKE_OBJDUMP}")
     endif()
+  elseif(HYP_LINUX AND CMAKE_OBJDUMP)
+    set(HYP_DEPENDENCY_PLATFORM "linux+elf")
+    set(HYP_DEPENDENCY_TOOL "objdump")
+    set(HYP_DEPENDENCY_TOOL_COMMAND "${CMAKE_OBJDUMP}")
+  endif()
 
-    if(HYP_DEPENDENCY_TOOL)
-      add_custom_command(TARGET ${BUILD_NAME} POST_BUILD
-          COMMAND ${CMAKE_COMMAND}
-              "-DLIBRARY=$<TARGET_FILE:${BUILD_NAME}>"
-              "-DOUTPUT=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Sdk/RuntimeLibraries.txt"
-              "-DTOOL=${HYP_DEPENDENCY_TOOL}"
-              "-DTOOL_COMMAND=${HYP_DEPENDENCY_TOOL_COMMAND}"
-              "-DEXCLUDE=${HYP_SDK_SHADER_COMPILER_LIBRARIES}"
-              -P "${CMAKE_SOURCE_DIR}/GatherRuntimeLibraries.cmake")
-    endif()
+  if(HYP_DEPENDENCY_TOOL)
+    add_custom_command(TARGET ${BUILD_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND}
+            "-DLIBRARY=$<TARGET_FILE:${BUILD_NAME}>"
+            "-DOUTPUT=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Sdk/RuntimeLibraries.txt"
+            "-DPLATFORM=${HYP_DEPENDENCY_PLATFORM}"
+            "-DTOOL=${HYP_DEPENDENCY_TOOL}"
+            "-DTOOL_COMMAND=${HYP_DEPENDENCY_TOOL_COMMAND}"
+            "-DEXCLUDE=${HYP_SDK_SHADER_COMPILER_LIBRARIES}"
+            -P "${CMAKE_SOURCE_DIR}/GatherRuntimeLibraries.cmake")
   endif()
 endif()
 

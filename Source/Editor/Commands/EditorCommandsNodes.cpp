@@ -961,6 +961,162 @@ DEFINE_EDITOR_COMMAND(MoveNodeToScene);
 
 #pragma endregion EditorCommandMoveNodeToScene
 
+#pragma region EditorCommandConvertNodeToEntityType
+
+class EditorCommandConvertNodeToEntityType final : public EditorCommandBase
+{
+    HYP_OBJECT_BODY(EditorCommandConvertNodeToEntityType);
+
+public:
+    EditorCommandConvertNodeToEntityType() = default;
+
+    virtual ~EditorCommandConvertNodeToEntityType() override = default;
+
+    virtual String GetText() const override
+    {
+        return m_text.Length() ? m_text : EditorCommandBase::GetText();
+    }
+
+    virtual bool AllowedWhileEditingPrefab() const override
+    {
+        return false;
+    }
+
+    virtual void Execute(EditorSubsystem* subsystem) override
+    {
+        AssertOnThread(g_simThread);
+
+        if (NumArguments() < 2)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandConvertNodeToEntityType: expected a node and an entity class name");
+            return;
+        }
+
+        uintptr_t nodeAddress = 0;
+
+        if (!StringUtil::Parse(GetArgument(0), &nodeAddress) || nodeAddress == uintptr_t(NULL))
+        {
+            HYP_LOG(Editor, Error, "EditorCommandConvertNodeToEntityType: invalid node address");
+            return;
+        }
+
+        const Class* entityClass = ClassRegistry::GetInstance().GetClass(Name(ANSIString(GetArgument(1))));
+
+        if (!entityClass || !entityClass->IsDerivedFrom(Entity::StaticClass()) || entityClass->IsAbstract())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandConvertNodeToEntityType: '{}' is not a valid Entity class", GetArgument(1));
+            return;
+        }
+
+        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandConvertNodeToEntityType: no project loaded");
+            return;
+        }
+
+        Handle<Node> sourceNode = MakeStrongRef(reinterpret_cast<Node*>(nodeAddress));
+
+        if (!sourceNode.IsValid() || sourceNode->InstanceClass() != Node::StaticClass())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandConvertNodeToEntityType: only base Node instances can be converted");
+            return;
+        }
+
+        Node* parentRaw = sourceNode->GetParent();
+        if (!parentRaw)
+        {
+            HYP_LOG(Editor, Error, "EditorCommandConvertNodeToEntityType: '{}' has no parent, cannot convert scene root", sourceNode->GetName());
+            return;
+        }
+
+        BoxedValue instanceData;
+        if (!entityClass->CreateInstance(instanceData, /* allowAbstract */ false) || !instanceData.Is<Handle<Entity>>())
+        {
+            HYP_LOG(Editor, Error, "EditorCommandConvertNodeToEntityType: failed to create instance of '{}'", GetArgument(1));
+            return;
+        }
+
+        Handle<Entity> entity = instanceData.Get<Handle<Entity>>();
+        if (!entity.IsValid())
+        {
+            return;
+        }
+
+        // UUID carries over so anything referencing the node keeps resolving to the converted entity
+        entity->SetUUID(sourceNode->GetUUID());
+        entity->SetName(sourceNode->GetName());
+        entity->SetNodeFlags(sourceNode->GetNodeFlags());
+        entity->SetLocalTransform(sourceNode->GetLocalTransform());
+        entity->SetLocalBounds(sourceNode->GetLocalBounds());
+
+        for (const NodeTag& tag : sourceNode->GetTags())
+        {
+            entity->Node::AddTag(NodeTag(tag));
+        }
+
+        InitObject(entity);
+
+        Array<Handle<Node>> children;
+
+        for (Node* child : sourceNode->GetChildren())
+        {
+            if (child)
+            {
+                children.PushBack(MakeStrongRef(child));
+            }
+        }
+
+        m_text = HYP_FORMAT("Convert '{}' to {}", sourceNode->GetName(), entityClass->GetName());
+
+        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
+            GetText(),
+            Proc<EditorActionFunctions()>(
+                [sourceNode, entity, parent = MakeStrongRef(parentRaw), children]() -> EditorActionFunctions
+                {
+                    auto swapNodes = [parent, children](const Handle<Node>& from, const Handle<Node>& to, EditorSubsystem* editorSubsystem)
+                    {
+                        parent->AddChild(to);
+
+                        for (const Handle<Node>& child : children)
+                        {
+                            child->Remove();
+                            to->AddChild(child);
+                        }
+
+                        from->Remove();
+
+                        editorSubsystem->SetSelectedNodes({ to });
+                        editorSubsystem->SetFocusedNode(to, true);
+                    };
+
+                    return EditorActionFunctions {
+                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [swapNodes, sourceNode, entity](EditorSubsystem* editorSubsystem, EditorProject*)
+                            {
+                                swapNodes(sourceNode, entity, editorSubsystem);
+                            }),
+                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
+                            [swapNodes, sourceNode, entity](EditorSubsystem* editorSubsystem, EditorProject*)
+                            {
+                                swapNodes(entity, sourceNode, editorSubsystem);
+                            })
+                    };
+                }));
+
+        InitObject(action);
+
+        subsystem->GetSceneActionStack()->PushAction(action);
+    }
+
+private:
+    String m_text;
+};
+
+DEFINE_EDITOR_COMMAND(ConvertNodeToEntityType);
+
+#pragma endregion EditorCommandConvertNodeToEntityType
+
 #pragma region RenameNode
 
 class EditorCommandRenameNode final : public EditorCommandBase

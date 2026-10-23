@@ -432,6 +432,7 @@ if ($IsMonolithic -and (Test-Path $SdkCMakeFile) -and (Test-Path $SdkImportLibra
     }
 
     Copy-StagedFile $SdkCMakeFile (Join-Path $SdkStageDir "CMake/HyperionSdk.cmake")
+    Copy-StagedFile (Join-Path $BinDir "Sdk/CMake/HyperionSdkPlatform.cmake") (Join-Path $SdkStageDir "CMake/HyperionSdkPlatform.cmake")
 
     $SdkRuntimeLibrariesFile = Join-Path $BinDir "Sdk/RuntimeLibraries.txt"
     if (Test-Path $SdkRuntimeLibrariesFile) { Copy-StagedFile $SdkRuntimeLibrariesFile (Join-Path $SdkStageDir "RuntimeLibraries.txt") }

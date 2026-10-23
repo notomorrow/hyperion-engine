@@ -145,6 +145,15 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _hasMoveToSceneTargets, value);
         }
 
+        public ObservableCollection<ConvertToEntityTypeItemViewModel> ConvertToEntityTypeTargets { get; } = new ObservableCollection<ConvertToEntityTypeItemViewModel>();
+
+        private bool _hasConvertToEntityTypeTargets;
+        public bool HasConvertToEntityTypeTargets
+        {
+            get => _hasConvertToEntityTypeTargets;
+            private set => SetProperty(ref _hasConvertToEntityTypeTargets, value);
+        }
+
         private bool _canGenerateCollision;
         public bool CanGenerateCollision
         {
@@ -309,6 +318,35 @@ namespace Hyperion.Editor.ViewModels
             HasMoveToSceneTargets = MoveToSceneTargets.Count > 0;
         }
 
+        public void RefreshConvertToEntityTypeTargets()
+        {
+            Dispatcher.UIThread.VerifyAccess();
+
+            ConvertToEntityTypeTargets.Clear();
+
+            MainWindowViewModel? mainWindowViewModel = MainWindowViewModel.Instance;
+
+            if (mainWindowViewModel != null
+                && !IsRootNode
+                && !mainWindowViewModel.IsEditingPrefab
+                && _node.IsValid && ClassName == "Node")
+            {
+                List<string> classNames = [];
+                NameCallbackDelegate callback = (name, _) => classNames.Add(name);
+
+                NativeBindings.Hyp_GetAllDerivedClassNames("Entity", callback, IntPtr.Zero);
+
+                classNames.Sort(StringComparer.OrdinalIgnoreCase);
+
+                foreach (string className in classNames)
+                {
+                    ConvertToEntityTypeTargets.Add(new ConvertToEntityTypeItemViewModel(className, _node));
+                }
+            }
+
+            HasConvertToEntityTypeTargets = ConvertToEntityTypeTargets.Count > 0;
+        }
+
         private bool _isExpanded;
         public bool IsExpanded
         {
@@ -339,10 +377,6 @@ namespace Hyperion.Editor.ViewModels
         private readonly Action? _onChildrenChanged;
         private readonly NodeViewModelIndex? _index;
 
-        /// <summary>
-        /// Walks the node's subtree and binds its child handlers, so this must run on the thread that mutates the
-        /// hierarchy (the sim thread). Register the result with <see cref="NodeViewModelIndex.Add"/> on the UI thread.
-        /// </summary>
         public NodeViewModel(Node node, NodeViewModel? parent = null, Action? onChildrenChanged = null, NodeViewModelIndex? index = null)
         {
             _node = node;
@@ -437,9 +471,8 @@ namespace Hyperion.Editor.ViewModels
         }
 
         /// <summary>
-        /// Prunes or restores this node from its parent's <see cref="Children"/> collection based on the
-        /// current swatch filter. Removed nodes stay alive in <see cref="AllChildren"/> so they can be
-        /// restored later. Must be called on the UI thread.
+        /// Prunes or restores this node from its parent's <see cref="Children"/> collection based on the current swatch filter.
+        /// Removed nodes stay alive in <see cref="AllChildren"/> so they can be restored later. Must be called on the UI thread.
         /// </summary>
         public void SetFilteredOut(bool filteredOut)
         {

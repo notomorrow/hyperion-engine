@@ -131,11 +131,15 @@
                                 <MenuItem.Icon>
                                     <controls:Codicon Kind="Add" Size="14" />
                                 </MenuItem.Icon>
-                                <MenuItem.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:CreatableClassViewModel">
-                                        <MenuItem Command="{Binding CreateCommand}" Header="{Binding ClassName}" />
-                                    </DataTemplate>
-                                </MenuItem.ItemTemplate>
+                                <MenuItem.ItemContainerTheme>
+                                    <ControlTheme
+                                        x:DataType="vm:CreatableClassViewModel"
+                                        BasedOn="{StaticResource {x:Type MenuItem}}"
+                                        TargetType="MenuItem">
+                                        <Setter Property="Header" Value="{Binding ClassName}" />
+                                        <Setter Property="Command" Value="{Binding CreateCommand}" />
+                                    </ControlTheme>
+                                </MenuItem.ItemContainerTheme>
                             </MenuItem>
                             <MenuItem
                                 Command="{Binding CloneCommand}"

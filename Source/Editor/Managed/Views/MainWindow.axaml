@@ -1628,6 +1628,21 @@
                                                                                 </ControlTheme>
                                                                             </MenuItem.ItemContainerTheme>
                                                                         </MenuItem>
+                                                                        <MenuItem
+                                                                            Header="Convert to Entity Type"
+                                                                            IsEnabled="{Binding !IsSimulating, Source={x:Static vm:MainWindowViewModel.Instance}}"
+                                                                            IsVisible="{Binding HasConvertToEntityTypeTargets}"
+                                                                            ItemsSource="{Binding ConvertToEntityTypeTargets}">
+                                                                            <MenuItem.ItemContainerTheme>
+                                                                                <ControlTheme
+                                                                                    x:DataType="vm:ConvertToEntityTypeItemViewModel"
+                                                                                    BasedOn="{StaticResource {x:Type MenuItem}}"
+                                                                                    TargetType="MenuItem">
+                                                                                    <Setter Property="Header" Value="{Binding ClassName}" />
+                                                                                    <Setter Property="Command" Value="{Binding ConvertCommand}" />
+                                                                                </ControlTheme>
+                                                                            </MenuItem.ItemContainerTheme>
+                                                                        </MenuItem>
                                                                         <Separator />
                                                                         <MenuItem Header="Collision" IsEnabled="{Binding HasCollisionActions}">
                                                                             <MenuItem

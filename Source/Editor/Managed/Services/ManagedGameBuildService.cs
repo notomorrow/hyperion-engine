@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection.PortableExecutable;
-using System.Runtime.InteropServices;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -19,10 +18,6 @@ namespace Hyperion.Editor.Services
         private static readonly LogChannel BuildLogChannel = LogChannel.ByName("GameBuild");
 
         private static readonly Regex ErrorLineRegex = new Regex(@"\berror\b", RegexOptions.Compiled);
-
-        private static readonly string CookCommandletExeName = OperatingSystem.IsWindows()
-            ? "BlobStorageCookCommandlet.exe"
-            : "BlobStorageCookCommandlet";
 
         private const string ScriptsLibraryName = "HyperionScripts";
 
@@ -147,7 +142,7 @@ namespace Hyperion.Editor.Services
                 return;
             }
 
-            string? stripTool = FindStripTool();
+            string? stripTool = GameBuildPlatform.Current.FindStripTool();
 
             if (stripTool == null)
             {
@@ -160,7 +155,7 @@ namespace Hyperion.Editor.Services
             {
                 long sizeBefore = new FileInfo(binary).Length;
 
-                int exitCode = RunProcessAsync(stripTool, outputDirectory, new[] { "--strip-unneeded", binary }, null, _ => { }).GetAwaiter().GetResult();
+                int exitCode = BuildProcess.RunAsync(BuildProcess.CreateStartInfo(stripTool, outputDirectory, new[] { "--strip-unneeded", binary }), BuildLogChannel, _ => { }).GetAwaiter().GetResult();
 
                 if (exitCode != 0)
                 {
@@ -212,51 +207,12 @@ namespace Hyperion.Editor.Services
             }
         }
 
-        private static string? FindStripTool()
-        {
-            string[] toolNames = OperatingSystem.IsWindows()
-                ? new[] { "strip.exe", "llvm-strip.exe" }
-                : new[] { "strip", "llvm-strip" };
-
-            foreach (string toolName in toolNames)
-            {
-                foreach (string directory in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    try
-                    {
-                        string candidate = Path.Combine(directory.Trim(), toolName);
-
-                        if (File.Exists(candidate))
-                        {
-                            return candidate;
-                        }
-                    }
-                    catch (ArgumentException)
-                    {
-                    }
-                }
-            }
-
-            if (OperatingSystem.IsWindows())
-            {
-                foreach (string installPath in NativeGameBuildService.FindVisualStudioInstalls())
-                {
-                    string candidate = Path.Combine(installPath, "VC", "Tools", "Llvm", "x64", "bin", "llvm-strip.exe");
-
-                    if (File.Exists(candidate))
-                    {
-                        return candidate;
-                    }
-                }
-            }
-
-            return null;
-        }
-
         private static bool CookPackage(string projectFilePath, string outputDirectory)
         {
+            GameBuildPlatform platform = GameBuildPlatform.Current;
+
             string editorDirectory = AppContext.BaseDirectory;
-            string cookExecutable = Path.Combine(editorDirectory, CookCommandletExeName);
+            string cookExecutable = Path.Combine(editorDirectory, platform.GetExecutableFileName("BlobStorageCookCommandlet"));
 
             if (!File.Exists(cookExecutable))
             {
@@ -278,7 +234,7 @@ namespace Hyperion.Editor.Services
                 "--out-content=" + Path.Combine(outputDirectory, "Content"),
                 "--out-engine-content=" + Path.Combine(outputDirectory, "Content", "Engine"),
                 "--shader-target=host",
-                "--target-platform=" + (OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "mac" : "linux"),
+                "--target-platform=" + platform.CookTargetPlatform,
                 "--target-config=" + Path.Combine(editorDirectory, "Config", "EngineConfig.json"),
                 "--cachedir=" + cookCacheDirectory
             };
@@ -288,7 +244,7 @@ namespace Hyperion.Editor.Services
             bool isComplete = false;
             string? firstError = null;
 
-            int exitCode = RunProcessAsync(cookExecutable, editorDirectory, arguments, null, line =>
+            int exitCode = BuildProcess.RunAsync(BuildProcess.CreateStartInfo(cookExecutable, editorDirectory, arguments), BuildLogChannel, line =>
             {
                 if (line.Contains("Blob storage cook complete."))
                 {
@@ -371,7 +327,7 @@ namespace Hyperion.Editor.Services
                     + "</Project>\n");
             }
 
-            string? toolchainError = FindNativeToolchain(out string? toolchainPath);
+            string? toolchainError = GameBuildPlatform.Current.FindNativeAotToolchainError(out string? toolchainPath);
 
             if (toolchainError != null)
             {
@@ -391,7 +347,7 @@ namespace Hyperion.Editor.Services
 
             try
             {
-                string runtimeIdentifier = GetRuntimeIdentifier();
+                string runtimeIdentifier = GameBuildPlatform.Current.RuntimeIdentifier;
                 string intermediateDirectory = Path.GetFullPath(Path.Combine(binariesDirectory, "..", "AotIntermediate", runtimeIdentifier));
                 string publishDirectory = Path.Combine(intermediateDirectory, "publish");
                 string scriptsLinkInputsFile = Path.Combine(intermediateDirectory, "ScriptsLinkInputs.txt");
@@ -504,94 +460,6 @@ namespace Hyperion.Editor.Services
             return null;
         }
 
-        private static string GetRuntimeIdentifier()
-        {
-            string? osName = null;
-            if (OperatingSystem.IsWindows())
-            {
-                osName = "win";
-            }
-            else if (OperatingSystem.IsMacOS())
-            {
-                osName = "osx";
-            }
-            else if (OperatingSystem.IsLinux())
-            {
-                osName = "linux";
-            }
-
-            string? archName = null;
-            switch (RuntimeInformation.OSArchitecture)
-            {
-                case Architecture.Arm64:
-                    archName = "arm64";
-                    break;
-                case Architecture.X64:
-                    archName = "x64";
-                    break;
-            }
-
-            Debug.Assert(osName != null && archName != null);
-
-            if (osName == null || archName == null)
-            {
-                return "invalid-invalid";
-            }
-
-            return osName + "-" + archName;
-        }
-
-        private static string? FindNativeToolchain(out string? toolchainPath)
-        {
-            toolchainPath = null;
-
-            if (!OperatingSystem.IsWindows())
-            {
-                return null;
-            }
-
-            string installerDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer");
-            string vswherePath = Path.Combine(installerDirectory, "vswhere.exe");
-
-            const string MissingToolchainMessage = "Packaging a C# game compiles it with NativeAOT, which needs the Visual Studio C++ build tools. Install Visual Studio (or Build Tools) with the \"Desktop development with C++\" workload.";
-
-            if (!File.Exists(vswherePath))
-            {
-                return MissingToolchainMessage;
-            }
-
-            string component = RuntimeInformation.OSArchitecture == Architecture.Arm64
-                ? "Microsoft.VisualStudio.Component.VC.Tools.ARM64"
-                : "Microsoft.VisualStudio.Component.VC.Tools.x86.x64";
-
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                FileName = vswherePath,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true
-            };
-
-            foreach (string argument in new[] { "-latest", "-products", "*", "-requires", component, "-property", "installationPath" })
-            {
-                startInfo.ArgumentList.Add(argument);
-            }
-
-            using Process? process = Process.Start(startInfo);
-
-            string installationPath = process?.StandardOutput.ReadToEnd().Trim() ?? string.Empty;
-            process?.WaitForExit();
-
-            if (installationPath.Length == 0)
-            {
-                return MissingToolchainMessage;
-            }
-
-            toolchainPath = installerDirectory;
-
-            return null;
-        }
-
         private static bool IsDebugFile(string path)
         {
             string extension = Path.GetExtension(path);
@@ -638,27 +506,7 @@ namespace Hyperion.Editor.Services
 
         private static Task<int> RunDotNetAsync(string managedProjectFile, string[] arguments, string? extraPath, Action<string> onOutputLine)
         {
-            string dotnet = OperatingSystem.IsMacOS() && File.Exists("/usr/local/share/dotnet/dotnet") ? "/usr/local/share/dotnet/dotnet" : "dotnet";
-
-            return RunProcessAsync(dotnet, Path.GetDirectoryName(managedProjectFile)!, arguments, extraPath, onOutputLine);
-        }
-
-        private static async Task<int> RunProcessAsync(string fileName, string workingDirectory, string[] arguments, string? extraPath, Action<string> onOutputLine)
-        {
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                FileName = fileName,
-                WorkingDirectory = workingDirectory,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
-
-            foreach (string argument in arguments)
-            {
-                startInfo.ArgumentList.Add(argument);
-            }
+            ProcessStartInfo startInfo = BuildProcess.CreateStartInfo(GameBuildPlatform.Current.FindDotNet(), Path.GetDirectoryName(managedProjectFile)!, arguments);
 
             startInfo.Environment.Remove("MSBuildSdksPath");
 
@@ -667,31 +515,7 @@ namespace Hyperion.Editor.Services
                 startInfo.Environment["PATH"] = extraPath + Path.PathSeparator + startInfo.Environment["PATH"];
             }
 
-            using Process process = new Process { StartInfo = startInfo };
-
-            void OnLine(string? line)
-            {
-                if (line == null)
-                {
-                    return;
-                }
-
-                Logger.Log(BuildLogChannel, LogLevel.Info, line);
-
-                onOutputLine(line);
-            }
-
-            process.OutputDataReceived += (_, eventArgs) => OnLine(eventArgs.Data);
-            process.ErrorDataReceived += (_, eventArgs) => OnLine(eventArgs.Data);
-
-            process.Start();
-
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-
-            await process.WaitForExitAsync().ConfigureAwait(false);
-
-            return process.ExitCode;
+            return BuildProcess.RunAsync(startInfo, BuildLogChannel, onOutputLine);
         }
 
         private static void ShowMessage(MessageBox messageBox)

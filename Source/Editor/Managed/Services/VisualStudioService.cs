@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Hyperion.Editor.ViewModels;
 
@@ -86,17 +85,14 @@ namespace Hyperion.Editor.Services
         {
             string presetsPath = Path.Combine(sourceDirectory, "CMakeUserPresets.json");
 
-            string editorDirectory = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
-            string sdkDirectory = Path.Combine(editorDirectory, "Sdk");
-            string sdkFile = Path.Combine(sdkDirectory, "CMake", "HyperionSdk.cmake");
+            HyperionSdk? sdk = HyperionSdk.Find();
 
-            if (!File.Exists(sdkFile))
+            if (sdk == null)
             {
                 return;
             }
 
-            Match compilerMatch = Regex.Match(File.ReadAllText(sdkFile), "set\\(HYPERION_SDK_COMPILER \"([^\"]*)\"\\)");
-            string compiler = compilerMatch.Success ? compilerMatch.Groups[1].Value : "clang-cl";
+            string compiler = sdk.Compiler.Length > 0 ? sdk.Compiler : "clang-cl";
 
             File.WriteAllLines(presetsPath,
             [
@@ -112,7 +108,7 @@ namespace Hyperion.Editor.Services
                 "      \"cacheVariables\": {",
                 "        \"CMAKE_BUILD_TYPE\": \"Release\",",
                 $"        \"CMAKE_CXX_COMPILER\": \"{compiler}\",",
-                $"        \"HYPERION_SDK_DIR\": \"{sdkDirectory.Replace('\\', '/')}\"",
+                $"        \"HYPERION_SDK_DIR\": \"{sdk.Directory.Replace('\\', '/')}\"",
                 "      }",
                 "    }",
                 "  ]",
@@ -127,7 +123,7 @@ namespace Hyperion.Editor.Services
                 return null;
             }
 
-            foreach (string installPath in NativeGameBuildService.FindVisualStudioInstalls())
+            foreach (string installPath in WindowsGameBuildPlatform.FindVisualStudioInstalls())
             {
                 string devEnvPath = Path.Combine(installPath, "Common7", "IDE", "devenv.exe");
 

@@ -10,13 +10,23 @@
 
 #include <Core/Threading/AtomicVar.hpp>
 
+#include <Core/Logging/LogChannels.hpp>
+#include <Core/Logging/Logger.hpp>
+
+#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <thread>
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <limits.h>
+#include <spawn.h>
+#include <sys/wait.h>
 #include <unistd.h>
+
+extern char** environ;
 
 namespace Hyperion {
 namespace PlatformUtils {
@@ -198,8 +208,38 @@ ENGINE_API bool HasBattery()
 
 ENGINE_API bool OpenInFileBrowser(const FilePath& path)
 {
-    // @TODO
-    return false;
+    // xdg-open hands the folder to whichever file manager the desktop has registered
+    char* argv[] = { const_cast<char*>("xdg-open"), const_cast<char*>(path.Data()), nullptr };
+
+    posix_spawn_file_actions_t fileActions;
+    posix_spawn_file_actions_init(&fileActions);
+    posix_spawn_file_actions_addopen(&fileActions, STDOUT_FILENO, "/dev/null", O_WRONLY, 0);
+    posix_spawn_file_actions_addopen(&fileActions, STDERR_FILENO, "/dev/null", O_WRONLY, 0);
+
+    pid_t pid = 0;
+    const int spawnResult = posix_spawnp(&pid, "xdg-open", &fileActions, nullptr, argv, environ);
+
+    posix_spawn_file_actions_destroy(&fileActions);
+
+    if (spawnResult != 0)
+    {
+        HYP_LOG(Core, Error, "Failed to open {} in the file browser (xdg-open: {})", path, std::strerror(spawnResult));
+
+        return false;
+    }
+
+    // xdg-open can stay alive as long as the file manager does, so reap it off the calling thread
+    std::thread([pid]()
+        {
+            int status = 0;
+
+            while (waitpid(pid, &status, 0) < 0 && errno == EINTR)
+            {
+            }
+        })
+        .detach();
+
+    return true;
 }
 
 ENGINE_API uint64 GetSystemMemoryBytes()

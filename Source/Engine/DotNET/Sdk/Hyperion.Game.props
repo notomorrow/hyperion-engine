@@ -65,7 +65,14 @@
       <_HyperionStaticLinkInput Include="@(NativeLibrary)" Condition="'%(Filename)' != 'dllmain'" />
     </ItemGroup>
 
-    <WriteLinesToFile File="$(HyperionStaticLinkInputsFile)" Lines="@(_HyperionStaticLinkInput->'%(FullPath)');@(SdkNativeLibrary)" Overwrite="true" />
+    <!-- system libraries: SdkNativeLibrary on Windows, NativeSystemLibrary / NativeFramework on Unix -->
+    <ItemGroup>
+      <_HyperionStaticLinkSystemInput Include="@(SdkNativeLibrary)" />
+      <_HyperionStaticLinkSystemInput Include="@(NativeSystemLibrary->'-l%(Identity)')" />
+      <_HyperionStaticLinkSystemInput Include="@(NativeFramework->'-framework %(Identity)')" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(HyperionStaticLinkInputsFile)" Lines="@(_HyperionStaticLinkInput->'%(FullPath)');@(_HyperionStaticLinkSystemInput)" Overwrite="true" />
   </Target>
 
   <Target Name="HyperionCheckBinDir" BeforeTargets="ResolveAssemblyReferences" Condition="'$(HyperionWebBuild)' != 'true'">
