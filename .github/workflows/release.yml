@@ -218,8 +218,9 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build patchelf libx11-dev libopenal-dev
+          sudo apt-get install -y ninja-build patchelf libx11-dev libopenal-dev libvulkan-dev
 
+      # the Linux SDK tarball ships headers and tools but no prebuilt loader, so libvulkan.so comes from libvulkan-dev
       - name: Install Vulkan SDK
         run: |
           curl -fsSL https://sdk.lunarg.com/sdk/download/latest/linux/vulkan_sdk.tar.xz -o "$RUNNER_TEMP/vulkan_sdk.tar.xz"
