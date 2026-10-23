@@ -3008,7 +3008,7 @@ Result BoxedToHMFImpl(
             {
                 const Class* actualClass = handle.GetClass();
 
-                if (actualClass && (typeInfo.IsHandleType() || actualClass->IsDerivedFrom(valueClass)))
+                if (actualClass && (!declaredTypeInfo || typeInfo.IsHandleType() || actualClass->IsDerivedFrom(valueClass)))
                 {
                     valueClass = actualClass;
                 }
