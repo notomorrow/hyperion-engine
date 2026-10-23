@@ -186,8 +186,70 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
+  build-linux:
+    name: build (linux-x64)
+    needs: codegen
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: codegen
+
+      - name: Read engine version
+        id: version
+        run: |
+          version=""
+          for c in MAJOR MINOR PATCH; do
+            part="$(sed -nE "s/^set\(HYP_VERSION_$c[[:space:]]+([0-9]+)\).*/\1/p" Source/CMakeLists.txt | head -n 1)"
+            if [ -z "$part" ]; then echo "HYP_VERSION_$c not found"; exit 1; fi
+            version="${version:+$version.}$part"
+          done
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build patchelf libx11-dev libopenal-dev
+
+      - name: Install Vulkan SDK
+        run: |
+          curl -fsSL https://sdk.lunarg.com/sdk/download/latest/linux/vulkan_sdk.tar.xz -o "$RUNNER_TEMP/vulkan_sdk.tar.xz"
+          mkdir -p "$RUNNER_TEMP/VulkanSDK"
+          tar -xJf "$RUNNER_TEMP/vulkan_sdk.tar.xz" -C "$RUNNER_TEMP/VulkanSDK"
+          sdk="$(find "$RUNNER_TEMP/VulkanSDK" -mindepth 2 -maxdepth 2 -type d -name x86_64 | sort -r | head -n 1)"
+          if [ -z "$sdk" ]; then echo "Vulkan SDK was not extracted under $RUNNER_TEMP/VulkanSDK"; exit 1; fi
+          echo "VULKAN_SDK=$sdk" >> "$GITHUB_ENV"
+
+      - name: Build
+        env:
+          CC: gcc
+          CXX: g++
+          HYP_BUILD_JOBS: 4
+          HYP_SKIP_CODEGEN: 1
+        run: bash Tools/Scripts/BuildHyperion.sh distribution ninja regenerate
+
+      - name: Package
+        run: bash Tools/Scripts/PackageEditorLinux.sh "$GITHUB_WORKSPACE/Packaged"
+
+      # the tarball keeps the executable bits, which a plain artifact upload would drop
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Hyperion-Editor-${{ steps.version.outputs.version }}-linux-x64
+          path: Packaged/*.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+
   release:
-    needs: [build, build-macos]
+    needs: [build, build-macos, build-linux]
     if: ${{ inputs.draft-release }}
     runs-on: ubuntu-latest
     permissions:
@@ -218,5 +280,7 @@ jobs:
             --title "Hyperion Editor $VERSION (preview)" \
             --notes-file - <<'EOF'
           No .NET install is needed to run the editor. C# scripting requires the .NET 10 SDK.
+
+          Linux (x64, X11): needs a Vulkan driver plus the Vulkan loader, OpenAL, X11, ICU and fontconfig, e.g. on Ubuntu/Debian `sudo apt install libvulkan1 libopenal1 libx11-6 libfontconfig1` plus your release's libicu package.
 
           EOF

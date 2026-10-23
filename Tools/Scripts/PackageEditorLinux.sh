@@ -1,0 +1,181 @@
+#!/bin/bash
+# 
+#   Tools/Scripts/BuildHyperion.sh distribution ninja regenerate
+#   Tools/Scripts/PackageEditorLinux.sh [output dir]
+
+set -euo pipefail
+shopt -s nullglob
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+BIN_DIR="$ROOT_DIR/Binaries/Linux/Distribution"
+OUTPUT_DIR="${1:-$ROOT_DIR/PackagedBuilds/EditorPreview}"
+
+step() { printf '==> %s\n' "$1"; }
+warn() { printf 'WARNING: %s\n' "$1" >&2; }
+
+version_component() {
+    sed -nE "s/^set\(HYP_VERSION_$1[[:space:]]+([0-9]+)\).*/\1/p" "$ROOT_DIR/Source/CMakeLists.txt" | head -n 1
+}
+
+VERSION="$(version_component MAJOR).$(version_component MINOR).$(version_component PATCH)"
+STAGE_NAME="Hyperion-Editor-$VERSION-linux-x64"
+STAGE_DIR="$OUTPUT_DIR/$STAGE_NAME"
+
+if [[ ! -e "$BIN_DIR/Hyperion.Editor" ]]; then
+    echo "Hyperion.Editor not found in $BIN_DIR. Run 'Tools/Scripts/BuildHyperion.sh distribution ninja regenerate' first." >&2
+    exit 1
+fi
+
+if ! command -v patchelf >/dev/null; then
+    echo "patchelf is required to rewrite the libraries' RUNPATH (apt install patchelf)" >&2
+    exit 1
+fi
+
+step "Packaging Hyperion editor preview $VERSION (Linux x64)"
+
+rm -rf "$STAGE_DIR"
+mkdir -p "$STAGE_DIR"
+
+# --- Managed editor ---------------------------------------------------------------------------------------------------
+
+# self-contained, so running the editor doesn't need a .NET install (same as the Windows package)
+step "Publishing self-contained editor"
+
+EDITOR_PROJECT="$ROOT_DIR/Build/CSharpProjects-Distribution/Hyperion.Editor/Hyperion.Editor.csproj"
+if [[ ! -f "$EDITOR_PROJECT" ]]; then
+    echo "Editor project not found at $EDITOR_PROJECT" >&2
+    exit 1
+fi
+
+PUBLISH_ROOT="$OUTPUT_DIR/publish-intermediate"
+rm -rf "$PUBLISH_ROOT"
+
+env -u MSBuildSdksPath dotnet publish "$EDITOR_PROJECT" --configuration Release --runtime linux-x64 --self-contained true --disable-build-servers \
+    -p:DebugType=none "-p:OutputPath=$PUBLISH_ROOT/build/" --output "$PUBLISH_ROOT/publish"
+
+cp -R "$PUBLISH_ROOT/publish/." "$STAGE_DIR/"
+rm -rf "$PUBLISH_ROOT"
+
+# loaded at runtime by ScriptSystem, so the editor's publish doesn't pick it up
+cp "$BIN_DIR/Hyperion.NET.Scripting.dll" "$STAGE_DIR/"
+
+# script projects compile against these; at runtime the published copies are used
+mkdir -p "$STAGE_DIR/ref"
+for name in Hyperion.NET.Shared.dll Hyperion.NET.Runtime.dll Hyperion.NET.Interop.dll Hyperion.NET.Generators.dll; do
+    cp "$BIN_DIR/$name" "$STAGE_DIR/ref/"
+done
+
+# --- Native binaries --------------------------------------------------------------------------------------------------
+
+step "Staging native libraries"
+
+is_elf() { file -b "$1" | grep -q "^ELF"; }
+
+# -P keeps the libz.so -> libz.so.1 -> libz.so.1.x symlink chain
+for path in "$BIN_DIR"/*.so "$BIN_DIR"/*.so.*; do
+    cp -P "$path" "$STAGE_DIR/"
+done
+
+native_libraries() {
+    find "$STAGE_DIR" -maxdepth 1 -type f -name "*.so*" | while read -r candidate; do
+        if is_elf "$candidate"; then echo "$candidate"; fi
+    done
+}
+
+# the build RUNPATH points into the source tree, and debug info names the build machine's object files
+while read -r library; do
+    chmod u+w "$library"
+    strip --strip-debug "$library"
+    if [[ -n "$(patchelf --print-rpath "$library")" ]]; then
+        patchelf --set-rpath '$ORIGIN' "$library"
+    fi
+done < <(native_libraries)
+
+# --- Config -----------------------------------------------------------------------------------------------------------
+
+step "Staging config"
+
+mkdir -p "$STAGE_DIR/Config"
+
+# mirrors Source/Sample/CopyPlatformConfigs.cmake for PLATFORM=Linux
+for config_file in "$ROOT_DIR"/Config/*; do
+    [[ -f "$config_file" ]] || continue
+    name="$(basename "$config_file")"
+
+    case "$name" in
+        *.IOS.json|*.Android.json|*.Windows.json|*.Mac.json|*.Linux.json|*.Web.json) continue ;;
+        *.json)
+            linux_variant="$ROOT_DIR/Config/${name%.json}.Linux.json"
+            if [[ -f "$linux_variant" ]]; then cp "$linux_variant" "$STAGE_DIR/Config/$name"; else cp "$config_file" "$STAGE_DIR/Config/$name"; fi
+            ;;
+        *) cp "$config_file" "$STAGE_DIR/Config/$name" ;;
+    esac
+done
+
+# basedir points at the source tree, trace/cache servers are dev-only localhost endpoints
+GLOBAL_CONFIG="$STAGE_DIR/Config/GlobalConfig.json"
+if [[ -f "$GLOBAL_CONFIG" ]]; then
+    sed -i -E 's# ?--(basedir|traceserver|cacheserver)=[^ "]*##g; s#("Args"[[:space:]]*:[[:space:]]*")#\1--basedir=./ #' "$GLOBAL_CONFIG"
+fi
+
+# --- Content, shaders, scripts ----------------------------------------------------------------------------------------
+
+copy_tracked() {
+    local count=0
+    while IFS= read -r -d '' relative_path; do
+        [[ -f "$ROOT_DIR/$relative_path" ]] || continue
+        mkdir -p "$STAGE_DIR/$(dirname "$relative_path")"
+        cp "$ROOT_DIR/$relative_path" "$STAGE_DIR/$relative_path"
+        count=$((count + 1))
+    done < <(cd "$ROOT_DIR" && git -c core.quotepath=off ls-files -z -- "$@")
+    echo "    $count files"
+}
+
+step "Staging engine and editor content"
+copy_tracked Content/Engine Content/Editor
+
+step "Staging shader sources"
+copy_tracked Source/Shaders
+
+step "Staging project templates"
+copy_tracked Source/Templates Source/Engine/DotNET/Sdk
+
+if [[ -d "$ROOT_DIR/Data/Scripts/Strata" ]]; then
+    step "Staging generated Strata bindings"
+    mkdir -p "$STAGE_DIR/Data/Scripts"
+    cp -R "$ROOT_DIR/Data/Scripts/Strata" "$STAGE_DIR/Data/Scripts/"
+else
+    warn "Data/Scripts/Strata not found; Strata scripts won't resolve engine modules"
+fi
+
+# --- Legal ------------------------------------------------------------------------------------------------------------
+
+cp "$ROOT_DIR/LICENSE" "$STAGE_DIR/LICENSE"
+[[ -f "$ROOT_DIR/THIRD_PARTY_NOTICES.md" ]] && cp "$ROOT_DIR/THIRD_PARTY_NOTICES.md" "$STAGE_DIR/"
+[[ -d "$ROOT_DIR/Documentation/ThirdPartyLicenses" ]] && cp -R "$ROOT_DIR/Documentation/ThirdPartyLicenses" "$STAGE_DIR/Licenses"
+
+# --- Checks and archive -----------------------------------------------------------------------------------------------
+
+step "Checking for paths that only exist on the build machine"
+while read -r library; do
+    rpath="$(patchelf --print-rpath "$library")"
+    if [[ -n "$rpath" && "$rpath" != '$ORIGIN' ]]; then
+        warn "$(basename "$library") still has RUNPATH $rpath"
+    fi
+
+    missing="$(ldd "$library" | awk '/not found/ {print $1}')"
+    if [[ -n "$missing" ]]; then
+        warn "$(basename "$library") links libraries that aren't on this machine or in the package: $(echo $missing)"
+    fi
+done < <(native_libraries)
+
+if grep -q -a -F "$ROOT_DIR" "$STAGE_DIR"/libhyperion*.so 2>/dev/null; then
+    warn "the engine library has the source tree path ($ROOT_DIR) baked in; build with the 'distribution' argument"
+fi
+
+step "Creating $STAGE_NAME.tar.gz"
+tar -czf "$OUTPUT_DIR/$STAGE_NAME.tar.gz" -C "$OUTPUT_DIR" "$STAGE_NAME"
+
+echo
+echo "Staged $STAGE_NAME ($(du -sh "$STAGE_DIR" | cut -f1)) at $STAGE_DIR"
