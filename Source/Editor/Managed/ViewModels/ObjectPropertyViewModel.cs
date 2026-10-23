@@ -108,13 +108,6 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _canCreateNew, value);
         }
 
-        private bool _hasCreatableClassChoice;
-        public bool HasCreatableClassChoice
-        {
-            get => _hasCreatableClassChoice;
-            private set => SetProperty(ref _hasCreatableClassChoice, value);
-        }
-
         private bool _isEditorExpanded;
         public bool IsEditorExpanded
         {
@@ -277,8 +270,6 @@ namespace Hyperion.Editor.ViewModels
         private void UpdateCanCreateNew()
         {
             IconKind = AssetIconHelper.FromTypeName(_propertyTypeClass?.Name.ToString());
-
-            HasCreatableClassChoice = _isAssetObjectType && _propertyTypeClass.HasValue && _propertyTypeClass.Value.IsAbstract;
 
             CanCreateNew = BuildCreatableClassEntries().Any(e => !e.IsAbstract);
         }
@@ -616,18 +607,6 @@ namespace Hyperion.Editor.ViewModels
 
         private void OnNew()
         {
-            // With more than one implementation to pick from the menu opens a class picker instead, which
-            // calls CreateNewOfClass directly.
-            if (HasCreatableClassChoice || BuildCreatableClassEntries().FirstOrDefault(e => !e.IsAbstract) is not ClassPickerEntry entry)
-            {
-                return;
-            }
-
-            CreateNewOfClass(entry.Name);
-        }
-
-        public void CreateNewOfClass(string className)
-        {
             if (!CanCreateNew || _isReadOnly)
             {
                 return;
@@ -637,75 +616,87 @@ namespace Hyperion.Editor.ViewModels
 
             _ = EngineManager.PostToSimThread(() =>
             {
-                if (!EngineManager.CanCreateAssets)
-                {
-                    Logger.Log(LogLevel.Warning, $"Cannot create a new asset for property '{Label}' while simulation is active.");
+                IReadOnlyList<ClassPickerEntry> entries = BuildCreatableClassEntries();
 
+                if (!entries.Any(e => !e.IsAbstract))
+                {
                     return;
                 }
 
-                try
+                Dispatcher.UIThread.Post(() =>
                 {
-                    BoxedValue boxed;
-
-                    if (DeclaredObjectClass.CreateManagedInstance(_declaredTypeResolver?.Invoke(), className) is object managedInstance)
+                    PanelService.Instance.OpenPanel(new NewAssetPanelViewModel(entries, CreatePendingAsset, asset =>
                     {
-                        boxed = new BoxedValue(managedInstance);
-                    }
-                    else
-                    {
-                        BoxedValueInternal result;
-
-                        unsafe
+                        if (asset != null)
                         {
-                            if (!Hyp_CreateInstanceOfClass(className, &result))
-                            {
-                                Logger.Log(LogLevel.Warning, $"Failed to create instance of class '{className}'");
-                                return;
-                            }
+                            _ = EngineManager.PostToSimThread(() => CommitNewAsset(asset, folderPath));
                         }
-
-                        boxed = BoxedValue.FromBuffer(result);
-                    }
-
-                    using BoxedValue ownedBoxed = boxed;
-
-                    if (boxed.GetValue() is AssetObject assetObj && assetObj.IsValid)
-                    {
-                        try
-                        {
-                            AssetManager.Instance.AssetRegistry.PutAssetUnique(assetObj);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Log(LogLevel.Warning, $"Failed to register new asset '{className}': {ex.Message}");
-                            return;
-                        }
-
-                        if (!assetObj.IsRegistered())
-                        {
-                            Logger.Log(LogLevel.Warning, $"New '{className}' for '{Label}' could not be added to the asset registry");
-                            return;
-                        }
-
-                        if (folderPath != null)
-                        {
-                            EngineManager.CurrentProject?.AssetFolders?.SetAssetFolderOf(assetObj.Path.BucketIndex, assetObj.Name, folderPath);
-                        }
-
-                        ContentBrowserViewModel.Instance?.NotifyAssetsChanged();
-                    }
-
-                    CommitPropertyChange($"Create {Label}", boxed);
-                    Dispatcher.UIThread.Post(() => IsEditorExpanded = true);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(LogLevel.Warning, $"Failed to create new asset for property '{Label}': {ex.Message}");
-
-                    Dispatcher.UIThread.Post(RefreshValue);
-                }
+                    }));
+                });
             });
+        }
+
+        // Sim thread.
+        private AssetObject? CreatePendingAsset(string className)
+        {
+            if (DeclaredObjectClass.CreateManagedInstance(_declaredTypeResolver?.Invoke(), className) is AssetObject managedAsset)
+            {
+                return managedAsset;
+            }
+
+            BoxedValueInternal result;
+
+            unsafe
+            {
+                if (!Hyp_CreateInstanceOfClass(className, &result))
+                {
+                    Logger.Log(LogLevel.Warning, $"Failed to create instance of class '{className}'");
+                    return null;
+                }
+            }
+
+            using BoxedValue boxed = BoxedValue.FromBuffer(result);
+
+            return boxed.GetValue() as AssetObject;
+        }
+
+        // Sim thread.
+        private void CommitNewAsset(AssetObject assetObj, string? folderPath)
+        {
+            if (!EngineManager.CanCreateAssets)
+            {
+                Logger.Log(LogLevel.Warning, $"Cannot create a new asset for property '{Label}' while simulation is active.");
+
+                return;
+            }
+
+            try
+            {
+                AssetManager.Instance.AssetRegistry.PutAssetUnique(assetObj);
+
+                if (!assetObj.IsRegistered())
+                {
+                    Logger.Log(LogLevel.Warning, $"New '{assetObj.Class.Name}' for '{Label}' could not be added to the asset registry");
+                    return;
+                }
+
+                if (folderPath != null)
+                {
+                    EngineManager.CurrentProject?.AssetFolders?.SetAssetFolderOf(assetObj.Path.BucketIndex, assetObj.Name, folderPath);
+                }
+
+                ContentBrowserViewModel.Instance?.NotifyAssetsChanged();
+
+                using BoxedValue boxed = new BoxedValue(assetObj);
+                CommitPropertyChange($"Create {Label}", boxed);
+                Dispatcher.UIThread.Post(() => IsEditorExpanded = true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogLevel.Warning, $"Failed to create new asset for property '{Label}': {ex.Message}");
+
+                Dispatcher.UIThread.Post(RefreshValue);
+            }
         }
 
         /// <summary>Duplicates the currently assigned asset and reassigns this property to the clone.</summary>
@@ -1186,6 +1177,7 @@ namespace Hyperion.Editor.ViewModels
                             else
                             {
                                 assetPathDisplay = "(Unregistered)";
+                                pickerName = $"{displayName} (unregistered)";
                             }
                         }
 

@@ -25,7 +25,6 @@ namespace Hyperion.Editor.Views.Inspector
 
             PART_CopyMenuItem.Click += OnCopyClicked;
             PART_PasteMenuItem.Click += OnPasteClicked;
-            PART_CreateNewOfClassMenuItem.Click += OnCreateNewOfClassClicked;
 
             DataContextChanged += OnDataContextChanged;
 
@@ -187,29 +186,6 @@ namespace Hyperion.Editor.Views.Inspector
         private void UpdateCopyEnabled()
         {
             PART_CopyMenuItem.IsEnabled = (DataContext as ObjectPropertyViewModel)?.GetCopyText() != null;
-        }
-
-        private async void OnCreateNewOfClassClicked(object? sender, RoutedEventArgs e)
-        {
-            if (DataContext is not ObjectPropertyViewModel vm)
-            {
-                return;
-            }
-
-            IReadOnlyList<ClassPickerEntry> entries = await EngineManager.PostToSimThread<IReadOnlyList<ClassPickerEntry>>(vm.BuildCreatableClassEntries);
-
-            if (DataContext != vm)
-            {
-                return;
-            }
-
-            ClassPicker.Show(PART_MoreButton, entries, null, allowNone: false, className =>
-            {
-                if (className != null)
-                {
-                    vm.CreateNewOfClass(className);
-                }
-            }, PlacementMode.BottomEdgeAlignedRight);
         }
 
         private async void OnCopyClicked(object? sender, RoutedEventArgs e)
