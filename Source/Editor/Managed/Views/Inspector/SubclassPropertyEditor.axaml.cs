@@ -1,10 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Hyperion.Editor.ViewModels;
 
 namespace Hyperion.Editor.Views.Inspector
@@ -15,50 +12,32 @@ namespace Hyperion.Editor.Views.Inspector
         {
             InitializeComponent();
 
-            PART_PickerBox.AsyncPopulator = (search, token) =>
+            PART_TypeButton.Click += OnTypeButtonClicked;
+        }
+
+        protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            base.OnAttachedToVisualTree(e);
+
+            if (DataContext is ObjectPropertyViewModel { IsPending: true })
             {
-                if (DataContext is not ObjectPropertyViewModel vm)
-                    return Task.FromResult<IEnumerable<object>>(Array.Empty<object>());
-
-                string filter = search ?? string.Empty;
-
-                var results = vm.AvailableSubclasses
-                    .Where(name => filter.Length == 0 || name.Contains(filter, StringComparison.OrdinalIgnoreCase))
-                    .Cast<object>()
-                    .ToList();
-
-                return Task.FromResult<IEnumerable<object>>(results);
-            };
-
-            PART_PickerToggle.Click += OnPickerToggleClicked;
-            PART_PickerBox.LostFocus += OnPickerBoxLostFocus;
-            PART_PickerBox.SelectionChanged += OnPickerSelectionChanged;
-        }
-
-        private void OnPickerToggleClicked(object? sender, RoutedEventArgs e)
-        {
-            if (DataContext is ObjectPropertyViewModel vm)
-                vm.SubclassFilter = string.Empty;
-
-            PART_PickerBox.IsDropDownOpen = true;
-            PART_PickerBox.Focus();
-        }
-
-        private void OnPickerBoxLostFocus(object? sender, FocusChangedEventArgs e)
-        {
-            if (DataContext is ObjectPropertyViewModel vm)
-                vm.ResetSubclassFilter();
-        }
-
-        private void OnPickerSelectionChanged(object? sender, SelectionChangedEventArgs e)
-        {
-            if (e.AddedItems.Count == 0 || DataContext is not ObjectPropertyViewModel vm)
-                return;
-
-            if (e.AddedItems[0] is string className)
-            {
-                vm.SelectedSubclass = className;
+                Dispatcher.UIThread.Post(OpenPicker, DispatcherPriority.Loaded);
             }
+        }
+
+        private void OnTypeButtonClicked(object? sender, RoutedEventArgs e)
+        {
+            OpenPicker();
+        }
+
+        private void OpenPicker()
+        {
+            if (DataContext is not ObjectPropertyViewModel vm || vm.IsReadOnly || !PART_TypeButton.IsEffectivelyVisible)
+            {
+                return;
+            }
+
+            ClassPicker.Show(PART_TypeButton, vm.SubclassEntries, vm.CurrentTypeName, allowNone: !vm.IsPending, vm.PickSubclass, PlacementMode.BottomEdgeAlignedRight);
         }
     }
 }

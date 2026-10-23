@@ -25,11 +25,10 @@ namespace Hyperion.Editor.Views.Inspector
 
             PART_CopyMenuItem.Click += OnCopyClicked;
             PART_PasteMenuItem.Click += OnPasteClicked;
+            PART_CreateNewOfClassMenuItem.Click += OnCreateNewOfClassClicked;
 
             DataContextChanged += OnDataContextChanged;
 
-            // The AutoCompleteBox queries matching assets on demand (top N),
-            // debounced + cancelled internally by Avalonia. No client-side cache.
             PART_PickerBox.AsyncPopulator = (search, token) =>
             {
                 if (DataContext is ObjectPropertyViewModel vm)
@@ -188,6 +187,22 @@ namespace Hyperion.Editor.Views.Inspector
         private void UpdateCopyEnabled()
         {
             PART_CopyMenuItem.IsEnabled = (DataContext as ObjectPropertyViewModel)?.GetCopyText() != null;
+        }
+
+        private void OnCreateNewOfClassClicked(object? sender, RoutedEventArgs e)
+        {
+            if (DataContext is not ObjectPropertyViewModel vm)
+            {
+                return;
+            }
+
+            Dispatcher.UIThread.Post(() => ClassPicker.Show(PART_MoreButton, vm.CreatableClassEntries, null, allowNone: false, className =>
+            {
+                if (className != null)
+                {
+                    vm.CreateNewOfClass(className);
+                }
+            }, PlacementMode.BottomEdgeAlignedRight));
         }
 
         private async void OnCopyClicked(object? sender, RoutedEventArgs e)

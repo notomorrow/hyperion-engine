@@ -108,6 +108,7 @@
                 </StackPanel>
 
                 <Button
+                    x:Name="PART_MoreButton"
                     Grid.Column="1"
                     Classes="gizmo"
                     ToolTip.Tip="More actions">
@@ -124,22 +125,13 @@
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem
-                                Header="Create New"
+                                x:Name="PART_CreateNewOfClassMenuItem"
+                                Header="Create New..."
                                 IsEnabled="{Binding CanCreateNew}"
-                                IsVisible="{Binding HasCreatableClassChoice}"
-                                ItemsSource="{Binding CreatableClasses}">
+                                IsVisible="{Binding HasCreatableClassChoice}">
                                 <MenuItem.Icon>
                                     <controls:Codicon Kind="Add" Size="14" />
                                 </MenuItem.Icon>
-                                <MenuItem.ItemContainerTheme>
-                                    <ControlTheme
-                                        x:DataType="vm:CreatableClassViewModel"
-                                        BasedOn="{StaticResource {x:Type MenuItem}}"
-                                        TargetType="MenuItem">
-                                        <Setter Property="Header" Value="{Binding ClassName}" />
-                                        <Setter Property="Command" Value="{Binding CreateCommand}" />
-                                    </ControlTheme>
-                                </MenuItem.ItemContainerTheme>
                             </MenuItem>
                             <MenuItem
                                 Command="{Binding CloneCommand}"

@@ -15,21 +15,6 @@ using Hyperion.Editor.Services;
 
 namespace Hyperion.Editor.ViewModels
 {
-    /// <summary>One implementation offered by an object property's "create new" menu.</summary>
-    public class CreatableClassViewModel
-    {
-        public string ClassName { get; }
-
-        public ICommand CreateCommand { get; }
-
-        public CreatableClassViewModel(string className, Action<string> create)
-        {
-            ClassName = className;
-
-            CreateCommand = new RelayCommand(() => create(className));
-        }
-    }
-
     public class ObjectPropertyViewModel : InspectorPropertyViewModelBase
     {
         private const int MaxDepth = 4;
@@ -80,7 +65,7 @@ namespace Hyperion.Editor.ViewModels
             private set
             {
                 if (SetProperty(ref _hasSubObject, value))
-                    OnPropertyChanged(nameof(ShowSubclassPicker));
+                    OnPropertyChanged(nameof(SubclassDisplay));
 
                 UpdateCanClone();
             }
@@ -123,14 +108,9 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _canCreateNew, value);
         }
 
-        /// <summary>Concrete classes the "create new" button can instantiate for this property.</summary>
-        public ObservableCollection<CreatableClassViewModel> CreatableClasses { get; } = new();
-
-        /// <summary>
-        /// The property's declared type cannot be instantiated on its own, so creating one means choosing
-        /// an implementation: the "create new" button opens a menu instead of creating outright.
-        /// </summary>
-        public bool HasCreatableClassChoice => CreatableClasses.Count > 1;
+        public IReadOnlyList<ClassPickerEntry> CreatableClassEntries { get; private set; } = [];
+        
+        public bool HasCreatableClassChoice => CreatableClassEntries.Count(e => !e.IsAbstract) > 1;
 
         private bool _isEditorExpanded;
         public bool IsEditorExpanded
@@ -184,46 +164,42 @@ namespace Hyperion.Editor.ViewModels
         }
 
 
-        public ObservableCollection<string> AvailableSubclasses { get; } = new();
+        public IReadOnlyList<ClassPickerEntry> SubclassEntries { get; private set; } = [];
 
-        public bool IsPolymorphic => AvailableSubclasses.Count > 0;
+        public bool IsPolymorphic => SubclassEntries.Count > 0;
 
         public bool ShowSubclassPicker => IsPolymorphic;
 
         internal bool IsPending { get; set; }
         internal Action<string>? OnPendingCommitted { get; set; }
 
-        private string? _selectedSubclass;
-        public string? SelectedSubclass
+        private string _currentTypeName = string.Empty;
+        public string CurrentTypeName
         {
-            get => _selectedSubclass;
-            set
+            get => _currentTypeName;
+            private set
             {
-                if (SetProperty(ref _selectedSubclass, value) && !string.IsNullOrEmpty(value) && !IsApplyingModelValue)
-                {
-                    if (!HasMixedValues && HasSubObject && value == _currentTypeName)
-                    {
-                        return;
-                    }
-
-                    CommitSubclass(value);
-                }
+                if (SetProperty(ref _currentTypeName, value))
+                    OnPropertyChanged(nameof(SubclassDisplay));
             }
         }
 
-        private string _subclassFilter = string.Empty;
-        public string SubclassFilter
-        {
-            get => _subclassFilter;
-            set => SetProperty(ref _subclassFilter, value);
-        }
+        public string SubclassDisplay => HasSubObject ? _currentTypeName : HasMixedValues ? "—" : "None";
 
-        private string _currentTypeName = string.Empty;
-
-        /// <summary>Restore the picker text to the current instance's type name.</summary>
-        public void ResetSubclassFilter()
+        public void PickSubclass(string? className)
         {
-            SubclassFilter = _currentTypeName;
+            if (className == null)
+            {
+                if (!IsPending && (HasSubObject || HasMixedValues))
+                    OnClear();
+
+                return;
+            }
+
+            if (!HasMixedValues && HasSubObject && className == _currentTypeName)
+                return;
+
+            CommitSubclass(className);
         }
 
         public ObjectPropertyViewModel(ObjectBase target, Property property, bool isReadOnly, int depth = 0)
@@ -297,7 +273,7 @@ namespace Hyperion.Editor.ViewModels
 
             PopulateCreatableClasses();
 
-            CanCreateNew = CreatableClasses.Count > 0;
+            CanCreateNew = CreatableClassEntries.Count > 0;
 
             OnPropertyChanged(nameof(HasCreatableClassChoice));
         }
@@ -309,7 +285,7 @@ namespace Hyperion.Editor.ViewModels
 
         private void PopulateCreatableClasses()
         {
-            CreatableClasses.Clear();
+            CreatableClassEntries = [];
 
             if (!_isAssetObjectType || _isReadOnly || _propertyTypeClass == null)
             {
@@ -329,23 +305,13 @@ namespace Hyperion.Editor.ViewModels
 
             if (!expected.IsAbstract)
             {
-                CreatableClasses.Add(new CreatableClassViewModel(expected.Name.ToString(), CreateNewOfClass));
+                CreatableClassEntries = [new ClassPickerEntry(expected.Name.ToString(), 0, false)];
                 return;
             }
 
             // An abstract property type (PhysicsShape, say) has no instance of its own to create, so the
             // choice of which implementation to create is the user's.
-            List<string> derivedNames = [];
-            NameCallbackDelegate callback = (name, _) => derivedNames.Add(name);
-
-            NativeBindings.Hyp_GetAllDerivedClassNames(expected.Name.ToString(), callback, IntPtr.Zero);
-
-            derivedNames.Sort(StringComparer.Ordinal);
-
-            foreach (string derivedName in derivedNames)
-            {
-                CreatableClasses.Add(new CreatableClassViewModel(derivedName, CreateNewOfClass));
-            }
+            CreatableClassEntries = ClassPickerEntries.BuildDerived(expected);
         }
 
         private static bool DetectIsAssetObjectType(TypeInfo typeInfo)
@@ -381,17 +347,9 @@ namespace Hyperion.Editor.ViewModels
             if (_isAssetObjectType || _propertyTypeClass == null)
                 return;
 
-            string className = _propertyTypeClass.Value.Name.ToString();
+            SubclassEntries = ClassPickerEntries.BuildDerived(_propertyTypeClass.Value);
 
-            List<string> names = [];
-            NameCallbackDelegate callback = (name, _) => names.Add(name);
-
-            NativeBindings.Hyp_GetAllDerivedClassNames(className, callback, IntPtr.Zero);
-
-            foreach (string name in names)
-                AvailableSubclasses.Add(name);
-
-            if (AvailableSubclasses.Count > 0)
+            if (IsPolymorphic)
                 OnPropertyChanged(nameof(ShowSubclassPicker));
         }
 
@@ -433,7 +391,17 @@ namespace Hyperion.Editor.ViewModels
                     }
 
                     int nextInstance = 0;
-                    CommitPropertyChange($"Set {Label} type", _ => instances[nextInstance++].GetValue());
+                    CommitPropertyChange($"Set {Label} type", current =>
+                    {
+                        object? instance = instances[nextInstance++].GetValue();
+
+                        if (current.GetValue() is ObjectBase previous && previous.IsValid && instance is ObjectBase created && created.IsValid)
+                        {
+                            CopyMatchingProperties(previous, created);
+                        }
+
+                        return instance;
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -449,6 +417,45 @@ namespace Hyperion.Editor.ViewModels
                     }
                 }
             });
+        }
+
+        // Sim thread. Inline sub-objects are left behind rather than shared between the old and new instance.
+        private static void CopyMatchingProperties(ObjectBase source, ObjectBase destination)
+        {
+            Class sourceClass = source.Class;
+
+            foreach (Property property in destination.Class.Properties)
+            {
+                ClassAttribute? attrEditor = property.GetAttribute("editor");
+
+                if (attrEditor != null && attrEditor.Value.GetBool() == false)
+                {
+                    continue;
+                }
+
+                Property? sourceProperty = sourceClass.GetProperty(property.Name);
+
+                if (sourceProperty == null || !sourceProperty.Value.TypeId.Equals(property.TypeId))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    using BoxedValue value = sourceProperty.Value.Get(source);
+
+                    if (value.GetValue() is ObjectBase inner && inner is not AssetObject)
+                    {
+                        continue;
+                    }
+
+                    property.Set(destination, value);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogLevel.Warning, $"Failed to carry '{property.Name}' over to the new '{destination.Class.Name}': {ex.Message}");
+                }
+            }
         }
 
         private void HookContentBrowser()
@@ -601,17 +608,17 @@ namespace Hyperion.Editor.ViewModels
 
         private void OnNew()
         {
-            // With more than one implementation to pick from the button hosts a menu instead, and each
-            // entry calls CreateNewOfClass directly.
-            if (CreatableClasses.Count != 1)
+            // With more than one implementation to pick from the menu opens a class picker instead, which
+            // calls CreateNewOfClass directly.
+            if (HasCreatableClassChoice || CreatableClassEntries.Count == 0)
             {
                 return;
             }
 
-            CreateNewOfClass(CreatableClasses[0].ClassName);
+            CreateNewOfClass(CreatableClassEntries.First(e => !e.IsAbstract).Name);
         }
 
-        private void CreateNewOfClass(string className)
+        public void CreateNewOfClass(string className)
         {
             if (!CanCreateNew || _isReadOnly)
             {
@@ -1202,8 +1209,8 @@ namespace Hyperion.Editor.ViewModels
 
                             if (IsPolymorphic)
                             {
-                                _currentTypeName = HasSubObject ? capturedDisplayName : string.Empty;
-                                SubclassFilter = _currentTypeName;
+                                CurrentTypeName = HasSubObject ? capturedDisplayName : string.Empty;
+                                OnPropertyChanged(nameof(SubclassDisplay));
                             }
 
                             if (_isAssetObjectType)

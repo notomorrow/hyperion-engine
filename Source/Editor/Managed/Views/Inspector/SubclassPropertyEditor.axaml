@@ -2,37 +2,38 @@
     x:Class="Hyperion.Editor.Views.Inspector.SubclassPropertyEditor"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Hyperion.Editor.Controls;assembly=Hyperion.Editor"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="clr-namespace:Hyperion.Editor.ViewModels;assembly=Hyperion.Editor"
     x:DataType="vm:ObjectPropertyViewModel"
     mc:Ignorable="d">
-    <Border Classes="picker-box" Margin="4,0,0,2">
-        <Grid ColumnDefinitions="*,Auto,Auto">
-            <AutoCompleteBox
-                x:Name="PART_PickerBox"
-                MinWidth="120"
-                MinimumPrefixLength="0"
-                MinimumPopulateDelay="0:0:0.05"
-                PlaceholderText="(Select type...)"
+    <Button
+        x:Name="PART_TypeButton"
+        MinWidth="120"
+        MaxWidth="220"
+        Classes="class-picker-button"
+        IsEnabled="{Binding !IsReadOnly}"
+        ToolTip.Tip="{Binding SubclassDisplay}">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <controls:Codicon
+                VerticalAlignment="Center"
+                Foreground="{DynamicResource Brush.AccentHover}"
+                Kind="SymbolClass"
+                Size="12" />
+            <TextBlock
+                Grid.Column="1"
+                Margin="6,0"
+                VerticalAlignment="Center"
                 FontSize="11"
-                Text="{Binding SubclassFilter, Mode=TwoWay}"
-                ToolTip.Tip="Type to filter subclasses, then select one to create an instance">
-                <AutoCompleteBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock FontSize="11" Text="{Binding}" />
-                    </DataTemplate>
-                </AutoCompleteBox.ItemTemplate>
-            </AutoCompleteBox>
-
-            <Border Grid.Column="1" Classes="picker-divider" />
-
-            <Button
-                x:Name="PART_PickerToggle"
+                Text="{Binding SubclassDisplay}"
+                TextTrimming="CharacterEllipsis" />
+            <controls:Codicon
                 Grid.Column="2"
-                Classes="picker-toggle"
-                ToolTip.Tip="Browse..."
-                Content="&#x25BC;" />
+                VerticalAlignment="Center"
+                Foreground="{DynamicResource Brush.TextMuted}"
+                Kind="ChevronDown"
+                Size="10" />
         </Grid>
-    </Border>
+    </Button>
 </UserControl>

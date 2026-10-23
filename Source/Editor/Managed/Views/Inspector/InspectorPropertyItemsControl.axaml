@@ -133,9 +133,11 @@
                 <StackPanel Spacing="0">
                     <local:AssetObjectPropertyEditor IsVisible="{Binding IsAssetObject}" />
                     <StackPanel IsVisible="{Binding !IsAssetObject}" Margin="0,2,0,0" Spacing="0">
-                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="13" Margin="4,0,0,2" ToolTip.Tip="{Binding LabelTooltip}" />
+                        <Grid ColumnDefinitions="*,Auto" Margin="4,0,0,2">
+                            <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding LabelTooltip}" />
+                            <local:SubclassPropertyEditor Grid.Column="1" Margin="8,0,0,0" IsVisible="{Binding ShowSubclassPicker}" />
+                        </Grid>
                         <ContentControl Margin="4,0,0,2" Content="{Binding}" ContentTemplate="{StaticResource PropertyDescriptionTemplate}" />
-                        <local:SubclassPropertyEditor IsVisible="{Binding ShowSubclassPicker}" />
                         <local:InspectorPropertyItemsControl IsVisible="{Binding HasSubObject}" ItemsSource="{Binding SubObject.Properties}" />
                     </StackPanel>
                 </StackPanel>

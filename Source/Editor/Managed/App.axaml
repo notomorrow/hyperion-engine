@@ -691,6 +691,18 @@
         <Style Selector="Button.picker-toggle:pointerover">
             <Setter Property="Background" Value="{StaticResource Brush.MenuHover}" />
         </Style>
+        <Style Selector="Button.class-picker-button">
+            <Setter Property="Background" Value="{StaticResource Brush.InputBackground}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.InputBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="{StaticResource Radius.Small}" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.class-picker-button:over">
+            <Setter Property="Background" Value="{StaticResource Brush.MenuHover}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.HoverBorder}" />
+        </Style>
 
         <!--  Inspector section headers: flat full-width toggle; hover feedback via chevron color  -->
         <Style Selector="ToggleButton.section-toggle">
