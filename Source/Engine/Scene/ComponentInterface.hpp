@@ -44,7 +44,8 @@ enum class ComponentInterfaceFlags : uint32
     SERIALIZE = 0x2,
     REPLICATED = 0x4,
     SHOW_IN_EDITOR = 0x8,
-    RUNTIME = 0x10
+    RUNTIME = 0x10,
+    MODULE = 0x20
 };
 
 HYP_MAKE_ENUM_FLAGS(ComponentInterfaceFlags)
@@ -124,6 +125,11 @@ public:
         return m_flags & ComponentInterfaceFlags::RUNTIME;
     }
 
+    HYP_FORCE_INLINE bool IsModuleComponent() const
+    {
+        return m_flags & ComponentInterfaceFlags::MODULE;
+    }
+
     void ConstructComponent(void* destination) const;
     void CopyConstructComponent(void* destination, const void* source) const;
     void MoveConstructComponent(void* destination, void* source) const;
@@ -170,6 +176,11 @@ public:
 
     void Register(TypeId typeId, UniquePtr<ComponentInterface> (*createFunction)());
 
+    // for a module loaded after Initialize() (e.g a game DLL); replaces interfaces of the same types from an earlier build
+    uint32 PublishModuleComponents();
+
+    void UnregisterComponentsInRange(UIntPtr begin, UIntPtr end);
+
     const ComponentInterface* RegisterRuntimeComponent(
         const Struct* componentStruct,
         EnumFlags<ComponentInterfaceFlags> flags = ComponentInterfaceFlags::SERIALIZE | ComponentInterfaceFlags::SHOW_IN_EDITOR);
@@ -194,6 +205,7 @@ private:
     static void AddToLookupTable(LookupTable& lookupTable, const ComponentInterface* componentInterface);
 
     Map<TypeId, UniquePtr<ComponentInterface> (*)()> m_nativeCreateFunctions;
+    Map<TypeId, UniquePtr<ComponentInterface> (*)()> m_pendingModuleCreateFunctions;
 
     // Interfaces are never destroyed before the registry itself, so containers referencing them never dangle
     Array<UniquePtr<ComponentInterface>> m_ownedInterfaces;

@@ -268,10 +268,10 @@ function(RunCodeGen version_major version_minor)
   endif()
 endfunction()
 
-# Run CodeGen with version 0.18
+# Run CodeGen with version 0.19
 # HYP_CODEGEN_VERSION_MAJOR 0
-# HYP_CODEGEN_VERSION_MINOR 18
-RunCodeGen(0 18)
+# HYP_CODEGEN_VERSION_MINOR 19
+RunCodeGen(0 19)
 
 # set HYP_DEBUG_MODE to 1 for debug builds, 0 for release builds
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -1521,6 +1521,8 @@ set(HYPERION_SDK_LIBRARIES \"${HYP_SDK_DEV_LIBRARIES}\")
 set(HYPERION_SDK_RUNTIME_DIR \"$<TARGET_FILE_DIR:${BUILD_NAME}>\")
 set(HYPERION_SDK_BASE_DIR \"${HYP_SDK_DEV_BASE_DIR}\")
 set(HYPERION_SDK_PCH \"${CMAKE_SOURCE_DIR}/Engine/HyperionPch.hpp\")
+set(HYPERION_SDK_CODEGEN \"${HYP_SDK_DEV_BASE_DIR}/Build/hyperion-codegen${CMAKE_EXECUTABLE_SUFFIX}\")
+set(HYPERION_SDK_ENGINE_TYPES \"${HYP_GENERATED_DIR}/EngineTypes.json\")
 " CONDITION "${HYP_SDK_DEV_PATHS_CONDITION}")
 
   # the libraries a game ships beside it, read by the SDK and by Package Game

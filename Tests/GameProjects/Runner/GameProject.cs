@@ -40,6 +40,11 @@ public sealed class GameProject
         : OperatingSystem.IsMacOS() ? $"lib{Name}Game.dylib"
         : $"lib{Name}Game.so");
 
+    // what a C++ game's CodeGen run writes, and the C# bindings assembly its build compiles from it
+    public string NativeGeneratedDirectory => Path.Combine(NativeBuildDirectory, "Generated");
+    public string BindingsAssemblyPath => Path.Combine(BinariesDirectory, $"{Name}Game.Bindings.dll");
+    public string ScriptsDirectory => Path.Combine(ContentDirectory, "Scripts");
+
     private GameProject(string name, GameProjectLanguage language, string directory)
     {
         Name = name;
@@ -82,6 +87,60 @@ public sealed class GameProject
     public ProcessResult Build()
     {
         return Language == GameProjectLanguage.Managed ? BuildManaged() : BuildNative();
+    }
+
+    /// Builds Content/Scripts as the editor's script compiler does: a module of its own, against the engine assemblies and the
+    /// game's (a C++ game's bindings assembly, or a C# game's own assembly)
+    public ProcessResult BuildScripts(string referenceAssemblyPath)
+    {
+        string scriptsProjectDirectory = Path.Combine(Directory, "Build", "Scripts");
+        System.IO.Directory.CreateDirectory(scriptsProjectDirectory);
+
+        string scriptsProjectPath = Path.Combine(scriptsProjectDirectory, "Scripts.csproj");
+
+        File.WriteAllText(scriptsProjectPath, RenderScriptsProject(referenceAssemblyPath, Path.Combine(scriptsProjectDirectory, "bin")));
+
+        return ProcessRunner.Run(
+            $"Building {Name}'s scripts",
+            "dotnet",
+            new[] { "build", scriptsProjectPath, "--disable-build-servers", "--nologo" },
+            scriptsProjectDirectory,
+            Path.Combine(LogsDirectory, "scripts-build.log"),
+            HarnessEnvironment.BuildTimeout);
+    }
+
+    // mirrors GenerateCSharpProjectFile() in Source/Engine/DotNET/Scripting/CSharpScriptCompiler.cs
+    private string RenderScriptsProject(string referenceAssemblyPath, string outputDirectory)
+    {
+        string Reference(string name, string path) =>
+            $"    <Reference Include=\"{name}\">\n      <HintPath>{path}</HintPath>\n      <Private>false</Private>\n    </Reference>\n";
+
+        string EngineAssembly(string name) => Path.Combine(HarnessEnvironment.EngineBinDir, name + ".dll");
+
+        string generatorPath = EngineAssembly("Hyperion.NET.Generators");
+        string scripts = string.Join("", System.IO.Directory.EnumerateFiles(ScriptsDirectory, "*.cs", SearchOption.AllDirectories)
+            .Select(script => $"    <Compile Include=\"{script}\" />\n"));
+
+        return "<Project Sdk=\"Microsoft.NET.Sdk\">\n"
+            + "  <PropertyGroup>\n"
+            + "    <OutputType>Library</OutputType>\n"
+            + "    <TargetFramework>net10.0</TargetFramework>\n"
+            + "    <ImplicitUsings>enable</ImplicitUsings>\n"
+            + "    <Nullable>enable</Nullable>\n"
+            + "    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>\n"
+            + "    <EnableDynamicLoading>true</EnableDynamicLoading>\n"
+            + "    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>\n"
+            + $"    <AssemblyName>{Name}.Scripts</AssemblyName>\n"
+            + $"    <OutputPath>{outputDirectory}/</OutputPath>\n"
+            + "  </PropertyGroup>\n"
+            + "  <ItemGroup>\n"
+            + Reference("Hyperion.NET.Shared", EngineAssembly("Hyperion.NET.Shared"))
+            + Reference("Hyperion.NET.Runtime", EngineAssembly("Hyperion.NET.Runtime"))
+            + Reference(Path.GetFileNameWithoutExtension(referenceAssemblyPath), referenceAssemblyPath)
+            + (File.Exists(generatorPath) ? $"    <Analyzer Include=\"{generatorPath}\" />\n" : "")
+            + scripts
+            + "  </ItemGroup>\n"
+            + "</Project>\n";
     }
 
     /// Launches the built game headless; the test game runs the tests for <paramref name="phase"/> and quits

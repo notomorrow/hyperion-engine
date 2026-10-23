@@ -205,6 +205,16 @@ ObjectContainerBase& ObjectContainerMap::GetOrCreate(TypeId typeId, const Class*
     container->m_typeId = typeId;
     container->m_class = cls;
 
+    for (const Pair<TypeId, uint32>& detachedIndexEnd : m_detachedIndexEnds)
+    {
+        if (detachedIndexEnd.first == typeId)
+        {
+            container->m_indexAllocator.idCounter.Set(detachedIndexEnd.second, MemoryOrder::RELEASE);
+
+            break;
+        }
+    }
+
     if (ClassRegistry::GetInstance().IsInitialized())
     {
         // ClassRegistry already initialized; need to call Initialize() ourselves
@@ -249,6 +259,22 @@ Array<ObjectContainerBase*> ObjectContainerMap::Detach(const Array<const Class*>
         }
 
         containers.PushBack(it->second);
+
+        const uint32 indexEnd = it->second->m_indexAllocator.idCounter.Get(MemoryOrder::ACQUIRE);
+
+        auto indexEndIt = m_detachedIndexEnds.FindIf([typeId = it->first](const Pair<TypeId, uint32>& element)
+            {
+                return element.first == typeId;
+            });
+
+        if (indexEndIt == m_detachedIndexEnds.End())
+        {
+            m_detachedIndexEnds.PushBack({ it->first, indexEnd });
+        }
+        else
+        {
+            indexEndIt->second = indexEndIt->second > indexEnd ? indexEndIt->second : indexEnd;
+        }
 
         it = m_map.Erase(it);
     }

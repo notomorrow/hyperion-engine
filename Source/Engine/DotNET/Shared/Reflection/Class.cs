@@ -531,8 +531,11 @@ namespace Hyperion
                 {
                     cls = new(ptr);
 
-                    // dynamic classes are superseded when their assembly reloads, so look them up every time
-                    if (!cls.Value.IsDynamic)
+                    // NOTE: dynamic classes + game module classes (as they have no valid static index) are superseded when their assembly reloads
+                    // so we must look them up every time
+                    bool canCache = !cls.Value.IsDynamic && Class_GetStaticIndex(ptr) >= 0;
+
+                    if (canCache)
                     {
                         classTypeNameCache[name] = cls.Value;
                     }
@@ -568,6 +571,9 @@ namespace Hyperion
 
         [DllImport("hyperion", EntryPoint = "Class_GetFlags")]
         private static extern uint Class_GetFlags([In] IntPtr classPtr);
+
+        [DllImport("hyperion", EntryPoint = "Class_GetStaticIndex")]
+        private static extern int Class_GetStaticIndex([In] IntPtr classPtr);
 
         [DllImport("hyperion", EntryPoint = "Class_GetAllocationMethod")]
         private static extern byte Class_GetAllocationMethod([In] IntPtr classPtr);

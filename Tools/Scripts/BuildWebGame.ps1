@@ -316,6 +316,27 @@ if (Test-Path $pipelineManifest)
     Copy-Item $pipelineManifest (Join-Path $packageDir "Cache\pipelinevariants.bin") -Force
 }
 
+# a C++ game's reflection and the C# of its classes, from its headers, as its desktop build makes them
+
+$gameGeneratedDir = Join-Path $buildDir "Generated"
+
+if ($hasGameCode)
+{
+    Step 28 "Running CodeGen over the game"
+
+    $codeGenExe = Join-Path $rootDir "Build\hyperion-codegen.exe"
+    $engineTypesFile = Join-Path $rootDir "Source\Generated\EngineTypes.json"
+
+    if (-not (Test-Path $codeGenExe) -or -not (Test-Path $engineTypesFile))
+    {
+        Fail "CodeGen is missing ($codeGenExe, $engineTypesFile). Build the engine: Tools\Scripts\BuildHyperion.bat"
+    }
+
+    Invoke-Cmd ("`"$codeGenExe`" --Mode=Game --WorkingDirectory=`"$gameSourceDir`" --SourceDirectory=`"$gameSourceDir`" " + `
+        "--CXXOutputDirectory=`"$gameGeneratedDir`" --CSharpOutputDirectory=`"$gameGeneratedDir\CSharp`" --EngineTypes=`"$engineTypesFile`" > `"$buildDir\CodeGen.log`" 2>&1") `
+        "CodeGen failed, see $buildDir\CodeGen.log"
+}
+
 # 3. a C# game: compiled ahead of time into a static library, linked into the page with the engine
 
 $managedLinkInputs = ""
@@ -366,9 +387,10 @@ if ($needsManaged)
     }
 
     $gameClassProperty = if ($webGameClass -ne "") { "-p:HyperionHostedGameClass=$webGameClass " } else { "" }
+    $gameBindingsProperty = if ($hasGameCode) { "-p:HyperionGameBindingsDir=`"$gameGeneratedDir\CSharp\\`" " } else { "" }
 
     Invoke-Cmd ("set `"MSBuildSdksPath=`" && dotnet publish `"$publishProject`" -c Release -r browser-wasm --disable-build-servers -nologo " + `
-        "-p:HyperionWebBuild=true -p:HyperionBinDir=`"$engineWebDir`" -p:HyperionWebEmsdk=`"$managedEmsdk`" $gameClassProperty-p:HyperionWriteGlobalConfig=false " + `
+        "-p:HyperionWebBuild=true -p:HyperionBinDir=`"$engineWebDir`" -p:HyperionWebEmsdk=`"$managedEmsdk`" $gameClassProperty$gameBindingsProperty-p:HyperionWriteGlobalConfig=false " + `
         "-p:HyperionProjectContentDir=`"$(($contentDir -replace '\\', '/') + '/')`" " + `
         "-p:OutputPath=`"$managedDir\bin\\`" -p:IntermediateOutputPath=`"$managedDir\obj\\`" -p:MSBuildProjectExtensionsPath=`"$managedDir\ext\\`" " + `
         "-p:HyperionWebLinkInputsFile=`"$managedLinkInputs`" > `"$managedDir\Publish.log`" 2>&1") `
@@ -393,12 +415,13 @@ if (Test-Path $pageDir)
 }
 
 $gameDirArgument = if ($hasGameCode) { $gameSourceDir -replace '\\', '/' } else { "" }
+$gameGeneratedDirArgument = if ($hasGameCode) { $gameGeneratedDir -replace '\\', '/' } else { "" }
 $linkOptimization = if ($FastLink) { "-O1" } else { "-Oz" }
 $keepsFunctionNames = if ($Run) { "ON" } else { "OFF" }
 
 Invoke-Cmd ("set `"EMSDK_QUIET=1`" && call `"$env:EMSDK\emsdk_env.bat`" >nul && emcmake cmake -S `"$templateDir`" -B `"$cmakeDir`" -G Ninja -DCMAKE_BUILD_TYPE=Release " + `
     "-DHYPERION_WEB_SDK=`"$($webSdk -replace '\\', '/')`" -DHYP_WEB_PAGE_NAME=$name -DHYP_WEB_PAGE_TITLE=`"$pageTitle`" -DHYP_WEB_PACKAGE=`"$($packageDir -replace '\\', '/')`" " + `
-    "-DHYP_WEB_GAME_DIR=`"$gameDirArgument`" -DHYP_WEB_OUTPUT=`"$($pageDir -replace '\\', '/')`" -DHYP_WEB_LINK_OPTIMIZATION=$linkOptimization -DHYP_WEB_FUNCTION_NAMES=$keepsFunctionNames " + `
+    "-DHYP_WEB_GAME_DIR=`"$gameDirArgument`" -DHYP_WEB_GAME_GENERATED_DIR=`"$gameGeneratedDirArgument`" -DHYP_WEB_OUTPUT=`"$($pageDir -replace '\\', '/')`" -DHYP_WEB_LINK_OPTIMIZATION=$linkOptimization -DHYP_WEB_FUNCTION_NAMES=$keepsFunctionNames " + `
     "-DHYP_WEB_MANAGED_LINK_INPUTS=`"$($managedLinkInputs -replace '\\', '/')`" -DHYP_WEB_GAME_CLASS=`"$gameClassArgument`" && cmake --build `"$cmakeDir`"") `
     "Building the page failed"
 

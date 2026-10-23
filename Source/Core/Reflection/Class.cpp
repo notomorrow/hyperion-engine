@@ -196,8 +196,9 @@ CORE_API int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId)
 
     const Class* subclass = GetClass(subclassTypeId);
 
-    // runtime classes (e.g a C# subclass of Entity) share the slot of their closest static ancestor
-    while (subclass && subclass->IsDynamic())
+    // runtime classes (e.g a C# subclass of Entity) and game module classes, which have no static index,
+    // share the slot of their closest ancestor with a static index
+    while (subclass && (subclass->IsDynamic() || subclass->GetStaticIndex() < 0))
     {
         subclass = subclass->GetParent();
     }
@@ -208,10 +209,6 @@ CORE_API int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId)
     }
 
     const int subclassStaticIndex = subclass->GetStaticIndex();
-    if (subclassStaticIndex < 0)
-    {
-        return -2; // subclass is not a static class
-    }
 
     const int baseStaticIndex = base->GetStaticIndex();
 

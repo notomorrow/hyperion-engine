@@ -57,6 +57,11 @@ const Array<ModuleAPIMapping>& CXXModuleGenerator::GetModuleAPIMappings()
 
 String CXXModuleGenerator::GetAPIMacroForModule(const Analyzer& analyzer, const Module& mod)
 {
+    if (analyzer.IsGameModule())
+    {
+        return String::empty;
+    }
+
     if (!mod.GetPath().Any())
     {
         return "CORE_API";
@@ -571,7 +576,16 @@ Result CXXModuleGenerator::GenerateInline(const Analyzer& analyzer, const Module
         });
 
         writer.WriteString(HYP_FORMAT("namespace {}", BuildNamespaceString(cls.namespaceParts)) + " {\n");
-        writer.WriteString(HYP_FORMAT("{} extern const Class* g_cls{};\n", apiMacro, cls.name));
+
+        // a game module has no ClassDecls.cpp, so it defines its own
+        if (analyzer.IsGameModule())
+        {
+            writer.WriteString(HYP_FORMAT("const Class* g_cls{} = nullptr;\n", cls.name));
+        }
+        else
+        {
+            writer.WriteString(HYP_FORMAT("{} extern const Class* g_cls{};\n", apiMacro, cls.name));
+        }
 
         // Implement class StaticClass() to return the static class instance
         // Only for structs, classes:
@@ -883,7 +897,16 @@ Result CXXModuleGenerator::Generate(const Analyzer& analyzer, const Module& mod,
         });
 
         writer.WriteString(HYP_FORMAT("namespace {}", BuildNamespaceString(cls.namespaceParts)) + " {\n");
-        writer.WriteString(HYP_FORMAT("{} extern const Class* g_cls{};\n", apiMacro, cls.name));
+
+        // a game module has no ClassDecls.cpp, so it defines its own
+        if (analyzer.IsGameModule())
+        {
+            writer.WriteString(HYP_FORMAT("const Class* g_cls{} = nullptr;\n", cls.name));
+        }
+        else
+        {
+            writer.WriteString(HYP_FORMAT("{} extern const Class* g_cls{};\n", apiMacro, cls.name));
+        }
 
         // Implement class StaticClass() to return the static class instance
         // Only for structs, classes:

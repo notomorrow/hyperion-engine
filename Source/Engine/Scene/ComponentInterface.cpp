@@ -241,7 +241,145 @@ void ComponentInterfaceRegistry::Shutdown()
 
 void ComponentInterfaceRegistry::Register(TypeId typeId, UniquePtr<ComponentInterface> (*createFunction)())
 {
+    Mutex::Guard guard(m_writeMutex);
+
     m_nativeCreateFunctions.Set(typeId, createFunction);
+
+    if (m_isInitialized)
+    {
+        m_pendingModuleCreateFunctions.Set(typeId, createFunction);
+    }
+}
+
+uint32 ComponentInterfaceRegistry::PublishModuleComponents()
+{
+    Mutex::Guard guard(m_writeMutex);
+
+    if (!m_isInitialized || m_pendingModuleCreateFunctions.Empty())
+    {
+        return 0;
+    }
+
+    const LookupTable& currentLookupTable = GetLookupTable();
+
+    Array<UniquePtr<ComponentInterface>> moduleInterfaces;
+
+    for (auto& it : m_pendingModuleCreateFunctions)
+    {
+        auto existingIt = currentLookupTable.interfacesByTypeId.Find(it.first);
+
+        if (existingIt != currentLookupTable.interfacesByTypeId.End() && !existingIt->second->IsModuleComponent())
+        {
+            HYP_LOG(Entity, Error, "Cannot register module component '{}': '{}' already uses TypeId {}",
+                LookupTypeName(it.first), existingIt->second->GetTypeInfo().name, it.first.Value());
+
+            continue;
+        }
+
+        UniquePtr<ComponentInterface> componentInterface = it.second();
+        Assert(componentInterface != nullptr);
+        Assert(componentInterface->GetTypeId() == it.first);
+
+        componentInterface->m_flags |= ComponentInterfaceFlags::MODULE;
+
+        moduleInterfaces.PushBack(std::move(componentInterface));
+    }
+
+    m_pendingModuleCreateFunctions.Clear();
+
+    if (moduleInterfaces.Empty())
+    {
+        return 0;
+    }
+
+    UniquePtr<LookupTable> lookupTable = MakeUnique<LookupTable>();
+
+    // added fresh, since an entity tag keeps its first registration in a table
+    for (const auto& it : currentLookupTable.interfacesByTypeId)
+    {
+        const bool isReplaced = moduleInterfaces.FindIf([typeId = it.first](const UniquePtr<ComponentInterface>& moduleInterface)
+                                    {
+                                        return moduleInterface->GetTypeId() == typeId;
+                                    })
+            != moduleInterfaces.End();
+
+        if (!isReplaced)
+        {
+            AddToLookupTable(*lookupTable, it.second);
+        }
+    }
+
+    const uint32 numPublished = uint32(moduleInterfaces.Size());
+
+    for (UniquePtr<ComponentInterface>& moduleInterface : moduleInterfaces)
+    {
+        AddToLookupTable(*lookupTable, moduleInterface.Get());
+
+        m_ownedInterfaces.PushBack(std::move(moduleInterface));
+    }
+
+    PublishLookupTable(std::move(lookupTable));
+
+    m_runtimeRegistrationGeneration.Increment(1, MemoryOrder::RELEASE);
+
+    return numPublished;
+}
+
+void ComponentInterfaceRegistry::UnregisterComponentsInRange(UIntPtr begin, UIntPtr end)
+{
+    Mutex::Guard guard(m_writeMutex);
+
+    const auto isInRange = [begin, end](UniquePtr<ComponentInterface> (*createFunction)())
+    {
+        const UIntPtr address = reinterpret_cast<UIntPtr>(createFunction);
+
+        return address >= begin && address < end;
+    };
+
+    Array<TypeId> typeIds;
+
+    for (const auto& it : m_nativeCreateFunctions)
+    {
+        if (isInRange(it.second))
+        {
+            typeIds.PushBack(it.first);
+        }
+    }
+
+    for (const auto& it : m_pendingModuleCreateFunctions)
+    {
+        if (isInRange(it.second) && !typeIds.Contains(it.first))
+        {
+            typeIds.PushBack(it.first);
+        }
+    }
+
+    for (TypeId typeId : typeIds)
+    {
+        m_nativeCreateFunctions.Erase(typeId);
+        m_pendingModuleCreateFunctions.Erase(typeId);
+    }
+
+    if (!m_isInitialized || typeIds.Empty())
+    {
+        return;
+    }
+
+    const LookupTable& currentLookupTable = GetLookupTable();
+
+    UniquePtr<LookupTable> lookupTable = MakeUnique<LookupTable>();
+
+    for (const auto& it : currentLookupTable.interfacesByTypeId)
+    {
+        if (!it.second->IsModuleComponent() || !typeIds.Contains(it.first))
+        {
+            AddToLookupTable(*lookupTable, it.second);
+        }
+    }
+
+    PublishLookupTable(std::move(lookupTable));
+
+    m_runtimeRegistrationGeneration.Increment(1, MemoryOrder::RELEASE);
 }
 
 const ComponentInterface* ComponentInterfaceRegistry::RegisterRuntimeComponent(const Struct* componentStruct, EnumFlags<ComponentInterfaceFlags> flags)

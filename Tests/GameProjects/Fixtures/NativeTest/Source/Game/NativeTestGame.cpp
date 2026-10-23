@@ -5,8 +5,7 @@
 
 #include <Core/Logging/Logger.hpp>
 
-#include <Core/Reflection/ClassUtils.hpp>
-#include <Core/Reflection/ClassRegistry.hpp>
+#include <NativeTestGame.generated.inl>
 
 namespace Hyperion {
 
@@ -32,26 +31,6 @@ void NativeTestGame::AfterContentLoaded()
 
     Hyp_RequestQuit();
 }
-
-#pragma region Reflection
-
-const Class* g_clsNativeTestGame = nullptr;
-
-const Class* NativeTestGame::StaticClass()
-{
-    return g_clsNativeTestGame;
-}
-
-// clang-format off
-
-HYP_BEGIN_CLASS(NativeTestGame, -1, 0, NAME("Game"))
-HYP_END_CLASS
-
-// clang-format on
-
-HYP_REGISTER_STATIC_CLASS(NativeTestGame);
-
-#pragma endregion Reflection
 
 } // namespace Hyperion
 

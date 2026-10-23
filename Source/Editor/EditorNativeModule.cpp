@@ -76,6 +76,7 @@ struct LoadedNativeModule
     bool isLoaded = false;
     bool warnedRebuilt = false;
     bool hasPlayed = false;
+    bool hasBindings = false;
 
     bool CanUnload() const
     {
@@ -426,6 +427,51 @@ static TResult<FilePath> CopyModule(const FilePath& modulePath, ANSIStringView c
     return copyPath;
 }
 
+static FilePath GetModuleBindingsPath(const FilePath& modulePath)
+{
+    String moduleStem = FilePath(modulePath.Basename()).StripExtension();
+
+#ifndef HYP_WINDOWS
+    if (moduleStem.StartsWith("lib"))
+    {
+        moduleStem = String(moduleStem.Substr(3));
+    }
+#endif
+
+    return modulePath.BasePath() / (moduleStem + ".Bindings.dll");
+}
+
+#ifdef HYP_DOTNET
+
+static bool LoadModuleBindings(const FilePath& modulePath)
+{
+    const FilePath bindingsPath = GetModuleBindingsPath(modulePath);
+
+    if (!bindingsPath.Exists() || !DotNETHost::GetInstance().IsInitialized())
+    {
+        return false;
+    }
+
+    TResult<FilePath> copyResult = CopyModule(bindingsPath, "NativeModuleBindings");
+
+    if (copyResult.HasError())
+    {
+        HYP_LOG(Editor, Error, "Failed to copy modules at path {}: {}", modulePath, copyResult.GetError().GetMessage());
+
+        return false;
+    }
+
+    if (!DotNETHost::GetInstance().LoadAssembly(copyResult.GetValue().Data()))
+    {
+        HYP_LOG(Editor, Error, "Failed to load {}. Please rebuild the game", bindingsPath, modulePath);
+
+        return false;
+    }
+
+    return true;
+}
+#endif
+
 static LoadedNativeModule LoadModuleCopy(const FilePath& modulePath, const FilePath& copyPath, Time timestamp)
 {
     LoadedNativeModule loadedModule;
@@ -476,6 +522,8 @@ static LoadedNativeModule LoadModuleCopy(const FilePath& modulePath, const FileP
         else
         {
 #ifdef HYP_DOTNET
+            loadedModule.hasBindings = LoadModuleBindings(modulePath);
+
             // The class has no C# counterpart, so the managed editor sees instances of it as plain Game objects
             if (gameClass->GetManagedClass() == nullptr)
             {
@@ -497,7 +545,7 @@ static LoadedNativeModule LoadModuleCopy(const FilePath& modulePath, const FileP
     return loadedModule;
 }
 
-static TResult<LoadedNativeModule*> LoadLatestModule(const FilePath& modulePath)
+static TResult<LoadedNativeModule*> LoadLatestModule(const FilePath& modulePath, const FilePath& projectDirectory)
 {
     const Time timestamp = modulePath.LastModifiedTimestamp();
 
@@ -507,6 +555,11 @@ static TResult<LoadedNativeModule*> LoadLatestModule(const FilePath& modulePath)
     {
         if (timestamp <= currentModule->loadedTimestamp)
         {
+            if (currentModule->hasBindings)
+            {
+                ScriptSystem::SetGameAssembly(projectDirectory, GetModuleBindingsPath(modulePath), /* isNewBuild */ false);
+            }
+
             return currentModule;
         }
 
@@ -559,6 +612,11 @@ static TResult<LoadedNativeModule*> LoadLatestModule(const FilePath& modulePath)
     else
     {
         HYP_LOG(Editor, Info, "{} game module {} (Game class: {})", isReload ? "Reloaded" : "Loaded", modulePath, loadedModule.gameClassName);
+    }
+
+    if (loadedModule.hasBindings)
+    {
+        ScriptSystem::SetGameAssembly(projectDirectory, GetModuleBindingsPath(modulePath), /* isNewBuild */ true);
     }
 
     return &loadedModule;
@@ -626,7 +684,7 @@ static Result ReloadNativeGameModule(EditorProject* project)
         HYP_LOG(Editor, Info, "Game module {} is up to date", modulePath);
     }
 
-    TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath);
+    TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath, project->GetFilePath().BasePath());
 
     if (moduleResult.HasError())
     {
@@ -914,7 +972,7 @@ EDITOR_API TResult<Handle<Game>> CreateGameFromNativeModule(const FilePath& proj
 
     Mutex::Guard guard(s_loadedModulesMutex);
 
-    TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath);
+    TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath, projectFilepath.BasePath());
 
     if (moduleResult.HasError())
     {
@@ -991,7 +1049,7 @@ EDITOR_API void UpdateGameModules(EditorSubsystem* subsystem)
 
         if (loadedModule != nullptr && !loadedModule->warnedRebuilt && PollModuleRebuilt(modulePath, loadedModule->loadedTimestamp))
         {
-            TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath);
+            TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath, project->GetFilePath().BasePath());
 
             loadedModule = moduleResult.HasError() ? nullptr : moduleResult.GetValue();
         }

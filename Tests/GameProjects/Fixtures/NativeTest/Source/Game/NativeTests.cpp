@@ -1,5 +1,7 @@
 #include <Game/NativeTests.hpp>
 #include <Game/NativeTestTypes.hpp>
+#include <Game/NativeTestMedkit.hpp>
+#include <Game/NativeTestGame.hpp>
 
 #include <Asset/AssetRegistry.hpp>
 #include <Asset/AssetBucket.hpp>
@@ -24,10 +26,15 @@ Handle<NativeTestWeaponAsset> CreateWeapon(const char* name)
     weapon->displayName = "Native Blaster";
     weapon->isAutomatic = true;
     weapon->muzzleOffset = Vec3f(1.0f, 2.0f, 3.0f);
+    weapon->rarity = NativeTestRarity::Legendary;
 
-    weapon->ammo = MakeHandle<NativeTestPickup>();
-    weapon->ammo->pickupName = "Energy Cell";
-    weapon->ammo->quantity = 30;
+    // a subclass of the field's type, which has to load back as itself
+    Handle<NativeTestMedkit> ammo = MakeHandle<NativeTestMedkit>();
+    ammo->pickupName = "Energy Cell";
+    ammo->quantity = 30;
+    ammo->healAmount = 12.5f;
+
+    weapon->ammo = ammo;
 
     return weapon;
 }
@@ -103,6 +110,43 @@ void TypesAreRegistered(GameTestContext& context)
     CheckClass(context, NativeTestPickup::StaticClass(), ObjectBase::StaticClass(), "NativeTestPickup");
     CheckClass(context, NativeTestWeaponAsset::StaticClass(), AssetObject::StaticClass(), "NativeTestWeaponAsset");
     CheckClass(context, NativeTestNoteAsset::StaticClass(), AssetObject::StaticClass(), "NativeTestNoteAsset");
+    CheckClass(context, NativeTestMedkit::StaticClass(), NativeTestPickup::StaticClass(), "NativeTestMedkit");
+    CheckClass(context, NativeTestGame::StaticClass(), Game::StaticClass(), "NativeTestGame");
+}
+
+void CodeGen_ReflectsMembers(GameTestContext& context)
+{
+    const Class* weaponClass = NativeTestWeaponAsset::StaticClass();
+
+    for (const char* fieldName : { "Damage", "FireRate", "DisplayName", "IsAutomatic", "MuzzleOffset", "Rarity", "Ammo" })
+    {
+        context.Check(weaponClass->GetField(StringHash(fieldName)) != nullptr, HYP_FORMAT("NativeTestWeaponAsset has no field {}", fieldName));
+    }
+
+    context.Check(weaponClass->GetAttribute("assetbucket"_sh).IsString(), "NativeTestWeaponAsset has no assetbucket attribute");
+
+    context.Check(NativeTestPickup::StaticClass()->GetMethod(StringHash("GetDoubledQuantity")) != nullptr, "NativeTestPickup has no GetDoubledQuantity method");
+}
+
+void CodeGen_DerivedGameClassInheritsMembers(GameTestContext& context)
+{
+    const Class* medkitClass = NativeTestMedkit::StaticClass();
+
+    context.Check(medkitClass->GetField(StringHash("HealAmount")) != nullptr, "NativeTestMedkit has no HealAmount field");
+    context.Check(medkitClass->GetField(StringHash("PickupName"), /* deep */ true) != nullptr, "NativeTestMedkit doesn't inherit PickupName");
+    context.Check(medkitClass->GetMethod(StringHash("GetDoubledQuantity"), /* deep */ true) != nullptr, "NativeTestMedkit doesn't inherit GetDoubledQuantity");
+}
+
+void CodeGen_ReflectsEnum(GameTestContext& context)
+{
+    const Class* enumClass = GetClass(StringHash("NativeTestRarity"));
+
+    if (!context.Check(enumClass != nullptr, "NativeTestRarity is not in the class registry"))
+    {
+        return;
+    }
+
+    context.Check(enumClass->IsEnumType(), "NativeTestRarity's class is not an enum class");
 }
 
 void WeaponAsset_GoesInAttributeBucket(GameTestContext& context)
@@ -150,6 +194,7 @@ void WeaponAsset_LoadsSavedFields(GameTestContext& context)
     context.Check(weapon.displayName == "Native Blaster", HYP_FORMAT("displayName: expected 'Native Blaster', got '{}'", weapon.displayName));
     context.Check(weapon.isAutomatic, "isAutomatic: expected true");
     context.Check(weapon.muzzleOffset == Vec3f(1.0f, 2.0f, 3.0f), HYP_FORMAT("muzzleOffset: expected (1, 2, 3), got {}", weapon.muzzleOffset));
+    context.Check(weapon.rarity == NativeTestRarity::Legendary, HYP_FORMAT("rarity: expected Legendary (3), got {}", uint32(weapon.rarity)));
 
     if (!context.Check(weapon.ammo.IsValid(), "ammo did not load"))
     {
@@ -158,6 +203,15 @@ void WeaponAsset_LoadsSavedFields(GameTestContext& context)
 
     context.Check(weapon.ammo->pickupName == "Energy Cell", HYP_FORMAT("ammo.pickupName: expected 'Energy Cell', got '{}'", weapon.ammo->pickupName));
     context.Check(weapon.ammo->quantity == 30, HYP_FORMAT("ammo.quantity: expected 30, got {}", weapon.ammo->quantity));
+
+    if (!context.Check(weapon.ammo->IsA<NativeTestMedkit>(), HYP_FORMAT("ammo loaded as {}, expected NativeTestMedkit", weapon.ammo->InstanceClass()->GetName())))
+    {
+        return;
+    }
+
+    const NativeTestMedkit& medkit = *static_cast<NativeTestMedkit*>(weapon.ammo.Get());
+
+    context.Check(medkit.healAmount == 12.5f, HYP_FORMAT("ammo.healAmount: expected 12.5, got {}", medkit.healAmount));
 }
 
 void NoteAsset_LoadsSavedFields(GameTestContext& context)
@@ -187,6 +241,9 @@ const Array<GameTestDefinition>& GetNativeGameTests()
 {
     static const Array<GameTestDefinition> s_tests {
         { "TypesAreRegistered", g_writePhase, &TypesAreRegistered },
+        { "CodeGen_ReflectsMembers", g_writePhase, &CodeGen_ReflectsMembers },
+        { "CodeGen_DerivedGameClassInheritsMembers", g_writePhase, &CodeGen_DerivedGameClassInheritsMembers },
+        { "CodeGen_ReflectsEnum", g_writePhase, &CodeGen_ReflectsEnum },
         { "WeaponAsset_GoesInAttributeBucket", g_writePhase, &WeaponAsset_GoesInAttributeBucket },
         { "NoteAsset_GoesInMiscBucket", g_writePhase, &NoteAsset_GoesInMiscBucket },
         { "WeaponAsset_SavesManifest", g_writePhase, &WeaponAsset_SavesManifest },

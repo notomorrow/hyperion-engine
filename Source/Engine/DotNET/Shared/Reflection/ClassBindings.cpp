@@ -225,6 +225,16 @@ extern "C"
         return uint32(cls->GetFlags());
     }
 
+    HYP_EXPORT int32 Class_GetStaticIndex(const Class* cls)
+    {
+        if (!cls)
+        {
+            return -1;
+        }
+
+        return int32(cls->GetStaticIndex());
+    }
+
     HYP_EXPORT uint8 Class_GetAllocationMethod(const Class* cls)
     {
         if (!cls)
