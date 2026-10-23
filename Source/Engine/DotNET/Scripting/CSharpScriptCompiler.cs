@@ -10,13 +10,38 @@ using System.Diagnostics;
 
 namespace Hyperion
 {
+    public record ScriptReferenceAssembly(string ScopeDirectory, string AssemblyPath);
+
     public class CSharpScriptCompiler : ScriptCompilerBase
     {
         private Dictionary<string, string> resolvedModuleNames = [];
 
+        private List<ScriptReferenceAssembly> referenceAssemblies = [];
+
         public CSharpScriptCompiler(string sourceDirectory, string intermediateDirectory, string binaryOutputDirectory)
             : base(sourceDirectory, intermediateDirectory, binaryOutputDirectory)
         {
+        }
+
+        public void SetReferenceAssemblies(IEnumerable<ScriptReferenceAssembly> references)
+        {
+            referenceAssemblies = references.ToList();
+        }
+
+        private IEnumerable<string> GetReferenceAssemblyPaths(string scriptDirectory)
+        {
+            string fullScriptDirectory = Path.GetFullPath(scriptDirectory);
+
+            return referenceAssemblies
+                .Where(reference => IsInDirectory(fullScriptDirectory, reference.ScopeDirectory) && File.Exists(reference.AssemblyPath))
+                .Select(reference => reference.AssemblyPath);
+        }
+
+        public static bool IsInDirectory(string path, string directory)
+        {
+            string relativePath = Path.GetRelativePath(Path.GetFullPath(directory), Path.GetFullPath(path));
+
+            return relativePath != ".." && !relativePath.StartsWith(".." + Path.DirectorySeparatorChar) && !Path.IsPathRooted(relativePath);
         }
 
         public override void BuildAllProjects()
@@ -94,6 +119,11 @@ namespace Hyperion
                         maxTimestamp = Math.Max(maxTimestamp, File.GetLastWriteTime(engineAssemblyPath).ToFileTime());
                     }
                 }
+            }
+
+            foreach (string referenceAssemblyPath in GetReferenceAssemblyPaths(scriptDirectory))
+            {
+                maxTimestamp = Math.Max(maxTimestamp, File.GetLastWriteTime(referenceAssemblyPath).ToFileTime());
             }
 
             if (!Directory.Exists(binaryOutputDirectory))
@@ -279,6 +309,12 @@ namespace Hyperion
                 ? $"<Analyzer Include=\"{EscapePath(generatorPath)}\" />\n"
                 : string.Empty;
 
+            string referenceItems = string.Join("", GetReferenceAssemblyPaths(scriptDirectory).Select(referenceAssemblyPath =>
+                $"<Reference Include=\"{Path.GetFileNameWithoutExtension(referenceAssemblyPath)}\">\n"
+                    + $"<HintPath>{EscapePath(Path.GetFullPath(referenceAssemblyPath))}</HintPath>\n"
+                    + "<Private>false</Private>\n"
+                + "</Reference>\n"));
+
             List<string> csFiles = Directory.GetFiles(scriptDirectory, "*.cs")
                 .ToList();
 
@@ -308,6 +344,7 @@ namespace Hyperion
                         + $"<HintPath>{EscapePath(Path.Combine(dependenciesDirectory, EngineAssemblies.FileName(EngineAssemblies.Runtime)))}</HintPath>\n"
                         + "<Private>false</Private>\n"
                     + "</Reference>\n"
+                    + referenceItems
                     + generatorItem
                     + string.Join("", csFiles.Select(script => $"<Compile Include=\"{EscapePath(Path.GetFullPath(script))}\" />\n"))
                     + "</ItemGroup>\n"

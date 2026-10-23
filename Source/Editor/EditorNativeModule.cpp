@@ -692,6 +692,8 @@ static TResult<LoadedManagedModule*> LoadLatestManagedModule(const FilePath& pro
 
     if (currentModule != nullptr && timestamp <= currentModule->loadedTimestamp)
     {
+        ScriptSystem::SetGameAssembly(projectFilepath.BasePath(), modulePath, /* isNewBuild */ false);
+
         return currentModule;
     }
 
@@ -721,6 +723,8 @@ static TResult<LoadedManagedModule*> LoadLatestManagedModule(const FilePath& pro
     else
     {
         HYP_LOG(Editor, Info, "{} game assembly {} (Game class: {})", currentModule != nullptr ? "Reloaded" : "Loaded", modulePath, gameClassName);
+
+        ScriptSystem::SetGameAssembly(projectFilepath.BasePath(), modulePath, /* isNewBuild */ true);
     }
 
     if (currentModule == nullptr)

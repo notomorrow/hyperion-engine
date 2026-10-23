@@ -18,6 +18,8 @@
 #include <Scripting/ScriptObjectResource.hpp>
 
 #include <Core/Threading/Threads.hpp>
+#include <Core/Threading/Mutex.hpp>
+#include <Core/Threading/AtomicVar.hpp>
 
 #include <Core/Resource/Resource.hpp>
 
@@ -142,6 +144,31 @@ public:
         object->InvokeMethodByName<void>(
             "UpdateSourceDirectories",
             sourceDirectories);
+    }
+
+    void SetReferenceAssembly(const FilePath& scopeDirectory, const FilePath& assemblyPath)
+    {
+        if (!object || !object->IsValid() || scopeDirectory.Empty())
+        {
+            return;
+        }
+
+        object->InvokeMethodByName<void>(
+            "SetReferenceAssembly",
+            scopeDirectory,
+            assemblyPath);
+    }
+
+    void RebuildModulesIn(const FilePath& directory)
+    {
+        if (!object || !object->IsValid())
+        {
+            return;
+        }
+
+        object->InvokeMethodByName<void>(
+            "RebuildModulesIn",
+            directory);
     }
 
     bool ResolveAssembly(const FilePath& scriptPath, ScriptDesc& scriptDesc)
@@ -366,6 +393,63 @@ static const FilePath& GetScriptsSourceDirectory()
     return s_directory.path;
 }
 
+struct GameAssemblyReference
+{
+    FilePath projectDirectory;
+    FilePath assemblyPath;
+};
+
+static Mutex s_gameAssemblyMutex;
+static GameAssemblyReference s_gameAssembly;
+static AtomicVar<uint32> s_gameAssemblyVersion { 0 };
+
+static GameAssemblyReference GetGameAssemblyReference()
+{
+    Mutex::Guard guard(s_gameAssemblyMutex);
+
+    return s_gameAssembly;
+}
+
+void ScriptSystem::SetGameAssembly(const FilePath& projectDirectory, const FilePath& assemblyPath, bool isNewBuild)
+{
+    {
+        Mutex::Guard guard(s_gameAssemblyMutex);
+
+        if (!isNewBuild && s_gameAssembly.projectDirectory == projectDirectory && s_gameAssembly.assemblyPath == assemblyPath)
+        {
+            return;
+        }
+
+        s_gameAssembly.projectDirectory = projectDirectory;
+        s_gameAssembly.assemblyPath = assemblyPath;
+    }
+
+    s_gameAssemblyVersion.Increment(1, MemoryOrder::RELEASE);
+}
+
+void ScriptSystem::ApplyGameAssembly(bool rebuildOnReload)
+{
+    const uint32 version = s_gameAssemblyVersion.Get(MemoryOrder::ACQUIRE);
+
+    if (!m_scriptTracker || version == m_gameAssemblyVersion)
+    {
+        return;
+    }
+
+    m_gameAssemblyVersion = version;
+
+    const GameAssemblyReference gameAssembly = GetGameAssemblyReference();
+
+    m_scriptTracker->SetReferenceAssembly(gameAssembly.projectDirectory, gameAssembly.assemblyPath);
+
+    if (rebuildOnReload && gameAssembly.projectDirectory == m_gameProjectDirectory)
+    {
+        m_scriptTracker->RebuildModulesIn(gameAssembly.projectDirectory);
+    }
+
+    m_gameProjectDirectory = gameAssembly.projectDirectory;
+}
+
 ScriptSystem::ScriptSystem()
 {
 }
@@ -553,6 +637,8 @@ void ScriptSystem::OnAddedToWorld(World* world)
 
         m_scriptTracker = MakeUnique<ScriptTracker>();
 
+        ApplyGameAssembly(/* rebuildOnReload */ false);
+
         void (*scriptTrackerCallback)(void*, ScriptEvent) = [](void* selfPtr, ScriptEvent event)
         {
             static_cast<ScriptingService*>(selfPtr)->PushScriptEvent(event);
@@ -626,6 +712,9 @@ SharedPtr<dotnet::Assembly> ScriptSystem::LoadProjectScriptAssembly(const FilePa
         GetScriptsSourceDirectory(),
         EngineGlobals::GetTempDirectory() / "ScriptProjects",
         CoreApi::GetExecutablePath());
+
+    const GameAssemblyReference gameAssembly = GetGameAssemblyReference();
+    scriptTracker.SetReferenceAssembly(gameAssembly.projectDirectory, gameAssembly.assemblyPath);
 
     ScriptDesc scriptDesc {};
     scriptDesc.language = ScriptLanguage::CSharp;
@@ -729,6 +818,8 @@ void ScriptSystem::Process(float delta, Span<Handle<Scene>> scenes)
 
         if (m_scriptTracker)
         {
+            ApplyGameAssembly(/* rebuildOnReload */ true);
+
             m_scriptTracker->InvokeUpdate();
         }
     }

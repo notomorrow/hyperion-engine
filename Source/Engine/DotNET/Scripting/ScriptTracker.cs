@@ -32,12 +32,16 @@ namespace Hyperion
 
         private Dictionary<string, DateTime> processedWriteTimes = [];
 
+        private List<string> forcedRebuildFiles = [];
+
         private HashSet<string> missingSourceDirectories = [];
         private ConcurrentQueue<string> createdSourceDirectories = new();
 
         private List<string> sourceDirectories = [];
         private string intermediateDirectory = string.Empty;
         private string binaryOutputDirectory = string.Empty;
+
+        private List<ScriptReferenceAssembly> referenceAssemblies = [];
 
         public void Initialize(Array sourceDirectoriesArray, string intermediateDirectory, string binaryOutputDirectory, IntPtr callbackPtr, IntPtr callbackSelfPtr)
         {
@@ -55,6 +59,7 @@ namespace Hyperion
                 Logger.Log(logChannel, LogLevel.Info, "Primary source directory: {0}", sourceDirectories[0]);
 
                 csharpCompiler = new CSharpScriptCompiler(sourceDirectories[0], intermediateDirectory, binaryOutputDirectory);
+                csharpCompiler.SetReferenceAssemblies(referenceAssemblies);
                 csharpCompiler.BuildAllProjects();
 
 
@@ -75,6 +80,51 @@ namespace Hyperion
             this.binaryOutputDirectory = binaryOutputDirectory;
 
             csharpCompiler = new CSharpScriptCompiler(sourceDirectory, intermediateDirectory, binaryOutputDirectory);
+            csharpCompiler.SetReferenceAssemblies(referenceAssemblies);
+        }
+
+        public void SetReferenceAssembly(string scopeDirectory, string assemblyPath)
+        {
+            string fullScopeDirectory = System.IO.Path.GetFullPath(scopeDirectory);
+
+            referenceAssemblies.RemoveAll(reference => string.Equals(reference.ScopeDirectory, fullScopeDirectory, StringComparison.OrdinalIgnoreCase));
+
+            if (assemblyPath.Length != 0)
+            {
+                referenceAssemblies.Add(new ScriptReferenceAssembly(fullScopeDirectory, System.IO.Path.GetFullPath(assemblyPath)));
+            }
+
+            csharpCompiler?.SetReferenceAssemblies(referenceAssemblies);
+        }
+
+        public void RebuildModulesIn(string directory)
+        {
+            if (csharpCompiler == null || !System.IO.Directory.Exists(directory))
+            {
+                return;
+            }
+
+            foreach (string sourceDirectory in sourceDirectories)
+            {
+                if (!System.IO.Directory.Exists(sourceDirectory))
+                {
+                    continue;
+                }
+
+                IEnumerable<string> moduleDirectories = System.IO.Directory.EnumerateDirectories(sourceDirectory, "*", SearchOption.AllDirectories)
+                    .Append(sourceDirectory)
+                    .Where(moduleDirectory => CSharpScriptCompiler.IsInDirectory(moduleDirectory, directory));
+
+                foreach (string moduleDirectory in moduleDirectories)
+                {
+                    string? scriptFile = System.IO.Directory.EnumerateFiles(moduleDirectory, "*.cs").FirstOrDefault();
+
+                    if (scriptFile != null && !forcedRebuildFiles.Contains(scriptFile))
+                    {
+                        forcedRebuildFiles.Add(scriptFile);
+                    }
+                }
+            }
         }
 
         public void UpdateSourceDirectories(Array sourceDirectoriesArray)
@@ -240,6 +290,7 @@ namespace Hyperion
             finishedScripts.Clear();
             changedFiles.Clear();
             processedWriteTimes.Clear();
+            forcedRebuildFiles.Clear();
 
             callback = null;
             callbackSelfPtr = IntPtr.Zero;
@@ -273,6 +324,13 @@ namespace Hyperion
             {
                 ProcessScriptFile(changedFile.Key, changedFile.Value);
             }
+
+            foreach (string forcedRebuildFile in forcedRebuildFiles)
+            {
+                ProcessScriptFile(forcedRebuildFile, ScriptLanguage.CSharp, force: true);
+            }
+
+            forcedRebuildFiles.Clear();
         }
 
         private void ProcessScripts()
@@ -417,7 +475,7 @@ namespace Hyperion
             changedFiles.Enqueue(new(e.FullPath, ScriptLanguage.Strata));
         }
 
-        private void ProcessScriptFile(string filePath, ScriptLanguage language)
+        private void ProcessScriptFile(string filePath, ScriptLanguage language, bool force = false)
         {
             if (processingScripts.ContainsKey(filePath))
             {
@@ -429,7 +487,7 @@ namespace Hyperion
             // one save often raises several change events, some only after the build they triggered
             DateTime writeTime = File.Exists(filePath) ? File.GetLastWriteTimeUtc(filePath) : DateTime.MinValue;
 
-            if (processedWriteTimes.TryGetValue(filePath, out DateTime processedWriteTime) && processedWriteTime == writeTime)
+            if (!force && processedWriteTimes.TryGetValue(filePath, out DateTime processedWriteTime) && processedWriteTime == writeTime)
             {
                 return;
             }

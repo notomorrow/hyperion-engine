@@ -3006,7 +3006,7 @@ Result BoxedToHMFImpl(
 
             if (handle.IsValid())
             {
-                const Class* actualClass = GetClass(handle.GetTypeId());
+                const Class* actualClass = handle.GetClass();
 
                 if (actualClass && (typeInfo.IsHandleType() || actualClass->IsDerivedFrom(valueClass)))
                 {
@@ -3509,7 +3509,9 @@ bool ResolveAssetPath(const String& path, const TypeInfo& targetType, BoxedValue
         return false;
     }
 
-    if (targetType.IsHandleType())
+    const Class* targetClass = targetType.GetClass();
+
+    if (targetType.IsHandleType() || (targetClass && targetClass->UseHandles()))
     {
         AssetReference ref(assetPath);
 

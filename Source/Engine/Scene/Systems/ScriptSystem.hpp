@@ -59,6 +59,8 @@ public:
 
     ENGINE_API static void RetargetReloadedObjects(World& world);
 
+    ENGINE_API static void SetGameAssembly(const FilePath& projectDirectory, const FilePath& assemblyPath, bool isNewBuild);
+
     static Delegate<void> OnScriptReloaded;
 
 private:
@@ -76,8 +78,13 @@ private:
     // Builds the C# module for a script if needed and points its asset at the assembly
     void ResolveScriptAssembly(ScriptComponent& scriptComponent);
 
+    void ApplyGameAssembly(bool rebuildOnReload);
+
     UniquePtr<ScriptingService> m_scriptingService;
     UniquePtr<ScriptTracker> m_scriptTracker;
+
+    uint32 m_gameAssemblyVersion = 0;
+    FilePath m_gameProjectDirectory;
 };
 
 } // namespace Hyperion

@@ -731,7 +731,7 @@ struct BoxedValueHelper<ObjId<T>> : BoxedValueHelper<ObjIdBase>
     HYP_FORCE_INLINE bool Is(const Handle<ObjectBase>& value) const
     {
         // allow null handles through
-        return !value || IsA(GetClass(TypeId::ForType<T>()), GetClass(value.GetTypeId()));
+        return !value || IsA(GetClass(TypeId::ForType<T>()), value.GetClass());
     }
 
     HYP_FORCE_INLINE ObjId<T> Get(ObjIdBase value) const
@@ -845,7 +845,7 @@ struct BoxedValueHelper<Handle<T>> : BoxedValueHelper<Handle<ObjectBase>, std::e
     HYP_FORCE_INLINE bool Is(const Handle<ObjectBase>& value) const
     {
         // Allow null handles through
-        return !value || IsA(GetClass(TypeId::ForType<T>()), GetClass(value.GetTypeId()));
+        return !value || IsA(GetClass(TypeId::ForType<T>()), value.GetClass());
     }
 
     HYP_FORCE_INLINE Handle<T>& Get(Handle<ObjectBase>& value) const
@@ -1059,7 +1059,7 @@ struct BoxedValueHelper<T*, std::enable_if_t<!is_const_pointer_v<T*> && !std::is
 
     HYP_FORCE_INLINE bool Is(const Handle<ObjectBase>& value) const
     {
-        return !value || IsA(GetClass(TypeId::ForType<T>()), GetClass(value.GetTypeId()));
+        return !value || IsA(GetClass(TypeId::ForType<T>()), value.GetClass());
     }
 
     HYP_FORCE_INLINE bool Is(const SharedPtr<void>& value) const
@@ -2061,7 +2061,7 @@ struct BoxedValueHelper<T, std::enable_if_t<!BoxedValue::canStoreDirectly<T> && 
         if constexpr (std::is_base_of_v<ObjectBase, T>)
         {
             // Dereferencing a null pointer would be bad - so we'll just pretend it's not the type
-            return value && IsA(GetClass(TypeId::ForType<T>()), GetClass(value.GetTypeId()));
+            return value && IsA(GetClass(TypeId::ForType<T>()), value.GetClass());
         }
         else
         {
@@ -2196,7 +2196,7 @@ struct BoxedValueHelper<T*, std::enable_if_t<std::is_base_of_v<ObjectBase, T> &&
     {
         if constexpr (std::is_base_of_v<ObjectBase, T>)
         {
-            return !value.IsValid() || IsA(GetClass(TypeId::ForType<T>()), GetClass(value.GetTypeId()));
+            return !value.IsValid() || IsA(GetClass(TypeId::ForType<T>()), value.GetClass());
         }
         else
         {

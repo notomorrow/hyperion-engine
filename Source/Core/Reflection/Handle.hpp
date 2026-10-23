@@ -70,7 +70,7 @@ struct Handle final : HandleBase
     {
         if (id.IsValid())
         {
-            ObjectContainerBase* container = GetObjectContainerForClass(GetClass(id.GetTypeId()));
+            ObjectContainerBase* container = GetObjectContainerForClass(::Hyperion::GetClass(id.GetTypeId()));
 
             // This really shouldn't happen unless we're doing something wrong.
             // We shouldn't have an Id for a type that doesn't have a container.
@@ -213,6 +213,14 @@ struct Handle final : HandleBase
         static const TypeId s_typeId = TypeId::ForType<T>();
 
         return ptr ? GetTypeIdForClass(ptr->m_header->cls) : s_typeId;
+    }
+
+    /*! \brief Get the instance class of the object the handle holds. 
+     *  \return The class pointer for the object the handle points to,
+     *  or nullptr if there is no valid object the handle points to. */
+    HYP_FORCE_INLINE const Class* GetClass() const
+    {
+        return ptr ? ptr->m_header->cls : nullptr;
     }
 
     /*! \brief Get TypeInfo for the object that the handle is referencing. If the handle is null, it returns the TypeInfo for T.
@@ -358,7 +366,7 @@ struct Handle final : HandleBase
     {
         if (ptr)
         {
-            if (!IsA(GetClass(TypeId::ForType<T>()), ptr->m_header->cls))
+            if (!IsA(::Hyperion::GetClass(TypeId::ForType<T>()), ptr->m_header->cls))
             {
                 HYP_FAIL("Cannot create Handle because it is not a base class of T! "
                     "Expected = {}, Received = {}",
@@ -610,6 +618,11 @@ struct WeakHandle final
         return ptr ? GetTypeIdForClass(ptr->m_header->cls) : s_typeId;
     }
 
+    HYP_FORCE_INLINE const Class* GetClass() const
+    {
+        return ptr ? ptr->m_header->cls : nullptr;
+    }
+
     /*! \brief Get TypeInfo for the object that the handle is referencing. If the handle is null, it returns the TypeInfo for T.
      *  otherwise, it returns the TypeInfo for the object that the handle is referencing, which can be a derived type.
      *  \return The TypeInfo of the object. */
@@ -738,7 +751,7 @@ struct WeakHandle final
 
         if (ptr)
         {
-            if (!IsA(GetClass(TypeId::ForType<T>()), ptr->m_header->cls))
+            if (!IsA(::Hyperion::GetClass(TypeId::ForType<T>()), ptr->m_header->cls))
             {
                 HYP_FAIL("Cannot create WeakHandle because it is not a base class of T!");
             }

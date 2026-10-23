@@ -11,6 +11,55 @@ namespace Hyperion
 {
     internal class GlobalAssemblyHelper
     {
+        private static readonly Dictionary<string, Assembly> latestAssembliesByName = new Dictionary<string, Assembly>();
+        private static readonly object latestAssembliesLock = new object();
+
+        public static void RegisterLatestAssembly(Assembly assembly)
+        {
+            string? name = assembly.GetName().Name;
+
+            if (name == null)
+            {
+                return;
+            }
+
+            lock (latestAssembliesLock)
+            {
+                latestAssembliesByName[name] = assembly;
+            }
+        }
+
+        public static void UnregisterLatestAssembly(Assembly assembly)
+        {
+            string? name = assembly.GetName().Name;
+
+            if (name == null)
+            {
+                return;
+            }
+
+            lock (latestAssembliesLock)
+            {
+                if (latestAssembliesByName.TryGetValue(name, out Assembly? latest) && ReferenceEquals(latest, assembly))
+                {
+                    latestAssembliesByName.Remove(name);
+                }
+            }
+        }
+
+        public static Assembly? FindLatestAssembly(AssemblyName name)
+        {
+            if (name.Name == null)
+            {
+                return null;
+            }
+
+            lock (latestAssembliesLock)
+            {
+                return latestAssembliesByName.TryGetValue(name.Name, out Assembly? latest) ? latest : null;
+            }
+        }
+
         public static Assembly? FindGlobalAssembly(AssemblyName name)
         {
             foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
@@ -99,7 +148,7 @@ namespace Hyperion
             // For instance, a script referencing Hyperion.Core or Hyperion.Runtime
             // should use those shared assemblies
             //
-            Assembly? globalAssembly = GlobalAssemblyHelper.FindGlobalAssembly(name);
+            Assembly? globalAssembly = GlobalAssemblyHelper.FindLatestAssembly(name) ?? GlobalAssemblyHelper.FindGlobalAssembly(name);
 
             if (globalAssembly != null)
             {
@@ -334,6 +383,11 @@ namespace Hyperion
                 }
             }
 
+            if (!isCoreAssembly)
+            {
+                GlobalAssemblyHelper.RegisterLatestAssembly(assembly);
+            }
+
             // Load all referenced assemblies to ensure nothing will crash later
             Logger.Log(LogLevel.Verbose, "Loaded assembly: {0}, with {1} referenced assemblies.", assembly.FullName, assembly.GetReferencedAssemblies().Length);
 
@@ -394,7 +448,7 @@ namespace Hyperion
 
             foreach (AssemblyInstance referencedAssembly in referencedAssemblies)
             {
-                if (referencedAssembly.IsCoreAssembly)
+                if (referencedAssembly.IsCoreAssembly || !ReferenceEquals(referencedAssembly.context, context))
                 {
                     continue;
                 }
@@ -405,6 +459,8 @@ namespace Hyperion
             }
 
             /// \todo Remove DynamicStruct instances for the assembly (their native Structs may be shared with the reloaded assembly's)
+
+            GlobalAssemblyHelper.UnregisterLatestAssembly(assembly);
 
             Class.RemoveCachedForAssembly(assembly);
 
@@ -588,6 +644,13 @@ namespace Hyperion
 
         public AssemblyInstance? Get(AssemblyName assemblyName)
         {
+            if (GlobalAssemblyHelper.FindLatestAssembly(assemblyName) is Assembly latest
+                && latest.GetName().FullName == assemblyName.FullName
+                && GetByReference(latest) is AssemblyInstance latestInstance)
+            {
+                return latestInstance;
+            }
+
             lock (lockObject)
             {
                 foreach (KeyValuePair<Guid, AssemblyInstance> kvp in assemblies)
