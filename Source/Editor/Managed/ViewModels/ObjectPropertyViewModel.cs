@@ -108,9 +108,12 @@ namespace Hyperion.Editor.ViewModels
             private set => SetProperty(ref _canCreateNew, value);
         }
 
-        public IReadOnlyList<ClassPickerEntry> CreatableClassEntries { get; private set; } = [];
-        
-        public bool HasCreatableClassChoice => CreatableClassEntries.Count(e => !e.IsAbstract) > 1;
+        private bool _hasCreatableClassChoice;
+        public bool HasCreatableClassChoice
+        {
+            get => _hasCreatableClassChoice;
+            private set => SetProperty(ref _hasCreatableClassChoice, value);
+        }
 
         private bool _isEditorExpanded;
         public bool IsEditorExpanded
@@ -147,6 +150,7 @@ namespace Hyperion.Editor.ViewModels
         private string _currentSelectedName = string.Empty;
 
         private readonly Class? _propertyTypeClass;
+        private readonly Func<Type?>? _declaredTypeResolver;
 
         public ICommand SelectCommand { get; }
         public ICommand ClearCommand { get; }
@@ -164,9 +168,9 @@ namespace Hyperion.Editor.ViewModels
         }
 
 
-        public IReadOnlyList<ClassPickerEntry> SubclassEntries { get; private set; } = [];
+        private TypeId? _propertyTypeId;
 
-        public bool IsPolymorphic => SubclassEntries.Count > 0;
+        public bool IsPolymorphic => _propertyTypeId.HasValue;
 
         public bool ShowSubclassPicker => IsPolymorphic;
 
@@ -207,8 +211,9 @@ namespace Hyperion.Editor.ViewModels
         {
             _depth = depth;
 
-            _isAssetObjectType = DetectIsAssetObjectType(property.TypeInfo);
-            _propertyTypeClass = GetPropertyTypeClass(property.TypeInfo);
+            _declaredTypeResolver = () => DeclaredObjectClass.FindMemberType(target.Class, property.Name);
+            _propertyTypeClass = DeclaredObjectClass.Resolve(GetPropertyTypeClass(property.TypeInfo), _declaredTypeResolver());
+            _isAssetObjectType = IsAssetObjectClass(_propertyTypeClass);
 
             SelectCommand = new RelayCommand(OnSelect);
             ClearCommand = new RelayCommand(OnClear);
@@ -227,8 +232,9 @@ namespace Hyperion.Editor.ViewModels
         {
             _depth = depth;
 
-            _isAssetObjectType = DetectIsAssetObjectType(property.TypeInfo);
-            _propertyTypeClass = GetPropertyTypeClass(property.TypeInfo);
+            _declaredTypeResolver = () => DeclaredObjectClass.FindMemberType(new Class(classAddress), property.Name);
+            _propertyTypeClass = DeclaredObjectClass.Resolve(GetPropertyTypeClass(property.TypeInfo), _declaredTypeResolver());
+            _isAssetObjectType = IsAssetObjectClass(_propertyTypeClass);
 
             SelectCommand = new RelayCommand(OnSelect);
             ClearCommand = new RelayCommand(OnClear);
@@ -242,13 +248,14 @@ namespace Hyperion.Editor.ViewModels
             UpdateCanClone();
         }
 
-        public ObjectPropertyViewModel(string label, TypeInfo typeInfo, Func<BoxedValue> getter, Action<BoxedValue> setter, bool isReadOnly, int depth = 0)
+        public ObjectPropertyViewModel(string label, TypeInfo typeInfo, Func<BoxedValue> getter, Action<BoxedValue> setter, bool isReadOnly, int depth = 0, Func<Type?>? declaredTypeResolver = null)
             : base(label, typeInfo, getter, setter, isReadOnly)
         {
             _depth = depth;
 
-            _isAssetObjectType = DetectIsAssetObjectType(typeInfo);
-            _propertyTypeClass = GetPropertyTypeClass(typeInfo);
+            _declaredTypeResolver = declaredTypeResolver;
+            _propertyTypeClass = DeclaredObjectClass.Resolve(GetPropertyTypeClass(typeInfo), _declaredTypeResolver?.Invoke());
+            _isAssetObjectType = IsAssetObjectClass(_propertyTypeClass);
 
             SelectCommand = new RelayCommand(OnSelect);
             ClearCommand = new RelayCommand(OnClear);
@@ -271,11 +278,9 @@ namespace Hyperion.Editor.ViewModels
         {
             IconKind = AssetIconHelper.FromTypeName(_propertyTypeClass?.Name.ToString());
 
-            PopulateCreatableClasses();
+            HasCreatableClassChoice = _isAssetObjectType && _propertyTypeClass.HasValue && _propertyTypeClass.Value.IsAbstract;
 
-            CanCreateNew = CreatableClassEntries.Count > 0;
-
-            OnPropertyChanged(nameof(HasCreatableClassChoice));
+            CanCreateNew = BuildCreatableClassEntries().Any(e => !e.IsAbstract);
         }
 
         private void UpdateCanClone()
@@ -283,13 +288,11 @@ namespace Hyperion.Editor.ViewModels
             CanClone = _isAssetObjectType && !_isReadOnly && HasSubObject;
         }
 
-        private void PopulateCreatableClasses()
+        public IReadOnlyList<ClassPickerEntry> BuildCreatableClassEntries()
         {
-            CreatableClassEntries = [];
-
             if (!_isAssetObjectType || _isReadOnly || _propertyTypeClass == null)
             {
-                return;
+                return [];
             }
 
             Class expected = _propertyTypeClass.Value;
@@ -300,23 +303,22 @@ namespace Hyperion.Editor.ViewModels
             if (scriptAssetClass.HasValue
                 && (expected == scriptAssetClass.Value || expected.IsSubclassOf(scriptAssetClass.Value)))
             {
-                return;
+                return [];
             }
 
             if (!expected.IsAbstract)
             {
-                CreatableClassEntries = [new ClassPickerEntry(expected.Name.ToString(), 0, false)];
-                return;
+                return [new ClassPickerEntry(expected.Name.ToString(), 0, false)];
             }
 
             // An abstract property type (PhysicsShape, say) has no instance of its own to create, so the
             // choice of which implementation to create is the user's.
-            CreatableClassEntries = ClassPickerEntries.BuildDerived(expected);
+            return ClassPickerEntries.BuildDerived(expected.TypeId);
         }
 
-        private static bool DetectIsAssetObjectType(TypeInfo typeInfo)
+        private static bool IsAssetObjectClass(Class? propertyClass)
         {
-            if (!typeInfo.IsClass || !typeInfo.Class.HasValue)
+            if (!propertyClass.HasValue)
             {
                 return false;
             }
@@ -328,8 +330,7 @@ namespace Hyperion.Editor.ViewModels
                 return false;
             }
 
-            Class propertyClass = typeInfo.Class.Value;
-            return propertyClass == assetClass.Value || propertyClass.IsSubclassOf(assetClass.Value);
+            return propertyClass.Value == assetClass.Value || propertyClass.Value.IsSubclassOf(assetClass.Value);
         }
 
         private static Class? GetPropertyTypeClass(TypeInfo typeInfo)
@@ -344,13 +345,12 @@ namespace Hyperion.Editor.ViewModels
 
         private void PopulateSubclasses()
         {
-            if (_isAssetObjectType || _propertyTypeClass == null)
-                return;
+            _propertyTypeId = _isAssetObjectType ? null : _propertyTypeClass?.TypeId;
+        }
 
-            SubclassEntries = ClassPickerEntries.BuildDerived(_propertyTypeClass.Value);
-
-            if (IsPolymorphic)
-                OnPropertyChanged(nameof(ShowSubclassPicker));
+        public IReadOnlyList<ClassPickerEntry> BuildSubclassEntries()
+        {
+            return _propertyTypeId.HasValue ? ClassPickerEntries.BuildDerived(_propertyTypeId.Value) : [];
         }
 
         private void CommitSubclass(string className)
@@ -374,8 +374,16 @@ namespace Hyperion.Editor.ViewModels
 
                 try
                 {
+                    Type? declaredType = _declaredTypeResolver?.Invoke();
+
                     for (int i = 0; i < 1 + Peers.Count; i++)
                     {
+                        if (DeclaredObjectClass.CreateManagedInstance(declaredType, className) is object managedInstance)
+                        {
+                            instances.Add(new BoxedValue(managedInstance));
+                            continue;
+                        }
+
                         BoxedValueInternal result;
 
                         unsafe
@@ -610,12 +618,12 @@ namespace Hyperion.Editor.ViewModels
         {
             // With more than one implementation to pick from the menu opens a class picker instead, which
             // calls CreateNewOfClass directly.
-            if (HasCreatableClassChoice || CreatableClassEntries.Count == 0)
+            if (HasCreatableClassChoice || BuildCreatableClassEntries().FirstOrDefault(e => !e.IsAbstract) is not ClassPickerEntry entry)
             {
                 return;
             }
 
-            CreateNewOfClass(CreatableClassEntries.First(e => !e.IsAbstract).Name);
+            CreateNewOfClass(entry.Name);
         }
 
         public void CreateNewOfClass(string className)

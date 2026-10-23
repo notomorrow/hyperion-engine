@@ -1467,6 +1467,29 @@ extern "C"
         ClassRegistry::GetInstance().ForEachClass(doer);
     }
 
+    HYP_EXPORT void Hyp_GetAllDerivedClasses(const TypeId* baseTypeId, void* callback, void* userData)
+    {
+        using CallbackType = void (*)(const Class*, void*);
+        auto callbackFn = reinterpret_cast<CallbackType>(callback);
+
+        auto doer = [&](const Class* cls) -> IterationResult
+        {
+            for (const Class* current = cls; current != nullptr; current = current->GetParent())
+            {
+                if (current->GetTypeId() == *baseTypeId)
+                {
+                    callbackFn(cls, userData);
+
+                    break;
+                }
+            }
+
+            return IterationResult::CONTINUE;
+        };
+
+        ClassRegistry::GetInstance().ForEachClass(doer);
+    }
+
     HYP_EXPORT bool Hyp_CreateInstanceOfClass(const char* className, BoxedValue* outBoxed)
     {
         Assert(outBoxed != nullptr);

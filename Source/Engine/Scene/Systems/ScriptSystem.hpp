@@ -57,6 +57,8 @@ public:
      *  (e.g C# subclasses of Entity) are registered before the project's scenes are read. Editor only; null otherwise. */
     ENGINE_API static SharedPtr<dotnet::Assembly> LoadProjectScriptAssembly(const FilePath& contentDirectory);
 
+    ENGINE_API static void RetargetReloadedObjects(World& world);
+
     static Delegate<void> OnScriptReloaded;
 
 private:

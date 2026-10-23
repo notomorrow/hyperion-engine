@@ -11,46 +11,53 @@ namespace Hyperion.Editor.ViewModels
 
     public static class ClassPickerEntries
     {
-        public static List<ClassPickerEntry> Build(Class baseClass, IEnumerable<string> concreteClassNames)
+        public static List<ClassPickerEntry> BuildDerived(TypeId baseTypeId)
         {
-            Dictionary<string, Class> classes = new Dictionary<string, Class>();
+            List<Class> classes = [];
+            ClassCallbackDelegate callback = (cls, _) => classes.Add(new Class(cls));
+
+            NativeBindings.Hyp_GetAllDerivedClasses(ref baseTypeId, callback, IntPtr.Zero);
+
+            Dictionary<string, bool> abstractByName = new Dictionary<string, bool>();
             Dictionary<string, List<string>> children = new Dictionary<string, List<string>>();
-            string baseName = baseClass.Name.ToString();
+            string? baseName = null;
+            bool isBaseAbstract = true;
 
-            foreach (string name in concreteClassNames)
+            foreach (Class cls in classes)
             {
-                Class? cls = Class.TryGetClass(name);
+                string name = cls.Name.ToString();
 
-                if (!cls.HasValue)
+                if (cls.TypeId == baseTypeId)
+                {
+                    baseName = name;
+                    isBaseAbstract = cls.IsAbstract;
+                    continue;
+                }
+
+                Class? parent = cls.GetParent();
+
+                if (!parent.HasValue || !abstractByName.TryAdd(name, cls.IsAbstract))
                 {
                     continue;
                 }
 
-                Class current = cls.Value;
+                string parentName = parent.Value.Name.ToString();
 
-                while (classes.TryAdd(current.Name.ToString(), current) && current != baseClass)
+                if (!children.TryGetValue(parentName, out List<string>? siblings))
                 {
-                    Class? parent = current.GetParent();
-
-                    if (!parent.HasValue)
-                    {
-                        break;
-                    }
-
-                    string parentName = parent.Value.Name.ToString();
-
-                    if (!children.TryGetValue(parentName, out List<string>? siblings))
-                    {
-                        siblings = new List<string>();
-                        children.Add(parentName, siblings);
-                    }
-
-                    siblings.Add(current.Name.ToString());
-                    current = parent.Value;
+                    siblings = new List<string>();
+                    children.Add(parentName, siblings);
                 }
+
+                siblings.Add(name);
             }
 
             List<ClassPickerEntry> entries = new List<ClassPickerEntry>();
+
+            if (baseName == null)
+            {
+                return entries;
+            }
 
             void Visit(string name, int depth)
             {
@@ -63,12 +70,12 @@ namespace Hyperion.Editor.ViewModels
 
                 foreach (string child in names)
                 {
-                    entries.Add(new ClassPickerEntry(child, depth, classes[child].IsAbstract));
+                    entries.Add(new ClassPickerEntry(child, depth, abstractByName[child]));
                     Visit(child, depth + 1);
                 }
             }
 
-            if (classes.ContainsKey(baseName) && !baseClass.IsAbstract)
+            if (!isBaseAbstract)
             {
                 entries.Add(new ClassPickerEntry(baseName, 0, false));
                 Visit(baseName, 1);
@@ -79,16 +86,6 @@ namespace Hyperion.Editor.ViewModels
             }
 
             return entries;
-        }
-
-        public static List<ClassPickerEntry> BuildDerived(Class baseClass)
-        {
-            List<string> names = [];
-            NameCallbackDelegate callback = (name, _) => names.Add(name);
-
-            NativeBindings.Hyp_GetAllDerivedClassNames(baseClass.Name.ToString(), callback, IntPtr.Zero);
-
-            return Build(baseClass, names);
         }
     }
 

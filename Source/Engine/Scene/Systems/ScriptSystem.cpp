@@ -305,8 +305,11 @@ static void RetargetDynamicObject(ObjectBase* object, const DynamicClassInstance
     }
 }
 
-static void RetargetReloadedObjects(World& world)
+#endif // HYP_DOTNET
+
+void ScriptSystem::RetargetReloadedObjects(World& world)
 {
+#ifdef HYP_DOTNET
     uint32 numRetargeted = 0;
 
     for (Scene* scene : world.GetScenes())
@@ -350,8 +353,8 @@ static void RetargetReloadedObjects(World& world)
     {
         HYP_LOG(Scripting, Info, "Reloaded {} object(s) of C# classes", numRetargeted);
     }
-}
 #endif // HYP_DOTNET
+}
 
 #pragma endregion Reloaded script classes
 

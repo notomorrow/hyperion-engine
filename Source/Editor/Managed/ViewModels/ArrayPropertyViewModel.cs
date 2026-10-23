@@ -16,6 +16,8 @@ namespace Hyperion.Editor.ViewModels
 
         private readonly int _depth;
         private readonly TypeInfo _elementTypeInfo;
+        private readonly Func<Type?>? _elementTypeResolver;
+        private readonly Class? _elementClass;
         private readonly bool _isPolymorphic;
 
         // Array<BoxedValue>: each element row is built for the type the element actually holds.
@@ -80,6 +82,8 @@ namespace Hyperion.Editor.ViewModels
         {
             _depth = depth;
             _elementTypeInfo = property.TypeInfo.GetElementTypeInfo();
+            _elementTypeResolver = () => DeclaredObjectClass.FindMemberType(target.Class, property.Name, element: true);
+            _elementClass = DeclaredObjectClass.Resolve(_elementTypeInfo.Class, _elementTypeResolver());
             _isPolymorphic = DetectPolymorphic();
             _isTypeErased = IsTypeErasedElementType(_elementTypeInfo);
 
@@ -94,6 +98,8 @@ namespace Hyperion.Editor.ViewModels
         {
             _depth = depth;
             _elementTypeInfo = property.TypeInfo.GetElementTypeInfo();
+            _elementTypeResolver = () => DeclaredObjectClass.FindMemberType(new Class(classAddress), property.Name, element: true);
+            _elementClass = DeclaredObjectClass.Resolve(_elementTypeInfo.Class, _elementTypeResolver());
             _isPolymorphic = DetectPolymorphic();
             _isTypeErased = IsTypeErasedElementType(_elementTypeInfo);
 
@@ -108,6 +114,7 @@ namespace Hyperion.Editor.ViewModels
         {
             _depth = depth;
             _elementTypeInfo = typeInfoHint.GetElementTypeInfo();
+            _elementClass = _elementTypeInfo.Class;
             _isPolymorphic = DetectPolymorphic();
             _isTypeErased = IsTypeErasedElementType(_elementTypeInfo);
 
@@ -120,7 +127,7 @@ namespace Hyperion.Editor.ViewModels
 
         private bool DetectPolymorphic()
         {
-            Class? elementClass = _elementTypeInfo.Class;
+            Class? elementClass = _elementClass;
             if (elementClass == null)
                 return false;
 
@@ -181,7 +188,9 @@ namespace Hyperion.Editor.ViewModels
             BoxedValue? current = Volatile.Read(ref _currentArrayValue);
 
             if (current == null)
+            {
                 return;
+            }
 
             if (TryWriteContainerValueToSwatchOverride(current))
             {
@@ -230,7 +239,9 @@ namespace Hyperion.Editor.ViewModels
             BoxedValue? current = Volatile.Read(ref _peerArrayValues[peerIndex]);
 
             if (current == null)
+            {
                 return;
+            }
 
             PropertyTarget peer = Peers[peerIndex];
 
@@ -318,7 +329,7 @@ namespace Hyperion.Editor.ViewModels
 
             if (project != null)
             {
-                (EngineManager.GetActionStackFor(null) ?? project.ActionStack).PushAction(action);
+                (EngineManager.GetActionStackFor(null) ?? project.ActionStack)?.PushAction(action);
             }
             else
             {
@@ -341,7 +352,8 @@ namespace Hyperion.Editor.ViewModels
                 initialize: false,
                 preWriteCallback: ReloadArrayFromParent,
                 postWriteCallback: WriteArrayToParent,
-                valueChangedCallback: () => ValueChangedCallback?.Invoke());
+                valueChangedCallback: () => ValueChangedCallback?.Invoke(),
+                declaredTypeResolver: _isTypeErased ? null : _elementTypeResolver);
 
             // Element N edits element N of every selected object's array (only shown when the lengths match).
             List<PropertyTarget> elementPeers = new List<PropertyTarget>(Peers.Count);
@@ -379,7 +391,8 @@ namespace Hyperion.Editor.ViewModels
                     getter: () => throw new InvalidOperationException("Pending element"),
                     setter: _ => { },
                     isReadOnly: _isReadOnly,
-                    depth: _depth + 1);
+                    depth: _depth + 1,
+                    declaredTypeResolver: _elementTypeResolver);
 
                 vm.IsPending = true;
                 vm.OnPendingCommitted = CommitPendingElement;
@@ -415,7 +428,7 @@ namespace Hyperion.Editor.ViewModels
                 execute: (_, array) =>
                 {
                     // Each selected object gets its own instance.
-                    using BoxedValue instance = CreateInstanceOfClass(className);
+                    using BoxedValue instance = CreateInstanceOfClass(_elementTypeResolver?.Invoke(), className);
                     array.PushBackArrayElement(instance);
                 },
                 revert: (_, array) => RemoveLastElement(array)));
@@ -519,12 +532,19 @@ namespace Hyperion.Editor.ViewModels
             array.SetArrayElement(insertIndex, defaultElement);
         }
 
-        private static unsafe BoxedValue CreateInstanceOfClass(string className)
+        private static unsafe BoxedValue CreateInstanceOfClass(Type? declaredType, string className)
         {
+            if (DeclaredObjectClass.CreateManagedInstance(declaredType, className) is object managedInstance)
+            {
+                return new BoxedValue(managedInstance);
+            }
+
             BoxedValueInternal result;
 
             if (!Hyp_CreateInstanceOfClass(className, &result))
+            {
                 throw new InvalidOperationException($"Failed to create instance of '{className}'");
+            }
 
             return BoxedValue.FromBuffer(result);
         }

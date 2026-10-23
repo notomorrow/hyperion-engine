@@ -22,6 +22,9 @@ namespace Hyperion.Editor
         [MarshalAs(UnmanagedType.LPStr)] string name,
         IntPtr userData);
 
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void ClassCallbackDelegate(IntPtr cls, IntPtr userData);
+
 
     public unsafe struct ManagedDelegates
     {
@@ -72,6 +75,9 @@ namespace Hyperion.Editor
 
         [DllImport("hyperion")]
         public static extern void Hyp_GetAllDerivedClassNames(string baseClassName, NameCallbackDelegate callback, IntPtr userData);
+
+        [DllImport("hyperion")]
+        public static extern void Hyp_GetAllDerivedClasses([In] ref TypeId baseTypeId, ClassCallbackDelegate callback, IntPtr userData);
 
         [DllImport("hyperion")]
         public static extern bool Hyp_CreateInstanceOfClass(string className, out BoxedValueInternal outBoxed);

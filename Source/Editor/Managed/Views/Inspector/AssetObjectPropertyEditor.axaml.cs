@@ -189,20 +189,27 @@ namespace Hyperion.Editor.Views.Inspector
             PART_CopyMenuItem.IsEnabled = (DataContext as ObjectPropertyViewModel)?.GetCopyText() != null;
         }
 
-        private void OnCreateNewOfClassClicked(object? sender, RoutedEventArgs e)
+        private async void OnCreateNewOfClassClicked(object? sender, RoutedEventArgs e)
         {
             if (DataContext is not ObjectPropertyViewModel vm)
             {
                 return;
             }
 
-            Dispatcher.UIThread.Post(() => ClassPicker.Show(PART_MoreButton, vm.CreatableClassEntries, null, allowNone: false, className =>
+            IReadOnlyList<ClassPickerEntry> entries = await EngineManager.PostToSimThread<IReadOnlyList<ClassPickerEntry>>(vm.BuildCreatableClassEntries);
+
+            if (DataContext != vm)
+            {
+                return;
+            }
+
+            ClassPicker.Show(PART_MoreButton, entries, null, allowNone: false, className =>
             {
                 if (className != null)
                 {
                     vm.CreateNewOfClass(className);
                 }
-            }, PlacementMode.BottomEdgeAlignedRight));
+            }, PlacementMode.BottomEdgeAlignedRight);
         }
 
         private async void OnCopyClicked(object? sender, RoutedEventArgs e)

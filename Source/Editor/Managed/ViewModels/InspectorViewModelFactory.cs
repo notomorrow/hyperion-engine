@@ -286,7 +286,8 @@ namespace Hyperion.Editor.ViewModels
             bool initialize = true,
             Action? preWriteCallback = null,
             Action? postWriteCallback = null,
-            Action? valueChangedCallback = null)
+            Action? valueChangedCallback = null,
+            Func<Type?>? declaredTypeResolver = null)
         {
             bool isNameType = InspectorPropertyViewModelBase.IsNameType(typeInfo);
 
@@ -378,7 +379,7 @@ namespace Hyperion.Editor.ViewModels
             }
             else if (typeInfo.Class.HasValue && typeInfo.Class.Value.IsClassType)
             {
-                vm = new ObjectPropertyViewModel(label, typeInfo, getter, setter, isReadOnly, depth);
+                vm = new ObjectPropertyViewModel(label, typeInfo, getter, setter, isReadOnly, depth, declaredTypeResolver);
             }
             else if (typeInfo.Class.HasValue && typeInfo.Class.Value.IsStructType)
             {

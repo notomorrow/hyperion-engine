@@ -408,6 +408,19 @@ namespace Hyperion
             return dynamicClassesByType.TryGetValue(type, out cls);
         }
 
+        public static Type? TryGetDynamicType(Class cls)
+        {
+            foreach (KeyValuePair<Type, Class> pair in dynamicClassesByType)
+            {
+                if (pair.Value == cls)
+                {
+                    return pair.Key;
+                }
+            }
+
+            return null;
+        }
+
         public static void RemoveCachedForAssembly(Assembly assembly)
         {
             foreach (Type type in dynamicClassesByType.Keys)

@@ -6,7 +6,7 @@ namespace Hyperion.Editor.Services
     [SupportedOSPlatform("macos")]
     public sealed class MacGameBuildPlatform : PosixGameBuildPlatform
     {
-        public override string Name => "Darwin";
+        public override string Name => "Mac";
 
         public override string CookTargetPlatform => "mac";
 

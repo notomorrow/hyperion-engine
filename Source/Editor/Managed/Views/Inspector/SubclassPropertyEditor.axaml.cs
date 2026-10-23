@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -30,14 +31,19 @@ namespace Hyperion.Editor.Views.Inspector
             OpenPicker();
         }
 
-        private void OpenPicker()
+        private async void OpenPicker()
         {
             if (DataContext is not ObjectPropertyViewModel vm || vm.IsReadOnly || !PART_TypeButton.IsEffectivelyVisible)
             {
                 return;
             }
 
-            ClassPicker.Show(PART_TypeButton, vm.SubclassEntries, vm.CurrentTypeName, allowNone: !vm.IsPending, vm.PickSubclass, PlacementMode.BottomEdgeAlignedRight);
+            IReadOnlyList<ClassPickerEntry> entries = await EngineManager.PostToSimThread<IReadOnlyList<ClassPickerEntry>>(vm.BuildSubclassEntries);
+
+            if (DataContext == vm && PART_TypeButton.IsEffectivelyVisible)
+            {
+                ClassPicker.Show(PART_TypeButton, entries, vm.CurrentTypeName, allowNone: !vm.IsPending, vm.PickSubclass, PlacementMode.BottomEdgeAlignedRight);
+            }
         }
     }
 }
