@@ -564,32 +564,40 @@ static HYP_FORCE_INLINE constexpr HYP_ENABLE_IF(!isMathVectorV<T>, bool) ApproxE
 template <class T, class U = T>
 static HYP_FORCE_INLINE constexpr HYP_ENABLE_IF(!isMathVectorV<T>, U) Round(T a, int decimalPlaces)
 {
-    double factor = 1.0;
-    for (int i = Abs(decimalPlaces); i > 0; i--)
+    if constexpr (std::is_constant_evaluated())
     {
-        factor *= 10.0;
+        double factor = 1.0;
+        for (int i = Abs(decimalPlaces); i > 0; i--)
+        {
+            factor *= 10.0;
+        }
+
+        const double scaled = decimalPlaces >= 0 ? double(a) * factor : double(a) / factor;
+
+        if (!(Abs(scaled) < 4503599627370496.0))
+        {
+            return U(a);
+        }
+
+        double rounded = double(int64(scaled));
+        const double frac = scaled - rounded;
+
+        if (frac >= 0.5)
+        {
+            rounded += 1.0;
+        }
+        else if (frac <= -0.5)
+        {
+            rounded -= 1.0;
+        }
+
+        return U(decimalPlaces >= 0 ? rounded / factor : rounded * factor);
     }
-
-    const double scaled = decimalPlaces >= 0 ? double(a) * factor : double(a) / factor;
-
-    if (!(Abs(scaled) < 4503599627370496.0))
+    else
     {
-        return U(a);
+        const auto multiplier = std::pow(a, decimalPlaces);
+        return U(std::round(a * multiplier) / multiplier);
     }
-
-    double rounded = double(int64(scaled));
-    const double frac = scaled - rounded;
-
-    if (frac >= 0.5)
-    {
-        rounded += 1.0;
-    }
-    else if (frac <= -0.5)
-    {
-        rounded -= 1.0;
-    }
-
-    return U(decimalPlaces >= 0 ? rounded / factor : rounded * factor);
 }
 
 template <class T, class U = T>
