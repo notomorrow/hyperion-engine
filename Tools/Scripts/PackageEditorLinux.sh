@@ -192,8 +192,15 @@ if [[ -f "$SDK_CMAKE_FILE" ]]; then
     if grep -q -F "$ROOT_DIR" "$SDK_STAGE_DIR/CMake/HyperionSdk.cmake"; then
         warn "Sdk/CMake/HyperionSdk.cmake has the source tree path ($ROOT_DIR) in it"
     fi
+
+    if [[ ! -f "$SDK_STAGE_DIR/Include/Engine/HyperionPch.hpp" || ! -f "$SDK_STAGE_DIR/Include/Generated/CodeGenOutput.inc" ]]; then
+        echo "SDK headers are incomplete (HyperionPch.hpp or CodeGen output missing); run CodeGen and rebuild" >&2
+        exit 1
+    fi
 else
-    warn "SDK not staged ($SDK_CMAKE_FILE not found); game projects can't be built from this package"
+    # without it the editor can't build native game projects, so don't ship a package that looks fine but isn't
+    echo "SDK not staged: $SDK_CMAKE_FILE not found. Rebuild with 'Tools/Scripts/BuildHyperion.sh distribution ninja regenerate'" >&2
+    exit 1
 fi
 
 # --- Legal ------------------------------------------------------------------------------------------------------------
