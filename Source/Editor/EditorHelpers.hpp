@@ -13,7 +13,12 @@
 namespace Hyperion {
 
 class View;
+
+namespace filesystem {
 class FilePath;
+} // namespace filesystem
+
+using filesystem::FilePath;
 
 namespace EditorHelpers {
 
