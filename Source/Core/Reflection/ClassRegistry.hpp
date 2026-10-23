@@ -167,4 +167,20 @@ private:
     AtomicVar<uint32> m_cacheGeneration;
 };
 
+class CORE_API ClassLookupOverrideScope
+{
+public:
+    explicit ClassLookupOverrideScope(const Array<const Class*>& classes);
+
+    ClassLookupOverrideScope(const ClassLookupOverrideScope&) = delete;
+    ClassLookupOverrideScope& operator=(const ClassLookupOverrideScope&) = delete;
+
+    ~ClassLookupOverrideScope();
+
+    static const Class* Find(TypeId typeId);
+
+private:
+    const Array<const Class*>* m_previousClasses;
+};
+
 } // namespace Hyperion

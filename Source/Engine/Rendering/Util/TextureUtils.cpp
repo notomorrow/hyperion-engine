@@ -231,6 +231,66 @@ Handle<Texture> CreateCheckerTexture(
     return texture;
 }
 
+ENGINE_API ByteBuffer ResampleToSRGB8(const Float16* src, Vec2u srcExtent, Vec2u dstExtent)
+{
+    uint32 cropWidth = srcExtent.x;
+    uint32 cropHeight = srcExtent.y;
+
+    if (uint64(srcExtent.x) * dstExtent.y > uint64(dstExtent.x) * srcExtent.y)
+    {
+        cropWidth = MathUtil::Max(uint32(uint64(srcExtent.y) * dstExtent.x / dstExtent.y), 1u);
+    }
+    else
+    {
+        cropHeight = MathUtil::Max(uint32(uint64(srcExtent.x) * dstExtent.y / dstExtent.x), 1u);
+    }
+
+    const uint32 offsetX = (srcExtent.x - cropWidth) / 2;
+    const uint32 offsetY = (srcExtent.y - cropHeight) / 2;
+
+    ByteBuffer rgba8(size_t(dstExtent.x) * dstExtent.y * 4);
+    ubyte* dst = rgba8.Data();
+
+    for (uint32 y = 0; y < dstExtent.y; y++)
+    {
+        const uint32 y0 = offsetY + uint32(uint64(y) * cropHeight / dstExtent.y);
+        const uint32 y1 = MathUtil::Max(offsetY + uint32(uint64(y + 1) * cropHeight / dstExtent.y), y0 + 1);
+
+        for (uint32 x = 0; x < dstExtent.x; x++)
+        {
+            const uint32 x0 = offsetX + uint32(uint64(x) * cropWidth / dstExtent.x);
+            const uint32 x1 = MathUtil::Max(offsetX + uint32(uint64(x + 1) * cropWidth / dstExtent.x), x0 + 1);
+
+            float sum[3] = { 0.0f, 0.0f, 0.0f };
+
+            for (uint32 sy = y0; sy < y1; sy++)
+            {
+                for (uint32 sx = x0; sx < x1; sx++)
+                {
+                    const Float16* pixel = src + (size_t(sy) * srcExtent.x + sx) * 4;
+
+                    for (uint32 c = 0; c < 3; c++)
+                    {
+                        sum[c] += MathUtil::Clamp(float(pixel[c]), 0.0f, 1.0f);
+                    }
+                }
+            }
+
+            const float invCount = 1.0f / float((x1 - x0) * (y1 - y0));
+            ubyte* out = dst + (size_t(y) * dstExtent.x + x) * 4;
+
+            for (uint32 c = 0; c < 3; c++)
+            {
+                out[c] = LinearToSRGB8(sum[c] * invCount);
+            }
+
+            out[3] = 255;
+        }
+    }
+
+    return rgba8;
+}
+
 } // namespace TextureUtils
 
 } // namespace Hyperion

@@ -124,6 +124,8 @@ struct ClassDefinition
     String source;
     Module* declModule = nullptr;
 
+    bool hasCSharpClass : 1 = false;
+
     // cached C++ parsing metadata, used for building forward declarations
     bool isCXXClass : 1;     //!< original type is class
     bool isCXXStruct : 1;    //!< original type is struct

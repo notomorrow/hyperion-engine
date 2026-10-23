@@ -235,8 +235,13 @@ void Entity::RemoveFromLayerByName(Name layerName)
 
 Handle<Node> Entity::Clone() const
 {
+    return CloneAs(InstanceClass(), /* cloneChildren */ true);
+}
+
+Handle<Node> Entity::CloneAs(const Class* cls, bool cloneChildren) const
+{
     // Clone Node base
-    Handle<Node> baseClone = Node::Clone();
+    Handle<Node> baseClone = Node::CloneAs(cls, cloneChildren);
     if (!baseClone.IsValid())
     {
         return Handle<Node>::Null();
@@ -287,43 +292,7 @@ Handle<Node> Entity::Clone() const
         BoxedValue srcBoxed(HandleFromThis());
         BoxedValue dstBoxed(cloned);
 
-        for (const Class* cls = InstanceClass(); cls != nullptr && cls != Entity::StaticClass(); cls = cls->GetParent())
-        {
-            for (const IMember& member : cls->GetMembers(MemberType::Field | MemberType::Property, /* deep */ false))
-            {
-                if (member.GetMemberType() != MemberType::Property && member.GetAttribute(Attributes::g_attrProperty).IsValid())
-                {
-                    // skip fields that are mirrored by a Property with getter/setter methods,
-                    // otherwise they'd be copied twice
-                    continue;
-                }
-
-                if (const ClassAttributeValue& transientAttr = member.GetAttribute(Attributes::g_attrTransient); transientAttr.IsValid() && transientAttr.GetBool())
-                {
-                    continue;
-                }
-
-                switch (member.GetMemberType())
-                {
-                case MemberType::Field:
-                    static_cast<const Field&>(member).Set(dstBoxed, static_cast<const Field&>(member).Get(srcBoxed));
-                    break;
-                case MemberType::Property:
-                {
-                    const Property& property = static_cast<const Property&>(member);
-
-                    if (property.CanGet() && property.CanSet())
-                    {
-                        property.Set(dstBoxed, property.Get(srcBoxed));
-                    }
-
-                    break;
-                }
-                default:
-                    break;
-                }
-            }
-        }
+        CopyMembersByName(InstanceClass(), srcBoxed, cls, dstBoxed, /* stopAtClass */ Entity::StaticClass());
     }
 
     InitObject(cloned);
@@ -415,7 +384,7 @@ void Entity::FlushPendingSwatchOverrides()
 
     EntityManager* entityManager = GetEntityManager();
 
-    if (!entityManager || !entityManager->HasEntity(Id()))
+    if (!entityManager || !entityManager->HasEntity(this))
     {
         // Not registered with an EntityManager yet; keep the sets stashed until Init() runs.
         return;
@@ -785,7 +754,7 @@ void Entity::UpdateDescendantRenderProxies()
 
         Entity* descendantEntity = static_cast<Entity*>(descendant);
 
-        if (descendantEntity->GetEntityManager() == entityManager && entityManager->HasEntity(descendantEntity->Id()))
+        if (descendantEntity->GetEntityManager() == entityManager && entityManager->HasEntity(descendantEntity))
         {
             entityManager->AddTag<EntityTag::UpdateRenderProxy>(descendantEntity);
         }

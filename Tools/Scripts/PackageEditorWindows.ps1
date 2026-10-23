@@ -52,7 +52,8 @@ $ManagedEditorFiles = @(
 $OwnBinaries = @(
     "Hyperion.Editor.exe",
     "hyperion.dll",
-    "Hyperion.NET.Scripting.dll"
+    "Hyperion.NET.Scripting.dll",
+    "hyperion-codegen.exe"
 )
 
 $Warnings = [System.Collections.Generic.List[string]]::new()
@@ -423,6 +424,19 @@ if ($IsMonolithic -and (Test-Path $SdkCMakeFile) -and (Test-Path $SdkImportLibra
         $headerCount++
     }
     Write-Host "    $headerCount headers"
+
+    # a C++ game runs CodeGen over its own headers, against the engine types the engine's CodeGen run listed
+    $EngineTypesFile = Join-Path $RootDir "Source/Generated/EngineTypes.json"
+    $CodeGenExe = Join-Path $RootDir "Build/hyperion-codegen.exe"
+    if ((Test-Path $EngineTypesFile) -and (Test-Path $CodeGenExe))
+    {
+        Copy-StagedFile $EngineTypesFile (Join-Path $SdkStageDir "Include/Generated/EngineTypes.json")
+        Copy-StagedFile $CodeGenExe (Join-Path $SdkStageDir "Bin/hyperion-codegen.exe")
+    }
+    else
+    {
+        Add-Warning "CodeGen not staged (needs $CodeGenExe and $EngineTypesFile); C++ game projects can't be built from this package"
+    }
 
     $sdkCMakeText = Get-Content $SdkCMakeFile -Raw
     if ($sdkCMakeText -notmatch 'set\(HYPERION_SDK_THIRD_PARTY_DIRS "([^"]*)"\)') { throw "HYPERION_SDK_THIRD_PARTY_DIRS not found in $SdkCMakeFile" }

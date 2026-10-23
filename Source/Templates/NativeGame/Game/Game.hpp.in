@@ -4,6 +4,7 @@
 
 namespace Hyperion {
 
+HYP_CLASS()
 class @CLASS@ final : public Game
 {
     HYP_OBJECT_BODY(@CLASS@);

@@ -71,4 +71,9 @@ add_commandlet_target(BlobStorageCookCommandlet)
 add_commandlet_target(CacheServerCommandlet)
 add_commandlet_target(CookTexturesCommandlet)
 add_commandlet_target(BuildEditorIconsCommandlet)
+
+if(HYP_EDITOR)
+  add_commandlet_target(EditorGameTestCommandlet)
+endif()
+
 # add_commandlet_target(LogMemoryPools)

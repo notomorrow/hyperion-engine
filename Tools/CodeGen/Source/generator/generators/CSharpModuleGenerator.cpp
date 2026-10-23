@@ -25,7 +25,18 @@
 namespace Hyperion {
 namespace CodeGen {
 
-static const Map<String, String> s_getValueOverloads = {
+namespace {
+
+struct GameProperty
+{
+    String name;
+    CSharpTypeMapping mapping;
+
+    bool canGet : 1 = false;
+    bool canSet : 1 = false;
+};
+
+const Map<String, String> g_getValueOverloads = {
     { "bool", "ReadBool" },
     { "sbyte", "ReadInt8" },
     { "byte", "ReadUInt8" },
@@ -43,14 +54,14 @@ static const Map<String, String> s_getValueOverloads = {
     { "ObjIdBase", "ReadId" }
 };
 
-static String AppendNullable(const String& typeName, bool isNullable)
+String AppendNullable(const String& typeName, bool isNullable)
 {
     return isNullable ? typeName + "?" : typeName;
 }
 
-static const String s_interop = "global::System.Runtime.InteropServices";
+constexpr UTF8StringView InteropServices = "global::System.Runtime.InteropServices";
 
-static String NativeLibraryForModule(const Analyzer& analyzer, const Module& mod)
+String NativeLibraryForModule(const Analyzer& analyzer, const Module& mod)
 {
     const String relativePath = String(FileSystem::RelativePath(mod.GetPath().Data(), analyzer.GetSourceDirectory().Data()).c_str()).ReplaceAll("\\", "/");
 
@@ -67,7 +78,7 @@ static String NativeLibraryForModule(const Analyzer& analyzer, const Module& mod
     return "hyperion";
 }
 
-static String EnumUnderlyingCSharpType(const Analyzer& analyzer, const String& enumName)
+String EnumUnderlyingCSharpType(const Analyzer& analyzer, const String& enumName)
 {
     static const Map<String, String> s_underlyingTypes {
         { "int", "int" },
@@ -95,7 +106,7 @@ static String EnumUnderlyingCSharpType(const Analyzer& analyzer, const String& e
     return it != s_underlyingTypes.End() ? it->second : String::empty;
 }
 
-static String ArrayElementCSharpType(const StrataTypeMapping& mapping)
+String ArrayElementCSharpType(const StrataTypeMapping& mapping)
 {
     static const Map<String, String> s_elementTypes {
         { "float2", "Vec2f" },
@@ -108,7 +119,7 @@ static String ArrayElementCSharpType(const StrataTypeMapping& mapping)
     return it != s_elementTypes.End() ? it->second : mapping.elementTypeName;
 }
 
-static bool TryEmitDirectBinding(
+bool TryEmitDirectBinding(
     const Analyzer& analyzer,
     const ClassDefinition& cls,
     const BindingsShared::MethodThunk& thunk,
@@ -176,8 +187,8 @@ static bool TryEmitDirectBinding(
             const String elementType = strataMapping.isHandleArray ? String("nint") : ArrayElementCSharpType(strataMapping);
 
             prelude.PushBack(strataMapping.isHandleArray
-                    ? HYP_FORMAT("nint[] {}Elements = {}.ToNativeAddresses({});", localName, s_bindings, name)
-                    : HYP_FORMAT("{}[] {}Elements = {}.ToTypedArray<{}>({});", elementType, localName, s_bindings, elementType, name));
+                                 ? HYP_FORMAT("nint[] {}Elements = {}.ToNativeAddresses({});", localName, s_bindings, name)
+                                 : HYP_FORMAT("{}[] {}Elements = {}.ToTypedArray<{}>({});", elementType, localName, s_bindings, elementType, name));
 
             fixedStatements.PushBack(HYP_FORMAT("fixed ({}* {}Data = {}Elements)", elementType, localName, localName));
 
@@ -242,8 +253,8 @@ static bool TryEmitDirectBinding(
         else if (s_scalarTypes.Contains(csharpMapping.typeName))
         {
             nativeParams.PushBack(csharpMapping.typeName == "bool"
-                    ? HYP_FORMAT("[{}.MarshalAs({}.UnmanagedType.U1)] bool {}", s_interop, s_interop, name)
-                    : HYP_FORMAT("{} {}", csharpMapping.typeName, name));
+                                      ? HYP_FORMAT("[{}.MarshalAs({}.UnmanagedType.U1)] bool {}", InteropServices, InteropServices, name)
+                                      : HYP_FORMAT("{} {}", csharpMapping.typeName, name));
             nativeArgs.PushBack(name);
         }
         else
@@ -339,7 +350,7 @@ static bool TryEmitDirectBinding(
 
         nativeReturnType = "nint";
         body.PushBack(HYP_FORMAT("return {}.{}<{}>({});", s_bindings,
-            strataReturn.isStrongHandle ? "TakeManagedObject" : "GetManagedObject", returnTypeMapping.typeName, nativeCall()));
+                                 strataReturn.isStrongHandle ? "TakeManagedObject" : "GetManagedObject", returnTypeMapping.typeName, nativeCall()));
     }
     else if (strataReturn.isEnum)
     {
@@ -365,19 +376,19 @@ static bool TryEmitDirectBinding(
     }
 
     out += HYP_FORMAT("        [{}.LibraryImport(\"{}\", EntryPoint = \"{}\"{})]\n",
-        s_interop, libraryName, thunk.symbol,
-        usesStrings ? HYP_FORMAT(", StringMarshalling = {}.StringMarshalling.Utf8", s_interop) : String::empty);
+                      InteropServices, libraryName, thunk.symbol,
+                      usesStrings ? HYP_FORMAT(", StringMarshalling = {}.StringMarshalling.Utf8", InteropServices) : String::empty);
 
     if (returnsBool)
     {
-        out += HYP_FORMAT("        [return: {}.MarshalAs({}.UnmanagedType.U1)]\n", s_interop, s_interop);
+        out += HYP_FORMAT("        [return: {}.MarshalAs({}.UnmanagedType.U1)]\n", InteropServices, InteropServices);
     }
 
     out += HYP_FORMAT("        private static partial {} Native{}({});\n\n", nativeReturnType, managedName, String::Join(nativeParams, ", "));
 
     out += HYP_FORMAT("        public static {} {}(this {} obj{})\n",
-        AppendNullable(returnTypeMapping.typeName, returnTypeMapping.isNullable), managedName, cls.name,
-        argDecls.Any() ? ", " + String::Join(argDecls, ", ") : "");
+                      AppendNullable(returnTypeMapping.typeName, returnTypeMapping.isNullable), managedName, cls.name,
+                      argDecls.Any() ? ", " + String::Join(argDecls, ", ") : "");
     out += "        {\n";
 
     String indent = "            ";
@@ -426,6 +437,276 @@ static bool TryEmitDirectBinding(
     return true;
 }
 
+bool IsBoundInCSharp(const Analyzer& analyzer, const ClassDefinition& cls)
+{
+    if (analyzer.HasAttrInHierarchy(cls, Attributes::g_attrNoScriptBindings))
+    {
+        return false;
+    }
+
+    if (const ClassAttributeValue& attr = cls.GetAttribute(Attributes::g_attrOnlyLanguages); attr.IsValid() && attr.IsString())
+    {
+        return CheckAttrCSV(attr, "csharp");
+    }
+
+    return true;
+}
+
+bool HasCSharpClass(const Analyzer& analyzer, const ClassDefinition& cls)
+{
+    if (cls.declModule != nullptr)
+    {
+        return cls.type == ClassDefinitionType::Class && IsBoundInCSharp(analyzer, cls);
+    }
+
+    return cls.hasCSharpClass || analyzer.GetBuiltinClasses().Contains(cls.name);
+}
+
+String QualifiedCSharpName(const ClassDefinition& cls)
+{
+    return cls.namespaceParts.Any()
+        ? HYP_FORMAT("global::{}.{}", String::Join(cls.namespaceParts, '.'), cls.name)
+        : HYP_FORMAT("global::{}", cls.name);
+}
+
+String CSharpBaseClassName(const Analyzer& analyzer, const ClassDefinition& cls)
+{
+    const ClassDefinition* current = &cls;
+
+    while (true)
+    {
+        const ClassDefinition* base = nullptr;
+
+        for (const String& baseClassName : current->baseClassNames)
+        {
+            if ((base = analyzer.FindClassDefinition(baseClassName)) != nullptr)
+            {
+                break;
+            }
+        }
+
+        if (base == nullptr)
+        {
+            return "global::Hyperion.ObjectBase";
+        }
+
+        if (HasCSharpClass(analyzer, *base))
+        {
+            return QualifiedCSharpName(*base);
+        }
+
+        current = base;
+    }
+}
+
+void AddGameProperty(Array<GameProperty>& properties, const String& name, const CSharpTypeMapping& mapping, bool canGet, bool canSet)
+{
+    for (GameProperty& property : properties)
+    {
+        if (property.name == name)
+        {
+            property.canGet |= canGet;
+            property.canSet |= canSet;
+
+            return;
+        }
+    }
+
+    properties.PushBack(GameProperty { name, mapping, canGet, canSet });
+}
+
+// HYP_FIELDs and Property= getters/setters become C# properties that go through the native Property of the same name
+Array<GameProperty> CollectGameProperties(const Analyzer& analyzer, const ClassDefinition& cls)
+{
+    Array<GameProperty> properties;
+
+    for (const MemberDef& member : cls.members)
+    {
+        if (member.GetAttribute(Attributes::g_attrNoScriptBindings).GetBool() || !member.cxxType)
+        {
+            continue;
+        }
+
+        const ClassAttributeValue& propertyAttribute = member.GetAttribute(Attributes::g_attrProperty);
+
+        if (!propertyAttribute.IsString())
+        {
+            continue;
+        }
+
+        const String propertyName = String(propertyAttribute.GetString());
+
+        // a C# member can't share its class's name
+        if (propertyName == cls.name)
+        {
+            continue;
+        }
+
+        if (member.type == MemberType::Field)
+        {
+            if (member.cxxType->isStatic || member.cxxType->IsScriptableDelegate())
+            {
+                continue;
+            }
+
+            if (TResult<CSharpTypeMapping> res = MapToCSharpType(analyzer, member.cxxType.Get()); res.HasValue() && res.GetValue().typeName != "Array")
+            {
+                AddGameProperty(properties, propertyName, res.GetValue(), true, !member.cxxType->isConst);
+            }
+
+            continue;
+        }
+
+        if (member.type != MemberType::Method || !member.cxxType->isFunction || member.cxxType->isStatic)
+        {
+            continue;
+        }
+
+        const ASTFunctionType* functionType = dynamic_cast<const ASTFunctionType*>(member.cxxType.Get());
+
+        if (functionType == nullptr)
+        {
+            continue;
+        }
+
+        if (functionType->parameters.Empty() && !functionType->returnType->IsVoid())
+        {
+            if (TResult<CSharpTypeMapping> res = MapToCSharpType(analyzer, functionType->returnType); res.HasValue() && res.GetValue().typeName != "Array")
+            {
+                AddGameProperty(properties, propertyName, res.GetValue(), true, false);
+            }
+        }
+        else if (functionType->parameters.Size() == 1)
+        {
+            if (TResult<CSharpTypeMapping> res = MapToCSharpType(analyzer, functionType->parameters[0]->type); res.HasValue() && res.GetValue().typeName != "Array")
+            {
+                AddGameProperty(properties, propertyName, res.GetValue(), false, true);
+            }
+        }
+    }
+
+    return properties;
+}
+
+void EmitGameProperty(const GameProperty& property, ByteWriter& writer)
+{
+    const uint64 nameHash = uint64(CreateStringHashFromDynamicString(property.name.Data()));
+    const String typeName = AppendNullable(property.mapping.typeName, property.mapping.isNullable);
+
+    writer.WriteString(HYP_FORMAT("        public {} {}\n", typeName, property.name));
+    writer.WriteString("        {\n");
+
+    if (property.canGet)
+    {
+        writer.WriteString("            get\n");
+        writer.WriteString("            {\n");
+        writer.WriteString(HYP_FORMAT("                using (BoxedValue value = this.Class.GetProperty(new Name({}))!.Value.Get(this))\n", nameHash));
+        writer.WriteString("                {\n");
+
+        if (property.mapping.getValueOverload.HasValue())
+        {
+            writer.WriteString(HYP_FORMAT("                    return value.Buffer.{}();\n", property.mapping.getValueOverload.Get()));
+        }
+        else
+        {
+            writer.WriteString(HYP_FORMAT("                    return ({})value.GetValue()!;\n", typeName));
+        }
+
+        writer.WriteString("                }\n");
+        writer.WriteString("            }\n");
+    }
+
+    if (property.canSet)
+    {
+        writer.WriteString("            set\n");
+        writer.WriteString("            {\n");
+        writer.WriteString("                using (BoxedValue boxed = new BoxedValue(value))\n");
+        writer.WriteString("                {\n");
+        writer.WriteString(HYP_FORMAT("                    this.Class.GetProperty(new Name({}))!.Value.Set(this, boxed);\n", nameHash));
+        writer.WriteString("                }\n");
+        writer.WriteString("            }\n");
+    }
+
+    writer.WriteString("        }\n");
+}
+
+// a game module's types have no hand-written C# counterpart, so the declarations are generated along with the extension methods
+int EmitGameTypes(const Analyzer& analyzer, const Module& mod, ByteWriter& writer)
+{
+    int numTypesWritten = 0;
+
+    for (const Pair<String, ClassDefinition>& pair : mod.GetClasses())
+    {
+        const ClassDefinition& cls = pair.second;
+
+        if (!IsBoundInCSharp(analyzer, cls))
+        {
+            continue;
+        }
+
+        if (cls.condition.Any())
+        {
+            continue;
+        }
+
+        if (cls.type == ClassDefinitionType::Class)
+        {
+            writer.WriteString(HYP_FORMAT("    [ClassBinding(Name = \"{}\")]\n", cls.name));
+            writer.WriteString(HYP_FORMAT("    public partial class {} : {}\n", cls.name, CSharpBaseClassName(analyzer, cls)));
+            writer.WriteString("    {\n");
+
+            const Array<GameProperty> properties = CollectGameProperties(analyzer, cls);
+
+            for (size_t i = 0; i < properties.Size(); i++)
+            {
+                if (i != 0)
+                {
+                    writer.WriteString("\n");
+                }
+
+                EmitGameProperty(properties[i], writer);
+            }
+
+            writer.WriteString("    }\n\n");
+
+            ++numTypesWritten;
+        }
+        else if (cls.type == ClassDefinitionType::Enum)
+        {
+            String underlyingType = EnumUnderlyingCSharpType(analyzer, cls.name);
+
+            if (underlyingType.Empty())
+            {
+                underlyingType = "int";
+            }
+
+            writer.WriteString(HYP_FORMAT("    [ClassBinding(Name = \"{}\")]\n", cls.name));
+            writer.WriteString(HYP_FORMAT("    public enum {} : {}\n", cls.name, underlyingType));
+            writer.WriteString("    {\n");
+
+            for (const MemberDef& member : cls.members)
+            {
+                if (member.cxxDecl && member.cxxDecl->value)
+                {
+                    writer.WriteString(HYP_FORMAT("        {} = {},\n", member.name, member.cxxDecl->value->ToString()));
+                }
+                else
+                {
+                    writer.WriteString(HYP_FORMAT("        {},\n", member.name));
+                }
+            }
+
+            writer.WriteString("    }\n\n");
+
+            ++numTypesWritten;
+        }
+    }
+
+    return numTypesWritten;
+}
+
+} // namespace
+
 FilePath CSharpModuleGenerator::GetOutputFilePath(const Analyzer& analyzer, const Module& mod) const
 {
     FilePath relativePath = FilePath(FileSystem::RelativePath(mod.GetPath().Data(), analyzer.GetSourceDirectory().Data()).c_str());
@@ -445,6 +726,7 @@ Result CSharpModuleGenerator::Generate(const Analyzer& analyzer, const Module& m
         return !item.GetAttribute(Attributes::g_attrNoScriptBindings).GetBool();
     };
 
+    if (!analyzer.IsGameModule())
     {
         // check if all classes are empty; if so, skip generation entirely
         bool allEmpty = true;
@@ -491,12 +773,47 @@ Result CSharpModuleGenerator::Generate(const Analyzer& analyzer, const Module& m
 
     static const Set<String> allHandleNames = BindingsShared::CollectDeclaredTypeNames(analyzer);
 
-    const String libraryName = mod.GetPath().Any() ? NativeLibraryForModule(analyzer, mod) : String::empty;
+    // the editor loads a renamed copy of a game module, so a LibraryImport of it would bind to the wrong file
+    const String libraryName = mod.GetPath().Any() && !analyzer.IsGameModule() ? NativeLibraryForModule(analyzer, mod) : String::empty;
+
+    String namespaceName;
+
+    if (analyzer.IsGameModule())
+    {
+        for (const Pair<String, ClassDefinition>& pair : mod.GetClasses())
+        {
+            const String classNamespace = pair.second.namespaceParts.Any() ? String::Join(pair.second.namespaceParts, '.') : String(BaseNamespace);
+
+            if (namespaceName.Empty())
+            {
+                namespaceName = classNamespace;
+            }
+            else if (classNamespace != namespaceName)
+            {
+                return HYP_MAKE_ERROR(Error, "C# bindings need all the types in {} to share one namespace", mod.GetPath());
+            }
+        }
+    }
+
+    if (namespaceName.Empty())
+    {
+        namespaceName = BaseNamespace;
+    }
 
     writer.WriteString(GetGeneratedFilePreamble(FilePath::Relative(mod.GetPath(), analyzer.GetSourceDirectory())));
 
-    writer.WriteString("namespace Hyperion\n");
+    if (analyzer.IsGameModule())
+    {
+        writer.WriteString(HYP_FORMAT("using {};\n\n", BaseNamespace));
+    }
+
+    writer.WriteString(HYP_FORMAT("namespace {}\n", namespaceName));
     writer.WriteString("{\n");
+
+    if (analyzer.IsGameModule())
+    {
+        numClassesWritten += EmitGameTypes(analyzer, mod, writer);
+    }
 
     for (const Pair<String, ClassDefinition>& pair : mod.GetClasses())
     {
@@ -513,6 +830,9 @@ Result CSharpModuleGenerator::Generate(const Analyzer& analyzer, const Module& m
             else
             {
                 ++numClassesWritten;
+
+                Mutex::Guard guard(m_writtenClassNamesMutex);
+                m_writtenClassNames.Insert(cls.name);
             }
         });
 

@@ -9,8 +9,7 @@
 
 #include <Core/Logging/Logger.hpp>
 
-#include <Core/Reflection/ClassUtils.hpp>
-#include <Core/Reflection/ClassRegistry.hpp>
+#include <@CLASS@.generated.inl>
 
 namespace Hyperion {
 
@@ -125,26 +124,6 @@ bool @CLASS@::OnInputEvent(const Event& event)
 {
     return Game::OnInputEvent(event);
 }
-
-#pragma region Reflection
-
-const Class* g_cls@CLASS@ = nullptr;
-
-const Class* @CLASS@::StaticClass()
-{
-    return g_cls@CLASS@;
-}
-
-// clang-format off
-
-HYP_BEGIN_CLASS(@CLASS@, -1, 0, NAME("Game"))
-HYP_END_CLASS
-
-// clang-format on
-
-HYP_REGISTER_STATIC_CLASS(@CLASS@);
-
-#pragma endregion Reflection
 
 } // namespace Hyperion
 

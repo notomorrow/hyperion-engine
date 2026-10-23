@@ -32,6 +32,12 @@ if(NOT DEFINED HYPERION_SDK_INCLUDE_DIRS)
   hyperion_sdk_packaged_libraries("${HYPERION_SDK_ROOT}" "${HYPERION_SDK_RUNTIME_DIR}" HYPERION_SDK_LIBRARIES)
   set(HYPERION_SDK_BASE_DIR "${HYPERION_SDK_RUNTIME_DIR}")
   set(HYPERION_SDK_PCH "${HYPERION_SDK_ROOT}/Include/Engine/HyperionPch.hpp")
+  if(CMAKE_HOST_WIN32)
+    set(HYPERION_SDK_CODEGEN "${HYPERION_SDK_ROOT}/Bin/hyperion-codegen.exe")
+  else()
+    set(HYPERION_SDK_CODEGEN "${HYPERION_SDK_ROOT}/Bin/hyperion-codegen")
+  endif()
+  set(HYPERION_SDK_ENGINE_TYPES "${HYPERION_SDK_ROOT}/Include/Generated/EngineTypes.json")
 endif()
 
 if(NOT TARGET Hyperion::Engine)
@@ -88,6 +94,97 @@ function(hyperion_copy_runtime target content_dir)
 }
 ")
   endif()
+endfunction()
+
+# Runs CodeGen over the game's headers before it compiles (their reflection goes in <build>/Generated, included as <Foo.generated.inl>),
+# and builds <target>.Bindings.dll beside the game from the C# it writes, so scripts can use the game's classes.
+function(hyperion_game_codegen target source_dir)
+  set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/Generated")
+  set(generated_sources "${generated_dir}/GeneratedSources.cpp")
+
+  file(GLOB_RECURSE game_headers CONFIGURE_DEPENDS "${source_dir}/*.hpp" "${source_dir}/*.h")
+
+  file(GLOB generated_files CONFIGURE_DEPENDS "${generated_dir}/*.generated.inl" "${generated_dir}/*.generated.cpp")
+
+  add_custom_command(OUTPUT "${generated_sources}"
+      BYPRODUCTS ${generated_files}
+      COMMAND "${HYPERION_SDK_CODEGEN}" --Mode=Game
+          "--WorkingDirectory=${source_dir}"
+          "--SourceDirectory=${source_dir}"
+          "--CXXOutputDirectory=${generated_dir}"
+          "--CSharpOutputDirectory=${generated_dir}/CSharp"
+          "--EngineTypes=${HYPERION_SDK_ENGINE_TYPES}"
+      DEPENDS ${game_headers} "${HYPERION_SDK_CODEGEN}" "${HYPERION_SDK_ENGINE_TYPES}"
+      COMMENT "Running Hyperion CodeGen for ${target}"
+      VERBATIM)
+
+  add_custom_target(${target}CodeGen DEPENDS "${generated_sources}")
+  add_dependencies(${target} ${target}CodeGen)
+
+  target_sources(${target} PRIVATE "${generated_sources}")
+  target_include_directories(${target} BEFORE PRIVATE "${generated_dir}")
+
+  # a package links the scripts with NativeAOT, which compiles the generated C# itself
+  if(HYPERION_PACKAGE)
+    return()
+  endif()
+
+  find_program(HYPERION_DOTNET dotnet)
+
+  if(NOT HYPERION_DOTNET)
+    message(WARNING "dotnet was not found, so C# scripts can't use ${target}'s classes")
+    return()
+  endif()
+
+  get_target_property(bindings_output_dir ${target} RUNTIME_OUTPUT_DIRECTORY)
+
+  if(NOT bindings_output_dir)
+    set(bindings_output_dir "${CMAKE_CURRENT_BINARY_DIR}")
+  endif()
+
+  set(bindings_name "${target}.Bindings")
+  set(bindings_project "${CMAKE_CURRENT_BINARY_DIR}/Bindings/${bindings_name}.csproj")
+  set(bindings_assembly "${bindings_output_dir}/${bindings_name}.dll")
+  set(managed_sdk_dir "${HYPERION_SDK_BASE_DIR}/Source/Engine/DotNET/Sdk")
+
+  file(CONFIGURE OUTPUT "${bindings_project}" CONTENT [==[<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AssemblyName>${bindings_name}</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <HyperionBinDir>${HYPERION_SDK_RUNTIME_DIR}/</HyperionBinDir>
+    <HyperionBaseDir>${HYPERION_SDK_BASE_DIR}/</HyperionBaseDir>
+    <HyperionCopyEngineRuntime>false</HyperionCopyEngineRuntime>
+    <OutputPath>${bindings_output_dir}/</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="${generated_dir}/CSharp/**/*.cs" />
+  </ItemGroup>
+
+  <Import Project="${managed_sdk_dir}/Hyperion.Game.props" />
+
+  <ItemGroup>
+    <Reference Update="Hyperion.NET.Shared;Hyperion.NET.Interop;Hyperion.NET.Runtime" Private="false" />
+  </ItemGroup>
+</Project>
+]==])
+
+  # touched so a build that changed no C# still leaves it newer than the CodeGen run
+  add_custom_command(OUTPUT "${bindings_assembly}"
+      COMMAND "${CMAKE_COMMAND}" -E env --unset=MSBuildSdksPath
+          "${HYPERION_DOTNET}" build "${bindings_project}" --configuration Release --nologo --disable-build-servers -verbosity:minimal
+      COMMAND "${CMAKE_COMMAND}" -E touch "${bindings_assembly}"
+      DEPENDS "${generated_sources}" "${bindings_project}"
+      COMMENT "Building ${bindings_name}.dll"
+      VERBATIM)
+
+  add_custom_target(${target}Bindings DEPENDS "${bindings_assembly}")
+  add_dependencies(${target}Bindings ${target}CodeGen)
+  add_dependencies(${target} ${target}Bindings)
 endfunction()
 
 set(HYPERION_SCRIPTS_LINK_INPUTS "" CACHE FILEPATH "Link inputs of the game's NativeAOT scripts library, written by Package Game")

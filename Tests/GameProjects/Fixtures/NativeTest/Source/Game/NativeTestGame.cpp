@@ -1,12 +1,12 @@
 #include <Game/NativeTestGame.hpp>
+#include <Game/NativeTestBuild.hpp>
 #include <Game/NativeTests.hpp>
 
 #include <HyperionEngine.hpp>
 
 #include <Core/Logging/Logger.hpp>
 
-#include <Core/Reflection/ClassUtils.hpp>
-#include <Core/Reflection/ClassRegistry.hpp>
+#include <NativeTestGame.generated.inl>
 
 namespace Hyperion {
 
@@ -33,26 +33,6 @@ void NativeTestGame::AfterContentLoaded()
     Hyp_RequestQuit();
 }
 
-#pragma region Reflection
-
-const Class* g_clsNativeTestGame = nullptr;
-
-const Class* NativeTestGame::StaticClass()
-{
-    return g_clsNativeTestGame;
-}
-
-// clang-format off
-
-HYP_BEGIN_CLASS(NativeTestGame, -1, 0, NAME("Game"))
-HYP_END_CLASS
-
-// clang-format on
-
-HYP_REGISTER_STATIC_CLASS(NativeTestGame);
-
-#pragma endregion Reflection
-
 } // namespace Hyperion
 
 extern "C"
@@ -60,7 +40,7 @@ extern "C"
 
 HYP_EXPORT const char* HypGameModule_GetGameClassName()
 {
-    return "NativeTestGame";
+    return Hyperion::NativeTestGameClassName;
 }
 
 HYP_EXPORT void HypGameModule_GetEngineVersion(Hyperion::uint32* outMajor, Hyperion::uint32* outMinor, Hyperion::uint32* outPatch)

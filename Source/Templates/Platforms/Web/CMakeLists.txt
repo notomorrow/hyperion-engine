@@ -25,6 +25,11 @@ set(PAGE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp")
 if(HYP_WEB_GAME_DIR)
   file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS "${HYP_WEB_GAME_DIR}/Game/*.cpp")
   list(APPEND PAGE_SOURCES ${GAME_SOURCES})
+
+  # BuildWebGame.ps1 runs CodeGen over the game's headers first
+  if(HYP_WEB_GAME_GENERATED_DIR)
+    list(APPEND PAGE_SOURCES "${HYP_WEB_GAME_GENERATED_DIR}/GeneratedSources.cpp")
+  endif()
 endif()
 
 add_executable(${HYP_WEB_PAGE_NAME} ${PAGE_SOURCES})
@@ -35,6 +40,10 @@ target_link_directories(${HYP_WEB_PAGE_NAME} PRIVATE ${HYPERION_WEB_LINK_DIRECTO
 target_link_libraries(${HYP_WEB_PAGE_NAME} PRIVATE ${HYPERION_WEB_LIBRARIES})
 
 if(HYP_WEB_GAME_DIR)
+  if(HYP_WEB_GAME_GENERATED_DIR)
+    target_include_directories(${HYP_WEB_PAGE_NAME} BEFORE PRIVATE "${HYP_WEB_GAME_GENERATED_DIR}")
+  endif()
+
   target_include_directories(${HYP_WEB_PAGE_NAME} PRIVATE "${HYP_WEB_GAME_DIR}")
   target_compile_definitions(${HYP_WEB_PAGE_NAME} PRIVATE HYP_WEB_GAME_MODULE=1)
 elseif(HYP_WEB_GAME_CLASS)

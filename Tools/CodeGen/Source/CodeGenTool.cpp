@@ -34,6 +34,7 @@
 #include <parser/Parser.hpp>
 
 #include <analyzer/Analyzer.hpp>
+#include <analyzer/EngineTypes.hpp>
 
 #include <util/Util.hpp>
 
@@ -532,9 +533,13 @@ public:
         const FilePath& strataBodiesFile,
         const Set<FilePath>& excludeDirectories,
         const Set<FilePath>& excludeFiles,
-        CXXGenerationMode cxxMode = CXXGenerationMode::CPP)
-        : m_strataBodiesFile(strataBodiesFile)
+        CXXGenerationMode cxxMode = CXXGenerationMode::CPP,
+        const FilePath& engineTypesFile = FilePath())
+        : m_strataBodiesFile(strataBodiesFile),
+          m_engineTypesFile(engineTypesFile)
     {
+        m_analyzer.SetIsGameModule(engineTypesFile.Any());
+
         m_analyzer.SetWorkingDirectory(workingDirectory);
         m_analyzer.SetSourceDirectory(sourceDirectory);
 
@@ -563,6 +568,14 @@ public:
         HYP_LOG(Tool, Info, "Hyperion CodeGen v{}.{}.{}", HYP_CODEGEN_VERSION_MAJOR, HYP_CODEGEN_VERSION_MINOR, HYP_CODEGEN_VERSION_PATCH);
         HYP_LOG(Tool, Info, "Running...");
 
+        if (m_analyzer.IsGameModule())
+        {
+            if (Result res = LoadEngineTypes(m_analyzer, m_engineTypesFile); res.HasError())
+            {
+                return res;
+            }
+        }
+
         FindModules();
 
         Task processModules = ProcessModules();
@@ -585,6 +598,19 @@ public:
         }
 
         CleanStaleGeneratedFiles();
+
+        // a game's output directory comes ahead of the engine's on the include path, so it mustn't shadow engine-wide files
+        if (m_analyzer.IsGameModule())
+        {
+            HYP_LOG(Tool, Info, "CodeGen completed successfully");
+
+            return {};
+        }
+
+        if (Result res = WriteEngineTypes(m_analyzer, m_csharpModuleGenerator.GetWrittenClassNames(), m_analyzer.GetCXXOutputDirectory() / "EngineTypes.json"); res.HasError())
+        {
+            return res;
+        }
 
         // finally, add CodeGenOutput.inc to the output directory
         FilePath outputFilePath = m_analyzer.GetCXXOutputDirectory() / "CodeGenOutput.inc";
@@ -846,6 +872,13 @@ private:
                             continue;
                         }
 
+                        if (m_analyzer.GetEngineTypes().Contains(it.second.name))
+                        {
+                            m_analyzer.AddError(HYP_MAKE_ERROR(AnalyzerError, "{} has the same name as an engine type", mod->GetPath(), 0, it.second.name));
+
+                            continue;
+                        }
+
                         Assert(it.second.staticIndex == -1);
                         Assert(it.second.numDescendants == 0);
 
@@ -863,6 +896,12 @@ private:
                             mod->AddDependencyModule(dependencyModule);
                         }
                     }
+                }
+
+                // a game's classes register after the engine's static ones, so they keep staticIndex -1 and take the slow IsDerivedFrom path
+                if (m_analyzer.IsGameModule())
+                {
+                    return;
                 }
 
                 Array<Array<uint32>, DynamicAllocator> derived;
@@ -972,17 +1011,19 @@ private:
 
         SharedPtr<Module> builtinsModule = MakeShared<Module>(FilePath());
 
-        // add all builtins to a fake module for generation
-        for (auto& it : m_analyzer.GetBuiltinClasses())
+        // add all builtins to a fake module for generation.
+        // the engine run already generated them for a game
+        if (!m_analyzer.IsGameModule())
         {
-            builtinsModule->GetClasses().Set(it.second.name, it.second);
+            for (auto& it : m_analyzer.GetBuiltinClasses())
+            {
+                builtinsModule->GetClasses().Set(it.second.name, it.second);
+            }
         }
 
         if (m_analyzer.GetCSharpOutputDirectory().Any())
         {
             Assert(m_analyzer.GetCSharpOutputDirectory().MkDir(), "Failed to create C# output directory: {}", m_analyzer.GetCSharpOutputDirectory());
-
-            static CSharpModuleGenerator s_csharpModuleGenerator;
 
             if (builtinsModule->GetClasses().Any())
             {
@@ -991,14 +1032,14 @@ private:
                     {
                         bool wasWritten = false;
 
-                        if (Result res = s_csharpModuleGenerator.Generate(m_analyzer, *builtinsModule, &wasWritten); res.HasError())
+                        if (Result res = m_csharpModuleGenerator.Generate(m_analyzer, *builtinsModule, &wasWritten); res.HasError())
                         {
                             m_analyzer.AddError(AnalyzerError(res.GetError(), FilePath("<builtins>")));
                         }
                         else if (wasWritten)
                         {
                             Mutex::Guard guard(m_writtenCSharpFilesMutex);
-                            m_writtenCSharpFiles.Insert(NormalizeGeneratedFilePath(s_csharpModuleGenerator.GetOutputFilePath(m_analyzer, *builtinsModule)));
+                            m_writtenCSharpFiles.Insert(NormalizeGeneratedFilePath(m_csharpModuleGenerator.GetOutputFilePath(m_analyzer, *builtinsModule)));
                         }
                     });
             }
@@ -1015,14 +1056,14 @@ private:
                     {
                         bool wasWritten = false;
 
-                        if (Result res = s_csharpModuleGenerator.Generate(m_analyzer, mod, &wasWritten); res.HasError())
+                        if (Result res = m_csharpModuleGenerator.Generate(m_analyzer, mod, &wasWritten); res.HasError())
                         {
                             m_analyzer.AddError(AnalyzerError(res.GetError(), mod.GetPath()));
                         }
                         else if (wasWritten)
                         {
                             Mutex::Guard guard(m_writtenCSharpFilesMutex);
-                            m_writtenCSharpFiles.Insert(NormalizeGeneratedFilePath(s_csharpModuleGenerator.GetOutputFilePath(m_analyzer, mod)));
+                            m_writtenCSharpFiles.Insert(NormalizeGeneratedFilePath(m_csharpModuleGenerator.GetOutputFilePath(m_analyzer, mod)));
                         }
                     });
             }
@@ -1162,70 +1203,9 @@ private:
 
         CXXModuleGenerator cxxModuleGenerator;
 
-        // Generate the ClassDecl header (shared by both modes)
+        if (!m_analyzer.IsGameModule())
         {
-            FilePath classDeclHeaderPath = m_analyzer.GetCXXOutputDirectory() / "ClassDecls.inc";
-            FileByteWriter classDeclWriter(classDeclHeaderPath);
-
-            if (!classDeclWriter.IsOpen())
-            {
-                m_analyzer.AddError(HYP_MAKE_ERROR(AnalyzerError, "Failed to open ClassDecl header file: {}", {}, -1, classDeclHeaderPath));
-            }
-            else
-            {
-                if (Result res = cxxModuleGenerator.GenerateClassDeclHeader(m_analyzer, classDeclWriter); res.HasError())
-                {
-                    m_analyzer.AddError(AnalyzerError(res.GetError(), classDeclHeaderPath));
-                }
-
-                classDeclWriter.Close();
-            }
-        }
-
-        // Determine all unique API macros used across modules (always include ENGINE_API for builtins/fallback)
-        Set<String> apiMacros;
-        apiMacros.Insert("ENGINE_API");
-
-        for (const UniquePtr<Module>& mod : m_analyzer.GetModules())
-        {
-            if (!mod->GetClasses().Empty())
-            {
-                apiMacros.Insert(CXXModuleGenerator::GetAPIMacroForModule(m_analyzer, *mod));
-            }
-        }
-
-        // Generate a separate ClassDecls implementation file per API macro group
-        for (const String& apiMacro : apiMacros)
-        {
-            const String outputSubdir = CXXModuleGenerator::GetClassDeclsOutputSubdirForAPIMacro(apiMacro);
-
-            FilePath classDeclImplDir = m_analyzer.GetCXXOutputDirectory();
-
-            if (outputSubdir.Any())
-            {
-                classDeclImplDir = classDeclImplDir / outputSubdir;
-                Assert(classDeclImplDir.MkDir(), "Failed to create ClassDecl output subdirectory: {}", classDeclImplDir);
-            }
-
-            const FilePath classDeclImplPath = classDeclImplDir / "ClassDecls.cpp";
-            FilePath tmpClassDeclImplPath = classDeclImplPath + ".tmp";
-            FileByteWriter classDeclImplWriter(tmpClassDeclImplPath);
-
-            if (!classDeclImplWriter.IsOpen())
-            {
-                m_analyzer.AddError(HYP_MAKE_ERROR(AnalyzerError, "Failed to open ClassDecl implementation file: {}", {}, -1, tmpClassDeclImplPath));
-            }
-            else
-            {
-                if (Result res = cxxModuleGenerator.GenerateClassDeclImplementation(m_analyzer, apiMacro, classDeclImplWriter); res.HasError())
-                {
-                    m_analyzer.AddError(AnalyzerError(res.GetError(), tmpClassDeclImplPath));
-                }
-
-                classDeclImplWriter.Close();
-            }
-
-            ReplaceFileIfDifferent(tmpClassDeclImplPath, classDeclImplPath);
+            GenerateClassDecls(cxxModuleGenerator);
         }
 
         if (m_cxxMode == CXXGenerationMode::INL)
@@ -1347,7 +1327,7 @@ private:
                 }
 
                 // Append C binding thunks for this module's scriptable methods.
-                if (Result res = cBindingGenerator.EmitThunks(m_analyzer, *mod, bindingTypeNames, inlWriter); res.HasError())
+                if (Result res = m_analyzer.IsGameModule() ? Result() : cBindingGenerator.EmitThunks(m_analyzer, *mod, bindingTypeNames, inlWriter); res.HasError())
                 {
                     m_analyzer.AddError(AnalyzerError(res.GetError(), mod->GetPath()));
                 }
@@ -1366,6 +1346,11 @@ private:
                 ReplaceFileIfDifferent(tmpInlPath, inlPath);
 
                 m_writtenCXXGeneratedFiles.Insert(NormalizeGeneratedFilePath(inlPath));
+            }
+
+            if (m_analyzer.IsGameModule())
+            {
+                WriteGameSourcesFile();
             }
 
             TaskSystem::GetInstance().EnqueueBatch(batch);
@@ -1497,6 +1482,213 @@ private:
         TaskSystem::GetInstance().EnqueueBatch(batch);
 
         return task;
+    }
+
+    // A game's build compiles this one file, so headers with no .cpp of their own can come and go without reconfiguring.
+    // It's rewritten on every run so the build sees it as newer than the headers it was generated from.
+    void WriteGameSourcesFile()
+    {
+        Array<String> generatedSources;
+
+        for (const FilePath& file : m_writtenCXXGeneratedFiles)
+        {
+            if (file.EndsWith(".generated.cpp"))
+            {
+                generatedSources.PushBack(FilePath::Relative(file, m_analyzer.GetCXXOutputDirectory()).ReplaceAll("\\", "/"));
+            }
+        }
+
+        std::sort(generatedSources.Begin(), generatedSources.End());
+
+        const FilePath gameSourcesPath = m_analyzer.GetCXXOutputDirectory() / "GeneratedSources.cpp";
+        FileByteWriter writer { gameSourcesPath };
+
+        if (!writer.IsOpen())
+        {
+            m_analyzer.AddError(HYP_MAKE_ERROR(AnalyzerError, "Failed to open {}", {}, -1, gameSourcesPath));
+
+            return;
+        }
+
+        writer.WriteString(GetGeneratedFilePreamble(String::empty));
+
+        for (const String& generatedSource : generatedSources)
+        {
+            writer.WriteString(HYP_FORMAT("#include \"{}\"\n", generatedSource));
+        }
+
+        Array<String> headers;
+
+        for (const UniquePtr<Module>& mod : m_analyzer.GetModules())
+        {
+            if (mod->GetClasses().Any())
+            {
+                headers.PushBack(FilePath::Relative(mod->GetPath(), m_analyzer.GetSourceDirectory()).ReplaceAll("\\", "/"));
+            }
+        }
+
+        std::sort(headers.Begin(), headers.End());
+
+        writer.WriteString("\n");
+
+        for (const String& header : headers)
+        {
+            writer.WriteString(HYP_FORMAT("#include <{}>\n", header));
+        }
+
+        // A game's classes register here rather than in each .inl, in one translation unit so the order is known.
+        writer.WriteString("\n#include <Core/Reflection/ObjectMacros.hpp>\n\n");
+
+        for (const ClassDefinition* cls : SortGameClassesForRegistration())
+        {
+            if (cls->condition.Any())
+            {
+                writer.WriteString(HYP_FORMAT("#if {}\n", cls->condition));
+            }
+
+            const String qualifiedName = cls->namespaceParts.Any()
+                ? HYP_FORMAT("::{}::{}", String::Join(cls->namespaceParts, "::"), cls->name)
+                : HYP_FORMAT("::{}", cls->name);
+
+            writer.WriteString(HYP_FORMAT("static ::Hyperion::TClassStaticInit<{}> s_classInit{};\n", qualifiedName, cls->name));
+
+            if (cls->condition.Any())
+            {
+                writer.WriteString(HYP_FORMAT("#endif // {}\n", cls->condition));
+            }
+        }
+
+        writer.Close();
+    }
+
+    // enums first, then each class after the game classes it derives from
+    Array<const ClassDefinition*> SortGameClassesForRegistration() const
+    {
+        Array<const ClassDefinition*> classes;
+
+        for (const UniquePtr<Module>& mod : m_analyzer.GetModules())
+        {
+            for (const Pair<String, ClassDefinition>& pair : mod->GetClasses())
+            {
+                classes.PushBack(&pair.second);
+            }
+        }
+
+        std::sort(classes.Begin(), classes.End(), [](const ClassDefinition* a, const ClassDefinition* b)
+            {
+                return a->name < b->name;
+            });
+
+        Array<const ClassDefinition*> sorted;
+        Set<const ClassDefinition*> visited;
+
+        for (const ClassDefinition* cls : classes)
+        {
+            if (cls->type == ClassDefinitionType::Enum)
+            {
+                sorted.PushBack(cls);
+                visited.Insert(cls);
+            }
+        }
+
+        Proc<void(const ClassDefinition*)> visit;
+        visit = [&](const ClassDefinition* cls)
+        {
+            if (visited.Contains(cls))
+            {
+                return;
+            }
+
+            visited.Insert(cls);
+
+            for (const String& baseClassName : cls->baseClassNames)
+            {
+                const ClassDefinition* base = m_analyzer.FindClassDefinition(baseClassName);
+
+                if (base != nullptr && base->declModule != nullptr)
+                {
+                    visit(base);
+                }
+            }
+
+            sorted.PushBack(cls);
+        };
+
+        for (const ClassDefinition* cls : classes)
+        {
+            visit(cls);
+        }
+
+        return sorted;
+    }
+
+    void GenerateClassDecls(const CXXModuleGenerator& cxxModuleGenerator)
+    {
+        // Generate the ClassDecl header (shared by both modes)
+        {
+            FilePath classDeclHeaderPath = m_analyzer.GetCXXOutputDirectory() / "ClassDecls.inc";
+            FileByteWriter classDeclWriter(classDeclHeaderPath);
+
+            if (!classDeclWriter.IsOpen())
+            {
+                m_analyzer.AddError(HYP_MAKE_ERROR(AnalyzerError, "Failed to open ClassDecl header file: {}", {}, -1, classDeclHeaderPath));
+            }
+            else
+            {
+                if (Result res = cxxModuleGenerator.GenerateClassDeclHeader(m_analyzer, classDeclWriter); res.HasError())
+                {
+                    m_analyzer.AddError(AnalyzerError(res.GetError(), classDeclHeaderPath));
+                }
+
+                classDeclWriter.Close();
+            }
+        }
+
+        // Determine all unique API macros used across modules (always include ENGINE_API for builtins/fallback)
+        Set<String> apiMacros;
+        apiMacros.Insert("ENGINE_API");
+
+        for (const UniquePtr<Module>& mod : m_analyzer.GetModules())
+        {
+            if (!mod->GetClasses().Empty())
+            {
+                apiMacros.Insert(CXXModuleGenerator::GetAPIMacroForModule(m_analyzer, *mod));
+            }
+        }
+
+        // Generate a separate ClassDecls implementation file per API macro group
+        for (const String& apiMacro : apiMacros)
+        {
+            const String outputSubdir = CXXModuleGenerator::GetClassDeclsOutputSubdirForAPIMacro(apiMacro);
+
+            FilePath classDeclImplDir = m_analyzer.GetCXXOutputDirectory();
+
+            if (outputSubdir.Any())
+            {
+                classDeclImplDir = classDeclImplDir / outputSubdir;
+                Assert(classDeclImplDir.MkDir(), "Failed to create ClassDecl output subdirectory: {}", classDeclImplDir);
+            }
+
+            const FilePath classDeclImplPath = classDeclImplDir / "ClassDecls.cpp";
+            FilePath tmpClassDeclImplPath = classDeclImplPath + ".tmp";
+            FileByteWriter classDeclImplWriter(tmpClassDeclImplPath);
+
+            if (!classDeclImplWriter.IsOpen())
+            {
+                m_analyzer.AddError(HYP_MAKE_ERROR(AnalyzerError, "Failed to open ClassDecl implementation file: {}", {}, -1, tmpClassDeclImplPath));
+            }
+            else
+            {
+                if (Result res = cxxModuleGenerator.GenerateClassDeclImplementation(m_analyzer, apiMacro, classDeclImplWriter); res.HasError())
+                {
+                    m_analyzer.AddError(AnalyzerError(res.GetError(), tmpClassDeclImplPath));
+                }
+
+                classDeclImplWriter.Close();
+            }
+
+            ReplaceFileIfDifferent(tmpClassDeclImplPath, classDeclImplPath);
+        }
     }
 
     void CleanStaleGeneratedFiles()
@@ -2452,6 +2644,8 @@ private:
     CXXGenerationMode m_cxxMode = CXXGenerationMode::INL;
 
     FilePath m_strataBodiesFile;
+    FilePath m_engineTypesFile;
+    CSharpModuleGenerator m_csharpModuleGenerator;
 
     Set<FilePath> m_writtenCXXGeneratedFiles;
     Set<FilePath> m_writtenCSharpFiles;
@@ -2479,7 +2673,8 @@ int main(int argc, char** argv)
     definitions.Add("StrataBodiesFile", "", "Authored Strata struct bodies (extern struct) merged into Engine.strata", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING, /* defaultValue */ String::empty);
     definitions.Add("ExcludeDirectories", "", "", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING);
     definitions.Add("ExcludeFiles", "", "", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING);
-    definitions.Add("Mode", "m", "", CommandLineArgumentFlags::NONE, Array<String> { "ParseHeaders" }, String("ParseHeaders"));
+    definitions.Add("Mode", "m", "Mode to run in. Use `Game` to just generate a game module's sources (against the engine types in --EngineTypes)", CommandLineArgumentFlags::NONE, Array<String> { "ParseHeaders", "Game" }, String("ParseHeaders"));
+    definitions.Add("EngineTypes", "", "", CommandLineArgumentFlags::NONE, CommandLineArgumentType::STRING, /* defaultValue */ String::empty);
     definitions.Add("CXXMode", "", "C++ code generation mode (Cpp or Inl)", CommandLineArgumentFlags::NONE, Array<String> { "Cpp", "Inl" }, String("Inl"));
 
     CommandLineParser commandLineParser { &definitions };
@@ -2554,6 +2749,23 @@ int main(int argc, char** argv)
             cxxMode = CodeGen::Tool::CXXGenerationMode::INL;
         }
 
+        FilePath engineTypesFile;
+
+        if (parseResult.GetValue()["Mode"].AsString() == "Game")
+        {
+            engineTypesFile = FilePath(parseResult.GetValue()["EngineTypes"].AsString());
+
+            if (!engineTypesFile.Any())
+            {
+                HYP_LOG(Tool, Error, "--Mode=Game requires --EngineTypes to be passed. (use EngineTypes.json from CodeGenTool run)");
+
+                return 1;
+            }
+
+            cxxMode = CodeGen::Tool::CXXGenerationMode::INL;
+            strataBodiesFile = FilePath();
+        }
+
         CodeGen::Tool tool {
             workingDirectory,
             sourceDirectory,
@@ -2563,7 +2775,8 @@ int main(int argc, char** argv)
             strataBodiesFile,
             excludeDirectories,
             excludeFiles,
-            cxxMode
+            cxxMode,
+            engineTypesFile
         };
 
         Result res = tool.Run();

@@ -127,7 +127,11 @@ Node::~Node()
 
 Handle<Node> Node::Clone() const
 {
-    const Class* nodeClass = InstanceClass();
+    return CloneAs(InstanceClass(), /* cloneChildren */ true);
+}
+
+Handle<Node> Node::CloneAs(const Class* nodeClass, bool cloneChildren) const
+{
     AssertDebug(nodeClass != nullptr);
 
     if (nodeClass == nullptr)
@@ -163,6 +167,11 @@ Handle<Node> Node::Clone() const
     for (const NodeTag& tag : m_tags)
     {
         cloned->AddTag(NodeTag(tag));
+    }
+
+    if (!cloneChildren)
+    {
+        return cloned;
     }
 
     // Clone children recursively
@@ -448,11 +457,16 @@ Handle<Node> Node::AddChildKeepWorldTransform(const Handle<Node>& node)
     return AddChild_Internal(node, /* keepWorldTransform */ true);
 }
 
-Handle<Node> Node::AddChild_Internal(const Handle<Node>& node, bool keepWorldTransform)
+Handle<Node> Node::InsertChild(const Handle<Node>& node, uint32 index)
+{
+    return AddChild_Internal(node, /* keepWorldTransform */ false, index);
+}
+
+Handle<Node> Node::AddChild_Internal(const Handle<Node>& node, bool keepWorldTransform, uint32 index)
 {
     if (!node.IsValid())
     {
-        return AddChild_Internal(Handle<Node>(MakeHandle<Node>()), keepWorldTransform);
+        return AddChild_Internal(Handle<Node>(MakeHandle<Node>()), keepWorldTransform, index);
     }
 
     if (node.Get() == this || node->GetParent() == this)
@@ -516,7 +530,14 @@ Handle<Node> Node::AddChild_Internal(const Handle<Node>& node, bool keepWorldTra
         node->LockTransform();
     }
 
-    m_childNodes.PushBack(node);
+    if (index < m_childNodes.Size())
+    {
+        m_childNodes.Insert(m_childNodes.Begin() + index, node);
+    }
+    else
+    {
+        m_childNodes.PushBack(node);
+    }
 
     OnNodeAttached(node);
 

@@ -1421,6 +1421,13 @@ const ClassDefinition* Analyzer::FindClassDefinition_Internal(UTF8StringView cla
         }
     }
 
+    auto engineTypeIt = m_engineTypes.FindAs(className);
+
+    if (engineTypeIt != m_engineTypes.End())
+    {
+        return &engineTypeIt->second;
+    }
+
     return nullptr;
 }
 

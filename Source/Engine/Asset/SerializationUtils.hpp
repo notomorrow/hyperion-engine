@@ -11,6 +11,12 @@
 
 #include <Core/Utilities/Result.hpp>
 #include <Core/Utilities/Span.hpp>
+#include <Core/Utilities/EnumFlags.hpp>
+
+#include <Core/Reflection/BoxedValue.hpp>
+#include <Core/Reflection/Handle.hpp>
+
+#include <Core/Containers/Array.hpp>
 
 #include <Core/IO/ByteReader.hpp>
 
@@ -22,6 +28,7 @@ namespace Hyperion {
 
 struct BoxedValue;
 class Class;
+class IMember;
 
 namespace utilities {
 struct TypeInfo;
@@ -56,7 +63,7 @@ struct ToJSONOptions
     enum class FollowAssetPathsMode : int
     {
         Never = -1,
-        MatchingAttribute = 0, // with "FollowAssetPath" attribute evaluating to true
+        MatchingAttribute = 0, //!< with "FollowAssetPath" attribute evaluating to true
         Always
     };
 
@@ -126,6 +133,14 @@ ENGINE_API Result ObjectFromJSON(const JSON::Object& jsonObject, const Class* ta
 
 #pragma region Hyperion Manifest
 
+enum class CopyMembersFlags : uint32
+{
+    None = 0x0,
+    IncludeTransient = 0x1
+};
+
+HYP_MAKE_ENUM_FLAGS(CopyMembersFlags);
+
 struct ToHMFOptions
 {
     enum class FollowAssetPathsMode : int
@@ -149,6 +164,20 @@ struct ToHMFOptions
     SaveAssetsAsReferencesMode saveAssetsAsReferences = SaveAssetsAsReferencesMode::UnlessOtherwiseSpecified;
     FollowAssetPathsMode followAssetPaths = FollowAssetPathsMode::MatchingAttribute;
 };
+/*! \brief A handle member CopyMembersByName couldn't set.
+ *  its value is an object of another definition of the member's type,
+ *  so it can only be set once that object's replacement exists. */
+struct DeferredHandleCopy
+{
+    BoxedValue target;
+    const IMember* member = nullptr;
+    Handle<ObjectBase> value;
+};
+
+struct DeferredHandleCopiesContext
+{
+    Array<DeferredHandleCopy>* deferredCopies = nullptr;
+};
 
 ENGINE_API Result BoxedToHMF(
     const BoxedValue& value,
@@ -169,6 +198,17 @@ ENGINE_API TResult<BoxedValue> ObjectFieldsFromHMF(ByteReader& stream, Span<cons
 ENGINE_API TResult<BoxedValue> FieldFromHMF(ByteReader& stream, StringHash fieldName);
 
 ENGINE_API TResult<BoxedValue> BoxedAsType(const BoxedValue& value, const TypeInfo& typeInfo);
+
+/*! \brief Copies the fields and properties of \p source onto \p target, matched by name.
+ *  \param stopAtClass The first base class whose members aren't copied, or null to copy them all */
+ENGINE_API void CopyMembersByName(
+    const Class* sourceClass,
+    const BoxedValue& source,
+    const Class* targetClass,
+    BoxedValue& target,
+    const Class* stopAtClass = nullptr,
+    EnumFlags<CopyMembersFlags> flags = CopyMembersFlags::None);
+
 
 #pragma endregion Hyperion Manifest
 

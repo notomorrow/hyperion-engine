@@ -135,8 +135,16 @@ CORE_API void ReleaseObject(ObjectHeader* header)
     ObjectContainerBase* container = cls->GetObjectContainer();
     AssertDebug(container != nullptr, "Class has no ObjectContainer");
 
+    // the container's class, since a C# subclass's instances live in their native ancestor's container
+    const Class* containerClass = container->GetClass();
+
     // header memory is freed after this call, don't touch it
     container->Release(header);
+
+    if (containerClass->IsModuleClass())
+    {
+        containerClass->ReleaseModuleRef();
+    }
 
     if (cls->IsDynamic())
     {
@@ -343,12 +351,18 @@ ObjectHeader* ObjectContainerBase::AllocateObjectHeader(size_t size)
     constexpr uint32 HeaderOffset = ByteUtil::AlignAs(sizeof(ObjectHeader), MaxObjectAlignment) - sizeof(ObjectHeader);
 
     ObjectHeader* header = reinterpret_cast<ObjectHeader*>(reinterpret_cast<UIntPtr>(mem) + HeaderOffset);
-    header->index = m_indexAllocator.Allocate();
+    header->index = GetIndexAllocator().Allocate();
     header->cls = m_class;
     header->generation = m_generation.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
     header->refCountStrong = 1;
     // strong refs collectively hold 1 weak ref, released once the object is destructed
     header->refCountWeak = 1;
+
+    // like an instance of a dynamic class, an instance of a module's class holds it until ReleaseObject()
+    if (m_class->IsModuleClass())
+    {
+        m_class->AddModuleRef();
+    }
 
     m_headers.Emplace(header->index, header);
 
@@ -382,7 +396,7 @@ void ObjectContainerBase::Release(ObjectHeader* header)
     const uint32 index = header->index;
     HYP_CORE_ASSERT(index != AtomicIndexAllocator::InvalidIndex, "Invalid index");
 
-    m_indexAllocator.Free(index);
+    GetIndexAllocator().Free(index);
 
     // mark invalid before freeing - the memory may be handed to another thread's allocation as soon as it's back in the pool
     header->index = AtomicIndexAllocator::InvalidIndex;
@@ -397,6 +411,9 @@ void ObjectContainerBase::Release(ObjectHeader* header)
 
 void ObjectContainerBase::ForEachHeader(const ProcRef<void(const ObjectHeader*)>& callback)
 {
+    TLockGuard<AtomicFlag> guard;
+    LockIfNeeded(guard, PF_NONE);
+
     for (auto& header_ptr : m_headers)
     {
         if (header_ptr != nullptr)

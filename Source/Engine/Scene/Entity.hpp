@@ -77,6 +77,8 @@ public:
     HYP_METHOD()
     virtual Handle<Node> Clone() const override;
 
+    virtual Handle<Node> CloneAs(const Class* cls, bool cloneChildren) const override;
+
     HYP_METHOD()
     HYP_FORCE_INLINE EntityManager* GetEntityManager() const
     {

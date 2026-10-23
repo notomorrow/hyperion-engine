@@ -19,6 +19,63 @@ public static class HarnessEnvironment
 
     public static string SdkDir => Path.Combine(EngineBinDir, "Sdk");
 
+    public static string GetCommandletPath(string commandletName) => Path.Combine(EngineBinDir, commandletName + ExecutableExtension);
+
+    /// The compiler the SDK was built with ("cl", "clang-cl", or a CMake compiler id), which a game has to build with
+    public static string SdkCompiler { get; } = ReadSdkCompiler();
+
+    /// Visual Studio's install folder (with the C++ tools), where game builds on Windows get their environment from
+    public static string? VisualStudioDir { get; } = OperatingSystem.IsWindows() ? FindVisualStudioDir() : null;
+
+    // mirrors HyperionSdk.Find() in Source/Editor/Managed/Services/Build/HyperionSdk.cs
+    private static string ReadSdkCompiler()
+    {
+        string sdkFile = Path.Combine(SdkDir, "CMake", "HyperionSdk.cmake");
+
+        if (!File.Exists(sdkFile))
+        {
+            return "";
+        }
+
+        System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(File.ReadAllText(sdkFile), "set\\(HYPERION_SDK_COMPILER \"([^\"]*)\"\\)");
+
+        return match.Success ? match.Groups[1].Value : "";
+    }
+
+    private static string? FindVisualStudioDir()
+    {
+        string vswhere = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer", "vswhere.exe");
+
+        if (!File.Exists(vswhere))
+        {
+            return null;
+        }
+
+        System.Diagnostics.ProcessStartInfo startInfo = new System.Diagnostics.ProcessStartInfo(vswhere)
+        {
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        foreach (string argument in new[] { "-latest", "-products", "*", "-requires", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath" })
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        using System.Diagnostics.Process? process = System.Diagnostics.Process.Start(startInfo);
+
+        if (process == null)
+        {
+            return null;
+        }
+
+        string installPath = process.StandardOutput.ReadToEnd().Trim();
+        process.WaitForExit();
+
+        return Directory.Exists(installPath) ? installPath : null;
+    }
+
     public static string TemplatesDir => Path.Combine(RepositoryRoot, "Source", "Templates");
 
     public static string FixturesDir => Path.Combine(RepositoryRoot, "Tests", "GameProjects", "Fixtures");

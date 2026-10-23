@@ -104,4 +104,9 @@ protected:
     EnumFlags<MemberFlags> m_flags;
 };
 
+// for a Field or a Property
+CORE_API bool CanGetAndSetMember(const IMember& member);
+CORE_API BoxedValue GetMemberValue(const IMember& member, const BoxedValue& target);
+CORE_API void SetMemberValue(const IMember& member, BoxedValue& target, const BoxedValue& value);
+
 } // namespace Hyperion
