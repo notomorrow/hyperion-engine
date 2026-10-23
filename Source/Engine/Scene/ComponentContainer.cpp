@@ -15,23 +15,78 @@
 
 #include <Core/Utilities/ByteUtil.hpp>
 
+#include <Core/DataProcessing/HMF/HMF.hpp>
+
+#include <Core/Logging/Logger.hpp>
+#include <Core/Logging/LogChannels.hpp>
+
+#include <Asset/SerializationUtils.hpp>
+
 #include <ComponentContainer.generated.inl>
 
 namespace Hyperion {
 
 // matches the page size the typed SparseArray storage used to target
-static constexpr size_t g_componentSlabTargetSize = 64 * 1024;
-static constexpr size_t g_maxComponentSize = 1024 * 1024;
+constexpr size_t ComponentSlabTargetSize = 64 * 1024;
+constexpr size_t MaxComponentSize = 1024 * 1024;
 
-static size_t CalculateComponentBlocksPerSlab(size_t componentSize, size_t componentAlignment)
+namespace /* Helpers */ {
+
+size_t CalculateComponentBlocksPerSlab(
+    size_t componentSize,
+    size_t componentAlignment)
 {
     const size_t minimumBlockSize = sizeof(void*) > sizeof(uint32) ? sizeof(void*) : sizeof(uint32);
     const size_t alignment = componentAlignment > alignof(void*) ? componentAlignment : alignof(void*);
     const size_t blockSize = ByteUtil::AlignAs(componentSize > minimumBlockSize ? componentSize : minimumBlockSize, uint32(alignment));
-    const size_t blocksPerSlab = g_componentSlabTargetSize / blockSize;
+    const size_t blocksPerSlab = ComponentSlabTargetSize / blockSize;
 
     return blocksPerSlab != 0 ? blocksPerSlab : 1;
 }
+
+/// a field whose type changed keeps its value if it still parses as the new type
+void CopyRetypedProperties(
+    const Struct& sourceStruct,
+    const BoxedValue& source,
+    const Struct& targetStruct,
+    BoxedValue& target)
+{
+    for (const Property* sourceProperty : sourceStruct.GetProperties())
+    {
+        if (!sourceProperty->CanGet())
+        {
+            continue;
+        }
+
+        const Property* targetProperty = targetStruct.GetProperty(sourceProperty->GetName(), /* deep */ false);
+
+        if (!targetProperty || !targetProperty->CanSet() || targetProperty->GetTypeInfo().id == sourceProperty->GetTypeInfo().id)
+        {
+            continue;
+        }
+
+        String text;
+
+        if (BoxedToHMF(sourceProperty->Get(source), text, &sourceProperty->GetTypeInfo()).HasError())
+        {
+            continue;
+        }
+
+        TResult<BoxedValue> valueResult = BoxedAsType(BoxedValue(HMF::UnresolvedValue { text }), targetProperty->GetTypeInfo());
+
+        if (valueResult.HasError())
+        {
+            HYP_LOG(Entity, Warning, "Value of {}.{} doesn't fit new type {}", targetStruct.GetName(), sourceProperty->GetName(), targetProperty->GetTypeInfo().name);
+
+            continue;
+        }
+
+        targetProperty->Set(target, valueResult.GetValue());
+    }
+}
+} // namespace
+
+#pragma region ComponentContainer
 
 ComponentContainer::ComponentContainer(const ComponentInterface& componentInterface)
     : m_componentInterface(&componentInterface),
@@ -45,7 +100,9 @@ ComponentContainer::ComponentContainer(const ComponentInterface& componentInterf
       m_numComponents(0)
 {
     Assert(componentInterface.GetComponentSize() != 0, "Component type {} has no size", m_typeId.Value());
-    Assert(componentInterface.GetComponentSize() <= g_maxComponentSize, "Component type {} is too large ({} bytes)", m_typeId.Value(), componentInterface.GetComponentSize());
+    Assert(componentInterface.GetComponentSize() <= MaxComponentSize, "Component type {} is too large ({} bytes)", m_typeId.Value(), componentInterface.GetComponentSize());
+
+    componentInterface.m_numContainers.Increment(1, MemoryOrder::RELEASE);
 }
 
 ComponentContainer::~ComponentContainer()
@@ -57,6 +114,8 @@ ComponentContainer::~ComponentContainer()
         });
 
     m_components.Reset();
+
+    m_componentInterface->m_numContainers.Decrement(1, MemoryOrder::RELEASE);
 }
 
 void* ComponentContainer::AllocateComponentSlot(ComponentId& outId)
@@ -186,7 +245,7 @@ void ComponentContainer::MigrateTo(const ComponentInterface& componentInterface)
     HYP_MT_CHECK_RW(m_dataRaceDetector);
 
     Assert(componentInterface.GetTypeId() == m_typeId, "Cannot migrate components of type {} to type {}", m_typeId.Value(), componentInterface.GetTypeId().Value());
-    Assert(componentInterface.GetComponentSize() != 0 && componentInterface.GetComponentSize() <= g_maxComponentSize,
+    Assert(componentInterface.GetComponentSize() != 0 && componentInterface.GetComponentSize() <= MaxComponentSize,
         "Component type {} has an invalid size ({} bytes)", m_typeId.Value(), componentInterface.GetComponentSize());
 
     if (&componentInterface == m_componentInterface)
@@ -224,6 +283,8 @@ void ComponentContainer::MigrateTo(const ComponentInterface& componentInterface)
         componentInterface.GetComponentAlignment(),
         CalculateComponentBlocksPerSlab(componentInterface.GetComponentSize(), componentInterface.GetComponentAlignment()));
 
+    const ComponentInterface* previousInterface = m_componentInterface;
+
     m_componentInterface = &componentInterface;
     m_typeInfo = &componentInterface.GetTypeInfo();
     m_structReference = ClassRef(currentStruct);
@@ -236,7 +297,14 @@ void ComponentContainer::MigrateTo(const ComponentInterface& componentInterface)
 
         BoxedValue target(AnyRef(m_typeInfo, component));
         CopyMatchingProperties(*previousStruct, previousComponent.second, *currentStruct, target);
+        CopyRetypedProperties(*previousStruct, previousComponent.second, *currentStruct, target);
     }
+
+    // after the old values are copied, since the old interface's module may unload once its count is zero
+    componentInterface.m_numContainers.Increment(1, MemoryOrder::RELEASE);
+    previousInterface->m_numContainers.Decrement(1, MemoryOrder::RELEASE);
 }
+
+#pragma endregion ComponentContainer
 
 } // namespace Hyperion

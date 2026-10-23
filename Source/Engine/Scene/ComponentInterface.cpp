@@ -42,7 +42,8 @@ ComponentInterface::ComponentInterface(const TypeInfo* typeInfo, const Struct* c
       m_struct(componentStruct),
       m_structReference(componentStruct),
       m_entityTag(entityTag),
-      m_flags(flags)
+      m_flags(flags),
+      m_numContainers(0)
 {
     Assert(m_typeInfo != nullptr);
     Assert(m_struct != nullptr, "Component type {} has no Struct", m_typeInfo->name);
@@ -52,7 +53,11 @@ ComponentInterface::ComponentInterface(const TypeInfo* typeInfo, const Struct* c
 
 ComponentInterface::~ComponentInterface() = default;
 
-UniquePtr<ComponentInterface> ComponentInterface::CreateForStruct(const TypeInfo* typeInfo, size_t expectedSize, size_t expectedAlignment, bool shouldSerialize)
+UniquePtr<ComponentInterface> ComponentInterface::CreateForStruct(
+    const TypeInfo* typeInfo,
+    size_t expectedSize,
+    size_t expectedAlignment,
+    bool shouldSerialize)
 {
     Assert(typeInfo != nullptr);
 
@@ -66,7 +71,7 @@ UniquePtr<ComponentInterface> ComponentInterface::CreateForStruct(const TypeInfo
 
     EnumFlags<ComponentInterfaceFlags> flags = ComponentInterfaceFlags::NONE;
 
-    // a missing attribute compares unequal to false, so serialize/replicated default to on
+    // a missing attribute means serialize by default.
     if (shouldSerialize && GetComponentClassAttributeValue(cls, Attributes::g_attrSerialize) != false)
     {
         flags |= ComponentInterfaceFlags::SERIALIZE | ComponentInterfaceFlags::SHOW_IN_EDITOR;
@@ -80,7 +85,13 @@ UniquePtr<ComponentInterface> ComponentInterface::CreateForStruct(const TypeInfo
     return MakeUnique<ComponentInterface>(typeInfo, componentStruct, flags);
 }
 
-UniquePtr<ComponentInterface> ComponentInterface::CreateForEntityTag(const TypeInfo* typeInfo, size_t expectedSize, size_t expectedAlignment, EntityTag entityTag, bool shouldSerialize, bool showInEditor)
+UniquePtr<ComponentInterface> ComponentInterface::CreateForEntityTag(
+    const TypeInfo* typeInfo,
+    size_t expectedSize,
+    size_t expectedAlignment,
+    EntityTag entityTag,
+    bool shouldSerialize,
+    bool showInEditor)
 {
     Assert(typeInfo != nullptr);
 
@@ -325,7 +336,7 @@ uint32 ComponentInterfaceRegistry::PublishModuleComponents()
     return numPublished;
 }
 
-void ComponentInterfaceRegistry::UnregisterComponentsInRange(UIntPtr begin, UIntPtr end)
+Array<const ComponentInterface*> ComponentInterfaceRegistry::UnregisterComponentsInRange(UIntPtr begin, UIntPtr end)
 {
     Mutex::Guard guard(m_writeMutex);
 
@@ -360,9 +371,11 @@ void ComponentInterfaceRegistry::UnregisterComponentsInRange(UIntPtr begin, UInt
         m_pendingModuleCreateFunctions.Erase(typeId);
     }
 
+    Array<const ComponentInterface*> unregisteredInterfaces;
+
     if (!m_isInitialized || typeIds.Empty())
     {
-        return;
+        return unregisteredInterfaces;
     }
 
     const LookupTable& currentLookupTable = GetLookupTable();
@@ -371,15 +384,24 @@ void ComponentInterfaceRegistry::UnregisterComponentsInRange(UIntPtr begin, UInt
 
     for (const auto& it : currentLookupTable.interfacesByTypeId)
     {
-        if (!it.second->IsModuleComponent() || !typeIds.Contains(it.first))
+        if (it.second->IsModuleComponent() && typeIds.Contains(it.first))
         {
-            AddToLookupTable(*lookupTable, it.second);
+            // released while the module is loaded, since releasing reads the Struct
+            const_cast<ComponentInterface*>(it.second)->ReleaseStructReference();
+
+            unregisteredInterfaces.PushBack(it.second);
+
+            continue;
         }
+
+        AddToLookupTable(*lookupTable, it.second);
     }
 
     PublishLookupTable(std::move(lookupTable));
 
     m_runtimeRegistrationGeneration.Increment(1, MemoryOrder::RELEASE);
+
+    return unregisteredInterfaces;
 }
 
 const ComponentInterface* ComponentInterfaceRegistry::RegisterRuntimeComponent(const Struct* componentStruct, EnumFlags<ComponentInterfaceFlags> flags)

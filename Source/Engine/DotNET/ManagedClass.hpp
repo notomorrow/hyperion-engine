@@ -115,6 +115,12 @@ public:
         return m_class;
     }
 
+    // for a class whose native module is unloaded while the assembly stays loaded
+    HYP_FORCE_INLINE void DetachClass()
+    {
+        m_class = nullptr;
+    }
+
     HYP_FORCE_INLINE ManagedClass* GetParentClass() const
     {
         return m_parentClass;

@@ -727,12 +727,25 @@ public:
     {
         EnsureValidComponentType<Component>();
 
-        TSharedLock lock(m_componentContainersMtx);
+        {
+            TSharedLock lock(m_componentContainersMtx);
 
-        auto it = m_containers.Find(TypeId::ForType<Component>());
-        Assert(it != m_containers.End(), "No component container for `{}`; is the component type registered?", TypeNameWithoutNamespace<Component>().Data());
+            auto it = m_containers.Find(TypeId::ForType<Component>());
 
-        return *it->second;
+            if (it != m_containers.End())
+            {
+                return *it->second;
+            }
+        }
+
+        // a game module's component types get their containers on first use
+        const ComponentInterface* componentInterface = ComponentInterfaceRegistry::GetInstance().GetComponentInterface(TypeId::ForType<Component>());
+        Assert(componentInterface != nullptr, "No component container for `{}` - is the component type registered?", TypeNameWithoutNamespace<Component>().Data());
+
+        ComponentContainer* container = GetOrCreateContainer(*componentInterface);
+        Assert(container != nullptr, "No component container for `{}`", TypeNameWithoutNamespace<Component>().Data());
+
+        return *container;
     }
 
     ComponentContainer* TryGetContainer(TypeId componentTypeId)

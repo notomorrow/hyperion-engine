@@ -37,7 +37,8 @@ namespace Hyperion {
 
 static bool IsComponentDataCurrent(const ComponentInterface& componentInterface, const BoxedValue& componentData)
 {
-    if (!componentInterface.IsRuntimeComponent() || componentData.GetTypeInfo() == &componentInterface.GetTypeInfo())
+    if ((!componentInterface.IsRuntimeComponent() && !componentInterface.IsModuleComponent())
+        || componentData.GetTypeInfo() == &componentInterface.GetTypeInfo())
     {
         return true;
     }
@@ -113,10 +114,16 @@ EntityManager::EntityManager(const ThreadId& ownerThreadId, Scene* scene, EnumFl
         m_flags |= EntityManagerFlags::DETACHED_SCENE;
     }
 
-    // add initial component containers - types registered at runtime after this point get theirs from GetOrCreateContainer()
+    // add initial component containers - types registered at runtime after this point get theirs from GetOrCreateContainer().
+    // a game module's types do too, so only EntityManagers that use them hold containers to migrate when the module reloads
     for (const ComponentInterface* componentInterface : ComponentInterfaceRegistry::GetInstance().GetComponentInterfaces())
     {
         Assert(componentInterface != nullptr);
+
+        if (componentInterface->IsModuleComponent())
+        {
+            continue;
+        }
 
         m_containers.Set(componentInterface->GetTypeId(), MakeUniqueWithAllocator<ComponentContainer, SceneAllocator>(*componentInterface));
     }
@@ -1230,20 +1237,25 @@ void EntityManager::MigrateStaleComponentContainers()
         return;
     }
 
+    bool allMigrated = true;
+
     // containers are migrated in place, so m_containers itself doesn't change and pointers to the containers stay valid
     for (auto& it : m_containers)
     {
-        EnsureCurrentComponentLayout(*it.second);
+        allMigrated &= EnsureCurrentComponentLayout(*it.second);
     }
 
-    m_migratedRegistrationGeneration = registrationGeneration;
+    if (allMigrated)
+    {
+        m_migratedRegistrationGeneration = registrationGeneration;
+    }
 }
 
 bool EntityManager::EnsureCurrentComponentLayout(ComponentContainer& container)
 {
     const ComponentInterface& containerInterface = container.GetComponentInterface();
 
-    if (!containerInterface.IsRuntimeComponent())
+    if (!containerInterface.IsRuntimeComponent() && !containerInterface.IsModuleComponent())
     {
         return true;
     }
@@ -1255,8 +1267,9 @@ bool EntityManager::EnsureCurrentComponentLayout(ComponentContainer& container)
         return true;
     }
 
-    // no system reads runtime component containers, so the owner thread may migrate even while locked
-    if (!IsOnThread(m_ownerThreadId))
+    // no system reads runtime component containers, so the owner thread may migrate even while locked.
+    // a game module's systems may read its components, so those wait until the EntityManager is unlocked
+    if (!IsOnThread(m_ownerThreadId) || (containerInterface.IsModuleComponent() && IsLocked()))
     {
         return false;
     }

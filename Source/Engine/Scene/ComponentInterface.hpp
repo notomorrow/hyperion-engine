@@ -48,7 +48,7 @@ enum class ComponentInterfaceFlags : uint32
     MODULE = 0x20
 };
 
-HYP_MAKE_ENUM_FLAGS(ComponentInterfaceFlags)
+HYP_MAKE_ENUM_FLAGS(ComponentInterfaceFlags);
 
 namespace Attributes {
 CORE_API extern const Name g_attrSerialize;
@@ -67,8 +67,19 @@ public:
 
     ~ComponentInterface();
 
-    static UniquePtr<ComponentInterface> CreateForStruct(const TypeInfo* typeInfo, size_t expectedSize, size_t expectedAlignment, bool shouldSerialize);
-    static UniquePtr<ComponentInterface> CreateForEntityTag(const TypeInfo* typeInfo, size_t expectedSize, size_t expectedAlignment, EntityTag entityTag, bool shouldSerialize, bool showInEditor);
+    static UniquePtr<ComponentInterface> CreateForStruct(
+        const TypeInfo* typeInfo,
+        size_t expectedSize,
+        size_t expectedAlignment,
+        bool shouldSerialize);
+
+    static UniquePtr<ComponentInterface> CreateForEntityTag(
+        const TypeInfo* typeInfo,
+        size_t expectedSize,
+        size_t expectedAlignment,
+        EntityTag entityTag,
+        bool shouldSerialize,
+        bool showInEditor);
 
     HYP_FORCE_INLINE const TypeInfo& GetTypeInfo() const
     {
@@ -130,6 +141,11 @@ public:
         return m_flags & ComponentInterfaceFlags::MODULE;
     }
 
+    HYP_FORCE_INLINE uint32 GetNumContainers() const
+    {
+        return m_numContainers.Get(MemoryOrder::ACQUIRE);
+    }
+
     void ConstructComponent(void* destination) const;
     void CopyConstructComponent(void* destination, const void* source) const;
     void MoveConstructComponent(void* destination, void* source) const;
@@ -139,6 +155,7 @@ public:
 
 private:
     friend class ComponentInterfaceRegistry;
+    friend class ComponentContainer;
 
     void ReleaseStructReference();
 
@@ -148,6 +165,10 @@ private:
     ClassRef m_structReference;
     EntityTag m_entityTag;
     EnumFlags<ComponentInterfaceFlags> m_flags;
+
+    /// Number of containers built on this interface.
+    /// A module's interfaces have to reach zero before the module can unload.
+    mutable AtomicVar<uint32> m_numContainers;
 };
 
 class ENGINE_API ComponentInterfaceRegistry
@@ -176,10 +197,11 @@ public:
 
     void Register(TypeId typeId, UniquePtr<ComponentInterface> (*createFunction)());
 
-    // for a module loaded after Initialize() (e.g a game DLL); replaces interfaces of the same types from an earlier build
+    /*! \brief replaces interfaces of the same types from an earlier build,
+     *  for a module loaded after Initialize() (e.g a game DLL) */
     uint32 PublishModuleComponents();
 
-    void UnregisterComponentsInRange(UIntPtr begin, UIntPtr end);
+    Array<const ComponentInterface*> UnregisterComponentsInRange(UIntPtr begin, UIntPtr end);
 
     const ComponentInterface* RegisterRuntimeComponent(
         const Struct* componentStruct,

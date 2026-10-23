@@ -17,6 +17,10 @@
 #include <Framework/CVarManager.hpp>
 
 #include <Scene/World.hpp>
+#include <Scene/Scene.hpp>
+#include <Scene/DetachedScene.hpp>
+#include <Scene/EntityManager.hpp>
+#include <Scene/ComponentInterface.hpp>
 #include <Scene/Systems/ScriptSystem.hpp>
 
 #include <Core/DLL/DynamicLibrary.hpp>
@@ -91,6 +95,7 @@ struct RetiredNativeModule
     UIntPtr imageEnd = 0;
     Array<const Class*> classes;
     Array<ObjectContainerBase*> containers;
+    Array<const ComponentInterface*> componentInterfaces;
     Time retiredTime;
     Time lastCollectTime;
     uint32 requiredCollection = 0;
@@ -250,6 +255,8 @@ static RetiredNativeModule RetireModule(const LoadedNativeModule& loadedModule)
 
     CVarManager::GetInstance().UnregisterVarsInRange(loadedModule.imageBegin, loadedModule.imageEnd);
 
+    retiredModule.componentInterfaces = ComponentInterfaceRegistry::GetInstance().UnregisterComponentsInRange(loadedModule.imageBegin, loadedModule.imageEnd);
+
     return retiredModule;
 }
 
@@ -265,6 +272,19 @@ static void UnloadRetiredModule(RetiredNativeModule& retiredModule)
     }
 
     retiredModule.containers.Clear();
+
+#ifdef HYP_DOTNET
+    // the game's C# bindings assembly stays loaded, and unloading it at shutdown would reach its classes in this module
+    for (const Class* cls : retiredModule.classes)
+    {
+        if (SharedPtr<dotnet::ManagedClass> managedClass = cls->GetManagedClass(); managedClass && managedClass->GetClass() == cls)
+        {
+            managedClass->DetachClass();
+        }
+
+        cls->SetManagedClass(nullptr);
+    }
+#endif
 
     DynamicLibraryCache::GetInstance().UnloadLibrary(PlatformString(String(retiredModule.copyPath)));
 
@@ -291,6 +311,12 @@ static void UpdateRetiredModules()
 {
     const Time now = Time::Now();
 
+    // the world syncs its own scenes each update; nothing else syncs the detached scene, where removed nodes are kept for undo
+    if (s_retiredModules.Any())
+    {
+        GetDetachedSceneForCurrentThread().GetEntityManager()->SyncRuntimeComponentTypes();
+    }
+
     for (size_t index = s_retiredModules.Size(); index-- > 0;)
     {
         RetiredNativeModule& retiredModule = s_retiredModules[index];
@@ -302,6 +328,15 @@ static void UpdateRetiredModules()
             if (container->HasObjects())
             {
                 classesWithObjects.PushBack(container->GetClass());
+            }
+        }
+
+        // component containers still on its layouts call its code; they move to the new build's as their EntityManagers sync
+        for (const ComponentInterface* componentInterface : retiredModule.componentInterfaces)
+        {
+            if (componentInterface->GetNumContainers() != 0)
+            {
+                classesWithObjects.PushBack(componentInterface->GetStruct());
             }
         }
 
@@ -362,7 +397,13 @@ static void UpdateRetiredModules()
 
             retiredModule.requiredCollection = 0;
 
-            if (std::any_of(retiredModule.containers.Begin(), retiredModule.containers.End(), [](ObjectContainerBase* container) { return container->HasObjects(); }))
+            const bool shouldSkip = AnyOf(retiredModule.containers, &ObjectContainerBase::HasObjects)
+                || AnyOf(retiredModule.componentInterfaces, [](const ComponentInterface* componentInterface)
+                    {
+                        return componentInterface->GetNumContainers() != 0;
+                    });
+
+            if (shouldSkip)
             {
                 continue;
             }
@@ -531,6 +572,11 @@ static LoadedNativeModule LoadModuleCopy(const FilePath& modulePath, const FileP
             }
 #endif
         }
+    }
+
+    if (loadedModule.error.Empty())
+    {
+        ComponentInterfaceRegistry::GetInstance().PublishModuleComponents();
     }
 
     // nothing was made from it yet, so a failed build can go right away and be retried once rebuilt
