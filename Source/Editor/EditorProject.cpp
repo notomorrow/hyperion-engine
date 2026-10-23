@@ -858,9 +858,10 @@ Handle<EditorProject> EditorProject::CreateNew()
     // Create Game instance
     Handle<Game> gameInstance = MakeHandle<Game>();
 
-    // Create World
+    // Create World.
+    // Like a loaded project, it's only the edit world. the Game only owns a World while playing
     Handle<World> world = MakeHandle<World>(NAME("MainWorld"), WorldFlags::Default);
-    gameInstance->SetWorld(world);
+    world->SetGame(gameInstance);
 
     // Until the project is saved for the first time, keep all of its contentin a temporary
     // directory, so that no project directory is created under Projects/ before the project is explicitly saved.

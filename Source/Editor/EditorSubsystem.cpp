@@ -5480,12 +5480,6 @@ bool EditorSubsystem::OpenWorld(Name worldName)
 
         ShutdownProjectWorld(project, /* shutdownWorld */ true);
 
-        // A new project's World is also owned by its Game
-        if (gameInstance->GetWorld() == oldWorld)
-        {
-            gameInstance->SetWorld(Handle<World>::Null());
-        }
-
         // The shut down objects must not be handed out again if the World is reopened, it's reloaded from disk instead
         const Handle<AssetRegistry>& assetRegistry = gameInstance->GetAssetRegistry();
 
