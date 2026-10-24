@@ -16,7 +16,7 @@ using Hyperion.Editor.Views;
 
 namespace Hyperion.Editor.ViewModels
 {
-    public sealed record AssetCreationEntry(string Header, ICommand Command);
+    public sealed record AssetCreationEntry(string Header, ICommand Command, bool IsUserDefined = false);
 
     public enum AssetSortMode
     {
@@ -1147,7 +1147,7 @@ namespace Hyperion.Editor.ViewModels
         {
             Dispatcher.UIThread.VerifyAccess();
 
-            List<string> classNames = await EngineManager.PostToSimThread<List<string>>(BuildCreatableAssetClassNames);
+            List<(string Name, bool IsUserDefined)> classes = await EngineManager.PostToSimThread<List<(string Name, bool IsUserDefined)>>(BuildCreatableAssetClasses);
 
             List<AssetCreationEntry> entries = new();
             foreach (var kvp in DedicatedCreatorTypes)
@@ -1155,15 +1155,19 @@ namespace Hyperion.Editor.ViewModels
                 entries.Add(new AssetCreationEntry(kvp.Key, kvp.Value(this)));
             }
 
-            foreach (string className in classNames)
+            foreach ((string className, bool isUserDefined) in classes)
             {
-                entries.Add(new AssetCreationEntry(className, new RelayCommand(() => CreateAssetOfClass(className), () => CanCreateAssets)));
+                entries.Add(new AssetCreationEntry(className, new RelayCommand(() => CreateAssetOfClass(className), () => CanCreateAssets), isUserDefined));
             }
 
-            return entries.OrderBy(entry => entry.Header, StringComparer.OrdinalIgnoreCase).ToList();
+            // Engine types first, then UDT
+            return entries
+                .OrderBy(entry => entry.IsUserDefined)
+                .ThenBy(entry => entry.Header, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
-        private static List<string> BuildCreatableAssetClassNames()
+        private static List<(string Name, bool IsUserDefined)> BuildCreatableAssetClasses()
         {
             Class? assetClass = Class.TryGetClass<AssetObject>();
 
@@ -1191,11 +1195,21 @@ namespace Hyperion.Editor.ViewModels
                 }
             }
 
-            // Need to filter such that it will pass the 'not a concrete asset class' check in native code.
-            return ClassPickerEntries.BuildDerived(assetClass.Value.TypeId)
-                .Where(entry => !entry.IsAbstract && !dedicatedNames.Contains(entry.Name) && NativeBindings.Hyp_CanCreateInstanceOfClass(entry.Name))
-                .Select(entry => entry.Name)
-                .ToList();
+            List<(string Name, bool IsUserDefined)> classes = new();
+
+            foreach (ClassPickerEntry entry in ClassPickerEntries.BuildDerived(assetClass.Value.TypeId))
+            {
+                if (dedicatedNames.Contains(entry.Name)
+                    || Class.TryGetClass(entry.Name) is not { } cls
+                    || !ClassPickerEntries.CanCreateAssetForType(cls))
+                {
+                    continue;
+                }
+
+                classes.Add((entry.Name, cls.IsUserDefined));
+            }
+
+            return classes;
         }
 
         private void CreateAssetOfClass(string className)

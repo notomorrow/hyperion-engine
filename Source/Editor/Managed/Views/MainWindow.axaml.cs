@@ -1149,8 +1149,18 @@ namespace Hyperion.Editor
                 items.Remove(staleEntry);
             }
 
+            bool addedUserDefinedGroup = false;
+
             foreach (AssetCreationEntry entry in entries)
             {
+                if (entry.IsUserDefined && !addedUserDefinedGroup)
+                {
+                    items.Add(new Separator { Tag = AssetCreationEntryTag });
+                    items.Add(new MenuItem { Header = "Game Types", IsEnabled = false, Tag = AssetCreationEntryTag });
+
+                    addedUserDefinedGroup = true;
+                }
+
                 items.Add(new MenuItem { Header = entry.Header, Command = entry.Command, Tag = AssetCreationEntryTag });
             }
         }

@@ -299,14 +299,14 @@ namespace Hyperion.Editor.ViewModels
 
             if (!expected.IsAbstract)
             {
-                return NativeBindings.Hyp_CanCreateInstanceOfClass(expected.Name.ToString())
+                return ClassPickerEntries.CanCreateAssetForType(expected)
                     ? [new ClassPickerEntry(expected.Name.ToString(), 0, false)]
                     : [];
             }
 
-            // Need to filter such that it will pass the 'not a concrete asset class' check in native code.
             return ClassPickerEntries.BuildDerived(expected.TypeId)
-                .Where(entry => entry.IsAbstract || NativeBindings.Hyp_CanCreateInstanceOfClass(entry.Name))
+                .Where(entry => entry.IsAbstract
+                    || (Class.TryGetClass(entry.Name) is { } cls && ClassPickerEntries.CanCreateAssetForType(cls)))
                 .ToList();
         }
 

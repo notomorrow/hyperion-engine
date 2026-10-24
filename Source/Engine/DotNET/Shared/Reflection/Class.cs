@@ -90,6 +90,10 @@ namespace Hyperion
         public bool IsPODType => (Flags & ClassFlags.PODType) != 0;
         public bool IsDynamic => (Flags & ClassFlags.Dynamic) != 0;
 
+        public int StaticIndex => Class_GetStaticIndex(ptr);
+
+        public bool IsUserDefined => IsDynamic || StaticIndex < 0;
+
         public Class? GetParent()
         {
             IntPtr parentPtr = Class_GetParent(ptr);

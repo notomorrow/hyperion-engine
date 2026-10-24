@@ -158,13 +158,13 @@ public:
 
         const ObjId<Entity> id = entity.Id();
 
-        SubtypeData& subtypeData = GetSubtypeData(entity.ptr);
+        SubtypeData& subtypeData = GetSubtypeData(entity.Get());
         AssertDebug(!subtypeData.data.HasIndex(id.ToIndex()), "Entity with ID {} already exists in EntityContainer!", id);
 
         subtypeData.data.Emplace(id.ToIndex(), EntityData { entity.ToWeak() });
     }
 
-    bool Remove(const ObjectBase* entity)
+    bool Remove(const Entity* entity)
     {
         HYP_MT_CHECK_READ(m_dataRaceDetector);
 
@@ -174,7 +174,7 @@ public:
         }
 
         SubtypeData& subtypeData = GetSubtypeData(entity);
-        const uint32 index = entity->Id().ToIndex();
+        const uint32 index = GetEntityId(entity).ToIndex();
 
         if (!subtypeData.data.HasIndex(index))
         {
@@ -186,14 +186,14 @@ public:
         return true;
     }
 
-    bool HasEntity(const ObjectBase* entity) const
+    bool HasEntity(const Entity* entity) const
     {
         HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-        return entity != nullptr && GetSubtypeData(entity).data.HasIndex(entity->Id().ToIndex());
+        return entity != nullptr && GetSubtypeData(entity).data.HasIndex(GetEntityId(entity).ToIndex());
     }
 
-    EntityData* TryGetEntityData(const ObjectBase* entity)
+    EntityData* TryGetEntityData(const Entity* entity)
     {
         HYP_MT_CHECK_READ(m_dataRaceDetector);
 
@@ -202,15 +202,15 @@ public:
             return nullptr;
         }
 
-        return GetSubtypeData(entity).data.TryGet(entity->Id().ToIndex());
+        return GetSubtypeData(entity).data.TryGet(GetEntityId(entity).ToIndex());
     }
 
-    const EntityData* TryGetEntityData(const ObjectBase* entity) const
+    const EntityData* TryGetEntityData(const Entity* entity) const
     {
         return const_cast<EntityContainer*>(this)->TryGetEntityData(entity);
     }
 
-    HYP_FORCE_INLINE EntityData& GetEntityData(const ObjectBase* entity)
+    HYP_FORCE_INLINE EntityData& GetEntityData(const Entity* entity)
     {
         EntityData* data = TryGetEntityData(entity);
         AssertDebug(data != nullptr);
@@ -218,7 +218,7 @@ public:
         return *data;
     }
 
-    HYP_FORCE_INLINE const EntityData& GetEntityData(const ObjectBase* entity) const
+    HYP_FORCE_INLINE const EntityData& GetEntityData(const Entity* entity) const
     {
         const EntityData* data = TryGetEntityData(entity);
         AssertDebug(data != nullptr);
@@ -227,16 +227,38 @@ public:
     }
 
 private:
-    SubtypeData& GetSubtypeData(const ObjectBase* entity)
+    static HYP_FORCE_INLINE ObjId<Entity> GetEntityId(const Entity* entity)
     {
-        const int classIndex = GetSubclassIndex(TypeId::ForType<Entity>(), entity->InstanceClass()) + 1;
+        if (!entity)
+        {
+            return ObjId<Entity>::invalid;
+        }
+
+        // reinterpret_cast needed because Entity may be an undefined type here
+        return static_cast<ObjId<Entity>>(reinterpret_cast<const ObjectBase*>(entity)->Id());
+    }
+
+    static const Class* GetEntityInstanceClass(const Entity* entity)
+    {
+        if (!entity)
+        {
+            return nullptr;
+        }
+
+        // reinterpret_cast needed because Entity may be an undefined type here
+        return reinterpret_cast<const ObjectBase*>(entity)->InstanceClass();
+    }
+
+    SubtypeData& GetSubtypeData(const Entity* entity)
+    {
+        const int classIndex = GetSubclassIndex(TypeId::ForType<Entity>(), GetEntityInstanceClass(entity)) + 1;
         AssertDebug(classIndex >= 0, "Invalid class index {}", classIndex);
         AssertDebug(classIndex < m_subtypeData.Size(), "Invalid class index {}", classIndex);
 
         return m_subtypeData[classIndex];
     }
 
-    const SubtypeData& GetSubtypeData(const ObjectBase* entity) const
+    const SubtypeData& GetSubtypeData(const Entity* entity) const
     {
         return const_cast<EntityContainer*>(this)->GetSubtypeData(entity);
     }
