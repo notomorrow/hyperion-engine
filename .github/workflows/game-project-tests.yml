@@ -18,8 +18,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  game-project-tests:
+  # CodeGen output is the same for every platform, so generate it once and skip it in the build jobs
+  codegen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y zlib1g-dev
+
+      - name: Run CodeGen
+        run: |
+          version="$(grep -oE '^RunCodeGen\([0-9]+ [0-9]+\)' Source/CMakeLists.txt | grep -oE '[0-9]+ [0-9]+')"
+          if [ -z "$version" ]; then echo "RunCodeGen(<major> <minor>) not found in Source/CMakeLists.txt"; exit 1; fi
+          bash Tools/Scripts/RunCodeGen.sh $version
+          test -f Source/Generated/CodeGenOutput.inc
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: codegen
+          path: |
+            Source/Generated
+            Data/Scripts/Strata
+          if-no-files-found: error
+
+  test-linux:
     name: game project tests (linux-x64)
+    needs: codegen
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
@@ -33,6 +59,10 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: codegen
 
       - name: Install dependencies
         run: |
@@ -52,6 +82,7 @@ jobs:
       - name: Build engine
         env:
           HYP_BUILD_JOBS: 4
+          HYP_SKIP_CODEGEN: 1
         run: |
           bash Tools/Scripts/BuildHyperion.sh Release ninja regenerate
           test -f Binaries/Linux/Release/libhyperion.so
@@ -70,7 +101,123 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: game-project-tests
+          name: game-project-tests-linux-x64
+          path: |
+            Build/GameProjectTests/TestResults
+            Build/GameProjectTests/*/Logs
+          if-no-files-found: ignore
+
+  test-windows:
+    name: game project tests (win-x64)
+    needs: codegen
+    runs-on: windows-2025
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: codegen
+
+      - name: Point VCPKG_ROOT at the runner's vcpkg
+        shell: pwsh
+        run: '"VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV'
+
+      - name: Cache vcpkg binaries
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\vcpkg\archives
+          key: vcpkg-tests-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'Source/vcpkg.json', 'Tools/vcpkg/**') }}
+
+      - name: Install Vulkan SDK
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://sdk.lunarg.com/sdk/download/latest/windows/vulkan_sdk.exe -OutFile $env:RUNNER_TEMP/vulkan_sdk.exe
+          & $env:RUNNER_TEMP/vulkan_sdk.exe --accept-licenses --default-answer --confirm-command install | Out-Host
+          $sdk = Get-ChildItem C:\VulkanSDK -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $sdk) { throw "Vulkan SDK was not installed under C:\VulkanSDK" }
+          "VULKAN_SDK=$($sdk.FullName)" >> $env:GITHUB_ENV
+
+      - name: Build engine
+        shell: cmd
+        env:
+          HYP_SKIP_CODEGEN: 1
+        run: |
+          Tools\Scripts\BuildHyperion.bat Release ninja regenerate
+          if not exist Binaries\Windows\Release\hyperion.dll exit /b 1
+          if not exist Binaries\Windows\Release\Sdk\CMake\HyperionSdk.cmake exit /b 1
+
+      - name: Run game project tests
+        shell: pwsh
+        env:
+          HYPERION_BIN_DIR: ${{ github.workspace }}\Binaries\Windows\Release
+        run: >
+          dotnet test Tests/GameProjects/Runner/GameProjectTests.csproj
+          --logger "console;verbosity=normal"
+          --logger "trx;LogFileName=game-project-tests.trx"
+          --results-directory Build/GameProjectTests/TestResults
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: game-project-tests-win-x64
+          path: |
+            Build/GameProjectTests/TestResults
+            Build/GameProjectTests/*/Logs
+          if-no-files-found: ignore
+
+  test-macos:
+    name: game project tests (macos-arm64)
+    needs: codegen
+    runs-on: macos-15
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: codegen
+
+      - name: Install dependencies
+        run: |
+          brew install ninja molten-vk vulkan-headers vulkan-loader freetype
+          echo "VULKAN_SDK=$(brew --prefix)" >> "$GITHUB_ENV"
+
+      # the runner has 7 GB of memory, which 8 parallel compiles of the engine can exhaust
+      - name: Build engine
+        env:
+          HYP_BUILD_JOBS: 4
+          HYP_SKIP_CODEGEN: 1
+        run: |
+          bash Tools/Scripts/BuildHyperion.sh Release ninja regenerate
+          test -f Binaries/Mac/Release/libhyperion.dylib
+          test -f Binaries/Mac/Release/Sdk/CMake/HyperionSdk.cmake
+
+      - name: Run game project tests
+        env:
+          HYPERION_BIN_DIR: ${{ github.workspace }}/Binaries/Mac/Release
+        run: >
+          dotnet test Tests/GameProjects/Runner/GameProjectTests.csproj
+          --logger "console;verbosity=normal"
+          --logger "trx;LogFileName=game-project-tests.trx"
+          --results-directory Build/GameProjectTests/TestResults
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: game-project-tests-macos-arm64
           path: |
             Build/GameProjectTests/TestResults
             Build/GameProjectTests/*/Logs
