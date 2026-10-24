@@ -11,6 +11,8 @@
 
 #include <Core/Memory/UniquePtr.hpp>
 
+#include <Core/Math/MathUtil.hpp>
+
 #include <Core/Threading/Mutex.hpp>
 
 #include <Core/Defines.hpp>
@@ -20,6 +22,15 @@
 #include <windows.h>
 #elif HYP_UNIX
 #include <dlfcn.h>
+#include <climits>
+#include <cstdlib>
+#include <cstring>
+#if HYP_MACOS
+#include <mach-o/dyld.h>
+#include <mach-o/loader.h>
+#elif HYP_LINUX
+#include <link.h>
+#endif
 // so HMODULE can be used as a type for the handle on both Windows and Linux/MacOS
 typedef void* HMODULE;
 #else
@@ -156,6 +167,105 @@ bool DynamicLibrary::GetImageRange(UIntPtr& outBegin, UIntPtr& outEnd) const
     outEnd = base + ntHeaders->OptionalHeader.SizeOfImage;
 
     return true;
+#elif HYP_MACOS
+    char libraryPath[PATH_MAX];
+
+    if (!realpath(m_impl->path.Data(), libraryPath))
+    {
+        return false;
+    }
+
+    for (uint32_t imageIndex = 0; imageIndex < _dyld_image_count(); imageIndex++)
+    {
+        char imagePath[PATH_MAX];
+
+        if (!realpath(_dyld_get_image_name(imageIndex), imagePath) || std::strcmp(imagePath, libraryPath) != 0)
+        {
+            continue;
+        }
+
+        const mach_header* header = _dyld_get_image_header(imageIndex);
+        const intptr_t slide = _dyld_get_image_vmaddr_slide(imageIndex);
+
+        if (header == nullptr || header->magic != MH_MAGIC_64)
+        {
+            return false;
+        }
+
+        UIntPtr begin = ~UIntPtr(0);
+        UIntPtr end = 0;
+
+        const load_command* command = reinterpret_cast<const load_command*>(reinterpret_cast<const mach_header_64*>(header) + 1);
+
+        for (uint32_t commandIndex = 0; commandIndex < header->ncmds; commandIndex++)
+        {
+            if (command->cmd == LC_SEGMENT_64)
+            {
+                const segment_command_64* segment = reinterpret_cast<const segment_command_64*>(command);
+
+                if (segment->vmsize != 0 && std::strcmp(segment->segname, SEG_PAGEZERO) != 0)
+                {
+                    begin = MathUtil::Min(begin, UIntPtr(segment->vmaddr + slide));
+                    end = MathUtil::Max(end, UIntPtr(segment->vmaddr + segment->vmsize + slide));
+                }
+            }
+
+            command = reinterpret_cast<const load_command*>(reinterpret_cast<const char*>(command) + command->cmdsize);
+        }
+
+        outBegin = begin;
+        outEnd = end;
+
+        return end > begin;
+    }
+
+    return false;
+#elif HYP_LINUX
+    link_map* linkMap = nullptr;
+
+    if (dlinfo(m_impl->handle, RTLD_DI_LINKMAP, &linkMap) != 0 || linkMap == nullptr)
+    {
+        return false;
+    }
+
+    struct ImageSearch
+    {
+        const link_map* linkMap;
+        UIntPtr begin;
+        UIntPtr end;
+    };
+
+    ImageSearch search { linkMap, ~UIntPtr(0), 0 };
+
+    dl_iterate_phdr(
+        [](dl_phdr_info* info, size_t, void* data) -> int
+        {
+            ImageSearch& search = *static_cast<ImageSearch*>(data);
+
+            if (info->dlpi_addr != search.linkMap->l_addr || info->dlpi_name == nullptr || std::strcmp(info->dlpi_name, search.linkMap->l_name) != 0)
+            {
+                return 0;
+            }
+
+            for (int headerIndex = 0; headerIndex < info->dlpi_phnum; headerIndex++)
+            {
+                const ElfW(Phdr)& programHeader = info->dlpi_phdr[headerIndex];
+
+                if (programHeader.p_type == PT_LOAD)
+                {
+                    search.begin = MathUtil::Min(search.begin, UIntPtr(info->dlpi_addr + programHeader.p_vaddr));
+                    search.end = MathUtil::Max(search.end, UIntPtr(info->dlpi_addr + programHeader.p_vaddr + programHeader.p_memsz));
+                }
+            }
+
+            return 1;
+        },
+        &search);
+
+    outBegin = search.begin;
+    outEnd = search.end;
+
+    return search.end > search.begin;
 #else
     return false;
 #endif

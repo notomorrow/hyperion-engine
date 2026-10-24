@@ -17,7 +17,7 @@
 #include <Core/Reflection/Class.hpp>
 
 #include <Core/Utilities/Format.hpp>
-#include <Core/Utilities/UUID.hpp>
+#include <Core/Utilities/Uuid.hpp>
 
 #include <NativeTestEditorTests.generated.inl>
 
