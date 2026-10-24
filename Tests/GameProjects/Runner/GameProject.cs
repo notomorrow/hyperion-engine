@@ -411,12 +411,13 @@ public sealed class GameProject
             HarnessEnvironment.BuildTimeout);
     }
 
-    // the same configure + build as the editor's NativeGameBuildService; the compiler comes from CXX, as for any CMake project
     private ProcessResult BuildNative()
     {
         return BuildNative(NativeBuildDirectory, "");
     }
 
+    // the same configure + build as the editor's NativeGameBuildService: on Windows inside vcvars64, with the compiler the SDK
+    // was built with; elsewhere the compiler comes from CXX, as for any CMake project
     private ProcessResult BuildNative(string buildDirectory, string label, params string[] cmakeArguments)
     {
         string logSuffix = label.Length > 0 ? "-" + label : "";
@@ -429,33 +430,66 @@ public sealed class GameProject
             "-DHYPERION_SDK_DIR=" + HarnessEnvironment.SdkDir.Replace('\\', '/')
         };
 
-        if (FindOnPath("ninja") != null)
+        if (HarnessEnvironment.VisualStudioDir != null)
+        {
+            configureArguments.AddRange(new[] { "-G", "Ninja", "-DCMAKE_CXX_COMPILER=" + FindWindowsCompiler().Replace('\\', '/') });
+        }
+        else if (FindOnPath("ninja") != null)
         {
             configureArguments.AddRange(new[] { "-G", "Ninja" });
         }
 
         configureArguments.AddRange(cmakeArguments);
 
-        ProcessResult configure = ProcessRunner.Run(
+        ProcessResult configure = RunCMake(
             $"Configuring {Name}",
-            "cmake",
             configureArguments,
-            Directory,
-            Path.Combine(LogsDirectory, $"configure{logSuffix}.log"),
-            HarnessEnvironment.BuildTimeout);
+            Path.Combine(LogsDirectory, $"configure{logSuffix}.log"));
 
         if (!configure.Succeeded)
         {
             return configure;
         }
 
-        return ProcessRunner.Run(
+        return RunCMake(
             $"Building {Name}",
-            "cmake",
             new[] { "--build", buildDirectory, "--config", "Release", "--parallel", Environment.ProcessorCount.ToString() },
-            Directory,
-            Path.Combine(LogsDirectory, $"build{logSuffix}.log"),
-            HarnessEnvironment.BuildTimeout);
+            Path.Combine(LogsDirectory, $"build{logSuffix}.log"));
+    }
+
+    // mirrors WindowsGameBuildPlatform.FindNativeToolchain() in Source/Editor/Managed/Services/Build
+    private static string FindWindowsCompiler()
+    {
+        if (HarnessEnvironment.SdkCompiler == "cl")
+        {
+            return "cl.exe";
+        }
+
+        string clangCl = Path.Combine(HarnessEnvironment.VisualStudioDir!, "VC", "Tools", "Llvm", "x64", "bin", "clang-cl.exe");
+
+        return File.Exists(clangCl) ? clangCl : "clang-cl.exe";
+    }
+
+    private ProcessResult RunCMake(string description, IReadOnlyList<string> arguments, string logPath)
+    {
+        if (HarnessEnvironment.VisualStudioDir == null)
+        {
+            return ProcessRunner.Run(description, "cmake", arguments, Directory, logPath, HarnessEnvironment.BuildTimeout);
+        }
+
+        string vcVarsPath = Path.Combine(HarnessEnvironment.VisualStudioDir, "VC", "Auxiliary", "Build", "vcvars64.bat");
+        string scriptPath = Path.Combine(Directory, "Build", Path.GetFileNameWithoutExtension(logPath) + ".bat");
+
+        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(scriptPath)!);
+
+        File.WriteAllText(scriptPath,
+            "@echo off\r\n"
+            + $"call \"{vcVarsPath}\" >nul\r\n"
+            + "if errorlevel 1 exit /b 1\r\n"
+            + "cmake " + string.Join(" ", arguments.Select(argument => "\"" + argument + "\"")) + "\r\n"
+            + "exit /b %errorlevel%\r\n");
+
+        return ProcessRunner.Run(description, "cmd.exe", new[] { "/d", "/c", scriptPath }, Directory, logPath, HarnessEnvironment.BuildTimeout);
     }
 
     private static string? FindOnPath(string program)

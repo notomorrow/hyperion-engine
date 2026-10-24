@@ -46,7 +46,7 @@ ANSIStringView GetModulePlatformDirectory()
 #ifdef HYP_WINDOWS
     return "Windows";
 #elif defined(HYP_MACOS)
-    return "Mac";
+    return "Darwin";
 #else
     return "Linux";
 #endif

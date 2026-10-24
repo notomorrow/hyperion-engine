@@ -88,6 +88,13 @@ jobs:
           test -f Binaries/Linux/Release/libhyperion.so
           test -f Binaries/Linux/Release/Sdk/CMake/HyperionSdk.cmake
 
+      # a C++ game's build runs CodeGen over its own headers with Build/hyperion-codegen, which the skipped CodeGen step would have built
+      - name: Build CodeGen tool
+        run: |
+          cmake -S Tools/CodeGen -B Build/CodeGen -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build Build/CodeGen --target hyperion-codegen --parallel 4
+          cp Build/CodeGen/hyperion-codegen Build/hyperion-codegen
+
       # the game projects run headless, so no GPU or display is needed
       - name: Run game project tests
         env:
@@ -153,6 +160,15 @@ jobs:
           if not exist Binaries\Windows\Release\hyperion.dll exit /b 1
           if not exist Binaries\Windows\Release\Sdk\CMake\HyperionSdk.cmake exit /b 1
 
+      - name: Build CodeGen tool
+        shell: cmd
+        run: |
+          cmake -S Tools/CodeGen -B Build/CodeGen
+          if errorlevel 1 exit /b 1
+          cmake --build Build/CodeGen --target hyperion-codegen --config Release --parallel 4
+          if errorlevel 1 exit /b 1
+          copy /Y Build\CodeGen\Release\hyperion-codegen.exe Build\hyperion-codegen.exe
+
       - name: Run game project tests
         shell: pwsh
         env:
@@ -204,6 +220,12 @@ jobs:
           bash Tools/Scripts/BuildHyperion.sh Release ninja regenerate
           test -f Binaries/Mac/Release/libhyperion.dylib
           test -f Binaries/Mac/Release/Sdk/CMake/HyperionSdk.cmake
+
+      - name: Build CodeGen tool
+        run: |
+          cmake -S Tools/CodeGen -B Build/CodeGen -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build Build/CodeGen --target hyperion-codegen --parallel 4
+          cp Build/CodeGen/hyperion-codegen Build/hyperion-codegen
 
       - name: Run game project tests
         env:
