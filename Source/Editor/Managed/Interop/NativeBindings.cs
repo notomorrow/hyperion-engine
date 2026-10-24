@@ -81,5 +81,8 @@ namespace Hyperion.Editor
 
         [DllImport("hyperion")]
         public static extern bool Hyp_CreateInstanceOfClass(string className, out BoxedValueInternal outBoxed);
+
+        [DllImport("hyperion")]
+        public static extern bool Hyp_CanCreateInstanceOfClass(string className);
     }
 }

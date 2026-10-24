@@ -5,9 +5,11 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using Hyperion.Editor.Services;
 using Hyperion.Editor.ViewModels;
 using Hyperion.Editor.Views;
+using System.Threading.Tasks;
 
 namespace Hyperion.Editor
 {
@@ -20,7 +22,25 @@ namespace Hyperion.Editor
         {
             AvaloniaXamlLoader.Load(this);
 
+            // An exception in managed code should not take down the entire application, ideally.
+            Dispatcher.UIThread.UnhandledException += OnUIThreadUnhandledException;
+            TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
             MenuItem.ClickEvent.AddClassHandler<MenuItem>(CloseFlyoutOnMenuItemClick, handledEventsToo: true);
+        }
+
+        private static void OnUIThreadUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            Logger.Log(LogLevel.Error, "Unhandled exception on the UI thread:\n\n{0}", e.Exception);
+
+            e.Handled = true;
+        }
+
+        private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+        {
+            Logger.Log(LogLevel.Error, "Unobserved task exception:\n\n{0}", e.Exception);
+
+            e.SetObserved();
         }
 
         private static void CloseFlyoutOnMenuItemClick(MenuItem item, RoutedEventArgs e)
