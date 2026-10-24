@@ -19,6 +19,8 @@ public static class HarnessEnvironment
 
     public static string SdkDir => Path.Combine(EngineBinDir, "Sdk");
 
+    public static string GetCommandletPath(string commandletName) => Path.Combine(EngineBinDir, commandletName + ExecutableExtension);
+
     public static string TemplatesDir => Path.Combine(RepositoryRoot, "Source", "Templates");
 
     public static string FixturesDir => Path.Combine(RepositoryRoot, "Tests", "GameProjects", "Fixtures");

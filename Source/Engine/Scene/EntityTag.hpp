@@ -220,10 +220,8 @@ struct TagComponentBase
     EntityTag value = EntityTag::None;
 };
 
-/*! \brief An EntityTag is a special component that is used to tag an entity with a specific flag.
- *
- *  \tparam tag The flag value
- */
+/*! \brief An EntityTag is a component that is used to assign a specific tag value to an Entity.
+ *  It only holds the tag pseudo-enum value and nothing else. */
 template <EntityTag TEntityTag>
 struct TagComponent : TagComponentBase
 {
@@ -240,7 +238,7 @@ struct EntityTypeTag : TagComponent<EntityType_Impl<T>::value>
 
 /*! \brief A helper used to query for Entity instances with a specific type.
  *
- *  \tparam T The type of Entity
+ *  \tparam T A subclass of Entity - what to query for.
  */
 template <class T>
 using EntityType = EntityTypeTag<T>;

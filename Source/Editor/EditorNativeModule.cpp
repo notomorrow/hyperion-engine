@@ -63,7 +63,8 @@ enum class RetiredModuleFlags : uint32
 {
     None = 0x0,
     HasPlayed = 0x1,
-    Warned = 0x2
+    Warned = 0x2,
+    WarnedObjectsMade = 0x4
 };
 
 HYP_MAKE_ENUM_FLAGS(RetiredModuleFlags);
@@ -105,6 +106,7 @@ struct RetiredNativeModule
     Array<ObjectContainerBase*> containers;
     Time retiredTime;
     Time lastCollectTime;
+    Time lastObjectScanTime;
     uint32 requiredCollection = 0;
     uint32 playsStoppedSinceRetired = 0;
     EnumFlags<RetiredModuleFlags> flags = RetiredModuleFlags::None;
@@ -296,6 +298,38 @@ Array<const Class*> GetClassesInUse(const RetiredNativeModule& retiredModule)
     return classesInUse;
 }
 
+const Class* FindObjectForModule(const NativeModuleImage& image)
+{
+    const Class* found = nullptr;
+
+    auto checkHeader = [&found, &image](const ObjectHeader* header)
+    {
+        if (found || header->GetRefCountStrong() <= 0)
+        {
+            return;
+        }
+
+        const UIntPtr vtable = *reinterpret_cast<const UIntPtr*>(ObjectHeader::GetObjectPointer(const_cast<ObjectHeader*>(header)));
+
+        if (vtable >= image.imageBegin && vtable < image.imageEnd)
+        {
+            found = header->cls;
+        }
+    };
+
+    auto checkContainer = [&found, &checkHeader](TypeId, ObjectContainerBase* container)
+    {
+        if (!found && container != nullptr)
+        {
+            container->ForEachHeader(checkHeader);
+        }
+    };
+
+    GetObjectContainerMap().ForEachContainer(checkContainer);
+
+    return found;
+}
+
 void UpdateRetiredModules()
 {
     NativeModuleState& state = GetNativeModuleState();
@@ -368,6 +402,25 @@ void UpdateRetiredModules()
             {
                 continue;
             }
+        }
+
+        if (int64(now - retiredModule.lastObjectScanTime) < ManagedCollectIntervalMs)
+        {
+            continue;
+        }
+
+        retiredModule.lastObjectScanTime = now;
+
+        if (const Class* objectClass = FindObjectForModule(retiredModule.image))
+        {
+            if (!(retiredModule.flags & RetiredModuleFlags::WarnedObjectsMade) && int64(now - retiredModule.retiredTime) >= StaysLoadedWarningDelayMs)
+            {
+                HYP_LOG(Editor, Warning, "Previous game module build {} stays loaded while objects its code made are alive (a {} among them)", retiredModule.image.copyPath, objectClass->GetName());
+
+                retiredModule.flags |= RetiredModuleFlags::WarnedObjectsMade;
+            }
+
+            continue;
         }
 
         UnloadRetiredModule(retiredModule);
@@ -764,31 +817,43 @@ EDITOR_API TResult<Handle<Game>> CreateGameFromNativeModule(const FilePath& proj
 
 EDITOR_API Result ReloadGameModule(EditorSubsystem* subsystem)
 {
-    const Handle<EditorProject>& project = subsystem->GetCurrentProject();
-
-    if (!project.IsValid() || !project->IsSaved())
-    {
-        return HYP_MAKE_ERROR(Error, "Cannot reload the game module: no saved project is open");
-    }
-
-    if (subsystem->IsSimulating())
+    if (subsystem->GetCurrentProject().IsValid() && subsystem->IsSimulating())
     {
         return HYP_MAKE_ERROR(Error, "Cannot reload the game module while simulating, it's reloaded when play starts");
     }
 
+    return ReloadGameModule(subsystem->GetCurrentProject().Get());
+}
+
+EDITOR_API Result ReloadGameModule(EditorProject* project)
+{
+    if (project == nullptr || !project->IsSaved())
+    {
+        return HYP_MAKE_ERROR(Error, "Cannot reload the game module: no saved project is open");
+    }
+
     return IsManagedProject(project->GetFilePath())
-        ? ReloadManagedGameModule(project.Get())
-        : ReloadNativeGameModule(project.Get());
+        ? ReloadManagedGameModule(project)
+        : ReloadNativeGameModule(project);
 }
 
 EDITOR_API void UpdateGameModules(EditorSubsystem* subsystem)
 {
+    UpdateGameModules(subsystem->GetCurrentProject().Get(), subsystem->IsSimulating(), subsystem);
+}
+
+EDITOR_API bool HasRetiredNativeModules()
+{
+    Mutex::Guard guard(GetGameModulesMutex());
+
+    return GetNativeModuleState().retiredModules.Any();
+}
+
+EDITOR_API void UpdateGameModules(EditorProject* project, bool isSimulating, EditorSubsystem* subsystem)
+{
     NativeModuleState& state = GetNativeModuleState();
 
-    const Handle<EditorProject>& project = subsystem->GetCurrentProject();
-
-    const bool isSimulating = subsystem->IsSimulating();
-    const bool canReload = project.IsValid() && project->IsSaved() && !isSimulating;
+    const bool canReload = project != nullptr && project->IsSaved() && !isSimulating;
 
     String gameClassToCreate;
     Array<const Class*> classesToRebuild;
@@ -797,7 +862,7 @@ EDITOR_API void UpdateGameModules(EditorSubsystem* subsystem)
     {
         Mutex::Guard guard(GetGameModulesMutex());
 
-        if (isSimulating && project.IsValid() && project->IsSaved())
+        if (isSimulating && project != nullptr && project->IsSaved())
         {
             if (LoadedNativeModule* playedModule = FindGameModule(state.loadedModules, GetNativeModulePath(project->GetFilePath())))
             {
@@ -830,7 +895,7 @@ EDITOR_API void UpdateGameModules(EditorSubsystem* subsystem)
 
             if (loadedModule != nullptr && loadedModule->error.Empty())
             {
-                gameClassToCreate = GetRetiredProjectGameReplacement(project.Get(), *loadedModule);
+                gameClassToCreate = GetRetiredProjectGameReplacement(project, *loadedModule);
                 classesToRebuild = std::move(state.classesToRebuild);
 
                 state.classesToRebuild.Clear();
@@ -840,17 +905,17 @@ EDITOR_API void UpdateGameModules(EditorSubsystem* subsystem)
 
     if (gameClassToCreate.Any())
     {
-        ReplaceProjectGameWithClass(project.Get(), gameClassToCreate);
+        ReplaceProjectGameWithClass(project, gameClassToCreate);
     }
 
     if (classesToRebuild.Any())
     {
-        RebuildRetiredModuleObjects(subsystem, classesToRebuild);
+        RebuildRetiredModuleObjects(project, subsystem, classesToRebuild);
     }
 
     if (canReload)
     {
-        UpdateManagedGameModule(project.Get());
+        UpdateManagedGameModule(project);
     }
 
     bool hasRetiredModules = false;

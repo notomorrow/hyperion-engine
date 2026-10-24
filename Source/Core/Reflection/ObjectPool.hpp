@@ -82,6 +82,12 @@ public:
 
     bool HasObjects();
 
+    /// objects of a class without a static index are kept in its closest ancestor's slot
+    void ShareIndicesWith(ObjectContainerBase& ancestorContainer)
+    {
+        m_sharedIndexAllocator = &ancestorContainer.GetIndexAllocator();
+    }
+
 protected:
     enum PoolFlags : uint8
     {
@@ -103,9 +109,15 @@ protected:
      */
     void LockIfNeeded(TLockGuard<AtomicFlag>& outGuard, int flags);
 
+    HYP_FORCE_INLINE AtomicIndexAllocator& GetIndexAllocator()
+    {
+        return m_sharedIndexAllocator != nullptr ? *m_sharedIndexAllocator : m_indexAllocator;
+    }
+
     TypeId m_typeId;
     const Class* m_class;
     AtomicIndexAllocator m_indexAllocator;
+    AtomicIndexAllocator* m_sharedIndexAllocator = nullptr;
     Pool* m_pool;
     AtomicFlag m_atomicFlag;
     AtomicVar<uint32> m_generation;
@@ -265,8 +277,6 @@ class CORE_API ObjectContainerMap
     // Maps TypeId to object container
     // Use a linked list so that references are never invalidated.
     List<Pair<TypeId, ObjectContainerBase*>> m_map;
-
-    Array<Pair<TypeId, uint32>> m_detachedIndexEnds;
 
     Mutex m_mutex;
 

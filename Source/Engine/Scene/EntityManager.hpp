@@ -223,11 +223,11 @@ public:
      */
     void MoveEntity(const Handle<Entity>& entity, const Handle<EntityManager>& other);
 
-    HYP_FORCE_INLINE bool HasEntity(ObjId<Entity> id) const
+    HYP_FORCE_INLINE bool HasEntity(const Entity* entity) const
     {
         AssertDebug(IsLocked() || IsOnThread(m_ownerThreadId));
 
-        return id.IsValid() && m_entities.HasEntity(id);
+        return m_entities.HasEntity(entity);
     }
 
     void AddTag(Entity* entity, EntityTag tag);
@@ -304,7 +304,7 @@ public:
 
         HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
 
-        return entity && m_entities.GetEntityData(entity->Id()).HasComponent<Component>();
+        return entity && m_entities.GetEntityData(entity).HasComponent<Component>();
     }
 
     bool HasComponent(TypeId componentTypeId, const Entity* entity) const
@@ -315,7 +315,7 @@ public:
 
         HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
 
-        return entity && m_entities.GetEntityData(entity->Id()).HasComponent(componentTypeId);
+        return entity && m_entities.GetEntityData(entity).HasComponent(componentTypeId);
     }
 
     template <class Component>
@@ -330,7 +330,7 @@ public:
         HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
         HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
-        EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
+        EntityData* entityData = m_entities.TryGetEntityData(entity);
         Assert(entityData != nullptr, "Entity does not exist");
 
         const Optional<ComponentId> componentIdOpt = entityData->TryGetComponentId<Component>();
@@ -367,7 +367,7 @@ public:
         HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
         HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
-        EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
+        EntityData* entityData = m_entities.TryGetEntityData(entity);
 
         if (!entityData)
         {
@@ -426,7 +426,7 @@ public:
         HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
         HYP_MT_CHECK_READ(m_containersDataRaceDetector);
 
-        EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
+        EntityData* entityData = m_entities.TryGetEntityData(entity);
 
         if (!entityData)
         {
@@ -500,7 +500,7 @@ public:
 
         AssertDebug(IsLocked() || IsOnThread(m_ownerThreadId));
 
-        const EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
+        const EntityData* entityData = m_entities.TryGetEntityData(entity);
 
         if (!entityData)
         {
@@ -528,7 +528,7 @@ public:
         Handle<Entity> entityHandle = MakeStrongRef(entity);
         Assert(entityHandle.IsValid());
 
-        EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
+        EntityData* entityData = m_entities.TryGetEntityData(entity);
         Assert(entityData != nullptr);
 
         Component* componentPtr = nullptr;
@@ -832,6 +832,7 @@ private:
     void NotifySystemOfAllEntitiesRemoved(SystemBase* system);
     void NotifySystemsOfEntityAdded(const Handle<Entity>& entity, const ComponentMap& componentIds);
     void NotifySystemsOfEntityRemoved(Entity* entity, const ComponentMap& componentIds);
+    void NotifySystemsOfEntityRemoved(Entity* entity);
 
     /*! \brief Removes an entity from the EntityManager.
      *  \param entity The Entity to remove

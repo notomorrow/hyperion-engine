@@ -838,8 +838,6 @@ bool EntityManager::RemoveEntity(Entity* entity, bool calledFromEntityDestructor
 
     HYP_MT_CHECK_RW(m_entitiesDataRaceDetector);
 
-    const ObjId<Entity> entityId = entity->Id();
-
     struct RemovedComponent
     {
         TypeId typeId;
@@ -850,12 +848,12 @@ bool EntityManager::RemoveEntity(Entity* entity, bool calledFromEntityDestructor
     // Components are destroyed once the entity is fully removed, matching when the boxed copies used to be destroyed
     FatArray<RemovedComponent, InlineAllocator<16>> removedComponents;
 
-    EntityData* entityData = m_entities.TryGetEntityData(entityId);
+    EntityData* entityData = m_entities.TryGetEntityData(entity);
     Assert(entityData != nullptr, "Entity does not exist");
 
     if (!calledFromEntityDestructor)
     {
-        NotifySystemsOfEntityRemoved(entity, entityData->components);
+        NotifySystemsOfEntityRemoved(entity);
     }
     else if (m_scene != nullptr && (m_scene->GetSceneFlags() & SceneFlags::HAS_OCTREE))
     {
@@ -917,7 +915,7 @@ bool EntityManager::RemoveEntity(Entity* entity, bool calledFromEntityDestructor
         entity->SetEntityManagerRaw_Internal(nullptr);
     }
 
-    m_entities.Remove(entityId);
+    m_entities.Remove(entity);
 
     for (const RemovedComponent& removedComponent : removedComponents)
     {
@@ -963,7 +961,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
     { // Remove components and entity from this and store them to be added to the other EntityManager
         HYP_MT_CHECK_RW(m_entitiesDataRaceDetector);
 
-        EntityData* entityData = m_entities.TryGetEntityData(entity.Id());
+        EntityData* entityData = m_entities.TryGetEntityData(entity.Get());
         Assert(entityData != nullptr, "Entity does not exist");
 
         if (m_world)
@@ -973,7 +971,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
 
         entity->OnRemovedFromScene(m_scene);
 
-        NotifySystemsOfEntityRemoved(entity, entityData->components);
+        NotifySystemsOfEntityRemoved(entity);
 
         for (auto componentInfoPairIt = entityData->components.Begin(); componentInfoPairIt != entityData->components.End();)
         {
@@ -1037,7 +1035,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
 
         entity->SetEntityManagerRaw_Internal(nullptr);
 
-        m_entities.Remove(entity);
+        m_entities.Remove(entity.Get());
     }
 
     lock.Reset();
@@ -1074,7 +1072,7 @@ void EntityManager::MoveEntity(const Handle<Entity>& entity, const Handle<Entity
 
         InitObject(entity);
 
-        EntityData* entityData = other->m_entities.TryGetEntityData(entity.Id());
+        EntityData* entityData = other->m_entities.TryGetEntityData(entity.Get());
         Assert(entityData != nullptr, "Entity with id {} does not exist", entity.Id());
 
         ComponentMap componentIds;
@@ -1335,7 +1333,7 @@ void EntityManager::AddComponent_Internal(Entity* entity, const ComponentInterfa
     Handle<Entity> entityHandle = MakeStrongRef(entity);
     Assert(entityHandle.IsValid());
 
-    EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
+    EntityData* entityData = m_entities.TryGetEntityData(entity);
     Assert(entityData != nullptr, "Entity with id {} does not exist", entity->Id());
 
     const TypeId componentTypeId = componentInterface.GetTypeId();
@@ -1477,7 +1475,7 @@ bool EntityManager::RemoveComponent(TypeId componentTypeId, Entity* entity)
 
     HYP_MT_CHECK_READ(m_entitiesDataRaceDetector);
 
-    EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
+    EntityData* entityData = m_entities.TryGetEntityData(entity);
 
     if (!entityData)
     {
@@ -1504,7 +1502,7 @@ bool EntityManager::RemoveComponent(TypeId componentTypeId, Entity* entity)
     NotifySystemsOfEntityRemoved(entity, removedComponents);
 
     // A system may have removed the component itself from OnEntityRemoved() in which case doing everything below would be redundant
-    entityData = m_entities.TryGetEntityData(entity->Id());
+    entityData = m_entities.TryGetEntityData(entity);
 
     if (!entityData || entityData->GetComponentId(componentTypeId) != componentId)
     {
@@ -1533,7 +1531,7 @@ bool EntityManager::RemoveComponent(TypeId componentTypeId, Entity* entity)
         entity->OnComponentRemoved(componentRef);
     }
 
-    entityData = m_entities.TryGetEntityData(entity->Id());
+    entityData = m_entities.TryGetEntityData(entity);
 
     if (!entityData)
     {
@@ -1580,7 +1578,7 @@ bool EntityManager::HasTag(const Entity* entity, EntityTag tag) const
 
     if (IsEntityTypeTag(tag))
     {
-        const EntityData* entityData = m_entities.TryGetEntityData(entity->Id());
+        const EntityData* entityData = m_entities.TryGetEntityData(entity);
 
         if (!entityData)
         {
@@ -1712,6 +1710,39 @@ void EntityManager::NotifySystemsOfEntityAdded(const Handle<Entity>& entity, con
                 systemIt.second->OnEntityAdded(entity);
             }
         }
+    }
+}
+
+void EntityManager::NotifySystemsOfEntityRemoved(Entity* entity)
+{
+    if (!entity || !m_world)
+    {
+        return;
+    }
+
+    Array<SystemBase*> trackingSystems;
+
+    {
+        TUniqueLock lock(m_systemEntityMapMutex);
+
+        for (auto& it : m_systemEntityMap)
+        {
+            auto entityIt = it.second.Find(entity);
+
+            if (entityIt == it.second.End())
+            {
+                continue;
+            }
+
+            it.second.Erase(entityIt);
+
+            trackingSystems.PushBack(it.first);
+        }
+    }
+
+    for (SystemBase* system : trackingSystems)
+    {
+        system->OnEntityRemoved(entity);
     }
 }
 

@@ -213,16 +213,6 @@ ObjectContainerBase& ObjectContainerMap::GetOrCreate(TypeId typeId, const Class*
     container->m_typeId = typeId;
     container->m_class = cls;
 
-    for (const Pair<TypeId, uint32>& detachedIndexEnd : m_detachedIndexEnds)
-    {
-        if (detachedIndexEnd.first == typeId)
-        {
-            container->m_indexAllocator.idCounter.Set(detachedIndexEnd.second, MemoryOrder::RELEASE);
-
-            break;
-        }
-    }
-
     if (ClassRegistry::GetInstance().IsInitialized())
     {
         // ClassRegistry already initialized; need to call Initialize() ourselves
@@ -267,22 +257,6 @@ Array<ObjectContainerBase*> ObjectContainerMap::Detach(const Array<const Class*>
         }
 
         containers.PushBack(it->second);
-
-        const uint32 indexEnd = it->second->m_indexAllocator.idCounter.Get(MemoryOrder::ACQUIRE);
-
-        auto indexEndIt = m_detachedIndexEnds.FindIf([typeId = it->first](const Pair<TypeId, uint32>& element)
-            {
-                return element.first == typeId;
-            });
-
-        if (indexEndIt == m_detachedIndexEnds.End())
-        {
-            m_detachedIndexEnds.PushBack({ it->first, indexEnd });
-        }
-        else
-        {
-            indexEndIt->second = indexEndIt->second > indexEnd ? indexEndIt->second : indexEnd;
-        }
 
         it = m_map.Erase(it);
     }
@@ -377,7 +351,7 @@ ObjectHeader* ObjectContainerBase::AllocateObjectHeader(size_t size)
     constexpr uint32 HeaderOffset = ByteUtil::AlignAs(sizeof(ObjectHeader), MaxObjectAlignment) - sizeof(ObjectHeader);
 
     ObjectHeader* header = reinterpret_cast<ObjectHeader*>(reinterpret_cast<UIntPtr>(mem) + HeaderOffset);
-    header->index = m_indexAllocator.Allocate();
+    header->index = GetIndexAllocator().Allocate();
     header->cls = m_class;
     header->generation = m_generation.Increment(1, MemoryOrder::ACQUIRE_RELEASE) + 1;
     header->refCountStrong = 1;
@@ -422,7 +396,7 @@ void ObjectContainerBase::Release(ObjectHeader* header)
     const uint32 index = header->index;
     HYP_CORE_ASSERT(index != AtomicIndexAllocator::InvalidIndex, "Invalid index");
 
-    m_indexAllocator.Free(index);
+    GetIndexAllocator().Free(index);
 
     // mark invalid before freeing - the memory may be handed to another thread's allocation as soon as it's back in the pool
     header->index = AtomicIndexAllocator::InvalidIndex;
@@ -437,6 +411,9 @@ void ObjectContainerBase::Release(ObjectHeader* header)
 
 void ObjectContainerBase::ForEachHeader(const ProcRef<void(const ObjectHeader*)>& callback)
 {
+    TLockGuard<AtomicFlag> guard;
+    LockIfNeeded(guard, PF_NONE);
+
     for (auto& header_ptr : m_headers)
     {
         if (header_ptr != nullptr)

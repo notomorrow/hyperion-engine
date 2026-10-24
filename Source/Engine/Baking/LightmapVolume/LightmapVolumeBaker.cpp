@@ -573,7 +573,7 @@ void Baker<LightmapVolume>::ReleaseEntity(const Handle<Entity>& entity)
         {
             Handle<EntityManager> entityManager = entityManagerWeak.Lock();
 
-            if (!entityManager || entity->GetEntityManager() != entityManager.Get() || !entityManager->HasEntity(entity->Id()))
+            if (!entityManager || entity->GetEntityManager() != entityManager.Get() || !entityManager->HasEntity(entity))
             {
                 return;
             }
@@ -727,7 +727,9 @@ void Baker<LightmapVolume>::OnCompleted_Internal()
                 }
 
                 // could have been deleted or moved to another scene between the bake finishing and this running
-                if (!entity.IsValid() || entity->GetEntityManager() != entityManager.Get() || !entityManager->HasEntity(entity->Id()))
+                if (!entity.IsValid()
+                    || entity->GetEntityManager() != entityManager.Get()
+                    || !entityManager->HasEntity(entity))
                 {
                     return;
                 }

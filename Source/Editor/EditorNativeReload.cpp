@@ -400,20 +400,23 @@ Handle<Node> Remap(const Handle<Node>& node, const Array<RebuiltObject>& rebuilt
 
 void RemapEditorReferences(EditorSubsystem* subsystem, EditorProject* project, const Array<RebuiltObject>& rebuiltObjects)
 {
-    const Handle<Node> focusedNode = subsystem->GetFocusedNode();
-
-    Array<Handle<Node>> selectedNodes = subsystem->GetSelectedNodes();
-
-    for (Handle<Node>& selectedNode : selectedNodes)
+    if (subsystem)
     {
-        selectedNode = Remap(selectedNode, rebuiltObjects);
-    }
+        const Handle<Node> focusedNode = subsystem->GetFocusedNode();
 
-    subsystem->SetSelectedNodes(selectedNodes);
+        Array<Handle<Node>> selectedNodes = subsystem->GetSelectedNodes();
 
-    if (FindRebuilt(focusedNode.Get(), rebuiltObjects) != nullptr)
-    {
-        subsystem->SetFocusedNode(Remap(focusedNode, rebuiltObjects), /* shouldSelectInOutline */ false);
+        for (Handle<Node>& selectedNode : selectedNodes)
+        {
+            selectedNode = Remap(selectedNode, rebuiltObjects);
+        }
+
+        subsystem->SetSelectedNodes(selectedNodes);
+
+        if (FindRebuilt(focusedNode.Get(), rebuiltObjects) != nullptr)
+        {
+            subsystem->SetFocusedNode(Remap(focusedNode, rebuiltObjects), /* shouldSelectInOutline */ false);
+        }
     }
 
     if (g_editorState.IsValid())
@@ -439,22 +442,23 @@ void RemapEditorReferences(EditorSubsystem* subsystem, EditorProject* project, c
 
 } // namespace
 
-EDITOR_API void RebuildRetiredModuleObjects(EditorSubsystem* subsystem, const Array<const Class*>& retiredClasses)
+EDITOR_API void RebuildRetiredModuleObjects(EditorProject* project, EditorSubsystem* subsystem, const Array<const Class*>& retiredClasses)
 {
-    const Handle<EditorProject>& project = subsystem->GetCurrentProject();
-
-    if (!project.IsValid() || retiredClasses.Empty())
+    if (!project || retiredClasses.Empty())
     {
         return;
     }
 
-    if (subsystem->IsEditingPrefab())
+    if (subsystem)
     {
-        subsystem->GetPrefabEditState()->Exit(/* apply */ true);
-    }
+        if (subsystem->IsEditingPrefab())
+        {
+            subsystem->GetPrefabEditState()->Exit(/* apply */ true);
+        }
 
-    subsystem->ExitMeshEditMode(/* saveEdits */ true);
-    subsystem->GetCsgState()->Exit(/* saveEdits */ true);
+        subsystem->ExitMeshEditMode(/* saveEdits */ true);
+        subsystem->GetCsgState()->Exit(/* saveEdits */ true);
+    }
 
     Array<RebuiltObject> rebuiltObjects;
     uint32 numRebuiltNodes = 0;
@@ -464,7 +468,7 @@ EDITOR_API void RebuildRetiredModuleObjects(EditorSubsystem* subsystem, const Ar
     Array<DeferredHandleCopy> deferredCopies;
     GlobalContextScope deferredCopiesScope(DeferredHandleCopiesContext { &deferredCopies });
 
-    const Array<Scene*> scenes = GetProjectScenes(project.Get());
+    const Array<Scene*> scenes = GetProjectScenes(project);
 
     // components move to the new build's layouts first: new systems see them, and a rebuilt entity takes its old components with it
     for (Scene* scene : scenes)
@@ -480,7 +484,7 @@ EDITOR_API void RebuildRetiredModuleObjects(EditorSubsystem* subsystem, const Ar
 
     if (const Handle<Game>& game = project->GetGame(); game.IsValid() && game->GetAssetRegistry().IsValid())
     {
-        for (const Handle<AssetObject>& oldAsset : GetCachedAssets(project.Get()))
+        for (const Handle<AssetObject>& oldAsset : GetCachedAssets(project))
         {
             if (!DerivesFromRetiredClass(oldAsset->InstanceClass(), retiredClasses))
             {
@@ -572,7 +576,7 @@ EDITOR_API void RebuildRetiredModuleObjects(EditorSubsystem* subsystem, const Ar
         }
     }
 
-    for (const Handle<AssetObject>& asset : GetCachedAssets(project.Get()))
+    for (const Handle<AssetObject>& asset : GetCachedAssets(project))
     {
         if (!DerivesFromRetiredClass(asset->InstanceClass(), retiredClasses))
         {
@@ -590,10 +594,13 @@ EDITOR_API void RebuildRetiredModuleObjects(EditorSubsystem* subsystem, const Ar
         }
     }
 
-    RemapEditorReferences(subsystem, project.Get(), rebuiltObjects);
+    RemapEditorReferences(subsystem, project, rebuiltObjects);
 
     // the inspector rebuilds its view of the selection the same way as for a script reload
-    subsystem->OnScriptReloaded();
+    if (subsystem)
+    {
+        subsystem->OnScriptReloaded();
+    }
 
     HYP_LOG(Editor, Info, "Rebuilt {} node(s), {} asset(s) and {} system(s) of native game classes on the new build ({} reference(s) updated). Undo history has been cleared.",
         numRebuiltNodes, numRebuiltAssets, numReplacedSystems, numRetargeted);

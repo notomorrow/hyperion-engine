@@ -384,7 +384,7 @@ void Entity::FlushPendingSwatchOverrides()
 
     EntityManager* entityManager = GetEntityManager();
 
-    if (!entityManager || !entityManager->HasEntity(Id()))
+    if (!entityManager || !entityManager->HasEntity(this))
     {
         // Not registered with an EntityManager yet; keep the sets stashed until Init() runs.
         return;
@@ -754,7 +754,7 @@ void Entity::UpdateDescendantRenderProxies()
 
         Entity* descendantEntity = static_cast<Entity*>(descendant);
 
-        if (descendantEntity->GetEntityManager() == entityManager && entityManager->HasEntity(descendantEntity->Id()))
+        if (descendantEntity->GetEntityManager() == entityManager && entityManager->HasEntity(descendantEntity))
         {
             entityManager->AddTag<EntityTag::UpdateRenderProxy>(descendantEntity);
         }

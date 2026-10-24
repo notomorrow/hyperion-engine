@@ -1,4 +1,5 @@
 #include <Game/NativeTestGame.hpp>
+#include <Game/NativeTestBuild.hpp>
 #include <Game/NativeTests.hpp>
 
 #include <HyperionEngine.hpp>
@@ -39,7 +40,7 @@ extern "C"
 
 HYP_EXPORT const char* HypGameModule_GetGameClassName()
 {
-    return "NativeTestGame";
+    return Hyperion::NativeTestGameClassName;
 }
 
 HYP_EXPORT void HypGameModule_GetEngineVersion(Hyperion::uint32* outMajor, Hyperion::uint32* outMinor, Hyperion::uint32* outPatch)

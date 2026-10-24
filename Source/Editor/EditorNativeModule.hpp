@@ -17,6 +17,7 @@
 namespace Hyperion {
 
 class Game;
+class EditorProject;
 class EditorSubsystem;
 
 enum class GameProjectLanguage : uint32
@@ -38,6 +39,11 @@ EDITOR_API TResult<Handle<Game>> CreateGameFromNativeModule(const FilePath& proj
 EDITOR_API Result ReloadGameModule(EditorSubsystem* subsystem);
 
 EDITOR_API void UpdateGameModules(EditorSubsystem* subsystem);
+
+// for tests, where there is no editor to control.
+EDITOR_API Result ReloadGameModule(EditorProject* project);
+EDITOR_API void UpdateGameModules(EditorProject* project, bool isSimulating, EditorSubsystem* subsystem = nullptr);
+EDITOR_API bool HasRetiredNativeModules();
 
 EDITOR_API FilePath GetManagedProjectFilePath(const FilePath& projectFilepath);
 

@@ -79,4 +79,47 @@ public:
     String text;
 };
 
+// members matched by name across classes, as a reloaded game class is matched to its previous build
+HYP_CLASS()
+class NativeTestCounterBase : public ObjectBase
+{
+    HYP_OBJECT_BODY(NativeTestCounterBase);
+
+public:
+    HYP_FIELD(Property = "BaseValue", Serialize)
+    int32 baseValue = 0;
+};
+
+HYP_CLASS()
+class NativeTestCounter final : public NativeTestCounterBase
+{
+    HYP_OBJECT_BODY(NativeTestCounter);
+
+public:
+    HYP_FIELD(Property = "Count", Serialize)
+    int32 count = 0;
+
+    HYP_FIELD(Property = "Label", Serialize)
+    String label;
+
+    HYP_FIELD(Property = "Scratch", Transient)
+    int32 scratch = 0;
+};
+
+HYP_CLASS()
+class NativeTestWideCounter final : public NativeTestCounterBase
+{
+    HYP_OBJECT_BODY(NativeTestWideCounter);
+
+public:
+    HYP_FIELD(Property = "Count", Serialize)
+    double count = 0.0;
+
+    HYP_FIELD(Property = "Label", Serialize)
+    String label;
+
+    HYP_FIELD(Property = "Scratch", Transient)
+    int32 scratch = 0;
+};
+
 } // namespace Hyperion

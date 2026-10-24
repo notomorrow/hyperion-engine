@@ -1,10 +1,17 @@
 #include <Game/NativeTests.hpp>
+#include <Game/NativeEngineTests.hpp>
 #include <Game/NativeTestTypes.hpp>
+#include <Game/NativeTestReloadTypes.hpp>
 #include <Game/NativeTestMedkit.hpp>
 #include <Game/NativeTestGame.hpp>
 
 #include <Asset/AssetRegistry.hpp>
 #include <Asset/AssetBucket.hpp>
+
+#include <Scene/World.hpp>
+#include <Scene/Scene.hpp>
+#include <Scene/Node.hpp>
+#include <Scene/EntityManager.hpp>
 
 #include <Core/Reflection/Class.hpp>
 
@@ -235,22 +242,125 @@ void NoteAsset_LoadsSavedFields(GameTestContext& context)
 
 #pragma endregion Read phase
 
+#pragma region Cooked phase
+
+// what NativeTestEditorTests' cook-author phase saved in the editor, as the packaged game loads it from the cook
+
+Scene* FindCookScene(GameTestContext& context)
+{
+    const Handle<World>& world = context.GetGame()->GetWorld();
+
+    if (!context.Check(world.IsValid() && !world->IsTransient(), "the game didn't load a World"))
+    {
+        return nullptr;
+    }
+
+    if (!context.Check(world->GetName() == NAME("MainWorld"), HYP_FORMAT("the game loaded World {}, expected MainWorld", world->GetName())))
+    {
+        return nullptr;
+    }
+
+    for (const Handle<Scene>& scene : world->GetScenes())
+    {
+        if (scene.IsValid() && scene->GetName() == NAME("CookScene") && scene->GetRoot().IsValid())
+        {
+            return scene.Get();
+        }
+    }
+
+    context.Check(false, "MainWorld has no CookScene");
+
+    return nullptr;
+}
+
+NativeTestReloadEntity* FindHero(GameTestContext& context)
+{
+    Scene* scene = FindCookScene(context);
+    Node* node = scene != nullptr ? scene->GetRoot()->FindChildByName(StringHash("Hero")) : nullptr;
+
+    if (!context.Check(scene == nullptr || node != nullptr, "CookScene has no Hero"))
+    {
+        return nullptr;
+    }
+
+    if (node != nullptr && !context.Check(node->IsA<NativeTestReloadEntity>(), HYP_FORMAT("Hero loaded as {}, expected NativeTestReloadEntity", node->InstanceClass()->GetName())))
+    {
+        return nullptr;
+    }
+
+    return static_cast<NativeTestReloadEntity*>(node);
+}
+
+void Cooked_LoadsStartupWorld(GameTestContext& context)
+{
+    FindCookScene(context);
+}
+
+void Cooked_LoadsGameEntityFields(GameTestContext& context)
+{
+    if (NativeTestReloadEntity* hero = FindHero(context))
+    {
+        context.Check(hero->health == 64, HYP_FORMAT("Hero.Health: expected 64, got {}", hero->health));
+        context.Check(hero->label == "cooked", HYP_FORMAT("Hero.Label: expected 'cooked', got '{}'", hero->label));
+    }
+}
+
+void Cooked_LoadsGameComponent(GameTestContext& context)
+{
+    NativeTestReloadEntity* hero = FindHero(context);
+    const NativeTestReloadComponent* component = hero != nullptr ? hero->TryGetComponent<NativeTestReloadComponent>() : nullptr;
+
+    if (!hero || !context.Check(component != nullptr, "Hero has no NativeTestReloadComponent"))
+    {
+        return;
+    }
+
+    context.Check(component->speed == 6.5f, HYP_FORMAT("Speed: expected 6.5, got {}", component->speed));
+    context.Check(component->tag == "cooked", HYP_FORMAT("Tag: expected 'cooked', got '{}'", component->tag));
+}
+
+void Cooked_LoadsReferencedGameAsset(GameTestContext& context)
+{
+    NativeTestReloadEntity* hero = FindHero(context);
+
+    if (!hero || !context.Check(hero->note.IsValid(), "Hero.Note didn't load"))
+    {
+        return;
+    }
+
+    context.Check(hero->note->text == "packed", HYP_FORMAT("Note.Text: expected 'packed', got '{}'", hero->note->text));
+    context.Check(hero->note->priority == 9, HYP_FORMAT("Note.Priority: expected 9, got {}", hero->note->priority));
+}
+
+#pragma endregion Cooked phase
+
 } // namespace
 
 const Array<GameTestDefinition>& GetNativeGameTests()
 {
-    static const Array<GameTestDefinition> s_tests {
-        { "TypesAreRegistered", g_writePhase, &TypesAreRegistered },
-        { "CodeGen_ReflectsMembers", g_writePhase, &CodeGen_ReflectsMembers },
-        { "CodeGen_DerivedGameClassInheritsMembers", g_writePhase, &CodeGen_DerivedGameClassInheritsMembers },
-        { "CodeGen_ReflectsEnum", g_writePhase, &CodeGen_ReflectsEnum },
-        { "WeaponAsset_GoesInAttributeBucket", g_writePhase, &WeaponAsset_GoesInAttributeBucket },
-        { "NoteAsset_GoesInMiscBucket", g_writePhase, &NoteAsset_GoesInMiscBucket },
-        { "WeaponAsset_SavesManifest", g_writePhase, &WeaponAsset_SavesManifest },
-        { "NoteAsset_SavesManifest", g_writePhase, &NoteAsset_SavesManifest },
-        { "WeaponAsset_LoadsSavedFields", g_readPhase, &WeaponAsset_LoadsSavedFields },
-        { "NoteAsset_LoadsSavedFields", g_readPhase, &NoteAsset_LoadsSavedFields }
-    };
+    static const Array<GameTestDefinition> s_tests = []()
+    {
+        Array<GameTestDefinition> tests {
+            { "TypesAreRegistered", g_writePhase, &TypesAreRegistered },
+            { "CodeGen_ReflectsMembers", g_writePhase, &CodeGen_ReflectsMembers },
+            { "CodeGen_DerivedGameClassInheritsMembers", g_writePhase, &CodeGen_DerivedGameClassInheritsMembers },
+            { "CodeGen_ReflectsEnum", g_writePhase, &CodeGen_ReflectsEnum },
+            { "WeaponAsset_GoesInAttributeBucket", g_writePhase, &WeaponAsset_GoesInAttributeBucket },
+            { "NoteAsset_GoesInMiscBucket", g_writePhase, &NoteAsset_GoesInMiscBucket },
+            { "WeaponAsset_SavesManifest", g_writePhase, &WeaponAsset_SavesManifest },
+            { "NoteAsset_SavesManifest", g_writePhase, &NoteAsset_SavesManifest },
+            { "WeaponAsset_LoadsSavedFields", g_readPhase, &WeaponAsset_LoadsSavedFields },
+            { "NoteAsset_LoadsSavedFields", g_readPhase, &NoteAsset_LoadsSavedFields },
+            { "Cooked_LoadsStartupWorld", g_cookedPhase, &Cooked_LoadsStartupWorld },
+            { "Cooked_LoadsGameEntityFields", g_cookedPhase, &Cooked_LoadsGameEntityFields },
+            { "Cooked_LoadsGameComponent", g_cookedPhase, &Cooked_LoadsGameComponent },
+            { "Cooked_LoadsReferencedGameAsset", g_cookedPhase, &Cooked_LoadsReferencedGameAsset }
+        };
+
+        tests.Concat(GetNativeEngineTests());
+
+        return tests;
+    }();
 
     return s_tests;
 }

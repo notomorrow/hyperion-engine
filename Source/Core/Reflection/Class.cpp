@@ -9,6 +9,7 @@
 #include <Core/Reflection/Enum.hpp>
 #include <Core/Reflection/MemberVariant.hpp>
 #include <Core/Reflection/Object.hpp>
+#include <Core/Reflection/ObjectPool.hpp>
 #include <Core/Reflection/StaticField.hpp>
 #include <Core/Reflection/ClassRegistry.hpp>
 
@@ -188,16 +189,19 @@ CORE_API bool IsA(const Class* cls, const Class* instanceClass)
 
 CORE_API int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId)
 {
+    return GetSubclassIndex(baseTypeId, GetClass(subclassTypeId));
+}
+
+CORE_API int GetSubclassIndex(TypeId baseTypeId, const Class* subclass)
+{
     const Class* base = GetClass(baseTypeId);
     if (!base)
     {
         return -2;
     }
 
-    const Class* subclass = GetClass(subclassTypeId);
-
     // runtime classes (e.g a C# subclass of Entity) and game module classes, which have no static index,
-    // share the slot of their closest ancestor with a static index
+    // share the slot of their closest ancestor with a static index.
     while (subclass && (subclass->IsDynamic() || subclass->GetStaticIndex() < 0))
     {
         subclass = subclass->GetParent();
@@ -812,6 +816,22 @@ void Class::Initialize()
         if (!IsDynamic())
         {
             HYP_CORE_ASSERT(!m_parent->IsDynamic(), "Non-dynamic Class cannot have a dynamic parent class!");
+        }
+    }
+
+    if (m_objectContainer != nullptr && !IsDynamic() && GetStaticIndex() < 0)
+    {
+        for (const Class* ancestor = m_parent; ancestor != nullptr; ancestor = ancestor->GetParent())
+        {
+            if (!ancestor->IsDynamic() && ancestor->GetStaticIndex() >= 0)
+            {
+                if (ancestor->GetObjectContainer() != nullptr)
+                {
+                    m_objectContainer->ShareIndicesWith(*ancestor->GetObjectContainer());
+                }
+
+                break;
+            }
         }
     }
 

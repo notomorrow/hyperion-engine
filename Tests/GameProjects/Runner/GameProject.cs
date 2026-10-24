@@ -14,6 +14,12 @@ public sealed record GameTestReport(string Phase, List<GameTestResult> Tests);
 
 public sealed record GameRunResult(ProcessResult Process, GameTestReport? Report);
 
+public sealed record EditorTestStep(string Build, string Phase, bool Loaded, string? LoadError, GameTestReport? Report);
+
+public sealed record EditorTestReport(List<EditorTestStep> Steps, bool RetiredBeforeRelease, GameTestReport? Release, bool Unloaded, bool Saved, string? SaveError);
+
+public sealed record EditorTestRunResult(ProcessResult Process, EditorTestReport? Report);
+
 /// A game project generated from Source/Templates the way the editor's Generate C# / C++ Project does, optionally with
 /// a fixture from Tests/GameProjects/Fixtures copied over it
 public sealed class GameProject
@@ -34,6 +40,7 @@ public sealed class GameProject
     public string NativeBuildDirectory => Path.Combine(Directory, "Build", HarnessEnvironment.PlatformName);
     public string LogsDirectory => Path.Combine(Directory, "Logs");
     public string ExecutablePath => Path.Combine(BinariesDirectory, Name + HarnessEnvironment.ExecutableExtension);
+    public string ProjectFilePath => Path.Combine(Directory, Name + ".hypproject");
 
     public string NativeModulePath => Path.Combine(BinariesDirectory,
         OperatingSystem.IsWindows() ? $"{Name}Game.dll"
@@ -52,9 +59,10 @@ public sealed class GameProject
         Directory = directory;
     }
 
-    public static GameProject Create(string name, GameProjectLanguage language, string? fixtureName = null)
+    /// <param name="directoryName">The project's folder under the work directory, when it isn't named after the project</param>
+    public static GameProject Create(string name, GameProjectLanguage language, string? fixtureName = null, string? directoryName = null)
     {
-        string directory = Path.Combine(HarnessEnvironment.WorkDir, name);
+        string directory = Path.Combine(HarnessEnvironment.WorkDir, directoryName ?? name);
 
         if (System.IO.Directory.Exists(directory))
         {
@@ -76,12 +84,165 @@ public sealed class GameProject
             project.WriteManagedProjectProps();
         }
 
+        project.WriteProjectFile();
+
         if (fixtureName != null)
         {
-            CopyDirectory(Path.Combine(HarnessEnvironment.FixturesDir, fixtureName), directory);
+            project.ApplyFixture(fixtureName);
         }
 
         return project;
+    }
+
+    /// Copies a fixture over the project, replacing the files it has
+    public void ApplyFixture(string fixtureName)
+    {
+        string fixtureDirectory = Path.Combine(HarnessEnvironment.FixturesDir, fixtureName);
+
+        CopyDirectory(fixtureDirectory, Directory);
+
+        // copies keep the fixture's timestamps, which are older than the last build's outputs
+        foreach (string sourcePath in System.IO.Directory.EnumerateFiles(fixtureDirectory, "*", SearchOption.AllDirectories))
+        {
+            File.SetLastWriteTimeUtc(Path.Combine(Directory, Path.GetRelativePath(fixtureDirectory, sourcePath)), DateTime.UtcNow);
+        }
+    }
+
+    /// Copies the game module as built (with its bindings and debug info) aside, so a later build doesn't replace it
+    public string SaveNativeModuleBuild(string label)
+    {
+        string buildDirectory = Path.Combine(Directory, "Build", "ModuleBuilds", label);
+
+        if (System.IO.Directory.Exists(buildDirectory))
+        {
+            System.IO.Directory.Delete(buildDirectory, recursive: true);
+        }
+
+        System.IO.Directory.CreateDirectory(buildDirectory);
+
+        string moduleStem = Path.GetFileNameWithoutExtension(NativeModulePath);
+
+        foreach (string path in System.IO.Directory.EnumerateFiles(BinariesDirectory, moduleStem + ".*"))
+        {
+            File.Copy(path, Path.Combine(buildDirectory, Path.GetFileName(path)));
+        }
+
+        // the bindings are named without the lib prefix on Linux and macOS
+        foreach (string path in System.IO.Directory.EnumerateFiles(BinariesDirectory, ClassName + ".Bindings.*"))
+        {
+            File.Copy(path, Path.Combine(buildDirectory, Path.GetFileName(path)), overwrite: true);
+        }
+
+        return buildDirectory;
+    }
+
+    /// Opens the project as the editor does, without the editor (Source/Editor/EditorGameTestCommandlet.cpp), loading each build of
+    /// the game module in turn the way the editor reloads a rebuilt game. The game's test class runs a phase on each build
+    public EditorTestRunResult RunEditorTests(string label, IReadOnlyList<string> buildDirectories, IReadOnlyList<string> phases, string testClassName,
+        string releasePhase = "", bool saveProject = false)
+    {
+        string resultsPath = Path.Combine(LogsDirectory, $"results-{label}.json");
+
+        if (File.Exists(resultsPath))
+        {
+            File.Delete(resultsPath);
+        }
+
+        System.IO.Directory.CreateDirectory(LogsDirectory);
+
+        List<string> arguments = new List<string>
+        {
+            "--project=" + Directory,
+            "--builds=" + string.Join(',', buildDirectories),
+            "--phases=" + string.Join(',', phases),
+            "--test-class=" + testClassName,
+            "--results=" + resultsPath
+        };
+
+        if (releasePhase.Length > 0)
+        {
+            arguments.Add("--release-phase=" + releasePhase);
+        }
+
+        if (saveProject)
+        {
+            arguments.Add("--save-project=true");
+        }
+
+        ProcessResult process = ProcessRunner.Run(
+            $"{Name} in the editor ({label})",
+            HarnessEnvironment.GetCommandletPath("EditorGameTestCommandlet"),
+            arguments,
+            HarnessEnvironment.EngineBinDir,
+            Path.Combine(LogsDirectory, $"{label}.log"),
+            HarnessEnvironment.RunTimeout);
+
+        EditorTestReport? report = File.Exists(resultsPath)
+            ? JsonSerializer.Deserialize<EditorTestReport>(File.ReadAllText(resultsPath), s_reportJsonOptions)
+            : null;
+
+        return new EditorTestRunResult(process, report);
+    }
+
+    /// Cooks the project into a package directory with the same arguments as the editor's Package Game (CookPackage() in
+    /// Source/Editor/Managed/Services/ManagedGameBuildService.cs), less the shaders, which a headless game doesn't use
+    public ProcessResult Cook(string packageDirectory)
+    {
+        string cookCacheDirectory = Path.Combine(Directory, "Build", "PackageCook");
+        System.IO.Directory.CreateDirectory(cookCacheDirectory);
+
+        string cookTargetPlatform = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "mac" : "linux";
+
+        return ProcessRunner.Run(
+            $"Cooking {Name}",
+            HarnessEnvironment.GetCommandletPath("BlobStorageCookCommandlet"),
+            new[]
+            {
+                "--project=" + Directory,
+                "--out-cache=" + Path.Combine(packageDirectory, "Cache"),
+                "--out-content=" + Path.Combine(packageDirectory, "Content"),
+                "--out-engine-content=" + Path.Combine(packageDirectory, "Content", "Engine"),
+                "--target-platform=" + cookTargetPlatform,
+                "--target-config=" + Path.Combine(HarnessEnvironment.EngineBinDir, "Config", "EngineConfig.json"),
+                "--cachedir=" + cookCacheDirectory
+            },
+            HarnessEnvironment.EngineBinDir,
+            Path.Combine(LogsDirectory, "cook.log"),
+            HarnessEnvironment.BuildTimeout);
+    }
+
+    /// Builds the game into a package directory as Package Game does (NativeGameBuildService.BuildPackage()), and writes the
+    /// config StagePackagedGame() in Source/Editor/Commands/EditorCommandsNativeProject.cpp writes
+    public ProcessResult BuildPackage(string packageDirectory, string startupWorldName)
+    {
+        ProcessResult build = BuildNative(
+            Path.Combine(Directory, "Build", HarnessEnvironment.PlatformName + "Package"),
+            "package",
+            "-DHYPERION_PACKAGE=ON",
+            "-DGAME_OUTPUT_DIR=" + packageDirectory.Replace('\\', '/'),
+            "-DHYPERION_SCRIPTS_LINK_INPUTS=");
+
+        if (!build.Succeeded)
+        {
+            return build;
+        }
+
+        string configDirectory = Path.Combine(packageDirectory, "Config");
+        System.IO.Directory.CreateDirectory(configDirectory);
+
+        File.WriteAllText(Path.Combine(configDirectory, "GlobalConfig.json"),
+            "{\n  \"App\": {\n"
+            + $"    \"Name\": \"{Name}\",\n"
+            + $"    \"Args\": \"--basedir=./ --startupworld={startupWorldName} --singleplayer\"\n"
+            + "  }\n}\n");
+
+        return build;
+    }
+
+    /// Launches the packaged game headless; it runs the tests for <paramref name="phase"/> and quits
+    public GameRunResult RunPackaged(string packageDirectory, string phase)
+    {
+        return RunGame(Path.Combine(packageDirectory, Name + HarnessEnvironment.ExecutableExtension), packageDirectory, phase);
     }
 
     public ProcessResult Build()
@@ -146,6 +307,11 @@ public sealed class GameProject
     /// Launches the built game headless; the test game runs the tests for <paramref name="phase"/> and quits
     public GameRunResult Run(string phase)
     {
+        return RunGame(ExecutablePath, BinariesDirectory, phase);
+    }
+
+    private GameRunResult RunGame(string executablePath, string workingDirectory, string phase)
+    {
         string resultsPath = Path.Combine(LogsDirectory, $"results-{phase}.json");
 
         if (File.Exists(resultsPath))
@@ -163,9 +329,9 @@ public sealed class GameProject
 
         ProcessResult process = ProcessRunner.Run(
             $"{Name} ({phase} phase)",
-            ExecutablePath,
+            executablePath,
             new[] { "--headless" },
-            BinariesDirectory,
+            workingDirectory,
             Path.Combine(LogsDirectory, $"run-{phase}.log"),
             HarnessEnvironment.RunTimeout,
             environment);
@@ -209,6 +375,16 @@ public sealed class GameProject
             .Replace("@CONTENT_DIR@", ContentDirFromBinaries);
     }
 
+    // the editor's project file, with only what differs from a new project's; the editor tools (cook, reload) open the project through it
+    private void WriteProjectFile()
+    {
+        File.WriteAllText(ProjectFilePath,
+            $"EditorProject {Name} {{\n"
+            + "    ContentSubfolder = \"Content\"\n"
+            + "    EditWorldName = MainWorld\n"
+            + "}\n");
+    }
+
     // mirrors WriteManagedProjectProps() in Source/Editor/EditorNativeModule.cpp
     private void WriteManagedProjectProps()
     {
@@ -238,10 +414,17 @@ public sealed class GameProject
     // the same configure + build as the editor's NativeGameBuildService; the compiler comes from CXX, as for any CMake project
     private ProcessResult BuildNative()
     {
+        return BuildNative(NativeBuildDirectory, "");
+    }
+
+    private ProcessResult BuildNative(string buildDirectory, string label, params string[] cmakeArguments)
+    {
+        string logSuffix = label.Length > 0 ? "-" + label : "";
+
         List<string> configureArguments = new List<string>
         {
             "-S", SourceDirectory,
-            "-B", NativeBuildDirectory,
+            "-B", buildDirectory,
             "-DCMAKE_BUILD_TYPE=Release",
             "-DHYPERION_SDK_DIR=" + HarnessEnvironment.SdkDir.Replace('\\', '/')
         };
@@ -251,12 +434,14 @@ public sealed class GameProject
             configureArguments.AddRange(new[] { "-G", "Ninja" });
         }
 
+        configureArguments.AddRange(cmakeArguments);
+
         ProcessResult configure = ProcessRunner.Run(
             $"Configuring {Name}",
             "cmake",
             configureArguments,
             Directory,
-            Path.Combine(LogsDirectory, "configure.log"),
+            Path.Combine(LogsDirectory, $"configure{logSuffix}.log"),
             HarnessEnvironment.BuildTimeout);
 
         if (!configure.Succeeded)
@@ -267,9 +452,9 @@ public sealed class GameProject
         return ProcessRunner.Run(
             $"Building {Name}",
             "cmake",
-            new[] { "--build", NativeBuildDirectory, "--config", "Release", "--parallel", Environment.ProcessorCount.ToString() },
+            new[] { "--build", buildDirectory, "--config", "Release", "--parallel", Environment.ProcessorCount.ToString() },
             Directory,
-            Path.Combine(LogsDirectory, "build.log"),
+            Path.Combine(LogsDirectory, $"build{logSuffix}.log"),
             HarnessEnvironment.BuildTimeout);
     }
 

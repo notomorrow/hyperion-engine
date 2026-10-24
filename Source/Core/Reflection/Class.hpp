@@ -93,6 +93,7 @@ static inline size_t GetNumDescendants()
 }
 
 CORE_API int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
+CORE_API int GetSubclassIndex(TypeId baseTypeId, const Class* subclass);
 
 template <class T, class U>
 static inline int GetSubclassIndex()
