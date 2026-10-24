@@ -365,6 +365,15 @@ if [[ -f "$SDK_CMAKE_FILE" ]]; then
     done
     echo "    $header_count headers"
 
+    # a C++ game runs CodeGen over its own headers, against the engine types the engine's CodeGen run listed
+    if [[ -f "$ROOT_DIR/Source/Generated/EngineTypes.json" && -f "$ROOT_DIR/Build/hyperion-codegen" ]]; then
+        cp "$ROOT_DIR/Source/Generated/EngineTypes.json" "$SDK_STAGE_DIR/Include/Generated/"
+        mkdir -p "$SDK_STAGE_DIR/Bin"
+        cp "$ROOT_DIR/Build/hyperion-codegen" "$SDK_STAGE_DIR/Bin/hyperion-codegen"
+    else
+        warn "CodeGen not staged (needs Build/hyperion-codegen and Source/Generated/EngineTypes.json); C++ game projects can't be built from this package"
+    fi
+
     third_party_dirs="$(sed -nE 's/^set\(HYPERION_SDK_THIRD_PARTY_DIRS "([^"]*)"\)/\1/p' "$SDK_CMAKE_FILE")"
     for third_party_dir in ${third_party_dirs//;/ }; do
         mkdir -p "$SDK_STAGE_DIR/ThirdParty/$third_party_dir"

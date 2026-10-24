@@ -1444,6 +1444,9 @@ extern "C"
         ClassRegistry::GetInstance().ForEachClass(doer);
     }
 
+    /// @TODO: Move the below class-specific functions into ClassBindings.cpp
+    ///  and rename as Class_* functions.
+
     HYP_EXPORT void Hyp_GetAllDerivedClassNames(const char* baseClassName, void* callback, void* userData)
     {
         using CallbackType = void (*)(const char*, void*);
@@ -1490,6 +1493,15 @@ extern "C"
         ClassRegistry::GetInstance().ForEachClass(doer);
     }
 
+    HYP_EXPORT bool Hyp_CanCreateInstanceOfClass(const char* className)
+    {
+        const Class* cls = ClassRegistry::GetInstance().GetClass(ANSIStringView(className));
+
+        return cls != nullptr
+            && !cls->IsAbstract()
+            && cls->CanCreateInstance();
+    }
+
     HYP_EXPORT bool Hyp_CreateInstanceOfClass(const char* className, BoxedValue* outBoxed)
     {
         Assert(outBoxed != nullptr);
@@ -1497,7 +1509,9 @@ extern "C"
         const Class* cls = ClassRegistry::GetInstance().GetClass(ANSIStringView(className));
 
         if (!cls)
+        {
             return false;
+        }
 
         return cls->CreateInstance(*outBoxed);
     }

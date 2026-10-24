@@ -187,11 +187,6 @@ static LONG WINAPI UnhandledExceptionFilter_Impl(EXCEPTION_POINTERS* exceptionPo
         ? exceptionPointers->ExceptionRecord->ExceptionCode
         : 0;
 
-    // intentionally not using the logging system; it may already be shut down
-    String trace = exceptionPointers && exceptionPointers->ContextRecord
-        ? StackDump(static_cast<const void*>(exceptionPointers->ContextRecord), 30).ToString()
-        : StackDump(30, 1).ToString();
-
     // for an access violation: whether it was a read (0), write (1) or execute (8), and of which address
     char accessDetail[128] = {};
 
@@ -202,10 +197,18 @@ static LONG WINAPI UnhandledExceptionFilter_Impl(EXCEPTION_POINTERS* exceptionPo
             static_cast<unsigned long long>(exceptionPointers->ExceptionRecord->ExceptionInformation[1]));
     }
 
-    std::fprintf(stdout, "\n[CRASH] Unhandled exception, code %lu%s! Stack trace:\n%s\n",
+    std::fprintf(stdout, "\n[CRASH] Unhandled exception, code %lu%s at 0x%llX! Stack trace:\n",
         static_cast<unsigned long>(exceptionCode),
         accessDetail,
-        trace.Data());
+        static_cast<unsigned long long>(exceptionPointers && exceptionPointers->ExceptionRecord ? UIntPtr(exceptionPointers->ExceptionRecord->ExceptionAddress) : 0));
+
+    std::fflush(HYP_DEBUG_OUTPUT_STREAM);
+
+    String trace = exceptionPointers && exceptionPointers->ContextRecord
+        ? StackDump(static_cast<const void*>(exceptionPointers->ContextRecord), 30).ToString()
+        : StackDump(30, 1).ToString();
+
+    std::fprintf(stdout, "%s\n", trace.Data());
 
     std::fflush(HYP_DEBUG_OUTPUT_STREAM);
 

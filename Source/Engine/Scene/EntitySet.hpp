@@ -213,11 +213,11 @@ public:
 
     /*! \brief Checks if an Entity's components are valid for this EntitySet.
      *
-     *  \param entityId The ID of the Entity to check.
+     *  \param entity he Entity to check for.
      *
      *  \return True if the Entity's components are valid for this EntitySet, false otherwise.
      */
-    virtual bool ValidForEntity(ObjId<Entity> entityId) const = 0;
+    virtual bool ValidForEntity(const Entity* entity) const = 0;
 
     /*! \brief Removes the given Entity from this EntitySet.
      */
@@ -349,21 +349,19 @@ public:
 
         AssertDebug(entity != nullptr);
 
-        const ObjId<Entity> id = entity->Id();
-
         const auto entityElementIt = m_elements.FindIf([entity](const Element& element)
             {
                 return element.template GetElement<0>() == entity;
             });
 
-        if (ValidForEntity(id))
+        if (ValidForEntity(entity))
         {
             if (entityElementIt != m_elements.End())
             {
                 return;
             }
 
-            EntityData& entityData = m_entities.GetEntityData(id);
+            EntityData& entityData = m_entities.GetEntityData(entity);
 
             m_elements.EmplaceBack(entity,
                 entityData.entityWeak.GetTypeId(),
@@ -382,15 +380,15 @@ public:
 
     /*! \brief Checks if an Entity's components are valid for this EntitySet.
      *
-     *  \param id The ID of the Entity to check.
+     *  \param entity The Entity to check.
      *
      *  \return True if the Entity's components are valid for this EntitySet, false otherwise.
      */
-    virtual bool ValidForEntity(ObjId<Entity> entityId) const override
+    virtual bool ValidForEntity(const Entity* entity) const override
     {
         HYP_MT_CHECK_READ(m_dataRaceDetector);
 
-        return m_entities.GetEntityData(entityId).template HasComponents<Components...>();
+        return m_entities.GetEntityData(entity).template HasComponents<Components...>();
     }
 
 #ifdef HYP_ENABLE_MT_CHECK

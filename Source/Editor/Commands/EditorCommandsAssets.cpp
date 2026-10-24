@@ -489,52 +489,93 @@ DEFINE_EDITOR_COMMAND(NewWeapon);
 
 #pragma endregion NewWeapon
 
-#pragma region NewDecal
+#pragma region NewAsset
 
-class EditorCommandNewDecal final : public EditorCommandBase
+class EditorCommandNewAsset final : public EditorCommandBase
 {
-    HYP_OBJECT_BODY(EditorCommandNewDecal);
+    HYP_OBJECT_BODY(EditorCommandNewAsset);
 
 public:
-    virtual ~EditorCommandNewDecal() override = default;
+    virtual ~EditorCommandNewAsset() override = default;
 
     virtual String GetText() const override
     {
-        return "New Decal";
+        return m_text.Length() ? m_text : EditorCommandBase::GetText();
     }
 
     virtual void Execute(EditorSubsystem* subsystem) override
     {
-        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
-        if (!currentProject.IsValid())
-        {
-            HYP_LOG(Editor, Error, "No project loaded; cannot create decal asset!");
+        AssertOnThread(g_simThread);
 
+        if (NumArguments() < 2)
+        {
+            HYP_LOG(Editor, Warning, "EditorCommandNewAsset requires a class name and a base name");
             return;
         }
 
-        Handle<Decal> decal = MakeHandle<Decal>(Name::Unique("NewDecal"), DecalDesc {});
-        InitObject(decal);
+        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
+        if (!currentProject.IsValid())
+        {
+            HYP_LOG(Editor, Error, "No project loaded; cannot create asset!");
+            return;
+        }
+
+        const Class* assetClass = ClassRegistry::GetInstance().GetClass(Name(ANSIString(GetArgument(0))));
+        if (!assetClass
+            || !assetClass->IsDerivedFrom(AssetObject::StaticClass())
+            || assetClass->IsAbstract() || !assetClass->CanCreateInstance())
+        {
+            HYP_LOG(Editor, Error, "'{}' is not a concrete asset class", GetArgument(0));
+            return;
+        }
+
+        BoxedValue boxed;
+        if (!assetClass->CreateInstance(boxed) || !boxed.Is<Handle<AssetObject>>())
+        {
+            HYP_LOG(Editor, Error, "could not create an instance of '{}'", GetArgument(0));
+            return;
+        }
+
+        Handle<AssetObject> asset = boxed.Get<Handle<AssetObject>>();
+        asset->SetName(Name(ANSIString(GetArgument(1))));
+        InitObject(asset);
+
+        // A prefab is only usable with a root node, which is named after the prefab
+        if (asset->IsA<Prefab>())
+        {
+            Handle<Prefab> prefab = static_cast<Handle<Prefab>>(asset);
+
+            Handle<Node> root = MakeHandle<Node>();
+            root->SetName(prefab->GetName());
+            InitObject(root);
+
+            prefab->SetRoot(root);
+        }
+
+        m_text = HYP_FORMAT("New {}", assetClass->GetName());
 
         Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
             GetText(),
             Proc<EditorActionFunctions()>(
-                [decal]() -> EditorActionFunctions
+                [asset]() -> EditorActionFunctions
                 {
                     return EditorActionFunctions {
                         .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [decal](EditorSubsystem* editorSubsystem, EditorProject*)
+                            [asset](EditorSubsystem*, EditorProject*)
                             {
-                                GetCurrentAssetRegistry()->PutAssetUnique(decal);
+                                GetCurrentAssetRegistry()->PutAssetUnique(asset);
 
-                                editorSubsystem->OnAssetsChanged(AssetBuckets::Decals.GetIndex());
+                                // the registry may have renamed the asset to keep it unique, and the root node follows the name
+                                if (asset->IsA<Prefab>())
+                                {
+                                    Handle<Prefab> prefab = static_cast<Handle<Prefab>>(asset);
+                                    prefab->SyncRootName();
+                                }
                             }),
                         .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [decal](EditorSubsystem* editorSubsystem, EditorProject*)
+                            [asset](EditorSubsystem*, EditorProject*)
                             {
-                                GetCurrentAssetRegistry()->RemoveAsset(decal);
-
-                                editorSubsystem->OnAssetsChanged(AssetBuckets::Decals.GetIndex());
+                                GetCurrentAssetRegistry()->RemoveAsset(asset);
                             })
                     };
                 }));
@@ -543,67 +584,14 @@ public:
 
         currentProject->GetActionStack()->PushAction(action);
     }
+
+private:
+    String m_text;
 };
 
-DEFINE_EDITOR_COMMAND(NewDecal);
+DEFINE_EDITOR_COMMAND(NewAsset);
 
-#pragma endregion NewDecal
-
-#pragma region NewMaterial
-
-class EditorCommandNewMaterial final : public EditorCommandBase
-{
-    HYP_OBJECT_BODY(EditorCommandNewMaterial);
-
-public:
-    virtual ~EditorCommandNewMaterial() override = default;
-
-    virtual String GetText() const override
-    {
-        return "New Material";
-    }
-
-    virtual void Execute(EditorSubsystem* subsystem) override
-    {
-        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
-        if (!currentProject.IsValid())
-        {
-            HYP_LOG(Editor, Error, "No project loaded; cannot create material asset!");
-
-            return;
-        }
-
-        Handle<Material> material = MakeHandle<Material>(Name::Unique("NewMaterial"));
-        InitObject(material);
-
-        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
-            GetText(),
-            Proc<EditorActionFunctions()>(
-                [material]() -> EditorActionFunctions
-                {
-                    return EditorActionFunctions {
-                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [material](EditorSubsystem*, EditorProject*)
-                            {
-                                GetCurrentAssetRegistry()->PutAssetUnique(material);
-                            }),
-                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [material](EditorSubsystem*, EditorProject*)
-                            {
-                                GetCurrentAssetRegistry()->RemoveAsset(material);
-                            })
-                    };
-                }));
-
-        InitObject(action);
-
-        currentProject->GetActionStack()->PushAction(action);
-    }
-};
-
-DEFINE_EDITOR_COMMAND(NewMaterial);
-
-#pragma endregion NewMaterial
+#pragma endregion NewAsset
 
 #pragma region AddAsset
 
@@ -2373,75 +2361,6 @@ public:
 };
 
 DEFINE_EDITOR_COMMAND(AddToPrefab);
-
-/// creates a blank Prefab with an empty root node
-class EditorCommandNewPrefab final : public EditorCommandBase
-{
-    HYP_OBJECT_BODY(EditorCommandNewPrefab);
-
-public:
-    virtual ~EditorCommandNewPrefab() override = default;
-
-    virtual String GetText() const override
-    {
-        return "New Prefab";
-    }
-
-    virtual void Execute(EditorSubsystem* subsystem) override
-    {
-        const Handle<EditorProject>& currentProject = subsystem->GetCurrentProject();
-        if (!currentProject.IsValid())
-        {
-            HYP_LOG(Editor, Error, "No project loaded; cannot create prefab asset!");
-            return;
-        }
-
-        ANSIString prefabNameStr = "NewPrefab";
-
-        if (NumArguments() >= 1 && !GetArgument(0).Empty())
-        {
-            prefabNameStr = GetArgument(0);
-        }
-
-        const Name prefabName = Name(prefabNameStr);
-
-        Handle<Node> root = MakeHandle<Node>();
-        root->SetName(prefabName);
-        InitObject(root);
-
-        Handle<Prefab> prefab = MakeHandle<Prefab>(prefabName, root);
-        InitObject(prefab);
-
-        Handle<FunctionalEditorAction> action = MakeHandle<FunctionalEditorAction>(
-            GetText(),
-            Proc<EditorActionFunctions()>(
-                [prefab]() -> EditorActionFunctions
-                {
-                    return EditorActionFunctions {
-                        .execute = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [prefab](EditorSubsystem* editorSubsystem, EditorProject*)
-                            {
-                                GetCurrentAssetRegistry()->PutAssetUnique(prefab);
-                                prefab->SyncRootName(); //sets the Node to have the same name as the Prefab we created
-                                                        //it may have a different name due to needing to be unique.
-
-                                editorSubsystem->OnAssetsChanged(AssetBuckets::Prefabs.GetIndex());
-                            }),
-                        .revert = Proc<void(EditorSubsystem*, EditorProject*)>(
-                            [prefab](EditorSubsystem* editorSubsystem, EditorProject*)
-                            {
-                                GetCurrentAssetRegistry()->RemoveAsset(prefab);
-                                editorSubsystem->OnAssetsChanged(AssetBuckets::Prefabs.GetIndex());
-                            })
-                    };
-                }));
-
-        InitObject(action);
-        currentProject->GetActionStack()->PushAction(action);
-    }
-};
-
-DEFINE_EDITOR_COMMAND(NewPrefab);
 
 class EditorCommandSavePrefab final : public EditorCommandBase
 {

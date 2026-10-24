@@ -30,6 +30,56 @@ using DataProcessing::SourceLocation;
 
 #pragma region Helpers
 
+static String EscapeString(const String& string)
+{
+    String result;
+    result.Reserve(string.Size());
+
+    for (const auto ch : string)
+    {
+        switch (ch)
+        {
+        case '\"':
+            result += "\\\"";
+            break;
+        case '\\':
+            result += "\\\\";
+            break;
+        case '\n':
+            result += "\\n";
+            break;
+        case '\r':
+            result += "\\r";
+            break;
+        case '\t':
+            result += "\\t";
+            break;
+        case '\b':
+            result += "\\b";
+            break;
+        case '\f':
+            result += "\\f";
+            break;
+        default:
+            if (uint32(ch) < 0x20)
+            {
+                char buffer[8];
+                std::snprintf(buffer, sizeof(buffer), "\\u%04x", uint32(ch));
+
+                result += buffer;
+            }
+            else
+            {
+                result.Append(ch);
+            }
+
+            break;
+        }
+    }
+
+    return result;
+}
+
 static Array<UTF8StringView> SplitStringView(UTF8StringView view, UTF8StringView::CharType separator)
 {
     Array<UTF8StringView> tokens;
@@ -1035,7 +1085,7 @@ JString Value::ToString_Internal(bool representation, uint32 depth) const
     {
         if (representation)
         {
-            return "\"" + AsString().Escape() + "\"";
+            return "\"" + EscapeString(AsString()) + "\"";
         }
         else
         {
@@ -1145,7 +1195,7 @@ JString Value::ToString_Internal(bool representation, uint32 depth) const
 
         for (size_t index = 0; index < members.Size(); index++)
         {
-            result += "\n" + propertyIndentation + "\"" + members[index]->first.Escape() + "\": ";
+            result += "\n" + propertyIndentation + "\"" + EscapeString(members[index]->first) + "\": ";
 
             result += members[index]->second.ToString(true, depth + 1);
 

@@ -564,7 +564,7 @@ static HYP_FORCE_INLINE constexpr HYP_ENABLE_IF(!isMathVectorV<T>, bool) ApproxE
 template <class T, class U = T>
 static HYP_FORCE_INLINE constexpr HYP_ENABLE_IF(!isMathVectorV<T>, U) Round(T a, int decimalPlaces)
 {
-    if constexpr (std::is_constant_evaluated())
+    if (std::is_constant_evaluated())
     {
         double factor = 1.0;
         for (int i = Abs(decimalPlaces); i > 0; i--)
@@ -595,8 +595,8 @@ static HYP_FORCE_INLINE constexpr HYP_ENABLE_IF(!isMathVectorV<T>, U) Round(T a,
     }
     else
     {
-        const auto multiplier = std::pow(a, decimalPlaces);
-        return U(std::round(a * multiplier) / multiplier);
+        const double multiplier = std::pow(10.0, decimalPlaces);
+        return U(std::round(double(a) * multiplier) / multiplier);
     }
 }
 

@@ -4,6 +4,8 @@
 
 #include <Asset/AssetRegistry.hpp>
 
+#include <Scene/World.hpp>
+
 #include <Core/DataProcessing/JSON/JSON.hpp>
 
 #include <Core/IO/ByteWriter.hpp>
@@ -19,10 +21,12 @@ ENGINE_API HYP_DECLARE_LOG_CHANNEL(Game);
 
 namespace tests {
 
-GameTestContext::GameTestContext(Game* game, const Handle<AssetRegistry>& assetRegistry, const String& phase)
+GameTestContext::GameTestContext(Game* game, const Handle<AssetRegistry>& assetRegistry, const String& phase, const Handle<World>& world)
     : m_game(game),
       m_assetRegistry(assetRegistry),
-      m_contentDirectory(assetRegistry.IsValid() ? assetRegistry->GetRootPath() : FilePath())
+      m_contentDirectory(assetRegistry.IsValid() ? assetRegistry->GetRootPath() : FilePath()),
+      m_phase(phase),
+      m_world(world)
 {
 }
 
@@ -36,15 +40,8 @@ bool GameTestContext::Check(bool condition, const String& message)
     return condition;
 }
 
-void RunGameTestsFromEnvironment(Game* game, const Array<GameTestDefinition>& tests)
+String RunGameTests(GameTestContext& context, const Array<GameTestDefinition>& tests)
 {
-    const char* phaseVariable = std::getenv("HYP_GAME_TEST_PHASE");
-    const char* resultsVariable = std::getenv("HYP_GAME_TEST_RESULTS");
-
-    const String phase = phaseVariable != nullptr && *phaseVariable != '\0' ? String(phaseVariable) : String(g_writePhase);
-
-    GameTestContext context(game, game->GetAssetRegistry(), phase);
-
     JSON::JArray resultsArray;
     uint32 numFailed = 0;
 
@@ -62,7 +59,7 @@ void RunGameTestsFromEnvironment(Game* game, const Array<GameTestDefinition>& te
     {
         for (const GameTestDefinition& test : tests)
         {
-            if (phase != test.phase)
+            if (context.GetPhase() != test.phase)
             {
                 continue;
             }
@@ -94,18 +91,30 @@ void RunGameTestsFromEnvironment(Game* game, const Array<GameTestDefinition>& te
         }
     }
 
-    HYP_LOG(Game, Info, "Game tests ({}): {} passed, {} failed", phase, resultsArray.Size() - numFailed, numFailed);
+    HYP_LOG(Game, Info, "Game tests ({}): {} passed, {} failed", context.GetPhase(), resultsArray.Size() - numFailed, numFailed);
+
+    JSON::Object report {
+        { "phase", JSON::Value(context.GetPhase()) },
+        { "tests", JSON::Value(std::move(resultsArray)) } };
+
+    return JSON::Value(std::move(report)).ToString(true);
+}
+
+void RunGameTestsFromEnvironment(Game* game, const Array<GameTestDefinition>& tests)
+{
+    const char* phaseVariable = std::getenv("HYP_GAME_TEST_PHASE");
+    const char* resultsVariable = std::getenv("HYP_GAME_TEST_RESULTS");
+
+    const String phase = phaseVariable != nullptr && *phaseVariable != '\0' ? String(phaseVariable) : String(g_writePhase);
+
+    GameTestContext context(game, game->GetAssetRegistry(), phase);
+
+    const String reportText = RunGameTests(context, tests);
 
     if (resultsVariable == nullptr || *resultsVariable == '\0')
     {
         return;
     }
-
-    JSON::Object report {
-        { "phase", JSON::Value(phase) },
-        { "tests", JSON::Value(std::move(resultsArray)) } };
-
-    const String reportText = JSON::Value(std::move(report)).ToString(true);
 
     FileByteWriter writer { FilePath(resultsVariable) };
 

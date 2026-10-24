@@ -334,6 +334,7 @@ protected:
                 return HYP_MAKE_ERROR(Error, "Package path is non existant or is not a directory: {}", projectArg);
             }
 
+#ifdef HYP_EDITOR
             TResult<FilePath> contentDirResult = ResolveProjectContentDirectory(projectDir);
 
             if (contentDirResult.HasError())
@@ -341,7 +342,12 @@ protected:
                 return contentDirResult.GetError();
             }
 
-            gameRegistry = MakeHandle<AssetRegistry>(AssetRegistryId::Game, contentDirResult.GetValue());
+            const FilePath contentDir = contentDirResult.GetValue();
+#else
+            const FilePath contentDir = projectDir;
+#endif // HYP_EDITOR
+
+            gameRegistry = MakeHandle<AssetRegistry>(AssetRegistryId::Game, contentDir);
             gameRegistry->Initialize(nullptr);
         }
 
@@ -400,7 +406,9 @@ protected:
         StringUtil::Parse(args["max-texture-size"].ToString(), &s_maxTextureSize);
 
         s_hasMaxTextureSizeArgument = args["max-texture-size"].ToString().Any();
+#ifdef HYP_EDITOR
         s_hasTargetPlatform = ParseTargetPlatform(args["target-platform"].ToString().ToAnsi(), s_targetPlatform);
+#endif // HYP_EDITOR
 
         ShaderTarget shaderTarget;
         Array<Handle<AssetObject>> targetShaderAssets;
@@ -445,8 +453,10 @@ private:
 
     static inline uint32 s_maxTextureSize = 0;
     static inline bool s_hasMaxTextureSizeArgument = false;
+#ifdef HYP_EDITOR
     static inline bool s_hasTargetPlatform = false;
     static inline TargetPlatform s_targetPlatform = TargetPlatform::Windows;
+#endif // HYP_EDITOR
     static inline Set<const AssetObject*> s_dataOnlyTextures;
 
 #ifdef HYP_EDITOR

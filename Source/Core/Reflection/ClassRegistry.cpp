@@ -26,7 +26,7 @@ namespace Hyperion {
 
 CORE_API const Class* g_hypObjectBaseClass = nullptr;
 
-#pragma region ClassRegistry
+thread_local const Array<const Class*>* t_classLookupOverrides = nullptr;
 
 #if defined(HYP_CLASS_REGISTRY_USE_TLS) && HYP_CLASS_REGISTRY_USE_TLS
 
@@ -73,6 +73,41 @@ CORE_API bool ClassRegistry_IsInitialized()
     return ClassRegistry::GetInstance().IsInitialized();
 }
 
+#pragma region ClassLookupOverrideScope
+
+ClassLookupOverrideScope::ClassLookupOverrideScope(const Array<const Class*>& classes)
+    : m_previousClasses(t_classLookupOverrides)
+{
+    t_classLookupOverrides = &classes;
+}
+
+ClassLookupOverrideScope::~ClassLookupOverrideScope()
+{
+    t_classLookupOverrides = m_previousClasses;
+}
+
+const Class* ClassLookupOverrideScope::Find(TypeId typeId)
+{
+    if (HYP_LIKELY(t_classLookupOverrides == nullptr))
+    {
+        return nullptr;
+    }
+
+    for (const Class* cls : *t_classLookupOverrides)
+    {
+        if (cls->GetTypeId() == typeId)
+        {
+            return cls;
+        }
+    }
+
+    return nullptr;
+}
+
+#pragma endregion ClassLookupOverrideScope
+
+#pragma region ClassRegistry
+
 ClassRegistry& ClassRegistry::GetInstance()
 {
     static ClassRegistry s_instance;
@@ -91,6 +126,11 @@ ClassRegistry::~ClassRegistry()
 
 const Class* ClassRegistry::GetClass(TypeId typeId) const
 {
+    if (const Class* overrideClass = ClassLookupOverrideScope::Find(typeId))
+    {
+        return overrideClass;
+    }
+
 #if defined(HYP_CLASS_REGISTRY_USE_TLS) && HYP_CLASS_REGISTRY_USE_TLS
     if (!typeId.IsDynamicType())
     {
@@ -333,6 +373,12 @@ void ClassRegistry::Register(TypeId typeId, Class* cls, bool* outWasRegistered)
     }
 
     m_classesByTypeId[typeId] = cls;
+
+    // only a module loaded after startup can register a static class now, and such a module may be unloaded again
+    if (m_isInitialized)
+    {
+        cls->m_isModuleClass = true;
+    }
 
     if (outWasRegistered)
     {

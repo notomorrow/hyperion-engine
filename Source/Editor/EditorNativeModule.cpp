@@ -7,16 +7,19 @@
 #include <EditorPch.hpp>
 
 #include <Editor/EditorNativeModule.hpp>
+#include <Editor/EditorNativeReload.hpp>
+#include <Editor/EditorGameModuleCommon.hpp>
 #include <Editor/EditorProject.hpp>
 #include <Editor/EditorProjectLayout.hpp>
-#include <Editor/EditorProjectSettings.hpp>
 #include <Editor/EditorSubsystem.hpp>
 
 #include <Framework/Game.hpp>
-#include <Framework/EngineGlobals.hpp>
 #include <Framework/CVarManager.hpp>
 
-#include <Scene/World.hpp>
+#include <Scene/Scene.hpp>
+#include <Scene/DetachedScene.hpp>
+#include <Scene/EntityManager.hpp>
+#include <Scene/ComponentInterface.hpp>
 #include <Scene/Systems/ScriptSystem.hpp>
 
 #include <Core/DLL/DynamicLibrary.hpp>
@@ -32,15 +35,8 @@
 #include <Core/Reflection/ClassRegistry.hpp>
 #include <Core/Reflection/ObjectPool.hpp>
 #include <Core/Reflection/TypeInfo.hpp>
-#include <Core/Reflection/ScriptObjectFunctions.hpp>
 
-#include <Core/Utilities/GlobalContext.hpp>
-#include <Core/Utilities/StringUtil.hpp>
-
-#include <Core/IO/ByteWriter.hpp>
-#include <Core/IO/ByteReader.hpp>
-
-#include <Scripting/ScriptObjectResource.hpp>
+#include <Core/Utilities/EnumFlags.hpp>
 
 #ifdef HYP_DOTNET
 #include <DotNET/DotNETHost.hpp>
@@ -48,181 +44,148 @@
 #include <DotNET/ManagedClass.hpp>
 #endif
 
-#include <filesystem>
-
 namespace Hyperion {
 
 EDITOR_API HYP_DECLARE_LOG_CHANNEL(Editor);
 
-namespace CoreApi {
-CORE_API extern const FilePath& GetBaseDirectory();
-CORE_API extern const FilePath& GetExecutablePath();
-} // namespace CoreApi
+enum class NativeModuleFlags : uint32
+{
+    None = 0x0,
+    Loaded = 0x1,
+    WarnedRebuilt = 0x2,
+    HasPlayed = 0x4,
+    HasBindings = 0x8
+};
+
+HYP_MAKE_ENUM_FLAGS(NativeModuleFlags);
+
+enum class RetiredModuleFlags : uint32
+{
+    None = 0x0,
+    HasPlayed = 0x1,
+    Warned = 0x2,
+    WarnedObjectsMade = 0x4
+};
+
+HYP_MAKE_ENUM_FLAGS(RetiredModuleFlags);
 
 namespace {
 
 using GetGameClassNameFn = const char* (*)();
 using GetEngineVersionFn = void (*)(uint32*, uint32*, uint32*);
 
-struct LoadedNativeModule
+constexpr int64 ManagedCollectIntervalMs = 2000;
+constexpr int64 StaysLoadedWarningDelayMs = 30000;
+
+// the copy of a game module build that's loaded
+struct NativeModuleImage
 {
-    FilePath modulePath;
     FilePath copyPath;
-    String gameClassName;
-    String error;
-    Time loadedTimestamp;
     UIntPtr imageBegin = 0;
     UIntPtr imageEnd = 0;
-    bool isLoaded = false;
-    bool warnedRebuilt = false;
-    bool hasPlayed = false;
 
+    // without an image range, what the module registered can't be told apart, so it stays loaded
     bool CanUnload() const
     {
         return imageEnd > imageBegin;
     }
 };
 
+struct LoadedNativeModule : GameModuleBase
+{
+    NativeModuleImage image;
+    String gameClassName;
+    EnumFlags<NativeModuleFlags> flags = NativeModuleFlags::None;
+};
+
+// a build that was replaced; unlike a loaded module it's never polled or reloaded, only freed once nothing uses it
 struct RetiredNativeModule
 {
-    FilePath copyPath;
-    UIntPtr imageBegin = 0;
-    UIntPtr imageEnd = 0;
+    NativeModuleImage image;
     Array<const Class*> classes;
     Array<ObjectContainerBase*> containers;
     Time retiredTime;
     Time lastCollectTime;
+    Time lastObjectScanTime;
     uint32 requiredCollection = 0;
     uint32 playsStoppedSinceRetired = 0;
-    bool hasPlayed = false;
-    bool warned = false;
+    EnumFlags<RetiredModuleFlags> flags = RetiredModuleFlags::None;
 };
 
-#ifdef HYP_DOTNET
-struct LoadedManagedModule
+// full C# collections with their finalizers, run off the sim thread since finalizers can need it
+class ManagedGarbageWaiter
 {
-    FilePath modulePath;
-    SharedPtr<dotnet::Assembly> assembly;
-    SharedPtr<dotnet::ManagedClass> gameClass;
-    String error;
-    Time loadedTimestamp;
-    bool needsRetarget = false;
-    bool applyFailed = false;
-};
-
-static Array<LoadedManagedModule> s_loadedManagedModules;
-#endif
-
-static Array<LoadedNativeModule> s_loadedModules;
-static Array<RetiredNativeModule> s_retiredModules;
-static Mutex s_loadedModulesMutex;
-static uint32 s_moduleCopyCounter = 0;
-
-static Time s_lastModulePollTime;
-static Time s_pendingModuleTimestamp;
-static bool s_wasSimulating = false;
-
-static AtomicVar<uint32> s_completedCollections { 0 };
-static AtomicVar<bool> s_isCollecting { false };
-
-static CVar<bool> s_cvAutoReloadGameModule { "Editor.AutoReloadGameModule", true };
-
-static const char* GetModulePlatformDirectory()
-{
-#ifdef HYP_WINDOWS
-    return "Windows";
-#elif defined(HYP_MACOS)
-    return "Mac";
-#else
-    return "Linux";
-#endif
-}
-
-static void CollectManagedGarbage()
-{
-#ifdef HYP_DOTNET
-    if (TriggerGCFunction triggerGc = DotNETHost::GetInstance().GetGlobalFunctions().triggerGcFunction)
+public:
+    static bool CanWait()
     {
-        triggerGc();
-    }
-#endif
-}
-
-static bool CanWaitForManagedGarbage()
-{
 #ifdef HYP_DOTNET
-    return DotNETHost::GetInstance().GetGlobalFunctions().collectGarbageAndWaitFunction != nullptr;
+        return DotNETHost::GetInstance().GetGlobalFunctions().collectGarbageAndWaitFunction != nullptr;
 #else
-    return false;
+        return false;
 #endif
-}
-
-// collects and waits for finalizers off the sim thread, since finalizers can need it
-static void StartWaitingForManagedGarbage()
-{
-#ifdef HYP_DOTNET
-    TriggerGCFunction collectAndWait = DotNETHost::GetInstance().GetGlobalFunctions().collectGarbageAndWaitFunction;
-
-    if (collectAndWait == nullptr || s_isCollecting.Exchange(true, MemoryOrder::ACQUIRE_RELEASE))
-    {
-        return;
     }
 
-    TaskSystem::GetInstance().Enqueue(
-        [collectAndWait]()
-        {
-            collectAndWait();
-
-            s_completedCollections.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
-            s_isCollecting.Set(false, MemoryOrder::RELEASE);
-        },
-        TaskThreadPoolName::THREAD_POOL_BACKGROUND,
-        TaskEnqueueFlags::FIRE_AND_FORGET);
-#endif
-}
-
-static LoadedNativeModule* FindLoadedModule(const FilePath& modulePath)
-{
-    for (LoadedNativeModule& loadedModule : s_loadedModules)
+    // the collection count to wait for: one that starts after now, so a collection already running doesn't count
+    uint32 RequestCollectionAfterNow() const
     {
-        if (loadedModule.modulePath == modulePath)
+        return m_completedCollections.Get(MemoryOrder::ACQUIRE) + (m_isCollecting.Get(MemoryOrder::ACQUIRE) ? 2 : 1);
+    }
+
+    bool HasCompleted(uint32 collection) const
+    {
+        return m_completedCollections.Get(MemoryOrder::ACQUIRE) >= collection;
+    }
+
+    void StartCollecting()
+    {
+#ifdef HYP_DOTNET
+        TriggerGCFunction collectAndWait = DotNETHost::GetInstance().GetGlobalFunctions().collectGarbageAndWaitFunction;
+
+        if (collectAndWait == nullptr || m_isCollecting.Exchange(true, MemoryOrder::ACQUIRE_RELEASE))
         {
-            return &loadedModule;
+            return;
         }
+
+        TaskSystem::GetInstance().Enqueue(
+            [this, collectAndWait]()
+            {
+                collectAndWait();
+
+                m_completedCollections.Increment(1, MemoryOrder::ACQUIRE_RELEASE);
+                m_isCollecting.Set(false, MemoryOrder::RELEASE);
+            },
+            TaskThreadPoolName::THREAD_POOL_BACKGROUND,
+            TaskEnqueueFlags::FIRE_AND_FORGET);
+#endif
     }
 
-    return nullptr;
-}
+private:
+    AtomicVar<uint32> m_completedCollections { 0 };
+    AtomicVar<bool> m_isCollecting { false };
+};
 
-static bool PollModuleRebuilt(const FilePath& modulePath, Time loadedTimestamp)
+// guarded by GetGameModulesMutex(), except the garbage waiter, which its background task also updates
+struct NativeModuleState
 {
-    const Time now = Time::Now();
+    Array<UniquePtr<LoadedNativeModule>> loadedModules;
+    Array<RetiredNativeModule> retiredModules;
 
-    if (!s_cvAutoReloadGameModule.Get() || int64(now - s_lastModulePollTime) < 1000)
-    {
-        return false;
-    }
+    // classes of retired builds whose scene nodes wait to be rebuilt on the latest build; kept across failed builds
+    Array<const Class*> classesToRebuild;
 
-    s_lastModulePollTime = now;
+    bool wasSimulating = false;
 
-    const Time timestamp = modulePath.Exists() ? modulePath.LastModifiedTimestamp() : Time();
+    ManagedGarbageWaiter garbageWaiter;
+};
 
-    if (timestamp <= loadedTimestamp)
-    {
-        return false;
-    }
+NativeModuleState& GetNativeModuleState()
+{
+    static NativeModuleState s_state;
 
-    if (timestamp == s_pendingModuleTimestamp)
-    {
-        return true;
-    }
-
-    s_pendingModuleTimestamp = timestamp;
-
-    return false;
+    return s_state;
 }
 
-static void EvictModuleTypeInfos(const RetiredNativeModule& retiredModule)
+void EvictModuleTypeInfos(const RetiredNativeModule& retiredModule)
 {
     Array<TypeId> typeIds;
 
@@ -231,28 +194,41 @@ static void EvictModuleTypeInfos(const RetiredNativeModule& retiredModule)
         typeIds.PushBack(cls->GetTypeId());
     }
 
-    TypeInfo_EvictForLibrary(retiredModule.imageBegin, retiredModule.imageEnd, typeIds);
+    TypeInfo_EvictForLibrary(retiredModule.image.imageBegin, retiredModule.image.imageEnd, typeIds);
 }
 
-static RetiredNativeModule RetireModule(const LoadedNativeModule& loadedModule)
+RetiredNativeModule RetireModule(const LoadedNativeModule& loadedModule)
 {
     RetiredNativeModule retiredModule;
-    retiredModule.copyPath = loadedModule.copyPath;
-    retiredModule.imageBegin = loadedModule.imageBegin;
-    retiredModule.imageEnd = loadedModule.imageEnd;
-    retiredModule.classes = ClassRegistry::GetInstance().UnregisterClassesInRange(loadedModule.imageBegin, loadedModule.imageEnd);
+    retiredModule.image = loadedModule.image;
+
+    retiredModule.classes = ClassRegistry::GetInstance().UnregisterClassesInRange(
+        loadedModule.image.imageBegin,
+        loadedModule.image.imageEnd);
+
     retiredModule.containers = GetObjectContainerMap().Detach(retiredModule.classes);
+
     retiredModule.retiredTime = Time::Now();
-    retiredModule.hasPlayed = loadedModule.hasPlayed;
+
+    if (loadedModule.flags & NativeModuleFlags::HasPlayed)
+    {
+        retiredModule.flags |= RetiredModuleFlags::HasPlayed;
+    }
 
     EvictModuleTypeInfos(retiredModule);
 
-    CVarManager::GetInstance().UnregisterVarsInRange(loadedModule.imageBegin, loadedModule.imageEnd);
+    CVarManager::GetInstance().UnregisterVarsInRange(
+        loadedModule.image.imageBegin,
+        loadedModule.image.imageEnd);
+
+    ComponentInterfaceRegistry::GetInstance().UnregisterComponentsInRange(
+        loadedModule.image.imageBegin,
+        loadedModule.image.imageEnd);
 
     return retiredModule;
 }
 
-static void UnloadRetiredModule(RetiredNativeModule& retiredModule)
+void UnloadRetiredModule(RetiredNativeModule& retiredModule)
 {
     // its code may have made more TypeInfos since it was retired
     EvictModuleTypeInfos(retiredModule);
@@ -265,17 +241,37 @@ static void UnloadRetiredModule(RetiredNativeModule& retiredModule)
 
     retiredModule.containers.Clear();
 
-    DynamicLibraryCache::GetInstance().UnloadLibrary(PlatformString(String(retiredModule.copyPath)));
+#ifdef HYP_DOTNET
+    // the game's C# bindings assembly stays loaded, and unloading it at shutdown would reach its classes in this module
+    for (const Class* cls : retiredModule.classes)
+    {
+        if (SharedPtr<dotnet::ManagedClass> managedClass = cls->GetManagedClass();
+                managedClass && managedClass->GetClass() == cls)
+        {
+            managedClass->DetachClass();
+        }
 
-    std::error_code errorCode;
-    std::filesystem::remove(retiredModule.copyPath.Data(), errorCode);
+        cls->SetManagedClass(nullptr);
+    }
+#endif
 
-    HYP_LOG(Editor, Info, "Unloaded previous game module build {}", retiredModule.copyPath);
+    DynamicLibraryCache::GetInstance().UnloadLibrary(PlatformString(String(retiredModule.image.copyPath)));
+
+    if (retiredModule.image.copyPath.Exists() && !retiredModule.image.copyPath.Remove())
+    {
+        HYP_LOG(Editor, Warning, "Unloaded previous game module build {}, but its copy couldn't be deleted", retiredModule.image.copyPath);
+
+        return;
+    }
+
+    HYP_LOG(Editor, Info, "Unloaded previous game module build {}", retiredModule.image.copyPath);
 }
 
-static bool IsRetiredModuleClass(const Class* cls)
+bool IsRetiredModuleClass(const Class* cls)
 {
-    for (const RetiredNativeModule& retiredModule : s_retiredModules)
+    const NativeModuleState& state = GetNativeModuleState();
+
+    for (const RetiredNativeModule& retiredModule : state.retiredModules)
     {
         if (retiredModule.classes.Contains(cls))
         {
@@ -286,41 +282,82 @@ static bool IsRetiredModuleClass(const Class* cls)
     return false;
 }
 
-static void UpdateRetiredModules()
+// a module class is held by its instances and ClassRefs (component containers and boxed values), as a dynamic class is
+Array<const Class*> GetClassesInUse(const RetiredNativeModule& retiredModule)
 {
-    const Time now = Time::Now();
+    Array<const Class*> classesInUse;
 
-    for (size_t index = s_retiredModules.Size(); index-- > 0;)
+    for (const Class* cls : retiredModule.classes)
     {
-        RetiredNativeModule& retiredModule = s_retiredModules[index];
-
-        Array<const Class*> classesWithObjects;
-
-        for (ObjectContainerBase* container : retiredModule.containers)
+        if (cls->GetModuleRefCount() != 0)
         {
-            if (container->HasObjects())
-            {
-                classesWithObjects.PushBack(container->GetClass());
-            }
+            classesInUse.PushBack(cls);
+        }
+    }
+
+    return classesInUse;
+}
+
+const Class* FindObjectForModule(const NativeModuleImage& image)
+{
+    const Class* found = nullptr;
+
+    auto checkHeader = [&found, &image](const ObjectHeader* header)
+    {
+        if (found || header->GetRefCountStrong() <= 0)
+        {
+            return;
         }
 
-        if (classesWithObjects.Any())
+        const UIntPtr vtable = *reinterpret_cast<const UIntPtr*>(ObjectHeader::GetObjectPointer(const_cast<ObjectHeader*>(header)));
+
+        if (vtable >= image.imageBegin && vtable < image.imageEnd)
+        {
+            found = header->cls;
+        }
+    };
+
+    auto checkContainer = [&found, &checkHeader](TypeId, ObjectContainerBase* container)
+    {
+        if (!found && container != nullptr)
+        {
+            container->ForEachHeader(checkHeader);
+        }
+    };
+
+    GetObjectContainerMap().ForEachContainer(checkContainer);
+
+    return found;
+}
+
+void UpdateRetiredModules()
+{
+    NativeModuleState& state = GetNativeModuleState();
+
+    const Time now = Time::Now();
+
+    for (size_t index = state.retiredModules.Size(); index-- > 0;)
+    {
+        RetiredNativeModule& retiredModule = state.retiredModules[index];
+
+        const Array<const Class*> classesInUse = GetClassesInUse(retiredModule);
+
+        if (classesInUse.Any())
         {
             retiredModule.requiredCollection = 0;
 
-            // managed wrappers hold their objects until they're collected
-            if (int64(now - retiredModule.lastCollectTime) >= 2000)
+            if (int64(now - retiredModule.lastCollectTime) >= ManagedCollectIntervalMs)
             {
                 CollectManagedGarbage();
 
                 retiredModule.lastCollectTime = now;
             }
 
-            if (!retiredModule.warned && int64(now - retiredModule.retiredTime) >= 30000)
+            if (!(retiredModule.flags & RetiredModuleFlags::Warned) && int64(now - retiredModule.retiredTime) >= StaysLoadedWarningDelayMs)
             {
                 String classNames;
 
-                for (const Class* cls : classesWithObjects)
+                for (const Class* cls : classesInUse)
                 {
                     if (classNames.Any())
                     {
@@ -330,121 +367,126 @@ static void UpdateRetiredModules()
                     classNames += *cls->GetName();
                 }
 
-                HYP_LOG(Editor, Warning, "Previous game module build {} stays loaded while objects of {} are alive", retiredModule.copyPath, classNames);
+                HYP_LOG(Editor, Warning, "Previous game module build {} stays loaded while objects of {} are alive", retiredModule.image.copyPath, classNames);
 
-                retiredModule.warned = true;
+                retiredModule.flags |= RetiredModuleFlags::Warned;
             }
 
             continue;
         }
 
         // what its code made during play can outlive the session, held by the editor until the next play
-        if (retiredModule.hasPlayed && retiredModule.playsStoppedSinceRetired == 0)
+        if ((retiredModule.flags & RetiredModuleFlags::HasPlayed) && retiredModule.playsStoppedSinceRetired == 0)
         {
             continue;
         }
 
         // C# objects that are garbage but not finalized yet can still hold what its code made
-        if (CanWaitForManagedGarbage())
+        if (ManagedGarbageWaiter::CanWait())
         {
             if (retiredModule.requiredCollection == 0)
             {
-                retiredModule.requiredCollection = s_completedCollections.Get(MemoryOrder::ACQUIRE) + (s_isCollecting.Get(MemoryOrder::ACQUIRE) ? 2 : 1);
+                retiredModule.requiredCollection = state.garbageWaiter.RequestCollectionAfterNow();
             }
 
-            if (s_completedCollections.Get(MemoryOrder::ACQUIRE) < retiredModule.requiredCollection)
+            if (!state.garbageWaiter.HasCompleted(retiredModule.requiredCollection))
             {
-                StartWaitingForManagedGarbage();
+                state.garbageWaiter.StartCollecting();
 
                 continue;
             }
 
             retiredModule.requiredCollection = 0;
 
-            if (std::any_of(retiredModule.containers.Begin(), retiredModule.containers.End(), [](ObjectContainerBase* container) { return container->HasObjects(); }))
+            if (GetClassesInUse(retiredModule).Any())
             {
                 continue;
             }
         }
 
+        if (int64(now - retiredModule.lastObjectScanTime) < ManagedCollectIntervalMs)
+        {
+            continue;
+        }
+
+        retiredModule.lastObjectScanTime = now;
+
+        if (const Class* objectClass = FindObjectForModule(retiredModule.image))
+        {
+            if (!(retiredModule.flags & RetiredModuleFlags::WarnedObjectsMade) && int64(now - retiredModule.retiredTime) >= StaysLoadedWarningDelayMs)
+            {
+                HYP_LOG(Editor, Warning, "Previous game module build {} stays loaded while objects its code made are alive (a {} among them)", retiredModule.image.copyPath, objectClass->GetName());
+
+                retiredModule.flags |= RetiredModuleFlags::WarnedObjectsMade;
+            }
+
+            continue;
+        }
+
         UnloadRetiredModule(retiredModule);
 
-        s_retiredModules.EraseAt(index);
+        state.retiredModules.EraseAt(index);
     }
 }
 
-static void RemoveStaleModuleCopies(const FilePath& copyDirectory, const String& moduleStem)
+FilePath GetModuleBindingsPath(const FilePath& modulePath)
 {
-    const std::string prefix = std::string(moduleStem.Data()) + ".";
+    String moduleStem = FilePath(modulePath.Basename()).StripExtension();
 
-    std::error_code errorCode;
-    Array<std::filesystem::path> stalePaths;
-
-    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(copyDirectory.Data(), errorCode))
+#ifndef HYP_WINDOWS
+    if (moduleStem.StartsWith("lib"))
     {
-        if (entry.is_regular_file(errorCode) && entry.path().filename().string().rfind(prefix, 0) == 0)
-        {
-            stalePaths.PushBack(entry.path());
-        }
+        moduleStem = String(moduleStem.Substr(3));
     }
+#endif
 
-    // copies still loaded (by this editor or another) are locked and stay
-    for (const std::filesystem::path& stalePath : stalePaths)
-    {
-        std::filesystem::remove(stalePath, errorCode);
-    }
+    return modulePath.BasePath() / (moduleStem + ".Bindings.dll");
 }
 
-// Load a copy so the project can be rebuilt while the editor has the module loaded
-static TResult<FilePath> CopyModule(const FilePath& modulePath, ANSIStringView copyDirectoryName)
+#ifdef HYP_DOTNET
+bool LoadModuleBindings(const FilePath& modulePath)
 {
-    const FilePath copyDirectory = EngineGlobals::GetTempDirectory() / String(copyDirectoryName);
+    const FilePath bindingsPath = GetModuleBindingsPath(modulePath);
 
-    if (!copyDirectory.Exists() && !copyDirectory.MkDir())
+    if (!bindingsPath.Exists() || !DotNETHost::GetInstance().IsInitialized())
     {
-        return HYP_MAKE_ERROR(Error, "Failed to create {} for the game module", copyDirectory);
+        return false;
     }
 
-    const String moduleStem = FilePath(modulePath.Basename()).StripExtension();
+    TResult<FilePath> copyResult = CopyModule(bindingsPath, "NativeModuleBindings");
 
-    RemoveStaleModuleCopies(copyDirectory, moduleStem);
-
-    const FilePath copyPath = copyDirectory / HYP_FORMAT("{}.{}.{}{}",
-        moduleStem,
-        uint64(Time::Now()),
-        s_moduleCopyCounter++,
-        modulePath.GetExtension().Any() ? String(".") + modulePath.GetExtension() : String());
-
-    std::error_code errorCode;
-    std::filesystem::copy_file(modulePath.Data(), copyPath.Data(), std::filesystem::copy_options::overwrite_existing, errorCode);
-
-    if (errorCode)
+    if (copyResult.HasError())
     {
-        return HYP_MAKE_ERROR(Error, "Failed to copy game module {} to {}: {}", modulePath, copyPath, errorCode.message().c_str());
+        HYP_LOG(Editor, Error, "Failed to copy game bindings {}: {}", bindingsPath, copyResult.GetError().GetMessage());
+
+        return false;
     }
 
-    return copyPath;
+    if (!DotNETHost::GetInstance().LoadAssembly(copyResult.GetValue().Data()))
+    {
+        HYP_LOG(Editor, Error, "Failed to load game bindings {} of {}. Rebuild the game.", bindingsPath, modulePath);
+
+        return false;
+    }
+
+    return true;
 }
+#endif
 
-static LoadedNativeModule LoadModuleCopy(const FilePath& modulePath, const FilePath& copyPath, Time timestamp)
+void LoadModuleCopy(LoadedNativeModule& loadedModule)
 {
-    LoadedNativeModule loadedModule;
-    loadedModule.modulePath = modulePath;
-    loadedModule.copyPath = copyPath;
-    loadedModule.loadedTimestamp = timestamp;
-
-    DynamicLibrary* library = DynamicLibraryCache::GetInstance().LoadLibrary(PlatformString(String(copyPath)));
+    DynamicLibrary* library = DynamicLibraryCache::GetInstance().LoadLibrary(PlatformString(String(loadedModule.image.copyPath)));
 
     if (library == nullptr)
     {
-        loadedModule.error = HYP_FORMAT("Failed to load game module {}", modulePath);
+        loadedModule.error = HYP_FORMAT("Failed to load game module {}", loadedModule.modulePath);
 
-        return loadedModule;
+        return;
     }
 
-    loadedModule.isLoaded = true;
+    loadedModule.flags |= NativeModuleFlags::Loaded;
 
-    library->GetImageRange(loadedModule.imageBegin, loadedModule.imageEnd);
+    library->GetImageRange(loadedModule.image.imageBegin, loadedModule.image.imageEnd);
 
     const GetGameClassNameFn getGameClassName = reinterpret_cast<GetGameClassNameFn>(library->GetFunction("HypGameModule_GetGameClassName"));
     const GetEngineVersionFn getEngineVersion = reinterpret_cast<GetEngineVersionFn>(library->GetFunction("HypGameModule_GetEngineVersion"));
@@ -455,13 +497,13 @@ static LoadedNativeModule LoadModuleCopy(const FilePath& modulePath, const FileP
 
     if (getGameClassName == nullptr || getEngineVersion == nullptr)
     {
-        loadedModule.error = HYP_FORMAT("Game module {} doesn't export HypGameModule_GetGameClassName / HypGameModule_GetEngineVersion", modulePath);
+        loadedModule.error = HYP_FORMAT("Game module {} doesn't export HypGameModule_GetGameClassName / HypGameModule_GetEngineVersion", loadedModule.modulePath);
     }
     else if (getEngineVersion(&versionMajor, &versionMinor, &versionPatch);
         versionMajor != HYP_VERSION_MAJOR || versionMinor != HYP_VERSION_MINOR)
     {
         loadedModule.error = HYP_FORMAT("Game module {} was built for engine {}.{}.{} (this is {}.{}.{}). Rebuild the game.",
-            modulePath, versionMajor, versionMinor, versionPatch, HYP_VERSION_MAJOR, HYP_VERSION_MINOR, HYP_VERSION_PATCH);
+            loadedModule.modulePath, versionMajor, versionMinor, versionPatch, HYP_VERSION_MAJOR, HYP_VERSION_MINOR, HYP_VERSION_PATCH);
     }
     else
     {
@@ -471,11 +513,16 @@ static LoadedNativeModule LoadModuleCopy(const FilePath& modulePath, const FileP
 
         if (gameClass == nullptr || !gameClass->IsDerivedFrom(Game::StaticClass()))
         {
-            loadedModule.error = HYP_FORMAT("Game module {} names Game class '{}', which isn't a registered Game subclass", modulePath, loadedModule.gameClassName);
+            loadedModule.error = HYP_FORMAT("Game module {} names Game class '{}', which isn't a registered Game subclass", loadedModule.modulePath, loadedModule.gameClassName);
         }
         else
         {
 #ifdef HYP_DOTNET
+            if (LoadModuleBindings(loadedModule.modulePath))
+            {
+                loadedModule.flags |= NativeModuleFlags::HasBindings;
+            }
+
             // The class has no C# counterpart, so the managed editor sees instances of it as plain Game objects
             if (gameClass->GetManagedClass() == nullptr)
             {
@@ -485,38 +532,52 @@ static LoadedNativeModule LoadModuleCopy(const FilePath& modulePath, const FileP
         }
     }
 
+    if (loadedModule.error.Empty())
+    {
+        ComponentInterfaceRegistry::GetInstance().PublishModuleComponents();
+
+        return;
+    }
+
     // nothing was made from it yet, so a failed build can go right away and be retried once rebuilt
-    if (loadedModule.error.Any() && loadedModule.CanUnload())
+    if (loadedModule.image.CanUnload())
     {
         RetiredNativeModule failedModule = RetireModule(loadedModule);
         UnloadRetiredModule(failedModule);
 
-        loadedModule.isLoaded = false;
+        loadedModule.flags &= ~NativeModuleFlags::Loaded;
     }
-
-    return loadedModule;
 }
 
-static TResult<LoadedNativeModule*> LoadLatestModule(const FilePath& modulePath)
+/// Loading the new build before retiring the current one isn't possible, since both register the same class names. So a build that
+/// fails to load leaves no module active
+TResult<LoadedNativeModule*> LoadLatestModule(const FilePath& modulePath, const FilePath& projectDirectory)
 {
+    NativeModuleState& state = GetNativeModuleState();
+
     const Time timestamp = modulePath.LastModifiedTimestamp();
 
-    LoadedNativeModule* currentModule = FindLoadedModule(modulePath);
+    LoadedNativeModule* currentModule = FindGameModule(state.loadedModules, modulePath);
 
     if (currentModule != nullptr)
     {
         if (timestamp <= currentModule->loadedTimestamp)
         {
+            if (currentModule->flags & NativeModuleFlags::HasBindings)
+            {
+                ScriptSystem::SetGameAssembly(projectDirectory, GetModuleBindingsPath(modulePath), /* isNewBuild */ false);
+            }
+
             return currentModule;
         }
 
-        if (currentModule->isLoaded && !currentModule->CanUnload())
+        if ((currentModule->flags & NativeModuleFlags::Loaded) && !currentModule->image.CanUnload())
         {
-            if (!currentModule->warnedRebuilt)
+            if (!(currentModule->flags & NativeModuleFlags::WarnedRebuilt))
             {
                 HYP_LOG(Editor, Warning, "Game module {} was rebuilt since it was loaded, restart the editor to use the new build", modulePath);
 
-                currentModule->warnedRebuilt = true;
+                currentModule->flags |= NativeModuleFlags::WarnedRebuilt;
             }
 
             return currentModule;
@@ -528,7 +589,7 @@ static TResult<LoadedNativeModule*> LoadLatestModule(const FilePath& modulePath)
     if (copyResult.HasError())
     {
         // most likely still being written by the linker
-        if (currentModule != nullptr && currentModule->isLoaded && currentModule->error.Empty())
+        if (currentModule != nullptr && (currentModule->flags & NativeModuleFlags::Loaded) && currentModule->error.Empty())
         {
             HYP_LOG(Editor, Warning, "Using the previous build of game module {}: {}", modulePath, copyResult.GetError().GetMessage());
 
@@ -538,79 +599,82 @@ static TResult<LoadedNativeModule*> LoadLatestModule(const FilePath& modulePath)
         return copyResult.GetError();
     }
 
-    const bool isReload = currentModule != nullptr && currentModule->isLoaded;
+    const bool isReload = currentModule != nullptr && (currentModule->flags & NativeModuleFlags::Loaded);
 
-    if (currentModule != nullptr)
+    if (isReload)
     {
-        if (currentModule->isLoaded)
-        {
-            s_retiredModules.PushBack(RetireModule(*currentModule));
-        }
+        const RetiredNativeModule& retiredModule = state.retiredModules.PushBack(RetireModule(*currentModule));
 
-        s_loadedModules.EraseAt(size_t(currentModule - s_loadedModules.Data()));
+        state.classesToRebuild.Concat(retiredModule.classes);
     }
 
-    LoadedNativeModule& loadedModule = s_loadedModules.PushBack(LoadModuleCopy(modulePath, copyResult.GetValue(), timestamp));
+    if (currentModule == nullptr)
+    {
+        currentModule = state.loadedModules.PushBack(MakeUnique<LoadedNativeModule>()).Get();
+    }
+
+    // reloaded in place, so pointers to it stay valid
+    LoadedNativeModule& loadedModule = *currentModule;
+    loadedModule = LoadedNativeModule {};
+    loadedModule.modulePath = modulePath;
+    loadedModule.image.copyPath = copyResult.GetValue();
+    loadedModule.loadedTimestamp = timestamp;
+
+    LoadModuleCopy(loadedModule);
 
     if (loadedModule.error.Any())
     {
         HYP_LOG(Editor, Error, "{}", loadedModule.error);
+
+        if (state.classesToRebuild.Any())
+        {
+            HYP_LOG(Editor, Warning, "No build of game module {} is active; existing objects of its classes keep running the previous build until a build loads", modulePath);
+        }
     }
     else
     {
         HYP_LOG(Editor, Info, "{} game module {} (Game class: {})", isReload ? "Reloaded" : "Loaded", modulePath, loadedModule.gameClassName);
     }
 
+    if (loadedModule.flags & NativeModuleFlags::HasBindings)
+    {
+        ScriptSystem::SetGameAssembly(projectDirectory, GetModuleBindingsPath(modulePath), /* isNewBuild */ true);
+    }
+
     return &loadedModule;
 }
 
-static void ReplaceProjectGame(EditorProject* project, Handle<Game> oldGame, Handle<Game> newGame)
+// the Game class to replace the project's Game with, if the project's Game is of a retired build
+String GetRetiredProjectGameReplacement(EditorProject* project, const LoadedNativeModule& loadedModule)
 {
-    newGame->SetIsServerGame(oldGame->IsServerGame());
-    newGame->SetStartupWorldName(oldGame->GetStartupWorldName());
-    newGame->SetAssetRegistry(oldGame->DetachAssetRegistry());
+    const Handle<Game>& oldGame = project->GetGame();
 
-    if (const Handle<World>& world = project->GetWorld(); world.IsValid() && world->GetGame() == oldGame.Get())
+    if (!oldGame.IsValid() || oldGame->GetWorld().IsValid() || loadedModule.error.Any() || !IsRetiredModuleClass(oldGame->InstanceClass()))
     {
-        world->SetGame(newGame.Get());
+        return String();
     }
 
-    project->SetGame(newGame);
-
-    oldGame->ReleaseManagedObject();
-    oldGame.Reset();
-
-    CollectManagedGarbage();
+    return loadedModule.gameClassName;
 }
 
-static void ReplaceRetiredProjectGame(EditorProject* project, const LoadedNativeModule& loadedModule)
+void ReplaceProjectGameWithClass(EditorProject* project, const String& gameClassName)
 {
-    Handle<Game> oldGame = project->GetGame();
-
-    if (!oldGame.IsValid() || !IsRetiredModuleClass(oldGame->InstanceClass()) || loadedModule.error.Any())
-    {
-        return;
-    }
-
-    if (oldGame->GetWorld().IsValid())
-    {
-        return;
-    }
-
-    Handle<Game> newGame = Game::CreateGame(StringHash(loadedModule.gameClassName.Data()));
+    Handle<Game> newGame = Game::CreateGame(StringHash(gameClassName.Data()));
 
     if (!newGame.IsValid())
     {
-        HYP_LOG(Editor, Error, "Failed to create an instance of Game class '{}' from {}", loadedModule.gameClassName, loadedModule.modulePath);
+        HYP_LOG(Editor, Error, "Failed to create an instance of Game class '{}'", gameClassName);
 
         return;
     }
 
-    ReplaceProjectGame(project, std::move(oldGame), std::move(newGame));
+    ReplaceProjectGame(project, project->GetGame(), std::move(newGame));
 }
 
-static Result ReloadNativeGameModule(EditorProject* project)
+Result ReloadNativeGameModule(EditorProject* project)
 {
+    NativeModuleState& state = GetNativeModuleState();
+
     const FilePath modulePath = GetNativeModulePath(project->GetFilePath());
 
     if (!modulePath.Exists())
@@ -618,261 +682,70 @@ static Result ReloadNativeGameModule(EditorProject* project)
         return HYP_MAKE_ERROR(Error, "Cannot reload the game module: {} isn't built", modulePath);
     }
 
-    Mutex::Guard guard(s_loadedModulesMutex);
+    String gameClassToCreate;
 
-    if (const LoadedNativeModule* currentModule = FindLoadedModule(modulePath);
-        currentModule != nullptr && currentModule->isLoaded && modulePath.LastModifiedTimestamp() <= currentModule->loadedTimestamp)
     {
-        HYP_LOG(Editor, Info, "Game module {} is up to date", modulePath);
+        Mutex::Guard guard(GetGameModulesMutex());
+
+        if (const LoadedNativeModule* currentModule = FindGameModule(state.loadedModules, modulePath);
+            currentModule != nullptr && (currentModule->flags & NativeModuleFlags::Loaded) && modulePath.LastModifiedTimestamp() <= currentModule->loadedTimestamp)
+        {
+            HYP_LOG(Editor, Info, "Game module {} is up to date", modulePath);
+
+            return {};
+        }
+
+        TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath, project->GetFilePath().BasePath());
+
+        if (moduleResult.HasError())
+        {
+            return moduleResult.GetError();
+        }
+
+        if (moduleResult.GetValue()->error.Any())
+        {
+            return HYP_MAKE_ERROR(Error, "{}", moduleResult.GetValue()->error);
+        }
+
+        gameClassToCreate = GetRetiredProjectGameReplacement(project, *moduleResult.GetValue());
     }
 
-    TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath);
-
-    if (moduleResult.HasError())
+    // scene nodes of the retired build are rebuilt by the next UpdateGameModules
+    if (gameClassToCreate.Any())
     {
-        return moduleResult.GetError();
+        ReplaceProjectGameWithClass(project, gameClassToCreate);
     }
-
-    if (moduleResult.GetValue()->error.Any())
-    {
-        return HYP_MAKE_ERROR(Error, "{}", moduleResult.GetValue()->error);
-    }
-
-    ReplaceRetiredProjectGame(project, *moduleResult.GetValue());
 
     return {};
-}
-
-#ifdef HYP_DOTNET
-static LoadedManagedModule* FindLoadedManagedModule(const FilePath& modulePath)
-{
-    for (LoadedManagedModule& loadedModule : s_loadedManagedModules)
-    {
-        if (loadedModule.modulePath == modulePath)
-        {
-            return &loadedModule;
-        }
-    }
-
-    return nullptr;
-}
-
-static LoadedManagedModule LoadManagedModuleCopy(const FilePath& modulePath, const FilePath& copyPath, const String& gameClassName, Time timestamp)
-{
-    LoadedManagedModule loadedModule;
-    loadedModule.modulePath = modulePath;
-    loadedModule.loadedTimestamp = timestamp;
-    loadedModule.assembly = DotNETHost::GetInstance().LoadAssembly(copyPath.Data());
-
-    if (!loadedModule.assembly)
-    {
-        loadedModule.error = HYP_FORMAT("Failed to load game assembly {} (it may have been built for a different engine version). Rebuild the game.", modulePath);
-
-        return loadedModule;
-    }
-
-    loadedModule.gameClass = loadedModule.assembly->FindClassByName(gameClassName.Data());
-
-    if (!loadedModule.gameClass || !loadedModule.gameClass->HasParentClass("Game"))
-    {
-        loadedModule.gameClass.Reset();
-        loadedModule.error = HYP_FORMAT("Game assembly {} has no Game subclass named '{}'", modulePath, gameClassName);
-    }
-
-    return loadedModule;
-}
-
-// builds of an assembly stay loaded until the editor exits, since dynamic classes can't be unregistered
-static TResult<LoadedManagedModule*> LoadLatestManagedModule(const FilePath& projectFilepath)
-{
-    const FilePath modulePath = GetManagedModulePath(projectFilepath);
-    const Time timestamp = modulePath.LastModifiedTimestamp();
-
-    LoadedManagedModule* currentModule = FindLoadedManagedModule(modulePath);
-
-    if (currentModule != nullptr && timestamp <= currentModule->loadedTimestamp)
-    {
-        ScriptSystem::SetGameAssembly(projectFilepath.BasePath(), modulePath, /* isNewBuild */ false);
-
-        return currentModule;
-    }
-
-    TResult<FilePath> copyResult = CopyModule(modulePath, "ManagedModules");
-
-    if (copyResult.HasError())
-    {
-        // most likely still being written by the build
-        if (currentModule != nullptr && currentModule->error.Empty())
-        {
-            HYP_LOG(Editor, Warning, "Using the previous build of game assembly {}: {}", modulePath, copyResult.GetError().GetMessage());
-
-            return currentModule;
-        }
-
-        return copyResult.GetError();
-    }
-
-    const String gameClassName = GetNativeProjectName(projectFilepath) + "Game";
-
-    LoadedManagedModule loadedModule = LoadManagedModuleCopy(modulePath, copyResult.GetValue(), gameClassName, timestamp);
-
-    if (loadedModule.error.Any())
-    {
-        HYP_LOG(Editor, Error, "{}", loadedModule.error);
-    }
-    else
-    {
-        HYP_LOG(Editor, Info, "{} game assembly {} (Game class: {})", currentModule != nullptr ? "Reloaded" : "Loaded", modulePath, gameClassName);
-
-        ScriptSystem::SetGameAssembly(projectFilepath.BasePath(), modulePath, /* isNewBuild */ true);
-    }
-
-    if (currentModule == nullptr)
-    {
-        return &s_loadedManagedModules.PushBack(std::move(loadedModule));
-    }
-
-    loadedModule.needsRetarget = loadedModule.error.Empty();
-
-    *currentModule = std::move(loadedModule);
-
-    return currentModule;
-}
-
-static TResult<Handle<Game>> CreateManagedGame(const LoadedManagedModule& loadedModule)
-{
-    if (loadedModule.error.Any())
-    {
-        return HYP_MAKE_ERROR(Error, "{}", loadedModule.error);
-    }
-
-    Handle<Game> game;
-
-    {
-        GlobalContextScope scope(ObjectInitializerContext { Game::StaticClass(), ObjectInitializerFlags::SUPPRESS_MANAGED_OBJECT_CREATION });
-
-        game = MakeHandle<Game>();
-    }
-
-    ScriptObjectResource* scriptObjectResource = ScriptObjectFunctions::CreateScriptObjectResource_DotNet(game.Get(), loadedModule.gameClass);
-
-    if (scriptObjectResource == nullptr || ScriptObjectFunctions::GetManagedObject(scriptObjectResource) == nullptr)
-    {
-        if (scriptObjectResource != nullptr)
-        {
-            ScriptObjectFunctions::DestroyScriptObjectResource(scriptObjectResource);
-        }
-
-        return HYP_MAKE_ERROR(Error, "Failed to create an instance of the Game class from {}", loadedModule.modulePath);
-    }
-
-    game->SetScriptObjectResource(scriptObjectResource);
-    scriptObjectResource->AddReader();
-
-    return game;
-}
-
-static bool IsCurrentManagedGame(Game* game, const LoadedManagedModule& loadedModule)
-{
-    ScriptObjectResource* scriptObjectResource = game->GetScriptObjectResource();
-
-    return scriptObjectResource != nullptr && scriptObjectResource->GetManagedClass() == loadedModule.gameClass;
-}
-
-// moves the project's objects and Game onto the latest build of the assembly
-static Result ApplyManagedModule(EditorProject* project, LoadedManagedModule& loadedModule)
-{
-    if (loadedModule.error.Any())
-    {
-        return HYP_MAKE_ERROR(Error, "{}", loadedModule.error);
-    }
-
-    if (loadedModule.needsRetarget)
-    {
-        if (const Handle<World>& world = project->GetWorld(); world.IsValid())
-        {
-            ScriptSystem::RetargetReloadedObjects(*world);
-        }
-
-        loadedModule.needsRetarget = false;
-    }
-
-    Handle<Game> oldGame = project->GetGame();
-
-    if (oldGame.IsValid() && (IsCurrentManagedGame(oldGame.Get(), loadedModule) || oldGame->GetWorld().IsValid()))
-    {
-        return {};
-    }
-
-    TResult<Handle<Game>> gameResult = CreateManagedGame(loadedModule);
-
-    if (gameResult.HasError())
-    {
-        return gameResult.GetError();
-    }
-
-    if (!oldGame.IsValid())
-    {
-        project->SetGame(gameResult.GetValue());
-
-        return {};
-    }
-
-    ReplaceProjectGame(project, std::move(oldGame), gameResult.GetValue());
-
-    return {};
-}
-#endif // HYP_DOTNET
-
-static Result ReloadManagedGameModule(EditorProject* project)
-{
-    const FilePath modulePath = GetManagedModulePath(project->GetFilePath());
-
-    if (!modulePath.Exists())
-    {
-        return HYP_MAKE_ERROR(Error, "Cannot reload the game module: {} isn't built", modulePath);
-    }
-
-#ifdef HYP_DOTNET
-    if (!DotNETHost::GetInstance().IsInitialized())
-    {
-        return HYP_MAKE_ERROR(Error, "Cannot reload the game module: {} needs the .NET runtime", modulePath);
-    }
-
-    if (const Handle<Game>& game = project->GetGame(); game.IsValid() && game->GetWorld().IsValid())
-    {
-        return HYP_MAKE_ERROR(Error, "Cannot reload the game module while the game is running");
-    }
-
-    Mutex::Guard guard(s_loadedModulesMutex);
-
-    TResult<LoadedManagedModule*> moduleResult = LoadLatestManagedModule(project->GetFilePath());
-
-    if (moduleResult.HasError())
-    {
-        return moduleResult.GetError();
-    }
-
-    LoadedManagedModule& loadedModule = *moduleResult.GetValue();
-
-    if (!loadedModule.needsRetarget && project->GetGame().IsValid() && IsCurrentManagedGame(project->GetGame().Get(), loadedModule))
-    {
-        HYP_LOG(Editor, Info, "Game assembly {} is up to date", modulePath);
-
-        return {};
-    }
-
-    Result result = ApplyManagedModule(project, loadedModule);
-
-    loadedModule.applyFailed = result.HasError();
-
-    return result;
-#else
-    return HYP_MAKE_ERROR(Error, "Cannot reload the game module: {} needs the .NET runtime", modulePath);
-#endif
 }
 
 } // namespace
+
+void RetireNativeModule(const FilePath& modulePath)
+{
+    NativeModuleState& state = GetNativeModuleState();
+
+    Mutex::Guard guard(GetGameModulesMutex());
+
+    for (size_t index = 0; index < state.loadedModules.Size(); index++)
+    {
+        LoadedNativeModule& loadedModule = *state.loadedModules[index];
+
+        if (loadedModule.modulePath != modulePath)
+        {
+            continue;
+        }
+
+        if ((loadedModule.flags & NativeModuleFlags::Loaded) && loadedModule.image.CanUnload())
+        {
+            state.retiredModules.PushBack(RetireModule(loadedModule));
+        }
+
+        state.loadedModules.EraseAt(index);
+
+        return;
+    }
+}
 
 EDITOR_API String GetNativeProjectName(const FilePath& projectFilepath)
 {
@@ -889,7 +762,7 @@ EDITOR_API FilePath GetNativeModulePath(const FilePath& projectFilepath)
     const String fileName = String("lib") + GetNativeProjectName(projectFilepath) + "Game.so";
 #endif
 
-    return projectFilepath.BasePath() / "Binaries" / GetModulePlatformDirectory() / fileName;
+    return projectFilepath.BasePath() / "Binaries" / String(GetModulePlatformDirectory()) / fileName;
 }
 
 EDITOR_API FilePath GetNativeBuildScriptPath(const FilePath& projectFilepath)
@@ -900,7 +773,7 @@ EDITOR_API FilePath GetNativeBuildScriptPath(const FilePath& projectFilepath)
     static constexpr const char* BuildScriptName = "Build.sh";
 #endif
 
-    return projectFilepath.BasePath() / "Build" / GetModulePlatformDirectory() / BuildScriptName;
+    return projectFilepath.BasePath() / "Build" / String(GetModulePlatformDirectory()) / BuildScriptName;
 }
 
 EDITOR_API TResult<Handle<Game>> CreateGameFromNativeModule(const FilePath& projectFilepath)
@@ -912,27 +785,31 @@ EDITOR_API TResult<Handle<Game>> CreateGameFromNativeModule(const FilePath& proj
         return Handle<Game>();
     }
 
-    Mutex::Guard guard(s_loadedModulesMutex);
+    String gameClassName;
 
-    TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath);
-
-    if (moduleResult.HasError())
     {
-        return moduleResult.GetError();
+        Mutex::Guard guard(GetGameModulesMutex());
+
+        TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath, projectFilepath.BasePath());
+
+        if (moduleResult.HasError())
+        {
+            return moduleResult.GetError();
+        }
+
+        if (moduleResult.GetValue()->error.Any())
+        {
+            return HYP_MAKE_ERROR(Error, "{}", moduleResult.GetValue()->error);
+        }
+
+        gameClassName = moduleResult.GetValue()->gameClassName;
     }
 
-    LoadedNativeModule* loadedModulePtr = moduleResult.GetValue();
-
-    if (loadedModulePtr->error.Any())
-    {
-        return HYP_MAKE_ERROR(Error, "{}", loadedModulePtr->error);
-    }
-
-    Handle<Game> game = Game::CreateGame(StringHash(loadedModulePtr->gameClassName.Data()));
+    Handle<Game> game = Game::CreateGame(StringHash(gameClassName.Data()));
 
     if (!game.IsValid())
     {
-        return HYP_MAKE_ERROR(Error, "Failed to create an instance of Game class '{}' from {}", loadedModulePtr->gameClassName, modulePath);
+        return HYP_MAKE_ERROR(Error, "Failed to create an instance of Game class '{}' from {}", gameClassName, modulePath);
     }
 
     return game;
@@ -940,559 +817,124 @@ EDITOR_API TResult<Handle<Game>> CreateGameFromNativeModule(const FilePath& proj
 
 EDITOR_API Result ReloadGameModule(EditorSubsystem* subsystem)
 {
-    const Handle<EditorProject>& project = subsystem->GetCurrentProject();
-
-    if (!project.IsValid() || !project->IsSaved())
-    {
-        return HYP_MAKE_ERROR(Error, "Cannot reload the game module: no saved project is open");
-    }
-
-    if (subsystem->IsSimulating())
+    if (subsystem->GetCurrentProject().IsValid() && subsystem->IsSimulating())
     {
         return HYP_MAKE_ERROR(Error, "Cannot reload the game module while simulating, it's reloaded when play starts");
     }
 
+    return ReloadGameModule(subsystem->GetCurrentProject().Get());
+}
+
+EDITOR_API Result ReloadGameModule(EditorProject* project)
+{
+    if (project == nullptr || !project->IsSaved())
+    {
+        return HYP_MAKE_ERROR(Error, "Cannot reload the game module: no saved project is open");
+    }
+
     return IsManagedProject(project->GetFilePath())
-        ? ReloadManagedGameModule(project.Get())
-        : ReloadNativeGameModule(project.Get());
+        ? ReloadManagedGameModule(project)
+        : ReloadNativeGameModule(project);
 }
 
 EDITOR_API void UpdateGameModules(EditorSubsystem* subsystem)
 {
-    Mutex::Guard guard(s_loadedModulesMutex);
+    UpdateGameModules(subsystem->GetCurrentProject().Get(), subsystem->IsSimulating(), subsystem);
+}
 
-    const Handle<EditorProject>& project = subsystem->GetCurrentProject();
+EDITOR_API bool HasRetiredNativeModules()
+{
+    Mutex::Guard guard(GetGameModulesMutex());
 
-    const bool isSimulating = subsystem->IsSimulating();
+    return GetNativeModuleState().retiredModules.Any();
+}
 
-    if (isSimulating && project.IsValid() && project->IsSaved())
+EDITOR_API void UpdateGameModules(EditorProject* project, bool isSimulating, EditorSubsystem* subsystem)
+{
+    NativeModuleState& state = GetNativeModuleState();
+
+    const bool canReload = project != nullptr && project->IsSaved() && !isSimulating;
+
+    String gameClassToCreate;
+    Array<const Class*> classesToRebuild;
+
+    // work that calls out of this file (game creation, node rebuilds, migrations) happens after the lock is released
     {
-        if (LoadedNativeModule* playedModule = FindLoadedModule(GetNativeModulePath(project->GetFilePath())))
+        Mutex::Guard guard(GetGameModulesMutex());
+
+        if (isSimulating && project != nullptr && project->IsSaved())
         {
-            playedModule->hasPlayed = true;
-        }
-    }
-
-    if (s_wasSimulating && !isSimulating)
-    {
-        for (RetiredNativeModule& retiredModule : s_retiredModules)
-        {
-            retiredModule.playsStoppedSinceRetired++;
-        }
-    }
-
-    s_wasSimulating = isSimulating;
-
-    if (project.IsValid() && project->IsSaved() && !isSimulating)
-    {
-        const FilePath modulePath = GetNativeModulePath(project->GetFilePath());
-
-        LoadedNativeModule* loadedModule = FindLoadedModule(modulePath);
-
-        if (loadedModule != nullptr && !loadedModule->warnedRebuilt && PollModuleRebuilt(modulePath, loadedModule->loadedTimestamp))
-        {
-            TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath);
-
-            loadedModule = moduleResult.HasError() ? nullptr : moduleResult.GetValue();
-        }
-
-        if (loadedModule != nullptr)
-        {
-            ReplaceRetiredProjectGame(project.Get(), *loadedModule);
-        }
-
-#ifdef HYP_DOTNET
-        LoadedManagedModule* managedModule = FindLoadedManagedModule(GetManagedModulePath(project->GetFilePath()));
-
-        if (managedModule != nullptr && PollModuleRebuilt(managedModule->modulePath, managedModule->loadedTimestamp))
-        {
-            TResult<LoadedManagedModule*> moduleResult = LoadLatestManagedModule(project->GetFilePath());
-
-            managedModule = moduleResult.HasError() ? nullptr : moduleResult.GetValue();
-        }
-
-        if (managedModule != nullptr && managedModule->error.Empty() && !managedModule->applyFailed)
-        {
-            if (Result result = ApplyManagedModule(project.Get(), *managedModule); result.HasError())
+            if (LoadedNativeModule* playedModule = FindGameModule(state.loadedModules, GetNativeModulePath(project->GetFilePath())))
             {
-                HYP_LOG(Editor, Error, "{}", result.GetError().GetMessage());
-
-                managedModule->applyFailed = true;
+                playedModule->flags |= NativeModuleFlags::HasPlayed;
             }
         }
-#endif
+
+        if (state.wasSimulating && !isSimulating)
+        {
+            for (RetiredNativeModule& retiredModule : state.retiredModules)
+            {
+                retiredModule.playsStoppedSinceRetired++;
+            }
+        }
+
+        state.wasSimulating = isSimulating;
+
+        if (canReload)
+        {
+            const FilePath modulePath = GetNativeModulePath(project->GetFilePath());
+
+            LoadedNativeModule* loadedModule = FindGameModule(state.loadedModules, modulePath);
+
+            if (loadedModule != nullptr && !(loadedModule->flags & NativeModuleFlags::WarnedRebuilt) && PollModuleRebuilt(*loadedModule))
+            {
+                TResult<LoadedNativeModule*> moduleResult = LoadLatestModule(modulePath, project->GetFilePath().BasePath());
+
+                loadedModule = moduleResult.HasError() ? nullptr : moduleResult.GetValue();
+            }
+
+            if (loadedModule != nullptr && loadedModule->error.Empty())
+            {
+                gameClassToCreate = GetRetiredProjectGameReplacement(project, *loadedModule);
+                classesToRebuild = std::move(state.classesToRebuild);
+
+                state.classesToRebuild.Clear();
+            }
+        }
     }
+
+    if (gameClassToCreate.Any())
+    {
+        ReplaceProjectGameWithClass(project, gameClassToCreate);
+    }
+
+    if (classesToRebuild.Any())
+    {
+        RebuildRetiredModuleObjects(project, subsystem, classesToRebuild);
+    }
+
+    if (canReload)
+    {
+        UpdateManagedGameModule(project);
+    }
+
+    bool hasRetiredModules = false;
+
+    {
+        Mutex::Guard guard(GetGameModulesMutex());
+
+        hasRetiredModules = state.retiredModules.Any();
+    }
+
+    // the world syncs its own scenes each update; nothing else syncs the detached scene, where removed nodes are kept for undo
+    if (hasRetiredModules)
+    {
+        GetDetachedSceneForCurrentThread().GetEntityManager()->SyncRuntimeComponentTypes();
+    }
+
+    Mutex::Guard guard(GetGameModulesMutex());
 
     UpdateRetiredModules();
-}
-
-EDITOR_API FilePath GetManagedProjectFilePath(const FilePath& projectFilepath)
-{
-    return projectFilepath.BasePath() / "Source" / (GetNativeProjectName(projectFilepath) + ".csproj");
-}
-
-EDITOR_API bool IsManagedProject(const FilePath& projectFilepath)
-{
-    return GetManagedProjectFilePath(projectFilepath).Exists();
-}
-
-EDITOR_API FilePath GetManagedModulePath(const FilePath& projectFilepath)
-{
-    return projectFilepath.BasePath() / "Binaries" / GetModulePlatformDirectory() / (GetNativeProjectName(projectFilepath) + ".dll");
-}
-
-EDITOR_API Result WriteManagedProjectProps(const FilePath& projectFilepath)
-{
-    const FilePath propsPath = projectFilepath.BasePath() / "Source" / "Hyperion.Local.props";
-
-    const String binDir = String(CoreApi::GetExecutablePath()).ReplaceAll("\\", "/");
-    const String baseDir = String(CoreApi::GetBaseDirectory()).ReplaceAll("\\", "/");
-
-    const String text = String("<Project>\n  <PropertyGroup>\n")
-        + "    <HyperionBinDir>" + binDir + "/</HyperionBinDir>\n"
-        + "    <HyperionBaseDir>" + baseDir + "/</HyperionBaseDir>\n"
-        + "    <HyperionSdkDir>" + baseDir + "/Source/Engine/DotNET/Sdk/</HyperionSdkDir>\n"
-        + "  </PropertyGroup>\n</Project>\n";
-
-    FileByteWriter writer { propsPath };
-
-    if (!writer.IsOpen())
-    {
-        return HYP_MAKE_ERROR(Error, "Failed to open {} for writing", propsPath);
-    }
-
-    writer.Write(text.Data(), text.Size());
-    writer.Close();
-
-    return {};
-}
-
-EDITOR_API TResult<Handle<Game>> CreateGameFromManagedModule(const FilePath& projectFilepath)
-{
-#ifdef HYP_DOTNET
-    // without a .NET runtime (a commandlet such as the cook), the project keeps the Game its file describes
-    if (!IsManagedProject(projectFilepath) || !DotNETHost::GetInstance().IsInitialized())
-    {
-        return Handle<Game>();
-    }
-
-    const FilePath modulePath = GetManagedModulePath(projectFilepath);
-
-    if (!modulePath.Exists())
-    {
-        return Handle<Game>();
-    }
-
-    Mutex::Guard guard(s_loadedModulesMutex);
-
-    TResult<LoadedManagedModule*> moduleResult = LoadLatestManagedModule(projectFilepath);
-
-    if (moduleResult.HasError())
-    {
-        return moduleResult.GetError();
-    }
-
-    return CreateManagedGame(*moduleResult.GetValue());
-#else
-    return Handle<Game>();
-#endif
-}
-
-namespace {
-
-struct GameProjectFile
-{
-    FilePath templatePath;
-    FilePath filepath;
-};
-
-Array<GameProjectFile> GetGameProjectFiles(const FilePath& projectFilepath, GameProjectLanguage language, const String& name)
-{
-    const FilePath sourceDir = projectFilepath.BasePath() / "Source";
-    const String className = name + "Game";
-
-    Array<GameProjectFile> files;
-
-    if (language == GameProjectLanguage::Managed)
-    {
-        const FilePath templateDir = CoreApi::GetBaseDirectory() / "Source/Templates/ManagedGame";
-
-        files.PushBack({ templateDir / "Game.csproj.in", sourceDir / (name + ".csproj") });
-        files.PushBack({ templateDir / "Game.cs.in", sourceDir / (className + ".cs") });
-        files.PushBack({ templateDir / "Program.cs.in", sourceDir / "Program.cs" });
-        files.PushBack({ templateDir / "Game.slnx.in", projectFilepath.BasePath() / (name + ".slnx") });
-    }
-    else if (language == GameProjectLanguage::Native)
-    {
-        const FilePath templateDir = CoreApi::GetBaseDirectory() / "Source/Templates/NativeGame";
-
-        files.PushBack({ templateDir / "CMakeLists.txt.in", sourceDir / "CMakeLists.txt" });
-        files.PushBack({ templateDir / "Game" / "Game.hpp.in", sourceDir / "Game" / (className + ".hpp") });
-        files.PushBack({ templateDir / "Game" / "Game.cpp.in", sourceDir / "Game" / (className + ".cpp") });
-        files.PushBack({ templateDir / "Launcher" / "main.cpp.in", sourceDir / "Launcher" / "main.cpp" });
-    }
-
-    return files;
-}
-
-bool ReadTextFile(const FilePath& filepath, String& outText)
-{
-    if (!filepath.Exists())
-    {
-        return false;
-    }
-
-    FileByteReader reader { filepath };
-
-    if (reader.Eof())
-    {
-        return false;
-    }
-
-    const ByteBuffer buffer = reader.Read();
-    reader.Close();
-
-    outText = String(buffer.ToByteView());
-
-    return true;
-}
-
-bool RenderGameProjectTemplate(const FilePath& templatePath, const FilePath& projectFilepath, const String& name, String& outText)
-{
-    String templateText;
-
-    if (!ReadTextFile(templatePath, templateText))
-    {
-        return false;
-    }
-
-    String contentDir = "../../";
-
-    if (TResult<String> contentSubfolderResult = ReadProjectContentSubfolder(projectFilepath); contentSubfolderResult.HasValue() && contentSubfolderResult.GetValue().Any())
-    {
-        contentDir += contentSubfolderResult.GetValue() + "/";
-    }
-
-    outText = templateText.ReplaceAll("@NAME@", name).ReplaceAll("@CLASS@", name + "Game").ReplaceAll("@CONTENT_DIR@", contentDir);
-
-    return true;
-}
-
-bool IsGameProjectScratchDirectory(const std::filesystem::path& path)
-{
-    static const char* const s_scratchDirectories[] = { "obj", "bin", ".vs", ".vscode", ".idea" };
-
-    const std::string directoryName = path.filename().string();
-
-    for (const char* scratchDirectory : s_scratchDirectories)
-    {
-        if (directoryName == scratchDirectory)
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-} // namespace
-
-EDITOR_API GameProjectLanguage GetGameProjectLanguage(const FilePath& projectFilepath)
-{
-    if (!(projectFilepath.BasePath() / "Source").Exists())
-    {
-        return GameProjectLanguage::None;
-    }
-
-    return IsManagedProject(projectFilepath) ? GameProjectLanguage::Managed : GameProjectLanguage::Native;
-}
-
-EDITOR_API bool IsGameProjectUnmodified(const FilePath& projectFilepath)
-{
-    const GameProjectLanguage language = GetGameProjectLanguage(projectFilepath);
-
-    if (language == GameProjectLanguage::None)
-    {
-        return false;
-    }
-
-    const FilePath sourceDir = projectFilepath.BasePath() / "Source";
-    const String name = GetNativeProjectName(projectFilepath);
-
-    std::error_code errorCode;
-    Array<std::filesystem::path> generatedPaths;
-
-    for (const GameProjectFile& file : GetGameProjectFiles(projectFilepath, language, name))
-    {
-        String expectedText;
-        String actualText;
-
-        if (!RenderGameProjectTemplate(file.templatePath, projectFilepath, name, expectedText)
-            || !ReadTextFile(file.filepath, actualText)
-            || expectedText != actualText)
-        {
-            return false;
-        }
-
-        generatedPaths.PushBack(std::filesystem::weakly_canonical(file.filepath.Data(), errorCode));
-    }
-
-    generatedPaths.PushBack(std::filesystem::weakly_canonical((sourceDir / "Hyperion.Local.props").Data(), errorCode));
-    generatedPaths.PushBack(std::filesystem::weakly_canonical((sourceDir / "CMakeUserPresets.json").Data(), errorCode));
-
-    // anything the user added next to the generated files counts as their work too
-    for (std::filesystem::recursive_directory_iterator it(sourceDir.Data(), errorCode), end; !errorCode && it != end; it.increment(errorCode))
-    {
-        if (it->is_directory(errorCode))
-        {
-            if (IsGameProjectScratchDirectory(it->path()))
-            {
-                it.disable_recursion_pending();
-            }
-
-            continue;
-        }
-
-        const std::filesystem::path path = std::filesystem::weakly_canonical(it->path(), errorCode);
-
-        bool isGenerated = false;
-
-        for (const std::filesystem::path& generatedPath : generatedPaths)
-        {
-            isGenerated |= (path == generatedPath);
-        }
-
-        if (!isGenerated)
-        {
-            return false;
-        }
-    }
-
-    return !errorCode;
-}
-
-EDITOR_API Result GenerateGameProjectFiles(const FilePath& projectFilepath, GameProjectLanguage language)
-{
-    if (language == GameProjectLanguage::None)
-    {
-        return HYP_MAKE_ERROR(Error, "No game project language given");
-    }
-
-    // before any file is written, Source/ existing changes what the project's name resolves to
-    const String name = GetNativeProjectName(projectFilepath);
-
-    for (const GameProjectFile& file : GetGameProjectFiles(projectFilepath, language, name))
-    {
-        String text;
-
-        if (!RenderGameProjectTemplate(file.templatePath, projectFilepath, name, text))
-        {
-            return HYP_MAKE_ERROR(Error, "Template {} is missing", file.templatePath);
-        }
-
-        const FilePath directory = file.filepath.BasePath();
-
-        if (!directory.Exists() && !directory.MkDir())
-        {
-            return HYP_MAKE_ERROR(Error, "Failed to create directory {}", directory);
-        }
-
-        FileByteWriter writer { file.filepath };
-
-        if (!writer.IsOpen())
-        {
-            return HYP_MAKE_ERROR(Error, "Failed to open {} for writing", file.filepath);
-        }
-
-        writer.Write(text.Data(), text.Size());
-        writer.Close();
-    }
-
-    if (language == GameProjectLanguage::Managed)
-    {
-        return WriteManagedProjectProps(projectFilepath);
-    }
-
-    return {};
-}
-
-EDITOR_API Result RemoveGameProjectFiles(const FilePath& projectFilepath)
-{
-    if (!IsGameProjectUnmodified(projectFilepath))
-    {
-        return HYP_MAKE_ERROR(Error, "The game project has been modified, not removing it");
-    }
-
-    const GameProjectLanguage language = GetGameProjectLanguage(projectFilepath);
-    const FilePath sourceDir = projectFilepath.BasePath() / "Source";
-    const String name = GetNativeProjectName(projectFilepath);
-
-    // a module built from the removed sources would still be picked up for play
-    const FilePath modulePath = language == GameProjectLanguage::Managed
-        ? GetManagedModulePath(projectFilepath)
-        : GetNativeModulePath(projectFilepath);
-
-    if (!sourceDir.RemoveRecursively())
-    {
-        return HYP_MAKE_ERROR(Error, "Failed to remove {}", sourceDir);
-    }
-
-    for (const GameProjectFile& file : GetGameProjectFiles(projectFilepath, language, name))
-    {
-        if (file.filepath.Exists())
-        {
-            file.filepath.Remove();
-        }
-    }
-
-    if (modulePath.Exists())
-    {
-        modulePath.Remove();
-    }
-
-    return {};
-}
-
-EDITOR_API Result RenameGameProjectFiles(const FilePath& projectFilepath, const String& oldName, const String& newName)
-{
-    const GameProjectLanguage language = GetGameProjectLanguage(projectFilepath);
-
-    if (language == GameProjectLanguage::None)
-    {
-        return HYP_MAKE_ERROR(Error, "{} has no game code to rename", projectFilepath);
-    }
-
-    const Array<GameProjectFile> oldFiles = GetGameProjectFiles(projectFilepath, language, oldName);
-    const Array<GameProjectFile> newFiles = GetGameProjectFiles(projectFilepath, language, newName);
-
-    for (size_t index = 0; index < oldFiles.Size(); index++)
-    {
-        if (oldFiles[index].filepath != newFiles[index].filepath && oldFiles[index].filepath.Exists() && newFiles[index].filepath.Exists())
-        {
-            return HYP_MAKE_ERROR(Error, "Can't rename {} to {}, it already exists", oldFiles[index].filepath, newFiles[index].filepath);
-        }
-    }
-
-    for (size_t index = 0; index < oldFiles.Size(); index++)
-    {
-        if (oldFiles[index].filepath == newFiles[index].filepath || !oldFiles[index].filepath.Exists())
-        {
-            continue;
-        }
-
-        std::error_code errorCode;
-        std::filesystem::rename(oldFiles[index].filepath.Data(), newFiles[index].filepath.Data(), errorCode);
-
-        if (errorCode)
-        {
-            return HYP_MAKE_ERROR(Error, "Failed to rename {} to {}: {}", oldFiles[index].filepath, newFiles[index].filepath, errorCode.message().c_str());
-        }
-    }
-
-    // g_cls<Name>Game is the reflection global of the Game class
-    const Pair<String, String> classReplacements[] = {
-        { String("g_cls") + oldName + "Game", String("g_cls") + newName + "Game" },
-        { oldName + "Game", newName + "Game" }
-    };
-
-    // the bare name is only the build's: targets, assembly and project file names
-    const Pair<String, String> buildReplacements[] = {
-        { oldName + "Game", newName + "Game" },
-        { oldName, newName }
-    };
-
-    static const char* const s_codeExtensions[] = { ".cpp", ".cc", ".c", ".hpp", ".h", ".inl", ".cs" };
-    static const char* const s_buildExtensions[] = { ".csproj", ".props", ".targets", ".txt", ".cmake", ".slnx", ".sln" };
-
-    Array<std::filesystem::path> codeFiles;
-    std::error_code errorCode;
-
-    const FilePath sourceDir = projectFilepath.BasePath() / "Source";
-
-    for (std::filesystem::recursive_directory_iterator it(sourceDir.Data(), errorCode), end; !errorCode && it != end; it.increment(errorCode))
-    {
-        if (it->is_directory(errorCode))
-        {
-            if (IsGameProjectScratchDirectory(it->path()))
-            {
-                it.disable_recursion_pending();
-            }
-
-            continue;
-        }
-
-        codeFiles.PushBack(it->path());
-    }
-
-    for (const GameProjectFile& file : newFiles)
-    {
-        if (file.filepath.BasePath() == projectFilepath.BasePath() && file.filepath.Exists())
-        {
-            codeFiles.PushBack(std::filesystem::path(file.filepath.Data()));
-        }
-    }
-
-    for (const std::filesystem::path& codeFile : codeFiles)
-    {
-        const std::string extension = codeFile.extension().string();
-
-        const auto hasExtension = [&extension](Span<const char* const> extensions)
-        {
-            return std::find_if(extensions.Begin(), extensions.End(), [&extension](const char* candidate)
-                       {
-                           return extension == candidate;
-                       })
-                != extensions.End();
-        };
-
-        Span<const Pair<String, String>> replacements;
-
-        if (hasExtension(s_codeExtensions))
-        {
-            replacements = classReplacements;
-        }
-        else if (hasExtension(s_buildExtensions))
-        {
-            replacements = buildReplacements;
-        }
-        else
-        {
-            continue;
-        }
-
-        const FilePath filepath(codeFile.string().c_str());
-
-        String text;
-
-        if (!ReadTextFile(filepath, text))
-        {
-            continue;
-        }
-
-        String renamedText = text;
-
-        for (const Pair<String, String>& replacement : replacements)
-        {
-            renamedText = StringUtil::ReplaceIdentifier(renamedText, replacement.first, replacement.second);
-        }
-
-        if (renamedText == text)
-        {
-            continue;
-        }
-
-        FileByteWriter writer { filepath };
-
-        if (!writer.IsOpen())
-        {
-            return HYP_MAKE_ERROR(Error, "Failed to open {} for writing", filepath);
-        }
-
-        writer.Write(renamedText.Data(), renamedText.Size());
-        writer.Close();
-    }
-
-    return {};
 }
 
 } // namespace Hyperion

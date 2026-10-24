@@ -31,10 +31,10 @@
 #include <Core/Reflection/Method.hpp>
 #include <Core/Reflection/BoxedValue.hpp>
 #include <Core/Reflection/TypeInfo.hpp>
+#include <Core/Reflection/ClassRegistry.hpp>
 
 #include <Core/Containers/Array.hpp>
-#include <Core/Containers/FlatSet.hpp>
-#include <Core/Containers/List.hpp>
+#include <Core/Containers/Set.hpp>
 
 #include <Core/Utilities/Format.hpp>
 #include <Core/Utilities/Uuid.hpp>
@@ -2282,7 +2282,7 @@ ENGINE_API void StripTransientMembers(BoxedValue& value)
     }
 
     // Build a set of transient member names so we know which to skip
-    FlatSet<Name> transientMembers;
+    Set<Name> transientMembers;
 
     for (const IMember& member : cls->GetMembers(MemberType::Field | MemberType::Property, /* deep */ false))
     {
@@ -2392,6 +2392,8 @@ ENGINE_API bool CloneWithoutTransientMembers(const BoxedValue& src, BoxedValue& 
 
 namespace {
 
+/// @TODO: Find a better place for some of these - they are too general and could be reused.
+
 void FormatEnumFlags(String& outText, const Class* enumClass, uint64 flagsValue)
 {
     Array<Name> flagNames;
@@ -2426,7 +2428,7 @@ void FormatEnumFlags(String& outText, const Class* enumClass, uint64 flagsValue)
     }
 }
 
-// Escape a string for inclusion in an HMF string literal "...".
+/// Escape a string for inclusion in an HMF string literal.
 void EscapeString(String& outText, const String& s)
 {
     outText += "\"";
@@ -2449,7 +2451,7 @@ void EscapeString(String& outText, const String& s)
     outText += "\"";
 }
 
-// Write indentation (4 spaces per level).
+/// Write indentation, 4 spaces per level.
 void WriteIndent(String& outText, int indent)
 {
     for (int i = 0; i < indent; i++)
@@ -2476,7 +2478,7 @@ void WriteFloatValue(String& outText, FloatType value)
     outText += buffer;
 }
 
-static BoxedValue DereferenceElement(AnyRef ref)
+BoxedValue DereferenceElement(AnyRef ref)
 {
     if (ref.HasValue() && ref.GetTypeInfo()->IsHandleType())
     {
@@ -2492,6 +2494,26 @@ static BoxedValue DereferenceElement(AnyRef ref)
 
     return BoxedValue(ref);
 }
+
+bool IsMemberCopied(const IMember& member, EnumFlags<CopyMembersFlags> flags)
+{
+    // a field mirrored by a property is copied through the property
+    if (member.GetMemberType() != MemberType::Property && member.GetAttribute(Attributes::g_attrProperty).IsValid())
+    {
+        return false;
+    }
+
+    if (!(flags & CopyMembersFlags::IncludeTransient))
+    {
+        if (const ClassAttributeValue& attribute = member.GetAttribute(Attributes::g_attrTransient); attribute.IsValid() && attribute.GetBool())
+        {
+            return false;
+        }
+    }
+
+    return CanGetAndSetMember(member);
+}
+
 
 Result ObjectToHMFImpl(
     const Class* cls,
@@ -3118,7 +3140,8 @@ static const IMember* ResolveMemberForOverride(const Class* cls, Name propertyNa
     }
 
     // If has `Property = ...`, use the synthetic Property instead
-    if (member->GetMemberType() == MemberType::Field && member->GetAttribute(Attributes::g_attrProperty).IsValid())
+    if (member->GetMemberType() == MemberType::Field
+        && member->GetAttribute(Attributes::g_attrProperty).IsValid())
     {
         if (Property* prop = cls->GetProperty(StringHash(propertyName)))
         {
@@ -3169,10 +3192,15 @@ static void WriteEntitySwatchOverridesSection(const Entity& entity, String& outT
         const EntitySwatchOverrideSet& overrideSet = overrideSets[setIndex];
         const bool isLastSet = setIndex + 1 >= overrideSets.Size();
 
+        const char* swatchName = overrideSet.swatchName.LookupString();
+        if (!swatchName)
+        {
+            swatchName = "";
+        }
+
         WriteIndent(outText, indent + 1);
-        EscapeString(outText, overrideSet.swatchName.IsValid() && overrideSet.swatchName.LookupString()
-                ? overrideSet.swatchName.LookupString()
-                : "");
+        EscapeString(outText, swatchName);
+
         outText += " = {\n";
 
         for (size_t i = 0; i < overrideSet.propertyOverrides.Size(); i++)
@@ -3353,6 +3381,36 @@ Result ObjectToHMFImpl(
     return {};
 }
 
+bool CanAssignHandle(const BoxedValue& value, const TypeInfo& handleType)
+{
+    if (!value.Is<Handle<ObjectBase>>())
+    {
+        return true;
+    }
+
+    const Handle<ObjectBase>& handle = value.Get<Handle<ObjectBase>>();
+    const Class* handleClass = handleType.GetClass();
+
+    return !handle.IsValid()
+        || handleClass == nullptr
+        || IsA(handleClass, handle.GetClass());
+}
+
+void DeferHandleCopy(BoxedValue& target, const IMember& targetMember, const BoxedValue& value, const Class* targetClass)
+{
+    const DeferredHandleCopiesContext* context = GetGlobalContext<DeferredHandleCopiesContext>();
+
+    if (!context || !context->deferredCopies)
+    {
+        HYP_LOG(Core, Warning, "{}.{} refers to an object of another definition of its type!",
+            targetClass->GetName(), targetMember.GetName());
+
+        return;
+    }
+
+    context->deferredCopies->PushBack({ target, &targetMember, value.Get<Handle<ObjectBase>>() });
+}
+
 } // anonymous namespace
 
 Result BoxedToHMF(
@@ -3493,6 +3551,96 @@ TResult<BoxedValue> BoxedAsType(const BoxedValue& value, const TypeInfo& typeInf
     }
 
     return HMF::ParseValue(source, typeInfo);
+}
+
+void CopyMembersByName(const Class* sourceClass, const BoxedValue& source, const Class* targetClass, BoxedValue& target, const Class* stopAtClass, EnumFlags<CopyMembersFlags> flags)
+{
+    // classes of the source no longer registered under their TypeIds (e.g a retired game module build), so their code can still read it
+    Array<const Class*> unregisteredClasses;
+
+    for (const Class* cls = sourceClass; cls != nullptr; cls = cls->GetParent())
+    {
+        if (GetClass(cls->GetTypeId()) != cls)
+        {
+            unregisteredClasses.PushBack(cls);
+        }
+    }
+
+    for (const Class* cls = sourceClass; cls != nullptr && cls != stopAtClass; cls = cls->GetParent())
+    {
+        for (const IMember& member : cls->GetMembers(MemberType::Field | MemberType::Property, /* deep */ false))
+        {
+            if (!IsMemberCopied(member, flags))
+            {
+                continue;
+            }
+
+            const IMember* targetMember = targetClass == sourceClass
+                ? &member
+                : targetClass->GetMember(member.GetName(), member.GetMemberType());
+
+            if (!targetMember || !IsMemberCopied(*targetMember, flags))
+            {
+                continue;
+            }
+
+            const TypeInfo& sourceType = member.GetTypeInfo();
+            const TypeInfo& targetType = targetMember->GetTypeInfo();
+
+            BoxedValue value;
+
+            {
+                ClassLookupOverrideScope lookupOverride(unregisteredClasses);
+
+                value = GetMemberValue(member, source);
+            }
+
+            // the same definition of the type, or a handle, which refers to the same object either way
+            if (&sourceType == &targetType || (sourceType.id == targetType.id && sourceType.IsHandleType()))
+            {
+                if (targetType.IsHandleType() && !CanAssignHandle(value, targetType))
+                {
+                    DeferHandleCopy(target, *targetMember, value, targetClass);
+
+                    continue;
+                }
+
+                SetMemberValue(*targetMember, target, value);
+
+                continue;
+            }
+
+            // a handle written to HMF would be a copy of the object it refers to
+            if (sourceType.IsHandleType() || targetType.IsHandleType())
+            {
+                HYP_LOG(Core, Warning, "{}.{} changed type to {}; it's reset", targetClass->GetName(), member.GetName(), targetType.name);
+
+                continue;
+            }
+
+            String text;
+
+            {
+                ClassLookupOverrideScope lookupOverride(unregisteredClasses);
+
+                if (BoxedToHMF(value, text, &sourceType).HasError())
+                {
+                    continue;
+                }
+            }
+
+            TResult<BoxedValue> valueResult = HMF::ParseValue(text, targetType);
+
+            if (valueResult.HasError())
+            {
+                HYP_LOG(Core, Warning, "Value of {}.{} doesn't fit its new type {}; it's reset", targetClass->GetName(), member.GetName(), targetType.name);
+
+                continue;
+            }
+
+            SetMemberValue(*targetMember, target, valueResult.GetValue());
+        }
+    }
 }
 
 bool ResolveAssetPath(const String& path, const TypeInfo& targetType, BoxedValue& out)

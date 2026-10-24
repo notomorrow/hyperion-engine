@@ -176,6 +176,26 @@ public:
         return m_builtinClasses;
     }
 
+    HYP_FORCE_INLINE Map<String, ClassDefinition>& GetEngineTypes()
+    {
+        return m_engineTypes;
+    }
+
+    HYP_FORCE_INLINE const Map<String, ClassDefinition>& GetEngineTypes() const
+    {
+        return m_engineTypes;
+    }
+
+    HYP_FORCE_INLINE bool IsGameModule() const
+    {
+        return m_isGameModule;
+    }
+
+    HYP_FORCE_INLINE void SetIsGameModule(bool isGameModule)
+    {
+        m_isGameModule = isGameModule;
+    }
+
     const ClassDefinition* FindClassDefinition(UTF8StringView className) const;
 
     Module* AddModule(const FilePath& path);
@@ -207,6 +227,9 @@ private:
     Set<String> m_includePaths;
 
     Map<String, ClassDefinition> m_builtinClasses;
+    Map<String, ClassDefinition> m_engineTypes;
+
+    bool m_isGameModule = false;
 };
 
 } // namespace CodeGen

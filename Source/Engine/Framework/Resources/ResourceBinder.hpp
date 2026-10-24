@@ -23,6 +23,9 @@ class StructuredBuffer;
 
 CORE_API extern size_t GetNumDescendants(TypeId typeId);
 CORE_API extern int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId);
+CORE_API extern int GetSubclassIndex(TypeId baseTypeId, const Class* subclass);
+CORE_API extern const TypeInfo& Class_GetTypeInfo(const Class& cls);
+CORE_API extern const Class* Class_GetNearestStaticClass(const Class& cls);
 
 ENGINE_API HYP_DECLARE_LOG_CHANNEL(Rendering);
 
@@ -158,12 +161,37 @@ class ResourceBinder : public ResourceBinderBase
         {
         }
 
+        HYP_FORCE_INLINE ObjId<T> MakeId(uint32 index) const
+        {
+            if (otherTypeIds.Any())
+            {
+                if (auto it = otherTypeIds.Find(index); it != otherTypeIds.End())
+                {
+                    return ObjId<T>(ObjIdBase { it->second, index + 1 });
+                }
+            }
+
+            return ObjId<T>(ObjIdBase { TypeInfo_GetId(*typeInfo), index + 1 });
+        }
+
+        HYP_FORCE_INLINE bool HoldsId(ObjIdBase id) const
+        {
+            if (id.GetTypeId() == TypeInfo_GetId(*typeInfo))
+            {
+                return true;
+            }
+
+            const auto it = otherTypeIds.Find(id.ToIndex());
+
+            return it != otherTypeIds.End() && it->second == id.GetTypeId();
+        }
+
         void ReleaseBindings(ResourceBindingAllocatorBase* allocator)
         {
             // Unbind all objects that were bound in the last frame
             for (typename BitsetType::BitIndex i : lastFrameIds)
             {
-                const ObjId<T> id = ObjId<T>(ObjIdBase { TypeInfo_GetId(*typeInfo), uint32(i + 1) });
+                const ObjId<T> id = MakeId(uint32(i));
 
                 const auto it = bindings.FindAs(id);
                 AssertDebug(it != bindings.End());
@@ -184,6 +212,8 @@ class ResourceBinder : public ResourceBinderBase
                 }
             }
 
+            otherTypeIds.Clear();
+
             AssertDebug(bindings.Empty());
         }
 
@@ -196,7 +226,14 @@ class ResourceBinder : public ResourceBinderBase
                 return;
             }
 
-            AssertDebug(id.GetTypeId() == TypeInfo_GetId(*typeInfo));
+            if (id.GetTypeId() != TypeInfo_GetId(*typeInfo))
+            {
+                otherTypeIds.Set(id.ToIndex(), id.GetTypeId());
+            }
+            else if (otherTypeIds.Any())
+            {
+                otherTypeIds.Erase(id.ToIndex());
+            }
 
             currentFrameIds.Set(id.ToIndex(), true);
 
@@ -215,7 +252,7 @@ class ResourceBinder : public ResourceBinderBase
                 return;
             }
 
-            AssertDebug(id.GetTypeId() == TypeInfo_GetId(*typeInfo));
+            AssertDebug(HoldsId(id));
 
             currentFrameIds.Set(id.ToIndex(), false);
         }
@@ -224,7 +261,7 @@ class ResourceBinder : public ResourceBinderBase
         {
             ObjIdBase id = pResource->Id();
             AssertDebug(id.IsValid());
-            AssertDebug(id.GetTypeId() == TypeInfo_GetId(*typeInfo));
+            AssertDebug(HoldsId(id));
 
             forceRebindBits.Set(id.ToIndex(), forceRebind);
         }
@@ -250,7 +287,7 @@ class ResourceBinder : public ResourceBinderBase
                         forceRebindBits.Set(bit, false);
                     }
 
-                    const ObjId<T> id = ObjId<T>(ObjIdBase { TypeInfo_GetId(*typeInfo), uint32(bit + 1) });
+                    const ObjId<T> id = MakeId(uint32(bit));
 
                     auto it = bindings.FindAs(id);
                     AssertDebug(it != bindings.End());
@@ -259,6 +296,11 @@ class ResourceBinder : public ResourceBinderBase
                     {
                         removedElements.PushBack(std::move(*it));
                         bindings.Erase(it);
+                    }
+
+                    if (otherTypeIds.Any())
+                    {
+                        otherTypeIds.Erase(uint32(bit));
                     }
                 }
 
@@ -285,7 +327,7 @@ class ResourceBinder : public ResourceBinderBase
                     forceRebindBits.Set(bit, false);
                 }
 
-                const ObjId<T> id = ObjId<T>(ObjIdBase { TypeInfo_GetId(*typeInfo), uint32(bit + 1) });
+                const ObjId<T> id = MakeId(uint32(bit));
 
                 if (bindings.FindAs(id) != bindings.End())
                 {
@@ -320,7 +362,7 @@ class ResourceBinder : public ResourceBinderBase
                 // go through unchanged and compare versions to see if we need to unbind+rebind to same slot
                 for (typename BitsetType::BitIndex bit : forceRebindBits)
                 {
-                    const ObjId<T> id = ObjId<T>(ObjIdBase { TypeInfo_GetId(*typeInfo), uint32(bit + 1) });
+                    const ObjId<T> id = MakeId(uint32(bit));
 
                     auto it = bindings.FindAs(id);
                     AssertDebug(it != bindings.End());
@@ -368,6 +410,8 @@ class ResourceBinder : public ResourceBinderBase
         }
 
         const TypeInfo* typeInfo;
+        // TypeIds of resources whose class shares this one's slot, as it has no static index of its own
+        Map<uint32, TypeId> otherTypeIds;
         // these bitsets are used to track which objects were bound in the last frame with bitwise operations
         BitsetType lastFrameIds;
         BitsetType currentFrameIds;
@@ -455,57 +499,19 @@ public:
             return;
         }
 
-        const TypeId baseTypeId = TypeId::ForType<T>();
-        const TypeId objectTypeId = GetTypeIdForClass(pResource->InstanceClass());
-
-        if (objectTypeId == baseTypeId)
+        if (Impl* impl = GetOrCreateImpl(pResource))
         {
-            m_baseImpl->Consider(m_bindingAllocator, pResource, forceRebind);
-
-            return;
+            impl->Consider(m_bindingAllocator, pResource, forceRebind);
         }
-
-        const int subclassIndex = GetSubclassIndex(baseTypeId, objectTypeId);
-        AssertDebug(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
-            "ResourceBinder<{}>: Attempted to bind object with TypeId {} which is not a subclass of the expected TypeId ({}) or has no static index",
-            TypeName<T>().Data(), objectTypeId.Value(), baseTypeId.Value());
-
-        if (!m_subclassImplsInitialized.Test(subclassIndex))
-        {
-            m_subclassImpls[subclassIndex].Construct(pResource->InstanceClass()->GetTypeInfo());
-            m_subclassImplsInitialized.Set(subclassIndex, true);
-        }
-
-        Impl& impl = m_subclassImpls[subclassIndex].Get();
-        impl.Consider(m_bindingAllocator, pResource, forceRebind);
     }
 
     virtual void Deconsider(ObjectBase* pResource) override
     {
         AssertDebug(pResource != nullptr);
 
-        const TypeId typeId = TypeId::ForType<T>();
-        const TypeId objectTypeId = GetTypeIdForClass(pResource->InstanceClass());
-
-        if (objectTypeId == typeId)
+        if (Impl* impl = FindImpl(pResource))
         {
-            m_baseImpl->Deconsider(m_bindingAllocator, pResource);
-        }
-        else
-        {
-            const int subclassIndex = GetSubclassIndex(typeId, objectTypeId);
-            AssertDebug(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
-                "ResourceBinder<{}>: Attempted to Deconsider object with TypeId {} which is not a subclass of the expected TypeId ({}) or has no static index",
-                TypeName<T>().Data(), objectTypeId.Value(), typeId.Value());
-
-            if (!m_subclassImplsInitialized.Test(subclassIndex))
-            {
-                // don't do anything if not set here since we're just Deconsidering
-                return;
-            }
-
-            Impl& impl = m_subclassImpls[subclassIndex].Get();
-            impl.Deconsider(m_bindingAllocator, pResource);
+            impl->Deconsider(m_bindingAllocator, pResource);
         }
     }
 
@@ -513,24 +519,12 @@ public:
     {
         AssertDebug(pResource != nullptr);
 
-        const TypeId typeId = TypeId::ForType<T>();
-        const TypeId objectTypeId = GetTypeIdForClass(pResource->InstanceClass());
+        Impl* impl = FindImpl(pResource);
+        AssertDebug(impl != nullptr);
 
-        if (objectTypeId == typeId)
+        if (impl)
         {
-            m_baseImpl->SetForceRebind(pResource, forceRebind);
-        }
-        else
-        {
-            const int subclassIndex = GetSubclassIndex(typeId, objectTypeId);
-            AssertDebug(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
-                "ResourceBinder<{}>: Attempted to set force rebind for object with TypeId {} which is not a subclass of the expected TypeId ({}) or has no static index",
-                TypeName<T>().Data(), objectTypeId.Value(), typeId.Value());
-
-            AssertDebug(m_subclassImplsInitialized.Test(subclassIndex));
-
-            Impl& impl = m_subclassImpls[subclassIndex].Get();
-            impl.SetForceRebind(pResource, forceRebind);
+            impl->SetForceRebind(pResource, forceRebind);
         }
     }
 
@@ -538,43 +532,16 @@ public:
     {
         AssertDebug(pResource != nullptr);
 
-        const TypeId typeId = TypeId::ForType<T>();
-        const TypeId objectTypeId = GetTypeIdForClass(pResource->InstanceClass());
+        const Impl* impl = const_cast<ResourceBinder*>(this)->FindImpl(pResource);
 
-        if (objectTypeId == typeId)
+        if (!impl)
         {
-            const ObjIdBase id = pResource->Id();
-            const auto it = m_baseImpl->bindings.FindAs(ObjId<T>(id));
-
-            if (it != m_baseImpl->bindings.End())
-            {
-                return it->second;
-            }
-        }
-        else
-        {
-            const int subclassIndex = GetSubclassIndex(typeId, objectTypeId);
-
-            AssertDebug(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
-                "ResourceBinder<{}>: Attempted to get binding for object with TypeId {} which is not a subclass of the expected TypeId ({}) or has no static index",
-                TypeName<T>().Data(), objectTypeId.Value(), typeId.Value());
-
-            if (!m_subclassImplsInitialized.Test(subclassIndex))
-            {
-                return InvalidBinding;
-            }
-
-            const Impl& impl = m_subclassImpls[subclassIndex].Get();
-            const ObjIdBase id = pResource->Id();
-            const auto it = impl.bindings.FindAs(ObjId<T>(id));
-
-            if (it != impl.bindings.End())
-            {
-                return it->second;
-            }
+            return InvalidBinding;
         }
 
-        return InvalidBinding;
+        const auto it = impl->bindings.FindAs(ObjId<T>(pResource->Id()));
+
+        return it != impl->bindings.End() ? it->second : InvalidBinding;
     }
 
     virtual void ApplyUpdates() override
@@ -597,18 +564,19 @@ public:
             return *m_emptyBitset;
         }
 
-        if (typeId == baseTypeId)
+        const int subclassIndex = typeId == baseTypeId ? -1 : GetSubclassIndex(baseTypeId, typeId);
+
+        if (subclassIndex == -1)
         {
             return m_baseImpl->lastFrameIds;
         }
         else
         {
-            const int subclassIndex = GetSubclassIndex(baseTypeId, typeId);
             AssertDebug(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
                 "ResourceBinder<{}>: Attempted to get bound indices for TypeId {} which is not a subclass of the expected TypeId ({}) or has no static index",
                 TypeName<T>().Data(), typeId.Value(), baseTypeId.Value());
 
-            if (!m_subclassImplsInitialized.Test(subclassIndex))
+            if (subclassIndex < 0 || !m_subclassImplsInitialized.Test(subclassIndex))
             {
                 // not initialized, return empty bitset
                 return *m_emptyBitset;
@@ -631,6 +599,51 @@ public:
     }
 
 protected:
+    // a resource of a class without a static index (e.g a game module's) is bound with its closest ancestor that has one
+    Impl* FindImpl(const ObjectBase* pResource)
+    {
+        const int subclassIndex = GetSubclassIndex(TypeId::ForType<T>(), pResource->InstanceClass());
+
+        if (subclassIndex == -1)
+        {
+            return m_baseImpl;
+        }
+
+        if (subclassIndex < 0 || subclassIndex >= int(m_subclassImpls.Size()) || !m_subclassImplsInitialized.Test(subclassIndex))
+        {
+            return nullptr;
+        }
+
+        return &m_subclassImpls[subclassIndex].Get();
+    }
+
+    Impl* GetOrCreateImpl(const ObjectBase* pResource)
+    {
+        const int subclassIndex = GetSubclassIndex(TypeId::ForType<T>(), pResource->InstanceClass());
+
+        if (subclassIndex == -1)
+        {
+            return m_baseImpl;
+        }
+
+        AssertDebug(subclassIndex >= 0 && subclassIndex < int(m_subclassImpls.Size()),
+            "ResourceBinder<{}>: Attempted to bind an object with TypeId {} which is not a subclass of the expected TypeId ({})",
+            TypeName<T>().Data(), pResource->Id().GetTypeId().Value(), TypeId::ForType<T>().Value());
+
+        if (subclassIndex < 0 || subclassIndex >= int(m_subclassImpls.Size()))
+        {
+            return nullptr;
+        }
+
+        if (!m_subclassImplsInitialized.Test(subclassIndex))
+        {
+            m_subclassImpls[subclassIndex].Construct(&Class_GetTypeInfo(*Class_GetNearestStaticClass(*pResource->InstanceClass())));
+            m_subclassImplsInitialized.Set(subclassIndex, true);
+        }
+
+        return &m_subclassImpls[subclassIndex].Get();
+    }
+
     bool IsInitialized() const
     {
         return m_baseImpl != nullptr;

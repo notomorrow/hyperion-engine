@@ -16,6 +16,8 @@ using Hyperion.Editor.Views;
 
 namespace Hyperion.Editor.ViewModels
 {
+    public sealed record AssetCreationEntry(string Header, ICommand Command, bool IsUserDefined = false);
+
     public enum AssetSortMode
     {
         Name,
@@ -70,6 +72,14 @@ namespace Hyperion.Editor.ViewModels
 
         private readonly Stack<string> _backHistory = new Stack<string>();
         private readonly Stack<string> _forwardHistory = new Stack<string>();
+
+        private static readonly KeyValuePair<string, Func<ContentBrowserViewModel, ICommand>>[] DedicatedCreatorTypes =
+        {
+            new(nameof(ScriptAsset), (ContentBrowserViewModel vm) => vm.NewScriptCommand),
+            new(nameof(Weapon), (ContentBrowserViewModel vm) => vm.NewWeaponCommand),
+            new(nameof(PhysicsShape), (ContentBrowserViewModel vm) => vm.NewPhysicsShapeCommand),
+            new(nameof(World), (ContentBrowserViewModel vm) => vm.NewWorldCommand)
+        };
 
         public AssetFolderViewModel RootFolder { get; private set; } = new AssetFolderViewModel(string.Empty, null);
 
@@ -165,6 +175,7 @@ namespace Hyperion.Editor.ViewModels
         private uint _pendingFocusBucket;
         private string? _pendingFocusName;
         private bool _pendingOpenEditor;
+        private bool _pendingBeginRename;
 
         public ICommand ImportCommand { get; }
 
@@ -177,11 +188,9 @@ namespace Hyperion.Editor.ViewModels
         public ICommand OpenFolderCommand { get; }
 
         public ICommand NewScriptCommand { get; }
-        public ICommand NewMaterialCommand { get; }
         public ICommand NewWeaponCommand { get; }
         public ICommand NewDecalCommand { get; }
         public ICommand NewPhysicsShapeCommand { get; }
-        public ICommand NewPrefabCommand { get; }
         public ICommand NewWorldCommand { get; }
 
         public ICommand OpenWorldCommand { get; }
@@ -196,6 +205,9 @@ namespace Hyperion.Editor.ViewModels
 
         /// <summary>Raised when a folder's name should become editable, so the view can focus its text box.</summary>
         public static event Action<AssetFolderViewModel>? FolderRenameRequested;
+
+        /// <summary>Raised when a newly created asset's name should become editable, so the view can focus its text box.</summary>
+        public static event Action<AssetObjectViewModel>? AssetRenameRequested;
 
         private string? _pendingRenamePath;
 
@@ -231,11 +243,9 @@ namespace Hyperion.Editor.ViewModels
             OnPropertyChanged(nameof(CanCreateAssets));
 
             (NewScriptCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (NewMaterialCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (NewWeaponCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (NewDecalCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (NewPhysicsShapeCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (NewPrefabCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (NewWorldCommand as RelayCommand)?.RaiseCanExecuteChanged();
             (NewFolderCommand as RelayCommand<AssetFolderViewModel>)?.RaiseCanExecuteChanged();
         }
@@ -365,21 +375,7 @@ namespace Hyperion.Editor.ViewModels
                 PanelService.Instance.OpenPanel(panel);
             }, () => CanCreateAssets);
 
-            NewDecalCommand = new RelayCommand(() =>
-            {
-                CreateInCurrentFolder("decal", AssetBucket.Decals.Value, openEditor: true, () =>
-                {
-                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewDecal"));
-                });
-            }, () => CanCreateAssets);
-
-            NewMaterialCommand = new RelayCommand(() =>
-            {
-                CreateInCurrentFolder("material", AssetBucket.Materials.Value, openEditor: true, () =>
-                {
-                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewMaterial"));
-                });
-            }, () => CanCreateAssets);
+            NewDecalCommand = new RelayCommand(() => CreateAssetOfClass("Decal"), () => CanCreateAssets);
 
             NewPhysicsShapeCommand = new RelayCommand(() =>
             {
@@ -401,14 +397,6 @@ namespace Hyperion.Editor.ViewModels
                 });
 
                 PanelService.Instance.OpenPanel(panel);
-            }, () => CanCreateAssets);
-
-            NewPrefabCommand = new RelayCommand(() =>
-            {
-                CreateInCurrentFolder("prefab", AssetBucket.Prefabs.Value, openEditor: false, () =>
-                {
-                    _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewPrefab"), MakeUniqueAssetName(AssetBucket.Prefabs.Value, "NewPrefab"));
-                });
             }, () => CanCreateAssets);
 
             NewWorldCommand = new RelayCommand(() =>
@@ -1155,6 +1143,138 @@ namespace Hyperion.Editor.ViewModels
             return name;
         }
 
+        public async Task<IReadOnlyList<AssetCreationEntry>> GetCreatableAssetEntriesAsync()
+        {
+            Dispatcher.UIThread.VerifyAccess();
+
+            List<(string Name, bool IsUserDefined)> classes = await EngineManager.PostToSimThread<List<(string Name, bool IsUserDefined)>>(BuildCreatableAssetClasses);
+
+            List<AssetCreationEntry> entries = new();
+            foreach (var kvp in DedicatedCreatorTypes)
+            {
+                entries.Add(new AssetCreationEntry(kvp.Key, kvp.Value(this)));
+            }
+
+            foreach ((string className, bool isUserDefined) in classes)
+            {
+                entries.Add(new AssetCreationEntry(className, new RelayCommand(() => CreateAssetOfClass(className), () => CanCreateAssets), isUserDefined));
+            }
+
+            // Engine types first, then UDT
+            return entries
+                .OrderBy(entry => entry.IsUserDefined)
+                .ThenBy(entry => entry.Header, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static List<(string Name, bool IsUserDefined)> BuildCreatableAssetClasses()
+        {
+            Class? assetClass = Class.TryGetClass<AssetObject>();
+
+            if (!assetClass.HasValue)
+            {
+                return [];
+            }
+
+            HashSet<string> dedicatedNames = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var kvp in DedicatedCreatorTypes)
+            {
+                Class? dedicatedClass = Class.TryGetClass(kvp.Key);
+
+                if (!dedicatedClass.HasValue)
+                {
+                    continue;
+                }
+
+                dedicatedNames.Add(dedicatedClass.Value.Name.ToString());
+
+                foreach (ClassPickerEntry derived in ClassPickerEntries.BuildDerived(dedicatedClass.Value.TypeId))
+                {
+                    dedicatedNames.Add(derived.Name);
+                }
+            }
+
+            List<(string Name, bool IsUserDefined)> classes = new();
+
+            foreach (ClassPickerEntry entry in ClassPickerEntries.BuildDerived(assetClass.Value.TypeId))
+            {
+                if (dedicatedNames.Contains(entry.Name)
+                    || Class.TryGetClass(entry.Name) is not { } cls
+                    || !ClassPickerEntries.CanCreateAssetForType(cls))
+                {
+                    continue;
+                }
+
+                classes.Add((entry.Name, cls.IsUserDefined));
+            }
+
+            return classes;
+        }
+
+        private void CreateAssetOfClass(string className)
+        {
+            string folderPath = _currentFolder.Path;
+
+            _ = EngineManager.PostToSimThread(() =>
+            {
+                if (!CanCreateAssetsOnSimThread(className))
+                {
+                    return;
+                }
+
+                HashSet<(uint BucketIndex, string Name)> assetsBefore = SnapshotAssets()
+                    .Select(asset => (asset.BucketIndex, asset.Name.ToString()))
+                    .ToHashSet();
+
+                _editorSubsystem.ExecuteCommandByName(new Name("EditorCommandNewAsset"), $"{className} New{className}");
+
+                List<(uint BucketIndex, Name Name)> created = SnapshotAssets()
+                    .Where(asset => !assetsBefore.Contains((asset.BucketIndex, asset.Name.ToString())))
+                    .ToList();
+
+                if (created.Count == 0)
+                {
+                    Logger.Log(LogLevel.Error, $"New {className} creation failed; no new asset appeared in the registry.");
+                    return;
+                }
+
+                EditorAssetFolders? assetFolders = EngineManager.CurrentProject?.AssetFolders;
+
+                foreach ((uint bucketIndex, Name name) in created)
+                {
+                    assetFolders?.SetAssetFolderOf(bucketIndex, name, folderPath);
+                }
+
+                NotifyAssetsChanged();
+
+                (uint focusBucket, Name focusName) = created[0];
+                Dispatcher.UIThread.Post(() => FocusAsset(focusBucket, focusName.ToString(), beginRename: true));
+            });
+        }
+
+        private static List<(uint BucketIndex, Name Name)> SnapshotAssets()
+        {
+            AssetRegistry registry = AssetManager.Instance.AssetRegistry;
+
+            List<(uint BucketIndex, Name Name)> assets = new List<(uint BucketIndex, Name Name)>();
+
+            foreach (AssetBucket bucket in AssetBucket.AllBuckets)
+            {
+                if (bucket.Value == AssetBucket.InvalidIndex)
+                {
+                    continue;
+                }
+
+                foreach (AssetDesc assetDesc in registry.GetBucketAssetDescs(bucket.Value))
+                {
+                    assets.Add((bucket.Value, assetDesc.Name));
+                }
+            }
+
+            return assets;
+        }
+
         private void CreateInCurrentFolder(string assetDescription, uint bucketIndex, bool openEditor, Action create)
         {
             string folderPath = _currentFolder.Path;
@@ -1274,7 +1394,7 @@ namespace Hyperion.Editor.ViewModels
             });
         }
 
-        public void FocusAsset(uint bucketIndex, string name, bool openEditor = false)
+        public void FocusAsset(uint bucketIndex, string name, bool openEditor = false, bool beginRename = false)
         {
             Dispatcher.UIThread.VerifyAccess();
 
@@ -1292,6 +1412,7 @@ namespace Hyperion.Editor.ViewModels
             _pendingFocusBucket = bucketIndex;
             _pendingFocusName = name;
             _pendingOpenEditor = openEditor;
+            _pendingBeginRename = beginRename;
 
             QueueReload();
         }
@@ -1313,10 +1434,12 @@ namespace Hyperion.Editor.ViewModels
             }
 
             bool openEditor = _pendingOpenEditor;
+            bool beginRename = _pendingBeginRename;
 
             _pendingFocusBucket = 0;
             _pendingFocusName = null;
             _pendingOpenEditor = false;
+            _pendingBeginRename = false;
 
             if (_folderIndex.TryGetValue(asset.FolderPath, out AssetFolderViewModel? folder) && !ReferenceEquals(folder, _currentFolder))
             {
@@ -1328,6 +1451,12 @@ namespace Hyperion.Editor.ViewModels
             if (openEditor)
             {
                 OpenAssetEditor(asset);
+            }
+
+            if (beginRename)
+            {
+                asset.BeginRename();
+                AssetRenameRequested?.Invoke(asset);
             }
         }
 

@@ -115,6 +115,11 @@ jobs:
           HYP_SKIP_CODEGEN: 1
         run: Tools\Scripts\BuildHyperion.bat Release ninja distribution ${{ matrix.backend }} regenerate
 
+      # shipped in the SDK, where C++ games run it over their own headers
+      - name: Build CodeGen
+        shell: cmd
+        run: echo y| call Tools\Scripts\BuildCodeGen.bat
+
       - name: Package
         shell: pwsh
         run: |
@@ -174,6 +179,10 @@ jobs:
           HYP_BUILD_JOBS: 4
           HYP_SKIP_CODEGEN: 1
         run: bash Tools/Scripts/BuildHyperion.sh distribution ninja regenerate
+
+      # shipped in the SDK, where C++ games run it over their own headers
+      - name: Build CodeGen
+        run: echo y | bash Tools/Scripts/BuildCodeGen.sh
 
       - name: Package
         run: bash Tools/Scripts/PackageEditorMacOS.sh "$GITHUB_WORKSPACE/Packaged"

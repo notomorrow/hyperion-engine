@@ -299,12 +299,15 @@ namespace Hyperion.Editor.ViewModels
 
             if (!expected.IsAbstract)
             {
-                return [new ClassPickerEntry(expected.Name.ToString(), 0, false)];
+                return ClassPickerEntries.CanCreateAssetForType(expected)
+                    ? [new ClassPickerEntry(expected.Name.ToString(), 0, false)]
+                    : [];
             }
 
-            // An abstract property type (PhysicsShape, say) has no instance of its own to create, so the
-            // choice of which implementation to create is the user's.
-            return ClassPickerEntries.BuildDerived(expected.TypeId);
+            return ClassPickerEntries.BuildDerived(expected.TypeId)
+                .Where(entry => entry.IsAbstract
+                    || (Class.TryGetClass(entry.Name) is { } cls && ClassPickerEntries.CanCreateAssetForType(cls)))
+                .ToList();
         }
 
         private static bool IsAssetObjectClass(Class? propertyClass)
@@ -361,7 +364,7 @@ namespace Hyperion.Editor.ViewModels
             {
                 // One instance per selected object - they must not end up sharing one. Held until the
                 // commit has written them.
-                List<BoxedValue> instances = new List<BoxedValue>();
+                List<BoxedValue> instances = new();
 
                 try
                 {
@@ -394,7 +397,10 @@ namespace Hyperion.Editor.ViewModels
                     {
                         object? instance = instances[nextInstance++].GetValue();
 
-                        if (current.GetValue() is ObjectBase previous && previous.IsValid && instance is ObjectBase created && created.IsValid)
+                        if (current.GetValue() is ObjectBase previous
+                            && previous.IsValid
+                            && instance is ObjectBase created
+                            && created.IsValid)
                         {
                             CopyMatchingProperties(previous, created);
                         }
@@ -570,7 +576,7 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    using BoxedValue boxed = new BoxedValue(obj);
+                    using BoxedValue boxed = new(obj);
                     CommitPropertyChange($"Set {Label}", boxed);
                 }
                 catch (Exception ex)
@@ -593,7 +599,7 @@ namespace Hyperion.Editor.ViewModels
             {
                 try
                 {
-                    using BoxedValue boxed = new BoxedValue(null);
+                    using BoxedValue boxed = new(null);
                     CommitPropertyChange($"Clear {Label}", boxed);
                 }
                 catch (Exception ex)
@@ -687,7 +693,7 @@ namespace Hyperion.Editor.ViewModels
 
                 ContentBrowserViewModel.Instance?.NotifyAssetsChanged();
 
-                using BoxedValue boxed = new BoxedValue(assetObj);
+                using BoxedValue boxed = new(assetObj);
                 CommitPropertyChange($"Create {Label}", boxed);
             }
             catch (Exception ex)
@@ -742,7 +748,7 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    using BoxedValue boxed = new BoxedValue(clonedAssetObj);
+                    using BoxedValue boxed = new(clonedAssetObj);
                     CommitPropertyChange($"Clone {Label}", boxed);
                     //Dispatcher.UIThread.Post(() => IsEditorExpanded = true);
                 }
@@ -815,7 +821,7 @@ namespace Hyperion.Editor.ViewModels
                     return;
                 }
 
-                using BoxedValue boxed = new BoxedValue(obj);
+                using BoxedValue boxed = new(obj);
                 CommitPropertyChange($"Import {Label}", boxed);
             }
             catch (Exception ex)
@@ -931,7 +937,7 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    using BoxedValue boxed = new BoxedValue(obj);
+                    using BoxedValue boxed = new(obj);
                     CommitPropertyChange($"Set {Label}", boxed);
                 }
                 catch (Exception ex)
@@ -1063,7 +1069,7 @@ namespace Hyperion.Editor.ViewModels
                         return;
                     }
 
-                    using BoxedValue boxed = new BoxedValue(obj);
+                    using BoxedValue boxed = new(obj);
                     CommitPropertyChange($"Set {Label}", boxed);
                 }
                 catch (Exception ex)

@@ -327,6 +327,24 @@ namespace Hyperion.Editor.Services
                     + "</Project>\n");
             }
 
+            string? gameBindingsDirectory = null;
+
+            if (isScriptsLibrary)
+            {
+                // the game's build runs CodeGenTool, which writes the C# of its classes that the scripts may use.
+                if (!NativeGameBuildService.Instance.BuildAsync(projectFilePath).GetAwaiter().GetResult())
+                {
+                    return false;
+                }
+
+                gameBindingsDirectory = Path.Combine(
+                    projectDirectory,
+                    "Build",
+                    GameBuildPlatform.Current.Name,
+                    "Generated",
+                    "CSharp");
+            }
+
             string? toolchainError = GameBuildPlatform.Current.FindNativeAotToolchainError(out string? toolchainPath);
 
             if (toolchainError != null)
@@ -359,8 +377,7 @@ namespace Hyperion.Editor.Services
 
                 Logger.Log(BuildLogChannel, LogLevel.Info, "Publishing {0} with NativeAOT for {1}", managedProjectFile, runtimeIdentifier);
 
-                string[] arguments =
-                {
+                List<string> arguments = [
                     "publish", managedProjectFile,
                     "--configuration", "Release",
                     "--runtime", runtimeIdentifier,
@@ -374,11 +391,16 @@ namespace Hyperion.Editor.Services
                     "-p:HyperionStaticLinkInputsFile=" + scriptsLinkInputsFile,
                     "-p:OutputPath=" + Path.Combine(intermediateDirectory, "bin") + Path.DirectorySeparatorChar,
                     "-p:IntermediateOutputPath=" + Path.Combine(intermediateDirectory, "obj") + Path.DirectorySeparatorChar
-                };
+                ];
+
+                if (gameBindingsDirectory != null && Directory.Exists(gameBindingsDirectory))
+                {
+                    arguments.Add("-p:HyperionGameBindingsDir=" + gameBindingsDirectory + Path.DirectorySeparatorChar);
+                }
 
                 string? firstError = null;
 
-                int exitCode = RunDotNetAsync(managedProjectFile, arguments, toolchainPath, line =>
+                int exitCode = RunDotNetAsync(managedProjectFile, arguments.ToArray(), toolchainPath, line =>
                 {
                     if (firstError == null && ErrorLineRegex.IsMatch(line))
                     {

@@ -201,6 +201,11 @@ public:
     HYP_METHOD()
     bool RemoveSubsystem(Subsystem* subsystem);
 
+    HYP_FORCE_INLINE const Array<Subsystem*, SceneAllocator>& GetSubsystems() const
+    {
+        return m_subsystemsArray;
+    }
+
     ///Swatches
 
     HYP_METHOD()
@@ -329,6 +334,11 @@ public:
      *  \returns A boolean indicating if the system was successfully removed or not. */
     HYP_METHOD()
     bool RemoveSystem(SystemBase* system);
+
+    HYP_FORCE_INLINE const Array<Handle<SystemBase>>& GetSystems() const
+    {
+        return m_systems;
+    }
 
     /*! \brief Get a system instance by type. If a system with the exact type exists, that will be returned.
      *  A second pass using IsA() to check for type matches is performed if the first one doesn't succeed,

@@ -50,6 +50,11 @@
     <Compile Include="$(HyperionProjectContentDir)Scripts/**/*.cs" Link="Scripts/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- the C# declarations CodeGen writes for a C++ game's classes, compiled in with the scripts that use them -->
+  <ItemGroup Condition="'$(HyperionGameBindingsDir)' != ''">
+    <Compile Include="$([MSBuild]::EnsureTrailingSlash('$(HyperionGameBindingsDir)'))**/*.cs" Link="GameBindings/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(HyperionHostedEntry)' == 'true'">
     <Compile Include="$(MSBuildThisFileDirectory)HyperionHostedEntry.cs" Link="Hyperion/HyperionHostedEntry.cs" />
 
@@ -80,7 +85,7 @@
            Text="HyperionBinDir must point at a Hyperion engine build (containing the native hyperion library); got '$(HyperionBinDir)'" />
   </Target>
 
-  <Target Name="HyperionCopyEngineRuntime" AfterTargets="Build" Condition="'$(HyperionOutputToBinDir)' != 'true' And '$(HyperionWebBuild)' != 'true'">
+  <Target Name="HyperionCopyEngineRuntime" AfterTargets="Build" Condition="'$(HyperionOutputToBinDir)' != 'true' And '$(HyperionWebBuild)' != 'true' And '$(HyperionCopyEngineRuntime)' != 'false'">
     <ItemGroup>
       <_HyperionNativeLibraries Include="$(HyperionBinDir)*.dll;$(HyperionBinDir)*.so;$(HyperionBinDir)*.dylib" Exclude="$(HyperionBinDir)Hyperion.NET.*.dll" />
       <_HyperionConfigFiles Include="$(HyperionBinDir)Config/**/*" />

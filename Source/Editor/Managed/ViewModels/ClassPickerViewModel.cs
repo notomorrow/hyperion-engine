@@ -11,6 +11,26 @@ namespace Hyperion.Editor.ViewModels
 
     public static class ClassPickerEntries
     {
+        private static readonly HashSet<string> CreatableEngineAssetTypeNames = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "Texture",
+            "Material",
+            "Decal",
+            "Prefab",
+            "World",
+            "Scene",
+            "Weapon",
+            "GroundCover",
+            "RawDataAsset",
+            "BoxPhysicsShape",
+            "SpherePhysicsShape",
+            "PlanePhysicsShape",
+            "ConvexHullPhysicsShape",
+            "CapsulePhysicsShape",
+            "HeightFieldPhysicsShape",
+            "CompoundPhysicsShape",
+        };
+
         public static List<ClassPickerEntry> BuildDerived(TypeId baseTypeId)
         {
             List<Class> classes = [];
@@ -18,8 +38,9 @@ namespace Hyperion.Editor.ViewModels
 
             NativeBindings.Hyp_GetAllDerivedClasses(ref baseTypeId, callback, IntPtr.Zero);
 
-            Dictionary<string, bool> abstractByName = new Dictionary<string, bool>();
-            Dictionary<string, List<string>> children = new Dictionary<string, List<string>>();
+            Dictionary<string, bool> abstractByName = new();
+            Dictionary<string, List<string>> children = new();
+
             string? baseName = null;
             bool isBaseAbstract = true;
 
@@ -86,6 +107,30 @@ namespace Hyperion.Editor.ViewModels
             }
 
             return entries;
+        }
+
+        public static bool CanCreateAssetForType(Class assetClass)
+        {
+            Class? assetObjectClass = Class.TryGetClass<AssetObject>();
+
+            if (!assetObjectClass.HasValue || (assetClass != assetObjectClass.Value && !assetClass.IsSubclassOf(assetObjectClass.Value)))
+            {
+                return false;
+            }
+
+            if (assetClass.IsAbstract)
+            {
+                return false;
+            }
+
+            string className = assetClass.Name.ToString();
+
+            if (!NativeBindings.Hyp_CanCreateInstanceOfClass(className))
+            {
+                return false;
+            }
+
+            return assetClass.IsUserDefined || CreatableEngineAssetTypeNames.Contains(className);
         }
     }
 

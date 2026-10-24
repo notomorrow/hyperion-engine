@@ -2791,20 +2791,13 @@
                                                                     <TextBlock VerticalAlignment="Center" Text="Add..." />
                                                                 </StackPanel>
                                                                 <Button.Flyout>
-                                                                    <MenuFlyout>
+                                                                    <MenuFlyout Opened="OnAddAssetMenuFlyoutOpened">
                                                                         <MenuItem
                                                                             Command="{Binding ContentBrowser.NewFolderCommand}"
                                                                             CommandParameter="{Binding ContentBrowser.CurrentFolder}"
                                                                             Header="Folder" />
                                                                         <Separator />
-                                                                        <MenuItem Command="{Binding ContentBrowser.NewPhysicsShapeCommand}" Header="Physics Shape" />
-                                                                        <MenuItem Command="{Binding ContentBrowser.NewMaterialCommand}" Header="Material" />
-                                                                        <MenuItem Command="{Binding ContentBrowser.NewDecalCommand}" Header="Decal" />
-                                                                        <MenuItem Command="{Binding ContentBrowser.NewPrefabCommand}" Header="Prefab" />
-                                                                        <Separator />
-                                                                        <MenuItem Command="{Binding ContentBrowser.NewScriptCommand}" Header="Script" />
-                                                                        <Separator/>
-                                                                        <MenuItem Command="{Binding ContentBrowser.NewWorldCommand}" Header="World" />
+                                                                        <!--  populated by MainWindow.PopulateAddAssetMenuItems -->
                                                                     </MenuFlyout>
                                                                 </Button.Flyout>
                                                             </Button>
@@ -2907,22 +2900,17 @@
                                                                     </ItemsPanelTemplate>
                                                                 </ListBox.ItemsPanel>
                                                                 <ListBox.ContextMenu>
-                                                                    <ContextMenu>
+                                                                    <ContextMenu Opened="OnAssetListContextMenuOpened">
                                                                         <MenuItem
                                                                             Command="{Binding ContentBrowser.NewFolderCommand}"
                                                                             CommandParameter="{Binding ContentBrowser.CurrentFolder}"
                                                                             Header="New Folder"
                                                                             IsEnabled="{Binding !IsSimulating}" />
-                                                                        <MenuItem Header="Add" IsEnabled="{Binding !IsSimulating}">
-                                                                          <MenuItem Command="{Binding ContentBrowser.NewPhysicsShapeCommand}" Header="Physics Shape" />
-                                                                          <MenuItem Command="{Binding ContentBrowser.NewMaterialCommand}" Header="Material" />
-                                                                          <MenuItem Command="{Binding ContentBrowser.NewDecalCommand}" Header="Decal" />
-                                                                          <MenuItem Command="{Binding ContentBrowser.NewPrefabCommand}" Header="Prefab" />
-                                                                          <Separator />
-                                                                          <MenuItem Command="{Binding ContentBrowser.NewScriptCommand}" Header="Script" />
-                                                                          <Separator/>
-                                                                          <MenuItem Command="{Binding ContentBrowser.NewWorldCommand}" Header="World" />
-                                                                        </MenuItem>
+                                                                        <!-- populated by MainWindow.PopulateAddAssetMenuItems  -->
+                                                                        <MenuItem
+                                                                            Header="Add"
+                                                                            IsEnabled="{Binding !IsSimulating}"
+                                                                            Tag="AddAssetMenu" />
                                                                         <Separator />
                                                                         <MenuItem
                                                                             Command="{Binding ContentBrowser.ImportCommand}"

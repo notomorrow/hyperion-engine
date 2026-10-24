@@ -16,6 +16,7 @@ using Dock.Model.Controls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Hyperion;
 using Hyperion.Editor.Views;
@@ -48,6 +49,8 @@ namespace Hyperion.Editor
         // what can be applied to an Entity via D&D
         private static readonly HashSet<string> EntityAssetTypeNames
             = ["Script", "ScriptAsset", "Material", "Texture"];
+
+        private static readonly object AssetCreationEntryTag = new();
         
         private NodeViewModel? _dragCandidate;
         private PointerPressedEventArgs? _dragPressedArgs;
@@ -140,6 +143,7 @@ namespace Hyperion.Editor
             PanelService.Instance.ActivePanelChanged += OnPanelServiceActivePanelChanged;
             ContentBrowserViewModel.BringToFrontRequested += OnContentBrowserBringToFrontRequested;
             ContentBrowserViewModel.FolderRenameRequested += OnContentBrowserFolderRenameRequested;
+            ContentBrowserViewModel.AssetRenameRequested += OnContentBrowserAssetRenameRequested;
 
             EngineManager.ViewportLayoutRequested += layout => Dispatcher.UIThread.Post(() => ApplyViewportLayout((ViewportLayout)layout));
 
@@ -1113,6 +1117,54 @@ namespace Hyperion.Editor
             }
         }
 
+        private async void OnAddAssetMenuFlyoutOpened(object? sender, EventArgs e)
+        {
+            if (sender is MenuFlyout flyout)
+            {
+                await PopulateAddAssetMenuItems(flyout.Items);
+            }
+        }
+
+        private async void OnAssetListContextMenuOpened(object? sender, RoutedEventArgs e)
+        {
+            if (sender is ContextMenu contextMenu
+                && contextMenu.Items.OfType<MenuItem>().FirstOrDefault(item => item.Tag as string == "AddAssetMenu") is { } addMenuItem)
+            {
+                await PopulateAddAssetMenuItems(addMenuItem.Items);
+            }
+        }
+
+        private static async Task PopulateAddAssetMenuItems(ItemCollection items)
+        {
+            if (MainWindowViewModel.Instance?.ContentBrowser is not { } contentBrowser)
+            {
+                return;
+            }
+
+            IReadOnlyList<AssetCreationEntry> entries = await contentBrowser.GetCreatableAssetEntriesAsync();
+
+            // Swap in the new entries only once they are ready, so two overlapping opens can't stack duplicates
+            foreach (object staleEntry in items.OfType<Control>().Where(item => ReferenceEquals(item.Tag, AssetCreationEntryTag)).ToList())
+            {
+                items.Remove(staleEntry);
+            }
+
+            bool addedUserDefinedGroup = false;
+
+            foreach (AssetCreationEntry entry in entries)
+            {
+                if (entry.IsUserDefined && !addedUserDefinedGroup)
+                {
+                    items.Add(new Separator { Tag = AssetCreationEntryTag });
+                    items.Add(new MenuItem { Header = "Game Types", IsEnabled = false, Tag = AssetCreationEntryTag });
+
+                    addedUserDefinedGroup = true;
+                }
+
+                items.Add(new MenuItem { Header = entry.Header, Command = entry.Command, Tag = AssetCreationEntryTag });
+            }
+        }
+
         private void OnToolSettingsMenuOpened(object? sender, RoutedEventArgs e)
         {
             if (DataContext is MainWindowViewModel vm)
@@ -1378,6 +1430,11 @@ namespace Hyperion.Editor
         private void OnContentBrowserFolderRenameRequested(AssetFolderViewModel folder)
         {
             Dispatcher.UIThread.Post(() => FocusFolderRenameTextBox(folder), DispatcherPriority.Loaded);
+        }
+
+        private void OnContentBrowserAssetRenameRequested(AssetObjectViewModel asset)
+        {
+            Dispatcher.UIThread.Post(() => FocusRenameTextBox("AssetRenameTextBox", asset), DispatcherPriority.Loaded);
         }
 
         private void FocusFolderRenameTextBox(AssetFolderViewModel folder)

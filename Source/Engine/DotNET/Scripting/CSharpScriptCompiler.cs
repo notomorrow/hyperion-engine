@@ -276,6 +276,43 @@ namespace Hyperion
             return path.Replace("\\x", "\\\\x");
         }
 
+        private static string FindDotNetExecutable()
+        {
+            string executableName = OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
+
+            List<string> roots = new List<string>();
+
+            if (System.Environment.GetEnvironmentVariable("DOTNET_ROOT") is string dotnetRoot && dotnetRoot.Length > 0)
+            {
+                roots.Add(dotnetRoot);
+            }
+
+            string? runtimeRoot = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))));
+
+            if (runtimeRoot != null)
+            {
+                roots.Add(runtimeRoot);
+            }
+
+            if (OperatingSystem.IsMacOS())
+            {
+                roots.Add("/usr/local/share/dotnet");
+                roots.Add("/opt/homebrew/share/dotnet");
+            }
+
+            foreach (string root in roots)
+            {
+                string candidate = Path.Combine(root, executableName);
+
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return "dotnet";
+        }
+
         private static string? GetDependenciesDirectory()
         {
             string? dependenciesDirectory = Path.GetDirectoryName(System.Environment.ProcessPath);
@@ -385,12 +422,8 @@ namespace Hyperion
                 }
             }
 
-            System.Diagnostics.Process process = new System.Diagnostics.Process();
-#if HYP_MACOS
-            process.StartInfo.FileName = "/usr/local/share/dotnet/dotnet";
-#else
-            process.StartInfo.FileName = "dotnet";
-#endif
+            Process process = new();
+            process.StartInfo.FileName = FindDotNetExecutable();
             process.StartInfo.Arguments = $"build";
             process.StartInfo.WorkingDirectory = projectOutputDirectory;
             process.StartInfo.RedirectStandardOutput = true;
@@ -398,15 +431,14 @@ namespace Hyperion
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
 
-            // prevents a stale MSBuildSdksPath (left behind by an uninstalled SDK) from breaking resolution of Microsoft.NET.Sdk
             process.StartInfo.Environment.Remove("MSBuildSdksPath");
 
 #if !HYP_MACOS
-            process.OutputDataReceived += (object sendingProcess, System.Diagnostics.DataReceivedEventArgs eventArgs) =>
+            process.OutputDataReceived += (object sendingProcess, DataReceivedEventArgs eventArgs) =>
             {
                 Logger.Log(logChannel, LogLevel.Info, "{0}", eventArgs.Data);
             };
-            process.ErrorDataReceived += (object sendingProcess, System.Diagnostics.DataReceivedEventArgs eventArgs) =>
+            process.ErrorDataReceived += (object sendingProcess, DataReceivedEventArgs eventArgs) =>
             {
                 Logger.Log(logChannel, LogLevel.Error, "{0}", eventArgs.Data);
             };

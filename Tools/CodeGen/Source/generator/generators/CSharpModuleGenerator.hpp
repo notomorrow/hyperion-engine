@@ -9,6 +9,11 @@
 
 #include <generator/Generator.hpp>
 
+#include <Core/Containers/Set.hpp>
+#include <Core/Containers/String.hpp>
+
+#include <Core/Threading/Mutex.hpp>
+
 namespace Hyperion {
 namespace CodeGen {
 
@@ -25,7 +30,14 @@ public:
     virtual Result Generate(const Analyzer& analyzer, const Module& mod, ByteWriter& writer) const override;
     virtual FilePath GetOutputFilePath(const Analyzer& analyzer, const Module& mod) const override;
 
+    HYP_FORCE_INLINE const Set<String>& GetWrittenClassNames() const
+    {
+        return m_writtenClassNames;
+    }
+
 protected:
+    mutable Set<String> m_writtenClassNames;
+    mutable Mutex m_writtenClassNamesMutex;
 };
 
 } // namespace CodeGen
