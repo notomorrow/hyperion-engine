@@ -98,7 +98,11 @@ endfunction()
 
 # Runs CodeGen over the game's headers before it compiles (their reflection goes in <build>/Generated, included as <Foo.generated.inl>),
 # and builds <target>.Bindings.dll beside the game from the C# it writes, so scripts can use the game's classes.
+# The game's function-local statics (its class registrations) stay in the game, not shared with an earlier build of it: the editor
+# loads each build into the same process, and default-visibility statics are unified across dlopen'd modules. Only HYP_EXPORT symbols stay visible.
 function(hyperion_game_codegen target source_dir)
+  set_target_properties(${target} PROPERTIES CXX_VISIBILITY_PRESET hidden)
+
   set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/Generated")
   set(generated_sources "${generated_dir}/GeneratedSources.cpp")
 

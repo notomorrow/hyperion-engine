@@ -17,22 +17,32 @@
 
 #include <Core/Defines.hpp>
 
-#if HYP_WINDOWS
+#ifdef HYP_WINDOWS
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#elif HYP_UNIX
+
+#elif defined(HYP_UNIX)
+
 #include <dlfcn.h>
 #include <climits>
 #include <cstdlib>
 #include <cstring>
-#if HYP_MACOS
+
+#if defined(HYP_MACOS)
+
 #include <mach-o/dyld.h>
 #include <mach-o/loader.h>
+
 #elif HYP_LINUX
+
 #include <link.h>
+
 #endif
+
 // so HMODULE can be used as a type for the handle on both Windows and Linux/MacOS
 typedef void* HMODULE;
+
 #else
 #error "Unsupported platform for DynamicLibrary"
 #endif
