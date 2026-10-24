@@ -43,7 +43,7 @@ Handle<NativeTestNoteAsset> CreateNote(const char* name)
 {
     Handle<NativeTestNoteAsset> note = MakeHandle<NativeTestNoteAsset>();
     note->SetName(CreateNameFromDynamicString(name));
-    note->text = "Remember the harness";
+    note->text = "Hello traveller";
 
     return note;
 }
@@ -230,7 +230,7 @@ void NoteAsset_LoadsSavedFields(GameTestContext& context)
 
     const NativeTestNoteAsset& note = *static_cast<NativeTestNoteAsset*>(asset.Get());
 
-    context.Check(note.text == "Remember the harness", HYP_FORMAT("text: expected 'Remember the harness', got '{}'", note.text));
+    context.Check(note.text == "Hello traveller", HYP_FORMAT("text: expected 'Hello traveller', got '{}'", note.text));
 }
 
 #pragma endregion Read phase

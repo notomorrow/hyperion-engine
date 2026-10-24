@@ -13,7 +13,8 @@ namespace Hyperion {
 class Class;
 class EditorSubsystem;
 
-// Native objects can't change class in place, so nodes of a reloaded game module's classes are rebuilt on its new build
-EDITOR_API void RebuildRetiredModuleNodes(EditorSubsystem* subsystem, const Array<const Class*>& retiredClasses);
+// Native objects can't change class in place, so scene nodes and loaded assets of a reloaded game module's classes are rebuilt on
+// its new build, and systems and subsystems of its classes are removed from the project's world
+EDITOR_API void RebuildRetiredModuleObjects(EditorSubsystem* subsystem, const Array<const Class*>& retiredClasses);
 
 } // namespace Hyperion

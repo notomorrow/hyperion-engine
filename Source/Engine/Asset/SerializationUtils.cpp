@@ -34,8 +34,7 @@
 #include <Core/Reflection/ClassRegistry.hpp>
 
 #include <Core/Containers/Array.hpp>
-#include <Core/Containers/FlatSet.hpp>
-#include <Core/Containers/List.hpp>
+#include <Core/Containers/Set.hpp>
 
 #include <Core/Utilities/Format.hpp>
 #include <Core/Utilities/Uuid.hpp>
@@ -2283,7 +2282,7 @@ ENGINE_API void StripTransientMembers(BoxedValue& value)
     }
 
     // Build a set of transient member names so we know which to skip
-    FlatSet<Name> transientMembers;
+    Set<Name> transientMembers;
 
     for (const IMember& member : cls->GetMembers(MemberType::Field | MemberType::Property, /* deep */ false))
     {
@@ -3141,7 +3140,8 @@ static const IMember* ResolveMemberForOverride(const Class* cls, Name propertyNa
     }
 
     // If has `Property = ...`, use the synthetic Property instead
-    if (member->GetMemberType() == MemberType::Field && member->GetAttribute(Attributes::g_attrProperty).IsValid())
+    if (member->GetMemberType() == MemberType::Field
+        && member->GetAttribute(Attributes::g_attrProperty).IsValid())
     {
         if (Property* prop = cls->GetProperty(StringHash(propertyName)))
         {
@@ -3192,10 +3192,15 @@ static void WriteEntitySwatchOverridesSection(const Entity& entity, String& outT
         const EntitySwatchOverrideSet& overrideSet = overrideSets[setIndex];
         const bool isLastSet = setIndex + 1 >= overrideSets.Size();
 
+        const char* swatchName = overrideSet.swatchName.LookupString();
+        if (!swatchName)
+        {
+            swatchName = "";
+        }
+
         WriteIndent(outText, indent + 1);
-        EscapeString(outText, overrideSet.swatchName.IsValid() && overrideSet.swatchName.LookupString()
-                ? overrideSet.swatchName.LookupString()
-                : "");
+        EscapeString(outText, swatchName);
+
         outText += " = {\n";
 
         for (size_t i = 0; i < overrideSet.propertyOverrides.Size(); i++)
@@ -3374,6 +3379,36 @@ Result ObjectToHMFImpl(
     }
 
     return {};
+}
+
+bool CanAssignHandle(const BoxedValue& value, const TypeInfo& handleType)
+{
+    if (!value.Is<Handle<ObjectBase>>())
+    {
+        return true;
+    }
+
+    const Handle<ObjectBase>& handle = value.Get<Handle<ObjectBase>>();
+    const Class* handleClass = handleType.GetClass();
+
+    return !handle.IsValid()
+        || handleClass == nullptr
+        || IsA(handleClass, handle.GetClass());
+}
+
+void DeferHandleCopy(BoxedValue& target, const IMember& targetMember, const BoxedValue& value, const Class* targetClass)
+{
+    const DeferredHandleCopiesContext* context = GetGlobalContext<DeferredHandleCopiesContext>();
+
+    if (!context || !context->deferredCopies)
+    {
+        HYP_LOG(Core, Warning, "{}.{} refers to an object of another definition of its type!",
+            targetClass->GetName(), targetMember.GetName());
+
+        return;
+    }
+
+    context->deferredCopies->PushBack({ target, &targetMember, value.Get<Handle<ObjectBase>>() });
 }
 
 } // anonymous namespace
@@ -3563,6 +3598,13 @@ void CopyMembersByName(const Class* sourceClass, const BoxedValue& source, const
             // the same definition of the type, or a handle, which refers to the same object either way
             if (&sourceType == &targetType || (sourceType.id == targetType.id && sourceType.IsHandleType()))
             {
+                if (targetType.IsHandleType() && !CanAssignHandle(value, targetType))
+                {
+                    DeferHandleCopy(target, *targetMember, value, targetClass);
+
+                    continue;
+                }
+
                 SetMemberValue(*targetMember, target, value);
 
                 continue;

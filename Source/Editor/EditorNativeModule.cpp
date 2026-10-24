@@ -845,7 +845,7 @@ EDITOR_API void UpdateGameModules(EditorSubsystem* subsystem)
 
     if (classesToRebuild.Any())
     {
-        RebuildRetiredModuleNodes(subsystem, classesToRebuild);
+        RebuildRetiredModuleObjects(subsystem, classesToRebuild);
     }
 
     if (canReload)
