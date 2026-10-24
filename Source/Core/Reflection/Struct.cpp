@@ -24,11 +24,16 @@
 
 namespace Hyperion {
 
+// a box keeps a dynamic struct, or a module's struct, from going away under it
 static void Struct_AddRefIfDynamic(const Struct* pStruct)
 {
     if (pStruct->IsDynamic())
     {
         const_cast<DynamicStructInstance*>(static_cast<const DynamicStructInstance*>(pStruct))->AddRef();
+    }
+    else if (pStruct->IsModuleClass())
+    {
+        pStruct->AddModuleRef();
     }
 }
 
@@ -37,6 +42,10 @@ static void Struct_ReleaseIfDynamic(const Struct* pStruct)
     if (pStruct->IsDynamic())
     {
         const_cast<DynamicStructInstance*>(static_cast<const DynamicStructInstance*>(pStruct))->Release();
+    }
+    else if (pStruct->IsModuleClass())
+    {
+        pStruct->ReleaseModuleRef();
     }
 }
 

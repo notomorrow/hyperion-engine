@@ -374,6 +374,12 @@ void ClassRegistry::Register(TypeId typeId, Class* cls, bool* outWasRegistered)
 
     m_classesByTypeId[typeId] = cls;
 
+    // only a module loaded after startup can register a static class now, and such a module may be unloaded again
+    if (m_isInitialized)
+    {
+        cls->m_isModuleClass = true;
+    }
+
     if (outWasRegistered)
     {
         *outWasRegistered = true;

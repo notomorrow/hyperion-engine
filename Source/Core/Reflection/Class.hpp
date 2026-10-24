@@ -21,6 +21,8 @@
 #include <Core/Memory/Any.hpp>
 #include <Core/Memory/AnyRef.hpp>
 
+#include <Core/Threading/AtomicVar.hpp>
+
 namespace Hyperion {
 
 namespace dotnet {
@@ -438,6 +440,28 @@ public:
         return m_flags;
     }
 
+    // registered by a module loaded after startup (e.g a game DLL). Like a dynamic class, it's held by its instances and ClassRefs,
+    // so the module can tell once nothing uses its classes
+    HYP_FORCE_INLINE bool IsModuleClass() const
+    {
+        return m_isModuleClass;
+    }
+
+    HYP_FORCE_INLINE int32 GetModuleRefCount() const
+    {
+        return m_moduleRefCount.Get(MemoryOrder::ACQUIRE);
+    }
+
+    HYP_FORCE_INLINE void AddModuleRef() const
+    {
+        m_moduleRefCount.Increment(1, MemoryOrder::RELEASE);
+    }
+
+    HYP_FORCE_INLINE void ReleaseModuleRef() const
+    {
+        m_moduleRefCount.Decrement(1, MemoryOrder::RELEASE);
+    }
+
     HYP_FORCE_INLINE bool IsClassType() const
     {
         return m_flags & ClassFlags::CLASS_TYPE;
@@ -692,8 +716,13 @@ protected:
     ObjectContainerBase* m_objectContainer;
 
 private:
+    friend class ClassRegistry;
+
     mutable WeakPtr<dotnet::ManagedClass> m_managedClass;
     mutable Mutex m_managedClassMutex;
+
+    mutable AtomicVar<int32> m_moduleRefCount { 0 };
+    bool m_isModuleClass = false;
 };
 
 template <class T>

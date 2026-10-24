@@ -42,8 +42,7 @@ ComponentInterface::ComponentInterface(const TypeInfo* typeInfo, const Struct* c
       m_struct(componentStruct),
       m_structReference(componentStruct),
       m_entityTag(entityTag),
-      m_flags(flags),
-      m_numContainers(0)
+      m_flags(flags)
 {
     Assert(m_typeInfo != nullptr);
     Assert(m_struct != nullptr, "Component type {} has no Struct", m_typeInfo->name);
@@ -336,7 +335,7 @@ uint32 ComponentInterfaceRegistry::PublishModuleComponents()
     return numPublished;
 }
 
-Array<const ComponentInterface*> ComponentInterfaceRegistry::UnregisterComponentsInRange(UIntPtr begin, UIntPtr end)
+void ComponentInterfaceRegistry::UnregisterComponentsInRange(UIntPtr begin, UIntPtr end)
 {
     Mutex::Guard guard(m_writeMutex);
 
@@ -371,11 +370,9 @@ Array<const ComponentInterface*> ComponentInterfaceRegistry::UnregisterComponent
         m_pendingModuleCreateFunctions.Erase(typeId);
     }
 
-    Array<const ComponentInterface*> unregisteredInterfaces;
-
     if (!m_isInitialized || typeIds.Empty())
     {
-        return unregisteredInterfaces;
+        return;
     }
 
     const LookupTable& currentLookupTable = GetLookupTable();
@@ -386,10 +383,8 @@ Array<const ComponentInterface*> ComponentInterfaceRegistry::UnregisterComponent
     {
         if (it.second->IsModuleComponent() && typeIds.Contains(it.first))
         {
-            // released while the module is loaded, since releasing reads the Struct
+            // the interface outlives the module, so it lets go of the module's Struct here
             const_cast<ComponentInterface*>(it.second)->ReleaseStructReference();
-
-            unregisteredInterfaces.PushBack(it.second);
 
             continue;
         }
@@ -400,8 +395,6 @@ Array<const ComponentInterface*> ComponentInterfaceRegistry::UnregisterComponent
     PublishLookupTable(std::move(lookupTable));
 
     m_runtimeRegistrationGeneration.Increment(1, MemoryOrder::RELEASE);
-
-    return unregisteredInterfaces;
 }
 
 const ComponentInterface* ComponentInterfaceRegistry::RegisterRuntimeComponent(const Struct* componentStruct, EnumFlags<ComponentInterfaceFlags> flags)

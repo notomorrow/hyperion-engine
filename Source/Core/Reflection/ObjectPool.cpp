@@ -135,8 +135,16 @@ CORE_API void ReleaseObject(ObjectHeader* header)
     ObjectContainerBase* container = cls->GetObjectContainer();
     AssertDebug(container != nullptr, "Class has no ObjectContainer");
 
+    // the container's class, since a C# subclass's instances live in their native ancestor's container
+    const Class* containerClass = container->GetClass();
+
     // header memory is freed after this call, don't touch it
     container->Release(header);
+
+    if (containerClass->IsModuleClass())
+    {
+        containerClass->ReleaseModuleRef();
+    }
 
     if (cls->IsDynamic())
     {
@@ -375,6 +383,12 @@ ObjectHeader* ObjectContainerBase::AllocateObjectHeader(size_t size)
     header->refCountStrong = 1;
     // strong refs collectively hold 1 weak ref, released once the object is destructed
     header->refCountWeak = 1;
+
+    // like an instance of a dynamic class, an instance of a module's class holds it until ReleaseObject()
+    if (m_class->IsModuleClass())
+    {
+        m_class->AddModuleRef();
+    }
 
     m_headers.Emplace(header->index, header);
 

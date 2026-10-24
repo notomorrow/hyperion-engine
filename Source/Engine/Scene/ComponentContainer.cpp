@@ -56,8 +56,6 @@ ComponentContainer::ComponentContainer(const ComponentInterface& componentInterf
 {
     Assert(componentInterface.GetComponentSize() != 0, "Component type {} has no size", m_typeId.Value());
     Assert(componentInterface.GetComponentSize() <= MaxComponentSize, "Component type {} is too large ({} bytes)", m_typeId.Value(), componentInterface.GetComponentSize());
-
-    componentInterface.m_numContainers.Increment(1, MemoryOrder::RELEASE);
 }
 
 ComponentContainer::~ComponentContainer()
@@ -69,8 +67,6 @@ ComponentContainer::~ComponentContainer()
         });
 
     m_components.Reset();
-
-    m_componentInterface->m_numContainers.Decrement(1, MemoryOrder::RELEASE);
 }
 
 void* ComponentContainer::AllocateComponentSlot(ComponentId& outId)
@@ -267,10 +263,6 @@ void ComponentContainer::MigrateTo(const ComponentInterface& componentInterface)
             CopyMatchingProperties(*previousStruct, previousComponent.second, *currentStruct, target);
         }
     }
-
-    // after the old values are copied, since the old interface's module may unload once its count is zero
-    componentInterface.m_numContainers.Increment(1, MemoryOrder::RELEASE);
-    previousInterface->m_numContainers.Decrement(1, MemoryOrder::RELEASE);
 }
 
 #pragma endregion ComponentContainer

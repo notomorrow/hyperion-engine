@@ -1586,12 +1586,13 @@ static inline bool IsDynamicStruct(const Class& cls)
     return (cls.GetFlags() & (ClassFlags::DYNAMIC | ClassFlags::STRUCT_TYPE)) == (ClassFlags::DYNAMIC | ClassFlags::STRUCT_TYPE);
 }
 
-static inline bool IsDynamicType(const Class& cls)
+// dynamic types and module classes are counted; other classes live as long as the program
+static inline bool IsCountedType(const Class& cls)
 {
-    return IsDynamicClass(cls) || IsDynamicStruct(cls);
+    return IsDynamicClass(cls) || IsDynamicStruct(cls) || cls.IsModuleClass();
 }
 
-static inline void DynamicType_AddRef(const Class* cls)
+static inline void CountedType_AddRef(const Class* cls)
 {
     if (IsDynamicClass(*cls))
     {
@@ -1601,9 +1602,13 @@ static inline void DynamicType_AddRef(const Class* cls)
     {
         const_cast<DynamicStructInstance*>(static_cast<const DynamicStructInstance*>(cls))->AddRef();
     }
+    else if (cls->IsModuleClass())
+    {
+        cls->AddModuleRef();
+    }
 }
 
-static inline void DynamicType_Release(const Class* cls)
+static inline void CountedType_Release(const Class* cls)
 {
     if (IsDynamicClass(*cls))
     {
@@ -1613,23 +1618,27 @@ static inline void DynamicType_Release(const Class* cls)
     {
         const_cast<DynamicStructInstance*>(static_cast<const DynamicStructInstance*>(cls))->Release();
     }
+    else if (cls->IsModuleClass())
+    {
+        cls->ReleaseModuleRef();
+    }
 }
 
 ClassRef::ClassRef(const Class* cls, int initialRefCount)
     : cls(cls)
 {
-    if (cls && IsDynamicType(*cls) && initialRefCount > 0)
+    if (cls && IsCountedType(*cls) && initialRefCount > 0)
     {
-        DynamicType_AddRef(cls);
+        CountedType_AddRef(cls);
     }
 }
 
 ClassRef::ClassRef(const ClassRef& other)
     : cls(other.cls)
 {
-    if (cls && IsDynamicType(*cls))
+    if (cls && IsCountedType(*cls))
     {
-        DynamicType_AddRef(cls);
+        CountedType_AddRef(cls);
     }
 }
 
@@ -1640,16 +1649,16 @@ ClassRef& ClassRef::operator=(const ClassRef& other)
         return *this;
     }
 
-    if (cls && IsDynamicType(*cls))
+    if (cls && IsCountedType(*cls))
     {
-        DynamicType_Release(cls);
+        CountedType_Release(cls);
     }
 
     cls = other.cls;
 
-    if (cls && IsDynamicType(*cls))
+    if (cls && IsCountedType(*cls))
     {
-        DynamicType_AddRef(cls);
+        CountedType_AddRef(cls);
     }
 
     return *this;
@@ -1668,9 +1677,9 @@ ClassRef& ClassRef::operator=(ClassRef&& other) noexcept
         return *this;
     }
 
-    if (cls && IsDynamicType(*cls))
+    if (cls && IsCountedType(*cls))
     {
-        DynamicType_Release(cls);
+        CountedType_Release(cls);
     }
 
     cls = other.cls;
@@ -1681,9 +1690,9 @@ ClassRef& ClassRef::operator=(ClassRef&& other) noexcept
 
 ClassRef::~ClassRef()
 {
-    if (cls && IsDynamicType(*cls))
+    if (cls && IsCountedType(*cls))
     {
-        DynamicType_Release(cls);
+        CountedType_Release(cls);
     }
 }
 

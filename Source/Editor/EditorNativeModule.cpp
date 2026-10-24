@@ -103,7 +103,6 @@ struct RetiredNativeModule
     NativeModuleImage image;
     Array<const Class*> classes;
     Array<ObjectContainerBase*> containers;
-    Array<const ComponentInterface*> componentInterfaces;
     Time retiredTime;
     Time lastCollectTime;
     uint32 requiredCollection = 0;
@@ -220,7 +219,7 @@ RetiredNativeModule RetireModule(const LoadedNativeModule& loadedModule)
         loadedModule.image.imageBegin,
         loadedModule.image.imageEnd);
 
-    retiredModule.componentInterfaces = ComponentInterfaceRegistry::GetInstance().UnregisterComponentsInRange(
+    ComponentInterfaceRegistry::GetInstance().UnregisterComponentsInRange(
         loadedModule.image.imageBegin,
         loadedModule.image.imageEnd);
 
@@ -281,24 +280,16 @@ bool IsRetiredModuleClass(const Class* cls)
     return false;
 }
 
+// a module class is held by its instances and ClassRefs (component containers and boxed values), as a dynamic class is
 Array<const Class*> GetClassesInUse(const RetiredNativeModule& retiredModule)
 {
     Array<const Class*> classesInUse;
 
-    for (ObjectContainerBase* container : retiredModule.containers)
+    for (const Class* cls : retiredModule.classes)
     {
-        if (container->HasObjects())
+        if (cls->GetModuleRefCount() != 0)
         {
-            classesInUse.PushBack(container->GetClass());
-        }
-    }
-
-    // component containers still on its layouts call its code; they move to the new build's as their EntityManagers sync
-    for (const ComponentInterface* componentInterface : retiredModule.componentInterfaces)
-    {
-        if (componentInterface->GetNumContainers() != 0)
-        {
-            classesInUse.PushBack(componentInterface->GetStruct());
+            classesInUse.PushBack(cls);
         }
     }
 

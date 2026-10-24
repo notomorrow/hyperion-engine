@@ -141,11 +141,6 @@ public:
         return m_flags & ComponentInterfaceFlags::MODULE;
     }
 
-    HYP_FORCE_INLINE uint32 GetNumContainers() const
-    {
-        return m_numContainers.Get(MemoryOrder::ACQUIRE);
-    }
-
     void ConstructComponent(void* destination) const;
     void CopyConstructComponent(void* destination, const void* source) const;
     void MoveConstructComponent(void* destination, void* source) const;
@@ -155,7 +150,6 @@ public:
 
 private:
     friend class ComponentInterfaceRegistry;
-    friend class ComponentContainer;
 
     void ReleaseStructReference();
 
@@ -165,10 +159,6 @@ private:
     ClassRef m_structReference;
     EntityTag m_entityTag;
     EnumFlags<ComponentInterfaceFlags> m_flags;
-
-    /// Number of containers built on this interface.
-    /// A module's interfaces have to reach zero before the module can unload.
-    mutable AtomicVar<uint32> m_numContainers;
 };
 
 class ENGINE_API ComponentInterfaceRegistry
@@ -201,7 +191,7 @@ public:
      *  for a module loaded after Initialize() (e.g a game DLL) */
     uint32 PublishModuleComponents();
 
-    Array<const ComponentInterface*> UnregisterComponentsInRange(UIntPtr begin, UIntPtr end);
+    void UnregisterComponentsInRange(UIntPtr begin, UIntPtr end);
 
     const ComponentInterface* RegisterRuntimeComponent(
         const Struct* componentStruct,

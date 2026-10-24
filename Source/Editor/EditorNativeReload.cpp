@@ -137,44 +137,20 @@ static Handle<Node> RebuildNode(const Handle<Node>& oldNode, const Class* newCla
     return newNode;
 }
 
-static bool RetargetHandleMember(const IMember& member, BoxedValue& target, const Array<RebuiltNode>& rebuiltNodes)
+// calls back with each reflected handle member of the node and of its components, and the object it's on
+template <class Callback>
+static void ForEachHandleMember(Node* node, Callback&& callback)
 {
-    if (!member.GetTypeInfo().IsHandleType() || !CanGetAndSetMember(member))
-    {
-        return false;
-    }
-
-    const BoxedValue value = GetMemberValue(member, target);
-
-    if (!value.Is<Handle<ObjectBase>>())
-    {
-        return false;
-    }
-
-    const Handle<Node>* replacement = FindRebuilt(value.Get<Handle<ObjectBase>>().Get(), rebuiltNodes);
-
-    if (replacement == nullptr)
-    {
-        return false;
-    }
-
-    SetMemberValue(member, target, BoxedValue(*replacement));
-
-    return true;
-}
-
-// reflected handles to a rebuilt node, on nodes and on their components, are pointed at its new node
-static uint32 RetargetHandles(Node* node, const Array<RebuiltNode>& rebuiltNodes)
-{
-    uint32 numRetargeted = 0;
-
     BoxedValue target(MakeStrongRef(node));
 
     for (const Class* cls = node->InstanceClass(); cls != nullptr; cls = cls->GetParent())
     {
         for (const IMember& member : cls->GetMembers(MemberType::Field | MemberType::Property, /* deep */ false))
         {
-            numRetargeted += RetargetHandleMember(member, target, rebuiltNodes) ? 1 : 0;
+            if (member.GetTypeInfo().IsHandleType() && CanGetAndSetMember(member))
+            {
+                callback(member, target);
+            }
         }
     }
 
@@ -183,14 +159,14 @@ static uint32 RetargetHandles(Node* node, const Array<RebuiltNode>& rebuiltNodes
 
     if (entityManager == nullptr)
     {
-        return numRetargeted;
+        return;
     }
 
     Optional<const ComponentMap&> components = entityManager->GetAllComponents(entity);
 
     if (!components.HasValue())
     {
-        return numRetargeted;
+        return;
     }
 
     for (const auto& it : *components)
@@ -213,11 +189,51 @@ static uint32 RetargetHandles(Node* node, const Array<RebuiltNode>& rebuiltNodes
 
         for (const Property* property : container->GetComponentInterface().GetStruct()->GetProperties())
         {
-            numRetargeted += RetargetHandleMember(*property, component, rebuiltNodes) ? 1 : 0;
+            if (property->GetTypeInfo().IsHandleType() && CanGetAndSetMember(*property))
+            {
+                callback(*property, component);
+            }
         }
     }
+}
+
+// reflected handles to a rebuilt node, on nodes and on their components, are pointed at its new node
+static uint32 RetargetHandles(Node* node, const Array<RebuiltNode>& rebuiltNodes)
+{
+    uint32 numRetargeted = 0;
+
+    ForEachHandleMember(node, [&rebuiltNodes, &numRetargeted](const IMember& member, BoxedValue& target)
+        {
+            const BoxedValue value = GetMemberValue(member, target);
+
+            if (!value.Is<Handle<ObjectBase>>())
+            {
+                return;
+            }
+
+            if (const Handle<Node>* replacement = FindRebuilt(value.Get<Handle<ObjectBase>>().Get(), rebuiltNodes))
+            {
+                SetMemberValue(member, target, BoxedValue(*replacement));
+
+                numRetargeted++;
+            }
+        });
 
     return numRetargeted;
+}
+
+// old nodes that refer to each other would keep each other, and the old build, alive
+static void ClearHandlesToRebuiltNodes(Node* oldNode, const Array<RebuiltNode>& rebuiltNodes)
+{
+    ForEachHandleMember(oldNode, [&rebuiltNodes](const IMember& member, BoxedValue& target)
+        {
+            const BoxedValue value = GetMemberValue(member, target);
+
+            if (value.Is<Handle<ObjectBase>>() && FindRebuilt(value.Get<Handle<ObjectBase>>().Get(), rebuiltNodes) != nullptr)
+            {
+                SetMemberValue(member, target, BoxedValue());
+            }
+        });
 }
 
 static Handle<Node> Remap(const Handle<Node>& node, const Array<RebuiltNode>& rebuiltNodes)
@@ -351,6 +367,16 @@ EDITOR_API void RebuildRetiredModuleNodes(EditorSubsystem* subsystem, const Arra
         for (Node* node : scene->GetRoot()->GetDescendantsArray())
         {
             numRetargeted += RetargetHandles(node, rebuiltNodes);
+        }
+    }
+
+    {
+        // the old nodes are read and written through their own build's code
+        ClassLookupOverrideScope lookupOverride(retiredClasses);
+
+        for (const RebuiltNode& rebuiltNode : rebuiltNodes)
+        {
+            ClearHandlesToRebuiltNodes(rebuiltNode.oldNode.Get(), rebuiltNodes);
         }
     }
 
