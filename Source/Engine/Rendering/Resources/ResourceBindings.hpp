@@ -48,6 +48,9 @@ static inline SubtypeResourceBindings& GetSubtypeBindings(const Class* cls)
 
     AssertDebug(cls != nullptr);
 
+    cls = cls->GetNearestStaticClass();
+    AssertDebug(cls != nullptr);
+
     int staticIndex = cls->GetStaticIndex();
     AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *cls->GetName());
 
@@ -218,6 +221,9 @@ struct ResourceContainer
     {
         AssertDebug(cls != nullptr);
 
+        cls = cls->GetNearestStaticClass();
+        AssertDebug(cls != nullptr);
+
         int staticIndex = cls->GetStaticIndex();
         AssertDebug(staticIndex >= 0, "Invalid class: '{}' has no assigned static index!", *cls->GetName());
 
@@ -377,7 +383,7 @@ static void SyncResources(
         AssertDebug(resourceId.IsValid());
 
         ResourceSubtypeData& subtypeData = resources.GetSubtypeData(pResource->InstanceClass());
-        AssertDebug(resourceId.GetTypeId() == subtypeData.typeInfo->id);
+        AssertDebug(pResource->InstanceClass()->GetNearestStaticClass()->GetTypeId() == subtypeData.typeInfo->id);
 
         ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
 
@@ -413,7 +419,7 @@ static void SyncResources(
         AssertDebug(resourceId.IsValid());
 
         ResourceSubtypeData& subtypeData = resources.GetSubtypeData(pResource->InstanceClass());
-        AssertDebug(resourceId.GetTypeId() == subtypeData.typeInfo->id);
+        AssertDebug(pResource->InstanceClass()->GetNearestStaticClass()->GetTypeId() == subtypeData.typeInfo->id);
 
         ResourceData* rd = subtypeData.data.TryGet(resourceId.ToIndex());
         AssertDebug(rd != nullptr, "No resource data for {}", resourceId);

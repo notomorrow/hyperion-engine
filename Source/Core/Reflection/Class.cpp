@@ -187,6 +187,11 @@ CORE_API bool IsA(const Class* cls, const Class* instanceClass)
     return false;
 }
 
+CORE_API const Class* Class_GetNearestStaticClass(const Class& cls)
+{
+    return cls.GetNearestStaticClass();
+}
+
 CORE_API int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId)
 {
     return GetSubclassIndex(baseTypeId, GetClass(subclassTypeId));
@@ -195,17 +200,15 @@ CORE_API int GetSubclassIndex(TypeId baseTypeId, TypeId subclassTypeId)
 CORE_API int GetSubclassIndex(TypeId baseTypeId, const Class* subclass)
 {
     const Class* base = GetClass(baseTypeId);
+
     if (!base)
     {
         return -2;
     }
 
-    // runtime classes (e.g a C# subclass of Entity) and game module classes, which have no static index,
-    // share the slot of their closest ancestor with a static index.
-    while (subclass && (subclass->IsDynamic() || subclass->GetStaticIndex() < 0))
-    {
-        subclass = subclass->GetParent();
-    }
+    subclass = subclass != nullptr
+        ? subclass->GetNearestStaticClass()
+        : nullptr;
 
     if (!subclass)
     {

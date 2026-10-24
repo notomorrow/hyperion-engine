@@ -399,6 +399,20 @@ public:
         return m_staticIndex;
     }
 
+    /*! \brief Returns this class if it has a valid static index, or
+     *  the nearest ancestor class that has a valid static index otherwise. */
+    HYP_FORCE_INLINE const Class* GetNearestStaticClass() const
+    {
+        const Class* cls = this;
+
+        while (cls != nullptr && (cls->IsDynamic() || cls->GetStaticIndex() < 0))
+        {
+            cls = cls->GetParent();
+        }
+
+        return cls;
+    }
+
     /*! \brief Returns the total number of descendants of this Class. */
     HYP_FORCE_INLINE uint32 GetNumDescendants() const
     {

@@ -501,7 +501,7 @@ IRenderProxy* GetRenderProxy(const void* resource)
                 subtypeData.typeInfo->name);
 
     const ObjIdBase resourceId = resourceCasted->Id();
-    AssertDebug(resourceId.GetTypeId() == subtypeData.typeInfo->id);
+    AssertDebug(resourceCasted->InstanceClass()->GetNearestStaticClass()->GetTypeId() == subtypeData.typeInfo->id);
 
     if (!subtypeData.proxies.HasIndex(resourceId.ToIndex()))
     {
@@ -525,7 +525,7 @@ void UpdateGpuData(const void* resource)
     const ObjIdBase resourceId = resourceCasted->Id();
 
     ResourceSubtypeData& subtypeData = RI.resources->GetSubtypeData(resourceCasted->InstanceClass());
-    AssertDebug(resourceId.GetTypeId() == subtypeData.typeInfo->id);
+    AssertDebug(resourceCasted->InstanceClass()->GetNearestStaticClass()->GetTypeId() == subtypeData.typeInfo->id);
 
     AssertDebug(subtypeData.sbuffer != nullptr,
                 "Cannot update GPU data for type which does not have a buffer! Type: {}",

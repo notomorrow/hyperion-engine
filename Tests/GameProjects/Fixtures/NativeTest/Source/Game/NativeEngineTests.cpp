@@ -9,6 +9,10 @@
 
 #include <Asset/SerializationUtils.hpp>
 
+#include <Framework/Resources/ResourceTracker.hpp>
+
+#include <Rendering/RenderProxy.hpp>
+
 #include <Core/Reflection/Class.hpp>
 #include <Core/Reflection/BoxedValue.hpp>
 
@@ -188,6 +192,42 @@ void GameEntity_CloneAsKeepsFieldsAndComponents(GameTestContext& context)
         HYP_FORMAT("component: expected (2, 'cloned'), got ({}, '{}')", component->speed, component->tag));
 }
 
+// render proxies are tracked this way per frame; a game entity is kept with Entity's, under its own id
+void ResourceTracker_TracksGameEntityWithEngineEntities(GameTestContext& context)
+{
+    Handle<Scene> scene = CreateTestScene();
+
+    Handle<Entity> engineEntity = MakeHandle<Entity>();
+    scene->GetRoot()->AddChild(engineEntity);
+
+    Handle<NativeTestReloadEntity> gameEntity = MakeHandle<NativeTestReloadEntity>();
+    scene->GetRoot()->AddChild(gameEntity);
+
+    Resources::ResourceTracker<DynamicAllocator, ObjId<Entity>, Entity*> tracker;
+
+    tracker.Track(engineEntity->Id(), engineEntity.Get());
+    tracker.Track(gameEntity->Id(), gameEntity.Get());
+
+    Array<ObjId<Entity>> added;
+    tracker.GetAdded(added, /* includeChanged */ false);
+
+    context.Check(added.Size() == 2, HYP_FORMAT("expected 2 added ids, got {}", added.Size()));
+    context.Check(added.Contains(ObjId<Entity>(gameEntity->Id())), "the game entity's id didn't come back with its own TypeId");
+    context.Check(added.Contains(ObjId<Entity>(engineEntity->Id())), "the engine entity's id didn't come back");
+
+    context.Check(tracker.GetElement(ObjId<Entity>(gameEntity->Id())) != nullptr, "the game entity can't be found by its id");
+    context.Check(tracker.GetElements<Entity>().Count() == 2, HYP_FORMAT("Entity's elements should include the game entity: {} of 2", tracker.GetElements<Entity>().Count()));
+
+    tracker.Advance();
+    tracker.MarkToRemove(ObjId<Entity>(gameEntity->Id()));
+    tracker.MarkToKeep(ObjId<Entity>(engineEntity->Id()));
+
+    Array<ObjId<Entity>> removed;
+    tracker.GetRemoved(removed, /* includeChanged */ false);
+
+    context.Check(removed.Size() == 1 && removed[0] == ObjId<Entity>(gameEntity->Id()), "removing the game entity didn't report its id");
+}
+
 void MathUtil_RoundAtRuntime(GameTestContext& context)
 {
     struct RoundCase
@@ -228,6 +268,7 @@ const Array<GameTestDefinition>& GetNativeEngineTests()
         { "Node_InsertChild_PlacesAtIndex", g_writePhase, &Node_InsertChild_PlacesAtIndex },
         { "GameComponent_AddsAndReadsBack", g_writePhase, &GameComponent_AddsAndReadsBack },
         { "GameEntity_CloneAsKeepsFieldsAndComponents", g_writePhase, &GameEntity_CloneAsKeepsFieldsAndComponents },
+        { "ResourceTracker_TracksGameEntityWithEngineEntities", g_writePhase, &ResourceTracker_TracksGameEntityWithEngineEntities },
         { "MathUtil_RoundAtRuntime", g_writePhase, &MathUtil_RoundAtRuntime }
     };
 
